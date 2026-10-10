@@ -1,5 +1,7 @@
 #include "CSSClothBasisStudy.h"
 #include "CSSRigAuditLibrary.h"
+#include "CSSJsonAuditArray.h"
+#include "Animation/MorphTarget.h"
 #include "Animation/MeshDeformerCollection.h"
 #include "Animation/SkeletalMeshVertexAttribute.h"
 #include "Engine/SkeletalMesh.h"
@@ -13,10 +15,88 @@
 #include "OptimusNodeGraph.h"
 #include "OptimusNodePin.h"
 #include "Rendering/SkeletalMeshRenderData.h"
+#include "Rendering/SkeletalMeshAttributeVertexBuffer.h"
 #include "SkeletalMeshAttributes.h"
 #include "SkinnedAssetCompiler.h"
 #include "UObject/Package.h"
 #include "UObject/UnrealType.h"
+
+FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots)
+{
+    if (!IsRunningCommandlet() || !IsInGameThread() || !Mesh || MaterialSlots.IsEmpty())
+        return TEXT("ERROR: commandlet mesh and cloth slots required");
+    USkinnedAsset* Assets[]{Mesh};
+    FSkinnedAssetCompilingManager::Get().FinishCompilation(Assets);
+    const auto* Render = Mesh->GetResourceForRendering();
+    if (!Render || Render->LODRenderData.Num() != 1) return TEXT("ERROR: expected one render LOD");
+    const auto& Lod = Render->LODRenderData[0];
+    TSet<FName> Requested(MaterialSlots), Found;
+    if (Requested.Num() != MaterialSlots.Num()) return TEXT("ERROR: duplicate cloth slot");
+    TArray<bool> Selected;
+    Selected.Init(false, Lod.GetNumVertices());
+    for (const auto& Section : Lod.RenderSections)
+    {
+        if (!Mesh->GetMaterials().IsValidIndex(Section.MaterialIndex)) return TEXT("ERROR: invalid material index");
+        const FName Slot = Mesh->GetMaterials()[Section.MaterialIndex].MaterialSlotName;
+        if (!Requested.Contains(Slot)) continue;
+        if (!Section.HasClothingData()) return TEXT("ERROR: requested slot has no cloth binding");
+        Found.Add(Slot);
+        const uint32 End = Section.BaseVertexIndex + Section.NumVertices;
+        if (End < Section.BaseVertexIndex || End > Lod.GetNumVertices()) return TEXT("ERROR: invalid section range");
+        for (uint32 Index = Section.BaseVertexIndex; Index < End; ++Index) Selected[Index] = true;
+    }
+    if (Found.Num() != Requested.Num()) return TEXT("ERROR: missing cloth section");
+    TArray<TSharedPtr<FJsonValue>> Rows;
+    for (const auto& Shape : CSSClothBasisStudy::Shapes)
+    {
+        const auto* Morph = Mesh->FindMorphTarget(Shape.Morph);
+        if (!Morph || Morph->GetMorphLODModels().Num() != 1) return TEXT("ERROR: missing shape render morph");
+        TArray<FVector3f> Expected;
+        Expected.Init(FVector3f::ZeroVector, Lod.GetNumVertices());
+        for (const auto& Delta : Morph->GetMorphLODModels()[0].Vertices)
+        {
+            if (Delta.SourceIdx >= Lod.GetNumVertices() || Delta.PositionDelta.ContainsNaN())
+                return TEXT("ERROR: invalid render morph delta");
+            if (Selected[Delta.SourceIdx]) Expected[Delta.SourceIdx] = Delta.PositionDelta;
+        }
+        for (int32 Axis = 0; Axis != 3; ++Axis)
+        {
+            const FName Name(*FString::Printf(TEXT("%s%c"), Shape.Attribute, TEXT('X') + Axis));
+            const auto* Buffer = Lod.VertexAttributeBuffers.GetAttributeBuffer(Name);
+            if (!Buffer) return TEXT("ERROR: missing basis render buffer");
+            const auto Cpu = Buffer->GetCPUData();
+            if (!Cpu.Data || Cpu.PixelFormat != PF_R32_FLOAT || Cpu.Data->GetStride() != sizeof(float) ||
+                Cpu.Data->GetNumVertices() != Lod.GetNumVertices() || !Cpu.Data->GetDataPointer())
+                return TEXT("ERROR: invalid basis render buffer format");
+            float MaximumError = 0.f;
+            FJsonAuditArray Values(true);
+            for (uint32 Index = 0; Index < Lod.GetNumVertices(); ++Index)
+            {
+                float Value;
+                FMemory::Memcpy(&Value, Cpu.Data->GetDataPointer() + Index * sizeof(float), sizeof(float));
+                if (!FMath::IsFinite(Value)) return TEXT("ERROR: nonfinite basis render value");
+                if (!Selected[Index] && Value != 0.f) return TEXT("ERROR: basis affects a non-cloth vertex");
+                MaximumError = FMath::Max(MaximumError, FMath::Abs(Value - Expected[Index][Axis]));
+                Values.Add(MakeShared<FJsonValueNumber>(Value));
+            }
+            // Imported render morphs omit deltas below the existing 0.015 cm threshold.
+            if (MaximumError > 0.02f) return TEXT("ERROR: basis differs from the render morph");
+            auto Row = MakeShared<FJsonObject>();
+            Row->SetStringField(TEXT("name"), Name.ToString());
+            Row->SetNumberField(TEXT("maximum_render_morph_error_cm"), MaximumError);
+            Row->SetField(TEXT("values"), Values.Finish());
+            Rows.Add(MakeShared<FJsonValueObject>(Row));
+        }
+    }
+    auto Result = MakeShared<FJsonObject>();
+    Result->SetArrayField(TEXT("buffers"), MoveTemp(Rows));
+    Result->SetNumberField(TEXT("vertices"), Lod.GetNumVertices());
+    Result->SetNumberField(TEXT("cloth_slots"), Found.Num());
+    FString Output;
+    const auto Writer = TJsonWriterFactory<>::Create(&Output);
+    if (!FJsonSerializer::Serialize(Result, Writer)) return TEXT("ERROR: cannot serialize basis check");
+    return Output;
+}
 
 bool UCSSRigAuditLibrary::CompileClothRuntimeGraph(UObject* Graph)
 {
@@ -36,18 +116,25 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
         return nullptr;
     };
     const FString SourcePackage = Source ? Source->GetOutermost()->GetName() : FString();
-    const bool bSourceAllowed = SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/SK_EveW3") ||
+    const bool bPeony = SourcePackage == TEXT("/Game/CSS/eins0fx/EveSB/Peony/Meshes/SK_Peony") ||
+        SourcePackage == TEXT("/Game/CSS/eins0fx/EveSB/Peony/Meshes/SK_Peony_Face");
+    const bool bSourceAllowed = bPeony || SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/SK_EveW3") ||
         SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/SK_GenessaW3") ||
         SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_EveW3_Face") ||
         SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_GenessaW3_Face");
     const FString ExpectedOutput = SourcePackage + (RuntimeDeformer ? TEXT("_BasisStudy3") :
         bAllShapes ? TEXT("_BasisStudy2") : TEXT("_BasisStudy1"));
-    if (!IsRunningCommandlet() || !IsInGameThread() || !Source || !bSourceAllowed || OutputPackage != ExpectedOutput ||
-        (bAllShapes && (!DeformerCollection || !DeformerCollection->GetPathName().StartsWith(
+    const bool bBindingsAllowed = bPeony ?
+        bAllShapes && DeformerCollection && RuntimeDeformer &&
+        DeformerCollection->GetPathName() == TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphBody.MDC_ClothMorphBody") &&
+        RuntimeDeformer->GetPathName() == TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphBody.DG_ClothMorphBody") :
+        !(bAllShapes && (!DeformerCollection || !DeformerCollection->GetPathName().StartsWith(
             RuntimeDeformer ? TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy5.") :
-                TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy4.")))) ||
-        (RuntimeDeformer && (!bAllShapes || !RuntimeDeformer->GetPathName().StartsWith(
-            TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy5.")))) ||
+                TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy4.")))) &&
+        !(RuntimeDeformer && (!bAllShapes || !RuntimeDeformer->GetPathName().StartsWith(
+            TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy5."))));
+    if (!IsRunningCommandlet() || !IsInGameThread() || !Source || !bSourceAllowed || OutputPackage != ExpectedOutput ||
+        !bBindingsAllowed ||
         !FPackageName::IsValidLongPackageName(OutputPackage) ||
         FindPackage(nullptr, *OutputPackage) || FPackageName::DoesPackageExist(OutputPackage))
         return Fail(TEXT("invalid commandlet source or private destination"));
@@ -62,19 +149,23 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
     const auto Morph = Attributes.GetVertexMorphPositionDelta(TEXT("PBMGlutesSize"));
     if (!Morph.IsValid()) return Fail(TEXT("missing glute morph"));
     const auto Slots = Attributes.GetPolygonGroupMaterialSlotNames();
-    FName SkirtSlot;
-    int32 Matches = 0;
+    const TSet<FName> ExpectedSlots = bPeony ? TSet<FName>{TEXT("Peony_leg_panels_Lower_2_L"),
+        TEXT("Peony_leg_panels_Lower_2_R")} : TSet<FName>{TEXT("UG_Skirt")};
+    TSet<FName> SkirtSlots, FoundSlots;
     for (const auto& Material : Mesh->GetMaterials())
-        if (Material.MaterialSlotName == TEXT("UG_Skirt"))
+        if (ExpectedSlots.Contains(Material.MaterialSlotName))
         {
-            SkirtSlot = Material.ImportedMaterialSlotName;
-            ++Matches;
+            if (FoundSlots.Contains(Material.MaterialSlotName) || Material.ImportedMaterialSlotName.IsNone() ||
+                SkirtSlots.Contains(Material.ImportedMaterialSlotName))
+                return Fail(TEXT("ambiguous cloth imported material slot"));
+            FoundSlots.Add(Material.MaterialSlotName);
+            SkirtSlots.Add(Material.ImportedMaterialSlotName);
         }
-    if (Matches != 1 || SkirtSlot.IsNone()) return Fail(TEXT("ambiguous skirt imported material slot"));
+    if (FoundSlots.Num() != ExpectedSlots.Num()) return Fail(TEXT("missing cloth imported material slot"));
     TSet<FVertexID> Skirt, Other;
     for (const auto Group : Description->PolygonGroups().GetElementIDs())
     {
-        auto& Used = Slots[Group] == SkirtSlot ? Skirt : Other;
+        auto& Used = SkirtSlots.Contains(Slots[Group]) ? Skirt : Other;
         for (const auto Triangle : Description->GetPolygonGroupTriangles(Group))
             for (const auto Corner : Description->GetTriangleVertexInstances(Triangle))
                 Used.Add(Description->GetVertexInstanceVertex(Corner));
@@ -92,8 +183,6 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
         Shared.Num(), SharedNonzero, SharedMaximum);
     if (Skirt.IsEmpty())
     {
-        UE_LOG(LogTemp, Error, TEXT("Cloth basis study: imported slot %s, skirt vertices %d, shared vertices %d"),
-            *SkirtSlot.ToString(), Skirt.Num(), Skirt.Intersect(Other).Num());
         return Fail(TEXT("missing skirt vertices"));
     }
     const int32 ShapeCount = bAllShapes ? UE_ARRAY_COUNT(CSSClothBasisStudy::Shapes) : 1;

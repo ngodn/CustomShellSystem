@@ -10,13 +10,21 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**Cloth body-shape integration:** `peony-clothmorph1` adds the existing shared
+cloth-morph graph binding and fifteen Float attribute buffers to both Peony
+meshes. Native authoring and fresh-process reload preserve all source/render
+data, the 22/137 morphs and both cloth simulations. Buffer checks verify finite
+values, morph agreement and zero correction outside the fabric sections. GPU,
+cook and gameplay validation remain. This does not fix the walking-arm contact
+defect or install a new trial. See the [cloth-binding evidence](../research/2026-10-10-peony-cloth-morph-binding.md).
+
 **Control integration:** `peony-catalog4` adds Peony to the unchanged six-variant
 Eve catalog with 40 controls, nine dye surfaces, five palettes and the existing
 automatic footwear-height rule. Its inherited body/hair geometry, UVs, weights,
 22 morphs and skeleton match the source exactly. The native catalog check passes
 2,048 visibility/height combinations and 10,240 palette/profile cases. Earlier
 UE 5.6.1 readback confirms 170 parameter values across 30 wardrobe materials.
-Peony cloth-morph authoring, fit, cooking, facial adapter registration, Astral
+Peony cloth-morph GPU checks, fit, cooking, facial adapter registration, Astral
 support and gameplay checks remain. Nothing new is installed. See the
 [binding evidence](../research/2026-10-10-peony-customization-bindings.md).
 

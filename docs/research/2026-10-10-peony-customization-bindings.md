@@ -49,12 +49,11 @@ retain their small receipts and catalog definitions; 226 duplicate images were
 removed only after matching the complete candidate's hashes, reclaiming
 124,749,846 bytes.
 
-Before cooking, add the existing shared cloth-morph correction to Peony where
-required. The Genessa helper currently restricts inputs to its W3 meshes and
-the `UG_Skirt` slot, so it cannot simply be run on Peony unchanged. The shared
-graph and runtime contract already exist; preserve those assets while adapting
-the outfit-specific attribute authoring for Peony's two cloth sections. Saved
-morph deltas alone do not prove the cloth render path applies them.
+The [cloth-morph authoring follow-up](2026-10-10-peony-cloth-morph-binding.md)
+now binds both Peony meshes to the unchanged shared graph and supplies the
+fifteen correction buffers. Native authoring and reload checks pass. Before
+cooking, verify GPU output on both cloth sections; saved morph deltas and CPU
+buffers alone do not prove the cloth render path applies them.
 
 ## Inputs and ownership
 

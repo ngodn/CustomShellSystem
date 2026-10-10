@@ -2,10 +2,15 @@
 
 Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Peony's [cloth body-shape binding](2026-10-10-peony-cloth-morph-binding.md)
+passes authoring and fresh-process reload on both normal and facial meshes,
+preserving the original cloth and morph data. GPU/cook/gameplay checks remain;
+the shared graph and installed outfits are unchanged.
+
 Peony's [control and catalog checks](2026-10-10-peony-customization-bindings.md)
 now cover the merged 40 controls, all five palettes, automatic boot height and
 unchanged inherited body/hair data. Native catalog/visibility/profile checks
-pass. Fit, cloth-morph authoring, cooking, facial adapters, Astral support and
+pass. Fit, cloth-morph GPU checks, cooking, facial adapters, Astral support and
 gameplay remain pending; no new outfit is installed.
 
 Latest Peony result: [upper-fit rejection and facial-cloth integration](2026-10-10-peony-upper-fit-and-facial-cloth.md).
