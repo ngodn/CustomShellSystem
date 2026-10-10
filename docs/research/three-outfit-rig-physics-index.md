@@ -1,6 +1,11 @@
 # Three-outfit rig and physics research index
 
-Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
+Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
+
+Peony's [cook preparation](2026-10-11-peony-cook-preparation.md) now has canonical
+normal/facial mesh copies and a complete 109-package editor dependency closure.
+Fresh-process checks preserve geometry, morphs, cloth and deformer buffers.
+Cooking, GPU checks, fit, adapters and gameplay remain open; nothing is installed.
 
 Peony's [walking body-contact comparison](2026-10-10-peony-hip-accessory-fit.md#body-contact-and-secondary-motion-control)
 finds arm/torso crossings near the hip accessories with secondary motion both

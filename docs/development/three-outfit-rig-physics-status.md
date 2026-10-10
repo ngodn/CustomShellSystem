@@ -1,6 +1,6 @@
 # Three-outfit implementation status
 
-Updated 2026-10-10. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
+Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
 Latest installed core: `718f76c3b60a8315`, with the CW hair trial. The user
 reports the requested CW Iris Out/hair/eyes/interruption check looks fine.
@@ -9,6 +9,15 @@ and no catalog, animation or recovery errors. Individual actions were not
 enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
+
+**Cook preparation:** both Peony meshes now have canonical editor copies,
+including `EveSB/Faces/Peony/SK_Facial1` for CSS's facial adapter rule. Authoring
+and fresh-process reload preserve all inspected deformation data and produce
+identical reports. Adding the three missing editor ponytail textures closes
+all 109 package dependencies. The ownership plan separates 55 new outfit assets,
+one shared function, 46 reused cooked dependencies and seven editor-only inputs.
+GPU validation, walking contact, cooking, adapters and gameplay remain open.
+Nothing new is installed. See the [cook-preparation evidence](../research/2026-10-11-peony-cook-preparation.md).
 
 **Walking pose comparison:** the unchanged body already has arm/torso crossings
 near the hip accessories in captured editor walking poses. Repeating the same
