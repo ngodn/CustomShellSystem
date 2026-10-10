@@ -7,6 +7,15 @@ trial. The six previous Eve variants and current CW/Genessa adapters are
 preserved. Installation hashes pass; Peony gameplay acceptance is pending.
 See the [combined-trial evidence](../research/2026-10-11-peony-combined-trial.md).
 
+**October 11 user rejection:** the installed Peony trial is not accepted. The
+user reports an oversized jacket/corset, lower-front body clipping and ragged
+world-space panels. Peony correction now takes priority over Slipstream binding.
+Remove both hip pockets and mechanical arm ornaments; retain gloves, collar,
+heels and ponytail attachment. The user also authorizes a fitted sweetheart
+neckline. These requirements are recorded in the goal's immediate Peony section.
+Private refit work is under Eve's `work/peony-closefit1` through `4`; no replacement
+has been installed. See the [refit evidence](../research/2026-10-11-peony-refit.md).
+
 Previous installed core: `718f76c3b60a8315`, with the CW hair trial. The user
 reports the requested CW Iris Out/hair/eyes/interruption check looks fine.
 The runtime snapshot confirms `SK_Facial1`, available Iris Out/gait choices

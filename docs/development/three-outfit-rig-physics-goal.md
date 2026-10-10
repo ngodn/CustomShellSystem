@@ -224,6 +224,45 @@ Use the references in `CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins
 
 Add both outfits to the current Eve mod alongside its existing six outfits. Inspect the archives before deciding the final component breakdown or display names. Preserve the reference designs and keep original inputs unchanged.
 
+### Immediate Peony correction, October 11
+
+The user rejected the installed Peony trial's fit and world-space cloth behavior.
+Correct these before continuing Slipstream binding. Reuse the earlier Eve
+garment-fitting, skin-weight transfer and body-morph workflows, including the
+Planet Diving Suit work, rather than treating clearance-only expansion as a
+finished body fit. Original inputs and the accepted Eve body remain unchanged.
+
+- Fit the oversized jacket and corset closely to the body. Follow all six CSS
+  body-shape controls, intermediate values and combined settings, plus secondary
+  body motion. Do not enlarge the body to fill oversized clothes.
+- The user authorizes a redesigned corset neckline: a fitted sweetheart curve
+  with a lower center opening for visible cleavage. Preserve the outfit's
+  fabric pattern and trim; avoid the boxy, detached cup silhouette.
+- Remove both hip pockets and exposed mechanical arm ornaments from the outfit
+  mesh and remove their obsolete customization controls. Preserve the hand
+  gloves and neck collar. The user explicitly confirmed keeping the heels and
+  ponytail attachment as they are. Preserve the original source assets.
+- Fix body clipping through the lower front garment, including the thigh and
+  crotch seams. Check body-shape settings and posed movement, not only rest pose.
+- Fix the hanging panels that distort and appear ragged in the game world.
+  Inspect their render/simulation correspondence, anchors, weights, collision
+  and body-morph correction using the established Genessa/Eve work. Keep cloth
+  simulation and the intended panel shape; do not hide or remove the panels as
+  a substitute for this repair.
+
+Evidence includes the screenshots supplied in this conversation and
+`/home/eins0fx/Pictures/screenshot-2026-10-11_03-18-49.png` (world fabric) and
+`/home/eins0fx/Pictures/screenshot-2026-10-11_03-17-44.png` (pocket removal).
+
+**Acceptance:** inspect the final textured outfit from front, side and back in
+CSS/player preview and gameplay. Check neutral, individual slider endpoints,
+intermediate and combined settings, idle/walk/jog/sprint, turns and action
+interruption. Verify normal/facial meshes, Iris Out, eyes, clothing visibility,
+five palettes, glow, saved settings and supported doubles. Record remaining
+defects honestly. Private fitting renders do not establish a runtime fix.
+These corrections supersede preserving the rejected Peony design unchanged;
+the rest of the three-outfit goal remains active.
+
 Each new outfit must have modular, individually removable garment components through CSS customization, allowing the outfit to be undressed, plus **five distinct template color palettes per outfit (ten total)**. Use the established customization and saved-profile behavior. Validate component combinations, palette application, body-shape fit, skin weights, collision, garment physics and animation/facial compatibility in both preview and gameplay. Apply the same performance and regression gates as the existing outfits.
 
 October 9 palette direction: include the user's supplied black-and-white

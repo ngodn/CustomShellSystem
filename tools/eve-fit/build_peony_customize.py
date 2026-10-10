@@ -52,7 +52,12 @@ def build(mesh: dict, plan: dict, palettes: dict, footwear: dict) -> tuple[dict,
         raise ValueError('Mesh and binding material names differ')
     counts = Counter(f[3] for f in mesh['faces'])
     empty = [r['name'] for r in rows if counts[r['slot']] == 0]
-    if set(empty) != {'Peony_leg_panels_Arm', 'Peony_leg_panels_Lower_1'}:
+    merged_empty = {'Peony_leg_panels_Arm', 'Peony_leg_panels_Lower_1'}
+    removed_ornaments = {
+        'Peony_arm_ornaments_Arm', 'Peony_arm_ornaments_Lower_1',
+        'Peony_hip_accessories_Arm', 'Peony_hip_accessories_Lower_1',
+    }
+    if set(empty) not in (merged_empty, merged_empty | removed_ornaments):
         raise ValueError('Unexpected empty slots after merging panel trim into cloth')
     owners = {key: [] for key in PARTS}
     families = {key: [] for key in FAMILIES}
@@ -76,7 +81,8 @@ def build(mesh: dict, plan: dict, palettes: dict, footwear: dict) -> tuple[dict,
         if family not in families:
             raise ValueError('Unknown Peony material family: ' + family)
         families[family].append(slot)
-    if any(not slots for slots in owners.values()) or any(not slots for slots in families.values()):
+    removed_parts = {'arm_ornaments', 'hip_accessories'} if removed_ornaments <= set(empty) else set()
+    if any(not slots for key, slots in owners.items() if key not in removed_parts) or any(not slots for slots in families.values()):
         raise ValueError('Missing wardrobe part or material family')
     boot, = footwear['controls']
     if set(owners['boots']) != set(boot['sections']):
@@ -88,6 +94,8 @@ def build(mesh: dict, plan: dict, palettes: dict, footwear: dict) -> tuple[dict,
         raise ValueError('Covered-foot face identities changed')
     controls = []
     for key, label in PARTS.items():
+        if key in removed_parts:
+            continue
         control = dict(id='toggle_' + key, name=label, kind='toggle', group='outfit',
                        role='piece', default=[1, 0, 0, 1], sections=owners[key])
         if key == 'boots':
