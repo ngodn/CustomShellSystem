@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace css {
 enum class AstralMaterialFamily { authored, uber, eye, smoke, refraction };
@@ -16,6 +17,7 @@ struct AstralMaterialDefinition {
     bool companion_two_sided;
     float clip;
     std::map<std::string,bool> defaults;
+    std::vector<std::string_view> required_textures{};
 };
 struct AstralMaterialState {
     uint8_t blend=0;

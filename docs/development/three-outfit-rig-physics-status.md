@@ -10,6 +10,15 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**Astral runtime integration:** the private core recognizes the four canonical
+Peony parents and their shared companions, with required source-texture checks.
+The Windows core builds; all four roots and thirty palette instances pass the
+portable selection checks. Compiled source/ghost uniform checks pass on SM5/SM6,
+and missing/placeholder-texture controls are rejected. Existing Astral policy
+and lifecycle tests pass. See the [runtime evidence](../research/2026-10-11-peony-astral-runtime.md).
+Live copying/rendering, fit, final assembly and gameplay remain unverified.
+Nothing new is installed.
+
 **Windows cook:** the private Peony cook passes after disabling offline cooker
 worker threading. Two earlier attempts crashed while building facial-mesh
 vertex attributes. Independent IoStore readback verifies both meshes' cloth
@@ -17,13 +26,13 @@ offsets, normal/facial base equality, body morphs, dependencies and Windows
 skin/cloth shaders for all 12 material variants. A second successful cook
 rebuilds both meshes; its 82 non-header payloads and decoded mesh/shader exports
 match the first passing result. See the [cook evidence](../research/2026-10-11-peony-windows-cook.md).
-Final fit, runtime adapters and gameplay remain. Nothing new is installed.
+Final fit, live adapter validation and gameplay remain. Nothing new is installed.
 
 **Astral material preparation:** four Peony ghost parents, four culling variants
 and one mask placeholder pass fresh-process saved-asset checks. A sampler change
 found in the first trial is corrected without changing existing shared textures.
 Source controls and dependencies are preserved. The Windows shader/cook checks
-above pass; rendering and runtime integration remain. See the
+above pass; the runtime integration above is built, but rendering remains. See the
 [Astral evidence](../research/2026-10-11-peony-astral-materials.md).
 
 **Cloth GPU comparison:** all 22 normal/facial held-pose cases pass using 44

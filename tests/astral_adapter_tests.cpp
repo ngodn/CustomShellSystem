@@ -40,15 +40,30 @@ int main(int argc,char** argv) {
           "Unrelated shared path crossed the namespace boundary");
     check(astral_companion_namespace("/Game/CSS/SharedAssets/Astral/Materials/M.M","unknown").empty(),
           "Unknown pose selected companion assets");
+    constexpr std::string_view peony_companion=
+        "/Game/CSS/eins0fx/Shared/Astral/Materials/M_PeonyFabric.M_PeonyFabric";
+    check(astral_companion_namespace(peony_companion,authored_astral_pose)==peony_companion,
+          "Canonical companion was rejected by the consolidated shared pack");
+    check(astral_companion_namespace(peony_companion,legacy_astral_pose).empty(),
+          "Canonical-only companion was invented in the legacy pack");
+    check(astral_companion_namespace(peony_companion,"unknown").empty(),
+          "Canonical companion accepted an unknown pose");
     std::set<std::string_view> roots;
     size_t checked=0;
     for(const auto& spec:astral_material_definitions) {
         check(roots.insert(spec.root).second,"Duplicate material root");
-        check(spec.companion.starts_with("/Game/CSS/SharedAssets/") &&
-              spec.alternate.starts_with("/Game/CSS/SharedAssets/"),"Companion escaped shared namespace");
+        const bool canonical=spec.companion.starts_with(authored_astral_root);
+        const auto companion_root=canonical ? authored_astral_root : legacy_astral_root;
+        check(spec.companion.starts_with(companion_root) && spec.alternate.starts_with(companion_root),
+              "Companion escaped shared namespace");
         check(spec.companion!=spec.alternate,"Culling alternatives share the same asset");
         check(std::any_of(spec.state_id.begin(),spec.state_id.end(),[](auto value){return value!=0;}),
               "Source graph identity is missing");
+        std::set<std::string_view> textures;
+        for(const auto name:spec.required_textures) {
+            check(!name.empty() && !name.starts_with("CSS_"),"Invalid source texture requirement");
+            check(textures.insert(name).second,"Duplicate source texture requirement");
+        }
         AstralMaterialState state{spec.blend,spec.companion_two_sided,false,false,spec.clip,spec.defaults};
         if(spec.family==AstralMaterialFamily::uber) {
             check(!astral_material_rejection(spec,state).empty(),"Virtual texture root was accepted without a VT adapter");
@@ -57,11 +72,12 @@ int main(int argc,char** argv) {
         }
         check(astral_material_companion(spec,state)==spec.companion,"Supported source did not select its parent");
         for(const auto companion:{spec.companion,spec.alternate}) {
-            check(astral_companion_namespace(companion,legacy_astral_pose)==companion,
+            check(astral_companion_namespace(companion,legacy_astral_pose)==
+                  (canonical ? std::string_view{} : companion),
                   "Legacy pack companion changed");
             const auto authored=astral_companion_namespace(companion,authored_astral_pose);
             check(authored==std::string(authored_astral_root)+
-                  std::string(companion.substr(legacy_astral_root.size())),
+                  std::string(companion.substr(companion_root.size())),
                   "Companion did not follow the selected pose pack");
             check(authored.substr(authored.find_last_of('/')+1)==
                   companion.substr(companion.find_last_of('/')+1),"Companion export name changed");
@@ -118,7 +134,7 @@ int main(int argc,char** argv) {
         }
         ++checked;
     }
-    check(checked==13,"Material catalog coverage changed without updating acceptance");
+    check(checked==17,"Material catalog coverage changed without updating acceptance");
     std::cout<<"Astral adapter policy passed for "<<checked<<" source graphs\n";
     if(argc==2) {
         std::ifstream input(argv[1]);
@@ -130,6 +146,18 @@ int main(int argc,char** argv) {
             const auto spec=std::find_if(astral_material_definitions.begin(),astral_material_definitions.end(),
                 [&](const auto& value){return astral_material_root_matches(value.root,root);});
             check(spec!=astral_material_definitions.end(),"Readback root has no catalog entry");
+            for(const auto name:spec->required_textures) {
+                const auto& textures=material.at("parameters").at("texture");
+                const auto found=std::find_if(textures.begin(),textures.end(),[&](const auto& row) {
+                    return row.at("name")==name && row.at("association")=="GlobalParameter" && row.at("index")==-1;
+                });
+                check(found!=textures.end(),"Required source texture is absent from the cooked material");
+                const auto& value=found->at("value");
+                const auto path=value.at(value.contains("ObjectPath") ? "ObjectPath" : "AssetPathName")
+                                     .template get<std::string>();
+                check(path.starts_with("/Game/") && !astral_fallback_texture(path),
+                      "Required source texture is missing or uses a companion placeholder");
+            }
             AstralMaterialState state;
             const auto& base=material.at("base");
             const auto blend=base.at("BlendMode").at("value").get<std::string>();

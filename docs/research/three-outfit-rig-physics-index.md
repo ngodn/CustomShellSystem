@@ -2,6 +2,12 @@
 
 Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Peony's [Astral runtime integration](2026-10-11-peony-astral-runtime.md) builds
+with four new material definitions and source-texture checks. All thirty
+palette instances pass portable selection; cooked SM5/SM6 uniform checks and
+missing-texture negative controls pass. Live copying, rendering, fit and
+package assembly remain. No new trial is installed.
+
 Peony's [Windows cook and readback](2026-10-11-peony-windows-cook.md) now pass
 with offline cooker worker threading disabled. The cooked meshes preserve the
 cloth offsets and normal/facial base data; all 12 material variants contain

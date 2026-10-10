@@ -162,6 +162,8 @@ void AstralMaterialAdapters::prepare(UObject* owner,std::span<UObject* const> so
         const auto companion=astral_companion_namespace(astral_material_companion(*spec,state),pose_path);
         if(companion.empty()) throw std::runtime_error("Invalid Astral companion namespace");
         AstralMaterialInput input{source,retained_load(companion),{},{},{}};
+        for(const auto name:spec->required_textures)
+            input.required_source_textures.push_back(wide(std::string(name)));
         input.textures.push_back({L"CSS_AstralNoise",retained_load(
             "/Game/Sparta/FX/Textures/Noises/BnW/T_noise_0017.T_noise_0017")});
         if(spec->family==AstralMaterialFamily::smoke) input.textures.push_back({L"CSS_EyeNoise",retained_load(

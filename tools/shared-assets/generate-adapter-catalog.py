@@ -64,6 +64,19 @@ for spec in manifest:
               "{" + ",".join("0x" + word + "u" for word in state_id) + "}",
               "AstralMaterialFamily::" + family, str(blend), str(variant["parent_two_sided"]).lower(),
               repr(properties.get("OpacityMaskClipValue", .3333)) + "f", "{" + ",".join(switches) + "}"]
+    required = spec.get("required_source_textures", [])
+    if len(set(required)) != len(required) or any(
+        not isinstance(name, str) or not name or len(name) > 128 or "\0" in name or name.startswith("CSS_")
+        for name in required
+    ):
+        raise ValueError("Invalid required source texture names")
+    if required:
+        textures = cached["RuntimeEntries[3]"]["ParameterInfoSet"]
+        available = {info["Name"] for info in textures
+                     if info["Association"].rsplit("::", 1)[-1] == "GlobalParameter" and info["Index"] == -1}
+        if not set(required) <= available:
+            raise ValueError("Required source texture missing from cooked graph")
+        values.append("{" + ",".join(json.dumps(name) for name in required) + "}")
     rows.append("    {" + ",\n     ".join(values) + "}")
 if len(rows) != len(manifest) - 1 or len(rows) < 11:
     raise ValueError("Expected all root graphs except the alternate Uber masked companion")

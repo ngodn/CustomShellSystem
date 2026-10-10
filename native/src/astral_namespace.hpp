@@ -39,9 +39,12 @@ inline bool astral_fallback_texture(std::string_view path) {
     return path.starts_with("/Game/CSS/SharedAssets/") || path.starts_with(authored_astral_root);
 }
 
-inline std::string astral_companion_namespace(std::string_view legacy,std::string_view pose) {
-    if(!is_astral_pose(pose) || !legacy.starts_with(legacy_astral_root)) return {};
-    if(pose==legacy_astral_pose) return std::string(legacy);
-    return std::string(authored_astral_root)+std::string(legacy.substr(legacy_astral_root.size()));
+inline std::string astral_companion_namespace(std::string_view companion,std::string_view pose) {
+    if(!is_astral_pose(pose)) return {};
+    if(companion.starts_with(authored_astral_root))
+        return pose==authored_astral_pose ? std::string(companion) : std::string{};
+    if(!companion.starts_with(legacy_astral_root)) return {};
+    if(pose==legacy_astral_pose) return std::string(companion);
+    return std::string(authored_astral_root)+std::string(companion.substr(legacy_astral_root.size()));
 }
 }
