@@ -10,11 +10,20 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**Windows cook:** the private Peony cook passes after disabling offline cooker
+worker threading. Two earlier attempts crashed while building facial-mesh
+vertex attributes. Independent IoStore readback verifies both meshes' cloth
+offsets, normal/facial base equality, body morphs, dependencies and Windows
+skin/cloth shaders for all 12 material variants. A second successful cook
+rebuilds both meshes; its 82 non-header payloads and decoded mesh/shader exports
+match the first passing result. See the [cook evidence](../research/2026-10-11-peony-windows-cook.md).
+Final fit, runtime adapters and gameplay remain. Nothing new is installed.
+
 **Astral material preparation:** four Peony ghost parents, four culling variants
 and one mask placeholder pass fresh-process saved-asset checks. A sampler change
 found in the first trial is corrected without changing existing shared textures.
-Source controls and dependencies are preserved. Compilation, rendering, cooking
-and runtime integration remain. See the
+Source controls and dependencies are preserved. The Windows shader/cook checks
+above pass; rendering and runtime integration remain. See the
 [Astral evidence](../research/2026-10-11-peony-astral-materials.md).
 
 **Cloth GPU comparison:** all 22 normal/facial held-pose cases pass using 44
@@ -30,7 +39,7 @@ and fresh-process reload preserve all inspected deformation data and produce
 identical reports. Adding the three missing editor ponytail textures closes
 all 109 package dependencies. The ownership plan separates 55 new outfit assets,
 one shared function, 46 reused cooked dependencies and seven editor-only inputs.
-Walking contact, cooking, adapters and gameplay remain open.
+The Windows cook/readback above passes. Walking contact, adapters and gameplay remain open.
 Nothing new is installed. See the [cook-preparation evidence](../research/2026-10-11-peony-cook-preparation.md).
 
 **Walking pose comparison:** the unchanged body already has arm/torso crossings

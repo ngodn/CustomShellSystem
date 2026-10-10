@@ -15,11 +15,58 @@
 #include "OptimusNodeGraph.h"
 #include "OptimusNodePin.h"
 #include "Rendering/SkeletalMeshRenderData.h"
+#include "Rendering/SkeletalMeshModel.h"
+#include "Rendering/SkeletalMeshLODModel.h"
 #include "Rendering/SkeletalMeshAttributeVertexBuffer.h"
 #include "SkeletalMeshAttributes.h"
 #include "SkinnedAssetCompiler.h"
 #include "UObject/Package.h"
 #include "UObject/UnrealType.h"
+
+FString UCSSRigAuditLibrary::SnapshotVertexAttributeStorage(USkeletalMesh* Mesh)
+{
+    if (!IsRunningCommandlet() || !IsInGameThread() || !IsValid(Mesh))
+        return TEXT("ERROR: commandlet mesh required");
+    USkinnedAsset* Assets[]{Mesh};
+    FSkinnedAssetCompilingManager::Get().FinishCompilation(Assets);
+    const auto* Model = Mesh->GetImportedModel();
+    if (!Model || Model->LODModels.Num() != 1 || !Mesh->GetLODInfo(0))
+        return TEXT("ERROR: expected one imported LOD");
+    const auto& Lod = Model->LODModels[0];
+    TArray<TSharedPtr<FJsonValue>> Rows;
+    bool bValid = true;
+    for (const auto& Info : Mesh->GetLODInfo(0)->VertexAttributes)
+    {
+        const auto* Attribute = Lod.VertexAttributes.Find(Info.Name);
+        auto Row = MakeShared<FJsonObject>();
+        Row->SetStringField(TEXT("name"), Info.Name.ToString());
+        Row->SetBoolField(TEXT("enabled"), Info.IsEnabledForRender());
+        Row->SetBoolField(TEXT("present"), Attribute != nullptr);
+        bool bAttributeValid = Attribute && Attribute->ComponentCount >= 1 && Attribute->ComponentCount <= 4;
+        if (Attribute)
+        {
+            Row->SetNumberField(TEXT("component_count"), Attribute->ComponentCount);
+            Row->SetNumberField(TEXT("values"), Attribute->Values.Num());
+            Row->SetBoolField(TEXT("has_data"), Attribute->Values.GetData() != nullptr);
+            bAttributeValid &= static_cast<int64>(Lod.NumVertices) * Attribute->ComponentCount == Attribute->Values.Num();
+            bAttributeValid &= Attribute->Values.Num() == 0 || Attribute->Values.GetData() != nullptr;
+            if (bAttributeValid)
+                for (float Value : Attribute->Values)
+                    bAttributeValid &= FMath::IsFinite(Value);
+        }
+        Row->SetBoolField(TEXT("valid"), bAttributeValid);
+        if (Info.IsEnabledForRender()) bValid &= bAttributeValid;
+        Rows.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    auto Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("valid"), bValid);
+    Result->SetNumberField(TEXT("imported_vertices"), Lod.NumVertices);
+    Result->SetArrayField(TEXT("attributes"), MoveTemp(Rows));
+    FString Output;
+    const auto Writer = TJsonWriterFactory<>::Create(&Output);
+    FJsonSerializer::Serialize(Result, Writer);
+    return Output;
+}
 
 FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots)
 {

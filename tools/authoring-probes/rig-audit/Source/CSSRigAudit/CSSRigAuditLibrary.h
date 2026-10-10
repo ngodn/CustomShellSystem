@@ -39,6 +39,9 @@ public:
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString CheckClothBasisBuffers(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots);
 
+    UFUNCTION(BlueprintCallable, Category = "CSS Rig Audit")
+    static FString SnapshotVertexAttributeStorage(class USkeletalMesh* Mesh);
+
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,
         bool bMatchACLSampleClock = false);

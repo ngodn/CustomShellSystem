@@ -2,8 +2,9 @@
 
 Four Peony ghost parents and four opposite-culling instances now pass saved
 asset verification in a fresh UE 5.6.1 process. They are private editor assets,
-not installed or accepted in the game. Shader compilation, rendered appearance,
-Windows cooking and runtime catalog registration remain.
+not installed or accepted in the game. The later
+[Windows cook/readback](2026-10-11-peony-windows-cook.md) passes shader and
+dependency checks. Rendered appearance and runtime catalog registration remain.
 
 ## Ownership and behavior
 

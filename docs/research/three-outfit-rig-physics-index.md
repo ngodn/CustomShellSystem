@@ -2,10 +2,17 @@
 
 Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Peony's [Windows cook and readback](2026-10-11-peony-windows-cook.md) now pass
+with offline cooker worker threading disabled. The cooked meshes preserve the
+cloth offsets and normal/facial base data; all 12 material variants contain
+Windows skin/cloth shaders. Final fit, rendering, runtime adapters and gameplay
+remain open. No new trial is installed.
+
 Peony's [Astral companions](2026-10-11-peony-astral-materials.md) pass fresh
 reload after correcting a saved mask-sampler mismatch. Four parents and their
 culling variants preserve customization controls and shared-only dependencies.
-Compilation, rendering, cooking and runtime integration remain unverified.
+Windows compilation and cook/readback now pass as recorded above. Rendering
+and runtime integration remain unverified.
 
 Peony's [cloth GPU comparison](2026-10-11-peony-cloth-gpu.md) passes 22
 normal/facial cases and two negative controls. Cloth corrections match exported
@@ -15,7 +22,8 @@ This does not accept moving contact, shading, performance or gameplay.
 Peony's [cook preparation](2026-10-11-peony-cook-preparation.md) now has canonical
 normal/facial mesh copies and a complete 109-package editor dependency closure.
 Fresh-process checks preserve geometry, morphs, cloth and deformer buffers.
-Cooking, fit, adapters and gameplay remain open; nothing is installed.
+Cooking is covered by the later readback above. Fit, adapters and gameplay
+remain open; nothing is installed.
 
 Peony's [walking body-contact comparison](2026-10-10-peony-hip-accessory-fit.md#body-contact-and-secondary-motion-control)
 finds arm/torso crossings near the hip accessories with secondary motion both
