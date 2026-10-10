@@ -10,13 +10,20 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**Cloth GPU comparison:** all 22 normal/facial held-pose cases pass using 44
+GPU readbacks. The shared graph restores the expected cloth morph offsets,
+with a maximum 0.014997 cm residual and no non-cloth position changes. Both
+negative controls detect missing correction. Moving contact, shading,
+performance and gameplay remain unverified. See the
+[GPU evidence](../research/2026-10-11-peony-cloth-gpu.md).
+
 **Cook preparation:** both Peony meshes now have canonical editor copies,
 including `EveSB/Faces/Peony/SK_Facial1` for CSS's facial adapter rule. Authoring
 and fresh-process reload preserve all inspected deformation data and produce
 identical reports. Adding the three missing editor ponytail textures closes
 all 109 package dependencies. The ownership plan separates 55 new outfit assets,
 one shared function, 46 reused cooked dependencies and seven editor-only inputs.
-GPU validation, walking contact, cooking, adapters and gameplay remain open.
+Walking contact, cooking, adapters and gameplay remain open.
 Nothing new is installed. See the [cook-preparation evidence](../research/2026-10-11-peony-cook-preparation.md).
 
 **Walking pose comparison:** the unchanged body already has arm/torso crossings
@@ -31,8 +38,8 @@ or adding arm IK. The accessory fit remains unaccepted. See the
 cloth-morph graph binding and fifteen Float attribute buffers to both Peony
 meshes. Native authoring and fresh-process reload preserve all source/render
 data, the 22/137 morphs and both cloth simulations. Buffer checks verify finite
-values, morph agreement and zero correction outside the fabric sections. GPU,
-cook and gameplay validation remain. This does not fix the walking-arm contact
+values, morph agreement and zero correction outside the fabric sections. The
+GPU check above passes; cook and gameplay validation remain. This does not fix the walking-arm contact
 defect or install a new trial. See the [cloth-binding evidence](../research/2026-10-10-peony-cloth-morph-binding.md).
 
 **Control integration:** `peony-catalog4` adds Peony to the unchanged six-variant
@@ -41,7 +48,7 @@ automatic footwear-height rule. Its inherited body/hair geometry, UVs, weights,
 22 morphs and skeleton match the source exactly. The native catalog check passes
 2,048 visibility/height combinations and 10,240 palette/profile cases. Earlier
 UE 5.6.1 readback confirms 170 parameter values across 30 wardrobe materials.
-Peony cloth-morph GPU checks, fit, cooking, facial adapter registration, Astral
+Peony fit, cooking, facial adapter registration, Astral
 support and gameplay checks remain. Nothing new is installed. See the
 [binding evidence](../research/2026-10-10-peony-customization-bindings.md).
 

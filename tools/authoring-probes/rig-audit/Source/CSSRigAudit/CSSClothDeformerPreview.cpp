@@ -14,12 +14,23 @@
 #include "OptimusDeformerInstance.h"
 #include "Serialization/JsonSerializer.h"
 
+namespace
+{
+bool IsClothPreviewMesh(const USkeletalMesh* Mesh)
+{
+    if (!Mesh) return false;
+    const FString Path = Mesh->GetPathName();
+    return Path.StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
+        Path == TEXT("/Game/CSS/eins0fx/EveSB/Peony/Meshes/SK_Peony_BasisStudy3.SK_Peony_BasisStudy3") ||
+        Path == TEXT("/Game/CSS/eins0fx/EveSB/Peony/Meshes/SK_Peony_Face_BasisStudy3.SK_Peony_Face_BasisStudy3");
+}
+}
+
 bool UCSSRigAuditLibrary::SetClothStudyDeformer(USkeletalMeshComponent* Component, UMeshDeformer* Deformer)
 {
     if (!IsRunningCommandlet() || !IsInGameThread() || !Component ||
         !Component->GetWorld() || !Component->GetWorld()->IsPreviewWorld() ||
-        !Component->GetSkeletalMeshAsset() ||
-        !Component->GetSkeletalMeshAsset()->GetPathName().StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")))
+        !IsClothPreviewMesh(Component->GetSkeletalMeshAsset()))
         return false;
     Component->SetMeshDeformer(Deformer);
     return (Component->GetMeshDeformerInstance() != nullptr) == (Deformer != nullptr);
@@ -29,8 +40,7 @@ bool UCSSRigAuditLibrary::RequestClothDeformerReadback(USkeletalMeshComponent* C
 {
     if (!IsRunningCommandlet() || !IsInGameThread() || !Component ||
         !Component->GetWorld() || !Component->GetWorld()->IsPreviewWorld() ||
-        !Component->GetSkeletalMeshAsset() || !Component->GetMeshDeformerInstance() ||
-        !Component->GetSkeletalMeshAsset()->GetPathName().StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
+        !IsClothPreviewMesh(Component->GetSkeletalMeshAsset()) || !Component->GetMeshDeformerInstance() ||
         Label.IsEmpty() || Label.Len() > 96)
         return false;
     for (TCHAR Character : Label)
@@ -86,10 +96,9 @@ FString UCSSRigAuditLibrary::StepClothDeformerStudy(USkeletalMeshComponent* Comp
 {
     if (!IsRunningCommandlet() || !IsInGameThread() || !Component ||
         !Component->GetWorld() || !Component->GetWorld()->IsPreviewWorld() ||
-        !Component->GetSkeletalMeshAsset() ||
-        !Component->GetSkeletalMeshAsset()->GetPathName().StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
+        !IsClothPreviewMesh(Component->GetSkeletalMeshAsset()) ||
         (!AdvanceSimulation && (Initialize || ResetCloth)))
-        return TEXT("ERROR: expected an isolated Genessa facial mesh preview");
+        return TEXT("ERROR: expected an isolated supported cloth mesh preview");
 
     if (Initialize)
     {

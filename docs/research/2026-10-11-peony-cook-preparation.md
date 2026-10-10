@@ -2,7 +2,8 @@
 
 The private `peony-cookprep1` editor project has complete package dependencies
 and canonical mesh paths. It is not cooked, installed or accepted for gameplay.
-Walking arm contact and the running GPU cloth check remain open.
+Walking arm contact remains open. The subsequent
+[GPU cloth comparison](2026-10-11-peony-cloth-gpu.md) passes its held-pose checks.
 
 ## Mesh paths and preservation
 

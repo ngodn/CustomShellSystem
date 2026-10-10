@@ -2,10 +2,15 @@
 
 Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Peony's [cloth GPU comparison](2026-10-11-peony-cloth-gpu.md) passes 22
+normal/facial cases and two negative controls. Cloth corrections match exported
+morphs, non-cloth positions remain unchanged, and source assets are preserved.
+This does not accept moving contact, shading, performance or gameplay.
+
 Peony's [cook preparation](2026-10-11-peony-cook-preparation.md) now has canonical
 normal/facial mesh copies and a complete 109-package editor dependency closure.
 Fresh-process checks preserve geometry, morphs, cloth and deformer buffers.
-Cooking, GPU checks, fit, adapters and gameplay remain open; nothing is installed.
+Cooking, fit, adapters and gameplay remain open; nothing is installed.
 
 Peony's [walking body-contact comparison](2026-10-10-peony-hip-accessory-fit.md#body-contact-and-secondary-motion-control)
 finds arm/torso crossings near the hip accessories with secondary motion both
@@ -15,13 +20,13 @@ packages remain unchanged.
 
 Peony's [cloth body-shape binding](2026-10-10-peony-cloth-morph-binding.md)
 passes authoring and fresh-process reload on both normal and facial meshes,
-preserving the original cloth and morph data. GPU/cook/gameplay checks remain;
+preserving the original cloth and morph data. The GPU check above passes; cook/gameplay checks remain;
 the shared graph and installed outfits are unchanged.
 
 Peony's [control and catalog checks](2026-10-10-peony-customization-bindings.md)
 now cover the merged 40 controls, all five palettes, automatic boot height and
 unchanged inherited body/hair data. Native catalog/visibility/profile checks
-pass. Fit, cloth-morph GPU checks, cooking, facial adapters, Astral support and
+pass. Fit, cooking, facial adapters, Astral support and
 gameplay remain pending; no new outfit is installed.
 
 Latest Peony result: [upper-fit rejection and facial-cloth integration](2026-10-10-peony-upper-fit-and-facial-cloth.md).
