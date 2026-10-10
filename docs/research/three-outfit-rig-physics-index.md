@@ -2,6 +2,11 @@
 
 Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Peony's [wardrobe binding checks](2026-10-10-peony-customization-bindings.md)
+now cover ten garment switches, five palettes, all visibility combinations and
+native material parameter defaults. This is a private fragment; body/hair/physics
+integration, footwear placement, fit, cooking and gameplay are still pending.
+
 Latest Peony result: [upper-fit rejection and facial-cloth integration](2026-10-10-peony-upper-fit-and-facial-cloth.md).
 Both closer-fitting panel trials are rejected. The retained combined cloth
 candidate now includes all 115 facial expressions; fresh native readback

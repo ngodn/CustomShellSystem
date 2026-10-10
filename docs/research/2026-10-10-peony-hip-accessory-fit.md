@@ -1,5 +1,50 @@
 # Peony hip accessory fit
 
+## Latest result
+
+The retained candidate is still fit11/native2. The follow-ups below do not
+resolve walking arm contact and are not installed.
+
+`peony-hipfit13` first measured exits for the 95 walk-frame-128 witnesses.
+Nearest arm-surface exits plus 0.1 cm clear those original points in both
+the posed and inverse-skinned bind checks, but this is not a whole-accessory
+contact result. Forward exits also clear those witnesses, requiring up to
+5.508465 cm displacement. Rearward and inward directions leave points inside.
+The source left/right accessories are not exact mirrors: nearest mirrored
+source-point distance reaches 0.747425 cm. A forced symmetry mapping was rejected.
+
+The subsequent left-only local forward fit moves small hardware rigidly and
+solves a smooth offset field on the main plate. It reverses one triangle,
+reduces one triangle's area to 0.059995 of its original area, and reaches an
+old/new normal dot of -0.303877. Reject this geometry before further import or
+contact testing. Its exact raw mesh was losslessly archived and rehashed before
+removal, reclaiming 103,420,760 logical bytes. The recipe, witnesses and
+`archive-receipt.json` remain in that folder. Fit11 is unchanged.
+
+Two further probes preserve each accessory's shape, restore the upper mount to
+0.25 cm from the corset, and refresh body-surface weights. Whole-body winding is
+evaluated on every unique accessory point at the same walk frame, with a
+0.02 cm penetration threshold:
+
+| Probe | Change | Inside points | Maximum depth (cm) |
+| --- | --- | --- | --- |
+| Retained fit11 neutral geometry/weights | None | 95 | 2.193505 |
+| fit14 | 5-degree forward pitch | 99 | 1.994200 |
+| fit14 | 10-degree forward pitch | 124 | 2.230783 |
+| fit14 | 15-degree forward pitch | 155 | 2.439510 |
+| fit15 | 2 cm forward mount slide | 94 | 1.817295 |
+| fit15 | 4 cm forward mount slide | 72 | 1.863975 |
+| fit15 | 6 cm forward mount slide | 138 | 2.462271 |
+
+The forward slide is projected onto the corset, so its requested distance is
+not the final XYZ displacement. Exact per-side transforms are saved in each
+`placement-probe.json`. The 4 cm slide reduces witnesses but does not resolve
+contact; neither probe is a complete repair. These are one-pose probes without
+new meshes, native imports, morph-limit tests or gameplay changes. Both Blender
+processes exited successfully. Their source/clip hashes are recorded.
+
+## Initial diagnosis
+
 The user's circled flaps belong to material 29,
 `Peony_hip_accessories_Lower_1`. They are distinct from the simulated fabric
 sections in slots 34/38. This is an outfit geometry issue, not a CSS UI setting.

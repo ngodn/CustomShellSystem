@@ -10,6 +10,19 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**Wardrobe integration:** a private fragment now provides ten garment switches,
+five colors and seven material controls, with all five Peony palettes. CSS's
+current native control code passes all 1,024 switch combinations and 5,120
+palette/visibility checks. UE 5.6.1 reads back 170 expected parameter values
+across 30 saved material instances. Full body/hair/physics control integration,
+boot-dependent ground placement, cooking and gameplay checks remain. See the
+[binding evidence](../research/2026-10-10-peony-customization-bindings.md).
+
+**Rejected accessory follow-ups:** local forward displacement folds one
+triangle, and 5/10/15-degree rigid forward pitches increase walk-frame contact
+counts. A 4 cm forward slide reduces the count from 95 to 72, but does not clear
+the arm. None changes the retained fit11/native2 candidate or installed files.
+
 **Body-slider follow-up:** `peony-hipfit11` adds the accessories' missing
 body-shape deltas and smooths them without changing the retained neutral fit or
 weights. Neutral, all six individual slider maxima and the all-max combination
