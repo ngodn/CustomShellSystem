@@ -2,7 +2,15 @@
 
 Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
-Latest Peony result: the [joint-coverage trial](2026-10-10-peony-joint-coverage.md)
+Latest Peony result: the [surface-coverage follow-up](2026-10-10-peony-surface-coverage.md)
+passes all six selected-panel gait strain screens at four iterations, with
+sampled leg contact clear. Upper attachment overlap with the walking arm
+remains. Its weights already match the source body's surface transfer, so a
+repeat transfer is rejected as a repair. A combined saved mesh passes native
+preservation readback and all six saved-binding gait strain/anchor checks. No new game trial is
+installed.
+
+Preceding Peony result: the [joint-coverage trial](2026-10-10-peony-joint-coverage.md)
 passes five of six selected-panel gait screens at four iterations; the targeted
 right-sprint eight-iteration control passes too. Sampled left sprint contact
 is clear, but right contact and upper attachment fit remain unaccepted. The

@@ -10,7 +10,17 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
-The newer [joint-coverage trial](../research/2026-10-10-peony-joint-coverage.md)
+The [surface-coverage follow-up](../research/2026-10-10-peony-surface-coverage.md)
+now passes all six selected-panel gait strain checks at four iterations.
+Right walk/sprint sampled contact is clear. Left sampled leg contact is
+clear after retaining the original hip-endpoint radius, but upper attachment
+overlap with the walking arm remains. Repeating surface-weight transfer does
+not fix those already correctly weighted attachments. A combined mesh is
+saved with the new colliders and passes preservation readback plus all six
+saved-binding gait strain/anchor checks. Nothing is installed. Keep the game closed
+until a complete trial is ready.
+
+The preceding [joint-coverage trial](../research/2026-10-10-peony-joint-coverage.md)
 adds body-fitted hip/knee capsule endpoints and directs own-calf contact.
 Five of six selected-panel gait screens pass at four iterations; a targeted
 right-sprint eight-iteration control also passes. Left sprint frame 78 now
@@ -18,7 +28,7 @@ has no sampled mapped-body penetration, and left walking's remaining leg
 depth falls to 0.826 cm. Right contact still fails, and the upper attachment
 has both skinned and simulated intersections. The largest fully skinned
 witnesses are unchanged by the collision work. No combined candidate is saved
-or installed yet; this is progress, not fit acceptance.
+or installed at that stage; this was progress, not fit acceptance.
 
 The following paragraphs record the preceding saved candidate.
 
