@@ -5,6 +5,46 @@
 The retained candidate is still fit11/native2. The follow-ups below do not
 resolve walking arm contact and are not installed.
 
+### Body contact and secondary-motion control
+
+`peony-hipfit16` checks the inherited body independently of the accessories.
+It skins the unchanged body using captured native poses, selects disjoint
+arm-weighted and torso-weighted triangle sets, and checks triangle intersections.
+The BVH supplies candidates only; segment/triangle intersections supply the
+reported witnesses. Positive and separated controls exercise that narrow phase.
+The [Blender BVH API](https://docs.blender.org/api/main/mathutils.bvhtree.html)
+documents the broad-phase operation used here.
+
+| Captured pose | Crossing triangle pairs |
+| --- | ---: |
+| Bind | 0 |
+| Walk frame 0 | 158 |
+| Walk frame 128 | 213 |
+| Sprint frame 78 | 28 |
+
+At walk frame 128, forty crossing pairs are within 3 cm of the accessory's
+existing penetration witnesses. The closest distance is 1.588 cm. The inherited
+body itself therefore intersects near the accessory problem in this captured
+pose; repeated accessory translations cannot be judged independently of it.
+These counts are triangle pairs, not independent penetrations or penetration
+depths. Transition vertices, coplanar contact and unsampled poses are excluded.
+
+`peony-motionstate1` repeats 129 walking frames with the native post-process
+blueprint disabled and enabled on the same retained mesh. The commandlet exits
+zero and preserves its inputs. Secondary motion changes hair, chest, abdomen,
+glute, thigh-twist and left-finger transforms, but not the upper/lower arms.
+Frame 128 has 213 crossing pairs and forty pairs near the accessory in both
+captures. The nearest distance changes only from 1.588 to 1.593 cm. Secondary
+motion does not resolve this sampled contact and is not its demonstrated cause.
+
+This is single-node editor playback, not the game's complete animation graph
+or an in-game reproduction. Do not change shared gait motion or add runtime arm
+IK based on this alone. The next fit decision needs the actual walking pose and
+attachment behavior considered together. The current fit is still unaccepted.
+Both stages have `validation-receipt.json`; the receipts pin nine probe files
+and 129 native-stage files after rechecking the recorded input hashes. Original
+sources and installed packages remain unchanged.
+
 `peony-hipfit13` first measured exits for the 95 walk-frame-128 witnesses.
 Nearest arm-surface exits plus 0.1 cm clear those original points in both
 the posed and inverse-skinned bind checks, but this is not a whole-accessory

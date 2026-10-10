@@ -2,6 +2,12 @@
 
 Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Peony's [walking body-contact comparison](2026-10-10-peony-hip-accessory-fit.md#body-contact-and-secondary-motion-control)
+finds arm/torso crossings near the hip accessories with secondary motion both
+disabled and enabled. This narrows the offline fit diagnosis; it does not verify
+the game's complete pose or accept the accessory fit. Sources and installed
+packages remain unchanged.
+
 Peony's [cloth body-shape binding](2026-10-10-peony-cloth-morph-binding.md)
 passes authoring and fresh-process reload on both normal and facial meshes,
 preserving the original cloth and morph data. GPU/cook/gameplay checks remain;

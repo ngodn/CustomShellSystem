@@ -10,6 +10,14 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**Walking pose comparison:** the unchanged body already has arm/torso crossings
+near the hip accessories in captured editor walking poses. Repeating the same
+clip with post-process physics enabled leaves the sampled crossing count
+unchanged. Secondary motion is not the demonstrated cause. This is not the
+game's full animation graph, so it does not justify altering shared gait motion
+or adding arm IK. The accessory fit remains unaccepted. See the
+[body-contact evidence](../research/2026-10-10-peony-hip-accessory-fit.md#body-contact-and-secondary-motion-control).
+
 **Cloth body-shape integration:** `peony-clothmorph1` adds the existing shared
 cloth-morph graph binding and fifteen Float attribute buffers to both Peony
 meshes. Native authoring and fresh-process reload preserve all source/render
