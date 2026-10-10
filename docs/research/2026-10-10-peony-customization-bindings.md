@@ -1,9 +1,60 @@
 # Peony wardrobe controls and material bindings
 
-This is a validated wardrobe fragment, not an installed outfit or a complete
-release catalog. Eve body/hair/physics controls, footwear-dependent placement,
-final cooking and gameplay checks remain. The hip-accessory contact repair is
-still open.
+The wardrobe fragment is now merged into a private seven-variant Eve catalog
+under `work/peony-catalog4`. This is not an installed outfit or a complete
+release package. Fit, final cooking, facial adapter registration, Astral support
+and gameplay checks remain. The hip-accessory contact repair is still open.
+
+## Complete control merge
+
+`tools/eve-fit/assemble_peony_catalog.py` retains all six existing variants and
+adds Peony with 40 controls: the 22 wardrobe controls below, six body shapes,
+six skin/hair colors, five existing rig controls and hair visibility. Hiding
+hair also hides its sword accessory, avoiding an accessory floating without
+the ponytail. The new variant retains the donor's shared animation references.
+
+The builder compares Peony's inherited body/hair with the accepted Skin Suit
+interchange before reusing its dye masks and controls: 93,355 points, 115,429
+ordered triangles, 379 bones, weights, UVs, corner normals/colors and all 22
+authored morphs agree exactly. Deliberately changed body positions, UVs,
+weights and morph deltas are rejected. This proves preservation of these
+inputs, not new gameplay physics or material rendering.
+
+Nine dye surfaces use 13 existing resources. The full seven-variant catalog
+retains all 106 dye resources and the existing thumbnail, with verified hashes.
+The covered-foot alias uses its original foot dye surface; boot lining uses
+the matching leg material's skin surface. No garment receives an anatomical
+dye surface. Existing six-variant definitions remain unchanged; no shipping
+version or container identities are changed.
+
+The previously implemented CSS `ground_offset_toggle` rule is now connected to
+Peony's `toggle_boots`, with shown height 9.769743204116821 cm and hidden height
+0. This reuses commit `c95fe26`, rather than adding another runtime height path.
+Manual Ground Height keeps priority. Earlier paragraphs about missing automatic
+placement describe the initial fragment; gameplay contact and doubles placement
+still need verification.
+
+The current native catalog loader reads the new catalog successfully.
+`tools/eve-fit/check_peony_catalog.cpp` tests all 2,048 combinations of the ten
+garment toggles plus hair, including correct boot coverage and authored height.
+All 10,240 palette/profile combinations preserve visibility, height and the 17
+inherited body/hair color, shape and rig controls. Moving between booted and
+barefoot placement restores the original component height without accumulation.
+This is a host check of the actual CSS control/catalog functions, not a live
+Unreal component test.
+
+Evidence is `assembly-receipt.json`, `native-checks.json`, `build-command.json`
+and `cleanup.json` under `work/peony-catalog4`. Intermediate candidates 1-3
+retain their small receipts and catalog definitions; 226 duplicate images were
+removed only after matching the complete candidate's hashes, reclaiming
+124,749,846 bytes.
+
+Before cooking, add the existing shared cloth-morph correction to Peony where
+required. The Genessa helper currently restricts inputs to its W3 meshes and
+the `UG_Skirt` slot, so it cannot simply be run on Peony unchanged. The shared
+graph and runtime contract already exist; preserve those assets while adapting
+the outfit-specific attribute authoring for Peony's two cloth sections. Saved
+morph deltas alone do not prove the cloth render path applies them.
 
 ## Inputs and ownership
 

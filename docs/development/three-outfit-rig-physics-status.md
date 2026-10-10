@@ -10,12 +10,14 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
-**Wardrobe integration:** a private fragment now provides ten garment switches,
-five colors and seven material controls, with all five Peony palettes. CSS's
-current native control code passes all 1,024 switch combinations and 5,120
-palette/visibility checks. UE 5.6.1 reads back 170 expected parameter values
-across 30 saved material instances. Full body/hair/physics control integration,
-boot-dependent ground placement, cooking and gameplay checks remain. See the
+**Control integration:** `peony-catalog4` adds Peony to the unchanged six-variant
+Eve catalog with 40 controls, nine dye surfaces, five palettes and the existing
+automatic footwear-height rule. Its inherited body/hair geometry, UVs, weights,
+22 morphs and skeleton match the source exactly. The native catalog check passes
+2,048 visibility/height combinations and 10,240 palette/profile cases. Earlier
+UE 5.6.1 readback confirms 170 parameter values across 30 wardrobe materials.
+Peony cloth-morph authoring, fit, cooking, facial adapter registration, Astral
+support and gameplay checks remain. Nothing new is installed. See the
 [binding evidence](../research/2026-10-10-peony-customization-bindings.md).
 
 **Rejected accessory follow-ups:** local forward displacement folds one
