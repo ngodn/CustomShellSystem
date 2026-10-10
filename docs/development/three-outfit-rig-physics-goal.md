@@ -308,6 +308,22 @@ When this item is reached, reproduce with that loadout and visibility setting; c
 
 **Acceptance:** no unintended hovering axe through those transitions; the intended weapon and effects remain visible when appropriate, charged shots and aiming work normally, and other sidearms/visibility modes retain their behavior. Record reproduction evidence, the actual cause and regression results. Keep this item queued if not yet investigated; do not describe it as fixed merely because the main goal is ready.
 
+## Low-priority follow-up: Naylshotte Tarstone effects while hidden
+
+**Status:** queued from the user's October 11 report, not reproduced or diagnosed. Investigate alongside the Trebuchaxe visibility issue after the current Peony work. A shared cause has not been established.
+
+With Naylshotte visibility set to **Only when in use**, the user reports a lingering Tarstone effect while the sidearm should be hidden. The supplied world screenshot shows an orange, weapon-shaped effect behind the character's shoulder. The loadout screenshots identify **Barrage Stone, Level 3** in the top slot and **Emberseed Stone, Level 3** in the second slot. The third slot's name is unconfirmed; do not infer it from its icon. Emberseed's displayed permanent-infusion upgrade is relevant reproduction context, not proof of the cause.
+
+Evidence:
+
+- `/home/eins0fx/Pictures/screenshot-2026-10-11_04-04-11.png` (Emberseed Stone/loadout).
+- `/home/eins0fx/Pictures/screenshot-2026-10-11_04-04-03.png` (Barrage Stone/loadout).
+- World screenshot attached to the same user report (local path not supplied).
+
+Identify the lingering object's owner and lifecycle before changing visibility logic. Check attached components, independently spawned effects and material overlays, including effects created after the sidearm has been hidden. Compare visibility modes, no Tarstones and individual stones through equip, aim/fire, stow, weapon swaps, form changes and save/reload. Preserve the infusion and its gameplay effects; do not suppress unrelated projectiles or world effects to hide the symptom.
+
+**Acceptance:** the hidden sidearm's attached visuals no longer linger, appropriate weapon effects return when it is in use, and infusion, damage, aiming and firing retain their behavior. Check other sidearms and the Trebuchaxe report separately. Record the actual cause and regression results; keep this queued until investigated and verified.
+
 ## Low-priority follow-up: Zhirelle and Merrick appearances
 
 **Status:** queued at the user's request on October 11. Eve remains the current priority. The requested targets are **Zhirelle and Merrick** under the existing **SHELL > Use NPC/Enemy** selector. Also support other NPCs that use the same skeleton as either target and pass the compatibility checks below. This is not a general expansion to NPCs with other skeletons.

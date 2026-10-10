@@ -18,7 +18,18 @@ The lower-front cause is isolated: an earlier radial fitting step stretched
 small fabric edges across the thigh. `peony-lower-recovery2` rebuilds from the
 preserved aligned garment; seven individual body-shape checks, source
 preservation and neutral/combined-slider/walking previews are recorded.
-Large-bust upper trim, full material/cloth review and gameplay checks remain.
+`peony-strip1` also removes the panel-mounted mechanical clips and rods while
+preserving all other interchange fields. Its wardrobe fragment retains 20
+controls and five palettes, with the removed parts' controls and bindings gone.
+`peony-refitnative1` has imported the repaired mesh and rebuilt cloth. Exact
+retained cloth geometry, weights, mappings, morphs and simulation settings pass
+comparison; each panel loses only its 346 reviewed hardware triangles. The
+facial variant retains 22 authored morphs and adds 115 expression shapes.
+Fresh facial and authored-morph readbacks pass on both meshes, including rejection
+of a deliberately altered expected delta. Cloth-basis authoring and fresh reload
+also pass in `peony-clothmorph2`, retaining existing data on both meshes and the
+shared graph. GPU validation, Windows cooking, full material review and gameplay
+checks remain. Upper contacts still need visual review.
 No replacement has been installed. See the
 [refit evidence](../research/2026-10-11-peony-refit.md).
 

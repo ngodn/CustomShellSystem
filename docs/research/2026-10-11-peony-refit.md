@@ -114,10 +114,65 @@ its center. Neutral and maximum-breast renders are retained. The large-bust
 underbust result is still not accepted: a targeted body-contact probe finds
 small contacts on components 70/71, and trim-to-fabric appearance needs work.
 
+The later isolated diffuse renders identify components 70/71 as ordinary round
+decorative buttons, not robotic ornaments. Their measured contacts include
+embedded backs. The maximum-body monochrome preview shows much of the apparent
+underbust break is trim occluded by the larger cup shape. This narrows the
+remaining review; it does not establish continuous-motion clearance. A denser
+primary-fabric probe also includes internal caps excluded by the original
+fitter, so its raw contact count must not be treated as a visible-defect count.
+
 `cloth-sprint78` replays the retained two-panel geometry composite against the
 repaired assembly. The source composite uses matching body poses from separate
 full-component runs, not a simultaneous game render. It preserves a useful
 cloth/garment comparison without proving current gameplay behavior.
+
+## Remaining mechanical fittings and native rebuild
+
+The isolated textured component renders in `peony-decoration-review1` identify
+additional mechanical rods and clips already merged into the two panel slots.
+`strip_peony_panel_hardware.py` removes these source components:
+
+- Arm: 26, 27.
+- Lower 1: 35, 41, 46, 50, 62, 67.
+- Lower 2: 7, 8, 25, 26, 27, 28.
+
+`peony-strip1/assembly` combines the closefit6 upper, recovered lower garment
+and this removal. Its mesh SHA-256 is
+`ec30879a114e39170178982c1ceb251fe7bd2af090dcf8d88bb36d662ff41577`.
+The exact comparison in `preservation.json` verifies removal of 692 triangles
+from panel material slots 34/38, with every other interchange field unchanged.
+This preserves the actual fabric, point IDs, skeleton, UVs, weights and morphs.
+It is additional to the earlier removal of 11,430 ornament/pocket triangles.
+
+The regenerated wardrobe fragment has 20 controls and five palettes. Its
+comparison matches the prior fragment exactly after removing the two ornament
+toggles and color bindings to their four empty slots. The initial comparison
+omitted the expected empty-slot binding removal and failed; the subsequent
+comparison accounts for those specific changes, not arbitrary differences.
+
+`peony-refitnative1` stages this mesh with 115 hash-verified dependencies from
+the retained native project. Import and material/skeleton/physics binding,
+cloth rebuilding and facial assembly have completed. Native verification shows:
+
+- Each panel loses exactly 346 reviewed hardware triangles, leaving 2,319
+  triangles and 1,578 render vertices. The retained oriented triangles and
+  combined position/weight/mapping/morph records match the previous build.
+- Simulation particles, maps, settings, physics references and the 115 staged
+  dependencies are unchanged. New cloth GUIDs and buffer offsets are expected.
+- Normal and facial cloth inspections match, excluding the mesh asset name.
+- All 115 facial shapes and 22 authored morphs survive fresh loading. The
+  authored morph check reads 97,990 built deltas on each mesh; deliberately
+  changing an expected delta by 0.1 cm is rejected on both.
+
+`native-verification.json` and `study-receipt.json` record the scope and hashes.
+`peony-clothmorph2` regenerates the repaired meshes' cloth body-morph buffers
+using the retained shared deformer. Authoring and fresh reload both pass: each
+mesh has two cloth sections and 15 enabled buffer attributes, with all existing
+mesh/rig/morph/cloth data preserved. The shared graph and 146 protected inputs
+are unchanged. Its `validation-receipt.json` freezes the results and recipes.
+GPU validation, Windows cooking, material review and gameplay remain pending.
+No replacement is installed.
 
 `assemble_peony_refit.py` applies only jacket/corset coordinates and their six
 morph endpoints to the retained `peony-hipfit11` interchange. The collar stays
