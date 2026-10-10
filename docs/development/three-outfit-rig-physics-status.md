@@ -10,6 +10,15 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+The [upper-fit and facial-cloth follow-up](../research/2026-10-10-peony-upper-fit-and-facial-cloth.md)
+rejects both closer-fitting upper-panel candidates. One collapses folds; the
+smoothed candidate adds contact defects and fails two gait strain screens.
+The retained combined cloth candidate now also has a saved facial mesh with
+all 115 expressions and 22 original morphs. Fresh native checks preserve its
+cloth geometry, mappings, settings and rig references exactly; all 117 staged
+dependencies remain unchanged. Upper contact is still open. Nothing new is
+installed, and no game launch is needed yet.
+
 The [surface-coverage follow-up](../research/2026-10-10-peony-surface-coverage.md)
 now passes all six selected-panel gait strain checks at four iterations.
 Right walk/sprint sampled contact is clear. Left sampled leg contact is

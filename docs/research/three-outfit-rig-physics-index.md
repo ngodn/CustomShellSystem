@@ -2,7 +2,13 @@
 
 Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
-Latest Peony result: the [surface-coverage follow-up](2026-10-10-peony-surface-coverage.md)
+Latest Peony result: [upper-fit rejection and facial-cloth integration](2026-10-10-peony-upper-fit-and-facial-cloth.md).
+Both closer-fitting panel trials are rejected. The retained combined cloth
+candidate now includes all 115 facial expressions; fresh native readback
+preserves its two cloth bindings and all inspected cloth/rig fields. Upper
+contact, cooking and game acceptance remain open. No new trial is installed.
+
+Preceding Peony result: the [surface-coverage follow-up](2026-10-10-peony-surface-coverage.md)
 passes all six selected-panel gait strain screens at four iterations, with
 sampled leg contact clear. Upper attachment overlap with the walking arm
 remains. Its weights already match the source body's surface transfer, so a
