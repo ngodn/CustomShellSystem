@@ -6,8 +6,11 @@ Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
 maps six removable garment groups while preserving the source data. Its latest
 continuous fit clears the sampled primary-body contact screen. Differential
 checks distinguish a strongly rotated chest-panel normal from a sampled
-inversion. Footwear, local compression, moving fit and runtime preparation still
-need work. Peony's installed trial remains pending gameplay review.
+inversion. The [boot follow-up](2026-10-11-slipstream-footwear-fit.md) restores
+the source heel profile, clears neutral visible-body intersections and prepares
+reversible foot coverage. CSS's required taller-footwear range is built and
+tested but not installed. Target binding, local compression, moving fit and
+runtime preparation remain. Peony's installed trial still needs gameplay review.
 
 The [Peony combined trial](2026-10-11-peony-combined-trial.md) is installed with
 verified hashes and external rollback copies. It preserves all six existing

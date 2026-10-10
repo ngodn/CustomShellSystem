@@ -23,9 +23,17 @@ continuous offset field with garment and triangle-interior clearance constraints
 Candidate 10 detects no inward samples in the 50,811-sample primary-body screen.
 One over-90-degree normal rotation has positive sampled field determinants and
 agrees with transported orientation; local compression and moving fit remain
-unaccepted. Boots are visibly unfitted. Exact source data, the accepted body
+unaccepted. The [boot follow-up](../research/2026-10-11-slipstream-footwear-fit.md)
+now preserves the heel profile, clears neutral visible-body intersections and
+records reversible coverage for 5,328 body faces. Exact source data, the accepted body
 and all six wardrobe groups are preserved. No Slipstream runtime package is
 installed, and this work does not complete either new outfit.
+
+The required 11.81 cm heel lift exceeds CSS's old limit. Commit `bf76c02` expands
+the consistently validated Ground Height range to 20 cm in either direction.
+The Windows candidate builds and targeted portable tests pass. It is staged,
+not installed; current Peony gameplay feedback and the remaining Slipstream
+binding, morph, material, physics and runtime checks are still pending.
 
 ### Reusable attachment follow-up found in the existing log
 
