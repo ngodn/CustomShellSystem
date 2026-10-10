@@ -265,15 +265,15 @@ When this item is reached, reproduce with that loadout and visibility setting; c
 
 **Acceptance:** no unintended hovering axe through those transitions; the intended weapon and effects remain visible when appropriate, charged shots and aiming work normally, and other sidearms/visibility modes retain their behavior. Record reproduction evidence, the actual cause and regression results. Keep this item queued if not yet investigated; do not describe it as fixed merely because the main goal is ready.
 
-## Low-priority follow-up: additional NPC appearances
+## Low-priority follow-up: Zhirelle and Merrick appearances
 
-**Status:** queued at the user's request on October 11. Eve remains the current priority. Investigate support for NPCs such as **Zhirelle and Merrick** under the existing **SHELL > Use NPC/Enemy** selector.
+**Status:** queued at the user's request on October 11. Eve remains the current priority. The requested targets are **Zhirelle and Merrick** under the existing **SHELL > Use NPC/Enemy** selector. Also support other NPCs that use the same skeleton as either target and pass the compatibility checks below. This is not a general expansion to NPCs with other skeletons.
 
-Inspect the game assets and dumps to identify each NPC's meshes, skeleton, animation setup, materials and attached components. Determine why an appearance is missing or incompatible before choosing a repair. Retargeting is a possible solution, not an established requirement. Check whether the existing native-human path can support it first; use outfit-specific adapters where necessary rather than changing shared behavior blindly.
+Inspect the game assets and dumps to identify Zhirelle's and Merrick's meshes, skeletons, animation setups, materials and attached components. Verify which other NPCs share either skeleton from asset references rather than names or visual similarity. Sharing a skeleton makes an NPC eligible for this work, but does not alone prove that its mesh, proportions, attachments and animation behavior work correctly. Determine why an appearance is missing or incompatible before choosing a repair. Retargeting is a possible solution, not an established requirement. Check whether the existing native-human path can support the targets first; reuse the repair for matching NPCs where valid rather than changing shared behavior blindly.
 
 Keep the gameplay shell, abilities and progression unchanged. Follow the existing selector and saved-profile design, expose only validated options, and give a clear fallback for unsupported appearances. Validate movement, combat, aiming, attachments, menu/world transitions, save/reload and appearance restoration after gates or form changes. Assess doubles compatibility separately; do not imply every NPC supports it.
 
-**Acceptance:** supported NPC appearances can be selected and restored reliably without breaking gameplay or existing appearance choices. Record tested characters and limitations. This is deferred work, not a release blocker or a claim of current support.
+**Acceptance:** Zhirelle, Merrick and validated NPCs sharing either skeleton can be selected and restored reliably without breaking gameplay or existing appearance choices. Record the shared-skeleton matches, tested characters and limitations. NPCs using different skeletons remain outside this follow-up. This is deferred work, not a release blocker or a claim of current support.
 
 ## Low-priority follow-up: native shell shades for appearance overrides
 
