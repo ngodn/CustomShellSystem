@@ -1,19 +1,7 @@
 // Included inside css after reflected calls, asset loads and material helpers.
 // Missing cosmetic bones use the original mesh's follower-pose fallback. The
 // component is hidden, non-colliding and does not run its own animation graph.
-static std::vector<WeakObject> attached_children(UObject* component) {
-    Call call(component,L"GetChildrenComponents",2);call.set(L"bIncludeAllDescendants",false);call.run();
-    auto* property=call.param(L"Children");
-    if(!property->IsA<FArrayProperty>()) throw std::runtime_error("Attachment children layout mismatch");
-    auto* array=static_cast<FArrayProperty*>(property);
-    if(!array->GetInner()->IsA<FObjectProperty>() || array->GetInner()->GetElementSize()!=sizeof(UObject*))
-        throw std::runtime_error("Attachment child is not an object");
-    FScriptArrayHelper values(array,call.data(property));
-    if(values.Num()<0 || values.Num()>128) throw std::runtime_error("Too many character attachments");
-    std::vector<WeakObject> result;
-    for(int i=0;i<values.Num();++i) {UObject* child{};std::memcpy(&child,values.GetRawPtr(i),sizeof(child));result.emplace_back(child);}
-    return result;
-}
+#include "attachment_children.inl"
 // USceneComponent's AttachParent and AttachSocketName are reflected properties, and the
 // Get* functions only return them, so they are read in place: the MISC and seal passes ask
 // this for every tracked item every frame.
@@ -101,7 +89,6 @@ void AttachmentFollower::update(UObject* component,const std::string& original) 
         }
         auto* proxy=proxy_.Get();
         if(!socket_bone_present(proxy,socket)) {unsupported_.insert(name);continue;}
-        if(owned_.size()>=128) throw std::runtime_error("Too many repaired attachments");
         // Record before mutation so cleanup can recover a failed read-back.
         owned_.push_back({weak});attach_relative(child,proxy,socket);
     }
@@ -387,7 +374,6 @@ void AttachmentOffsets::update(UObject* component) {
         const auto entry=offsets_.find(key); if(entry==offsets_.end()) continue;
         auto tracked=std::find_if(tracked_.begin(),tracked_.end(),[&](const auto& item){return item.child.Get()==child;});
         if(tracked==tracked_.end()) {
-            if(tracked_.size()>=64) throw std::runtime_error("Too many corrected attachments");
             tracked_.push_back({weak,socket,std::move(key),{},-1,0,-1,{}});
             tracked=std::prev(tracked_.end());
         }

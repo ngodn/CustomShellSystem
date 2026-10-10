@@ -117,16 +117,17 @@ The Windows candidate builds and targeted portable tests pass. It is staged,
 not installed; current Peony gameplay feedback and the remaining Slipstream
 binding, morph, material, physics and runtime checks are still pending.
 
-### Reusable attachment follow-up found in the existing log
+### Attachment-limit correction staged
 
-The existing CSS log contains `Accessory recovery deferred: Too many character
-attachments` and `Idle facial playback unavailable; keeping body idle: Too many
-character attachments` (last occurrences at lines 4415 and 4417 when inspected
-October 11). `native/src/attachment_follower.inl` still rejects more than 128
-direct children in `attached_children`. This contradicts the goal's explicit
-no-arbitrary-128-cap rule and remains to be repaired with actual component
-validation and lifecycle checks. These are existing log entries, not evidence
-of a new Peony regression. Do not discard the finding or call it fixed.
+The recorded recovery/facial failures reached CSS's fixed 128-child snapshot
+limit. The snapshot now validates against the actual engine object population
+and component identity instead. The separate 128 repaired-child and 64 offset
+record caps are removed. The Windows core builds and seven targeted portable
+tests pass, including the production snapshot through 4097 children. Candidate
+`attachment-limit1` is staged, not installed; Peony refit2 retains its current
+core for the user's fit comparison. Live recovery/facial checks above 128 and
+component-lifecycle checks remain pending. See the
+[attachment investigation](../research/2026-10-11-attachment-limits.md).
 
 ## Latest Peony contact checks
 
