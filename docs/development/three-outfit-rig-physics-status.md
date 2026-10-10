@@ -10,6 +10,19 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**User visual rejection:** the circled pieces are the rigid hip accessories,
+material 29 (`Peony_hip_accessories_Lower_1`), not the simulated panels in
+slots 34/38. Pixel-to-triangle tracing resolves that distinction. The fitting
+script translates each accessory assembly outward by its largest clearance
+correction plus 0.8 cm, leaving the upper anchors 2.45/3.23 cm from the corset.
+A private closer-fit candidate brings those anchors to 0.25 cm while preserving
+each assembly's shape. Front/side/walk reviews still show intersections, so it
+is not accepted or installed. See the [hip-accessory findings](../research/2026-10-10-peony-hip-accessory-fit.md).
+
+This gap is also visible in the earlier assembled review. Do not dismiss it
+as lighting or ship the diagnostic arm-pose change as a garment repair. The
+cloth/arm contact investigation remains separate from these rigid accessories.
+
 The [upper-fit and facial-cloth follow-up](../research/2026-10-10-peony-upper-fit-and-facial-cloth.md)
 rejects both closer-fitting upper-panel candidates. One collapses folds; the
 smoothed candidate adds contact defects and fails two gait strain screens.
