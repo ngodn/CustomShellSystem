@@ -43,6 +43,16 @@ All paths below are under `CSS_SeduXtress_eins0fx/work`.
   its trim does not resolve the failure. Do not import their output or loosen
   the guard.
 
+- `peony-closefit5`: responds to the user's request for more cleavage with a
+  4 cm neckline-depth parameter and 6 cm Gaussian width parameter. These are
+  authoring parameters, not measurements of the final opening. Neutral review
+  shows the deeper sweetheart shape. The breast-size endpoint keeps the center
+  opening, but its underbust fabric and trim still need repair. All seven
+  recorded shape cases clear the fitter's selected upper samples; this does not
+  establish clean topology, trim fit or gameplay acceptance. Scripts, hashes,
+  neutral renders and breast-size endpoint renders are retained in its
+  `work-receipt.json`. This candidate is not cooked or installed.
+
 The lower diagnostic localizes an outward drift to vertex 141329. Its initial
 body gap is 0.524 cm; the first smooth fit moves it only slightly, but clearance
 iterations drive it more than 20 cm away. Its nearest body triangle has normal

@@ -236,7 +236,9 @@ finished body fit. Original inputs and the accepted Eve body remain unchanged.
   body-shape controls, intermediate values and combined settings, plus secondary
   body motion. Do not enlarge the body to fill oversized clothes.
 - The user authorizes a redesigned corset neckline: a fitted sweetheart curve
-  with a lower center opening for visible cleavage. Preserve the outfit's
+  with a lower center opening for visible cleavage. The follow-up explicitly
+  requests more cleavage: deepen and widen the center opening while retaining
+  fitted cups, and check the breast-size range. Preserve the outfit's
   fabric pattern and trim; avoid the boxy, detached cup silhouette.
 - Remove both hip pockets and exposed mechanical arm ornaments from the outfit
   mesh and remove their obsolete customization controls. Preserve the hand
