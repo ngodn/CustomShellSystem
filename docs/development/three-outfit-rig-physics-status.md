@@ -10,6 +10,18 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+The newer [joint-coverage trial](../research/2026-10-10-peony-joint-coverage.md)
+adds body-fitted hip/knee capsule endpoints and directs own-calf contact.
+Five of six selected-panel gait screens pass at four iterations; a targeted
+right-sprint eight-iteration control also passes. Left sprint frame 78 now
+has no sampled mapped-body penetration, and left walking's remaining leg
+depth falls to 0.826 cm. Right contact still fails, and the upper attachment
+has both skinned and simulated intersections. The largest fully skinned
+witnesses are unchanged by the collision work. No combined candidate is saved
+or installed yet; this is progress, not fit acceptance.
+
+The following paragraphs record the preceding saved candidate.
+
 The saved `peony-panelcloth1` candidate now passes all six 145-frame walk,
 jog and sprint strain screens (left and right), with all 16 anchors per panel
 verified independently. It retains body collision, self-collision and cloth

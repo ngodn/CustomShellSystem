@@ -2,7 +2,14 @@
 
 Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
-Latest Peony result: the [saved panel candidate](2026-10-10-peony-panel-backstop.md)
+Latest Peony result: the [joint-coverage trial](2026-10-10-peony-joint-coverage.md)
+passes five of six selected-panel gait screens at four iterations; the targeted
+right-sprint eight-iteration control passes too. Sampled left sprint contact
+is clear, but right contact and upper attachment fit remain unaccepted. The
+largest upper witnesses are fully skinned and unchanged by cloth collision.
+No combined candidate is saved or installed.
+
+Preceding Peony result: the [saved panel candidate](2026-10-10-peony-panel-backstop.md)
 passes six short gait strain screens and all independent anchor checks, with
 body collision, self-collision and full cloth simulation retained. Loose-panel
 backstops are removed after controlled contact tests. The split preserves the
