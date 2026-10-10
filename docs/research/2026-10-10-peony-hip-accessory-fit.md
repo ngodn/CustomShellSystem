@@ -52,3 +52,97 @@ adjacent surfaces, inspect the inherited root-weighted edge during motion, and
 check the resulting fit through body shapes and gait poses. Preserve the accepted
 lower cloth candidate and facial data. Do not promote this draft or ask for a
 game restart yet.
+
+## Follow-up: attachment rotation and weight defect
+
+The next trial (`peony-hipfit2`) rotates each assembly toward its upper mount
+around its lower edge, instead of translating the whole accessory inward.
+Right/left rotation is +4.9933/-6.3688 degrees about Y. Small Y/Z translations
+complete the mount alignment; the lower pivot's X stays unchanged. Both measured
+upper anchors remain 0.25 cm from the corset. Positions, normals and positional
+morph deltas receive the same rotation. Edge lengths remain unchanged within
+0.00001 cm. This preserves the original attachment shape, but does not establish
+motion or contact acceptance.
+
+`peony-hipfit2/audit_motion.py` skins material 29 through all 145 captured frames
+of each gait, using the upstream animation snapshots. It measures every edge.
+The severe-stretch screen requires both a ratio above 2 and extension above 1 cm.
+It is a deformation screen, not a complete visual quality criterion.
+
+| Candidate | Walk failing frames / peak extension | Jog | Sprint |
+| --- | --- | --- | --- |
+| Original fitted assembly | 135 / 12.876 cm | 145 / 18.665 cm | 145 / 19.304 cm |
+| Attachment rotation, original weights | 135 / 12.442 cm | 145 / 18.658 cm | 145 / 19.529 cm |
+| Local harmonic repair of 82 root-weighted points | 135 / 6.678 cm | 145 / 8.207 cm | 145 / 12.364 cm |
+| Uniform pelvis attachment | 0 / below 0.000001 cm | 0 / below 0.000001 cm | 0 / below 0.000001 cm |
+| Uniform source-derived hip/thigh blend per side | 0 / no positive extension | 0 / no positive extension | 0 / no positive extension |
+| Underlying body-surface weights | 0 / 2.848 cm | 0 / 2.988 cm | 0 / 3.839 cm |
+
+The original and rotation-only candidates' worst edges include root-weighted
+points. Filling only those points from neighbouring weights is insufficient.
+It reduces the worst deformation but leaves severe stretching. The uniform
+candidates eliminate stretching but introduce sampled thigh contact during sprint.
+They are rejected as complete repairs.
+
+### Current private candidate
+
+`peony-hipfit6` retains the attachment rotation and transfers weights from the
+underlying torso/leg surface. The transfer excludes arm-weighted triangles.
+The large plates use interpolated surface weights; each small attached component
+uses its mean surface weights to avoid internal distortion. Only material 29's
+1,420 points change weights, with at most five influences per point. Skeleton,
+all other geometry/weights and cloth sections remain unchanged. Body-surface
+weights are a candidate treatment for these leather accessories, not a global
+outfit rebind.
+
+Its interchange SHA-256 is
+`6989b7c5a02af0f3720ca08987214411d9119e65ea21187b8f352a4e86def9ae`.
+All 435 sampled gait frames pass the severe-stretch screen. This still permits
+the smaller measured extensions above; do not describe the geometry as perfectly
+rigid or all deformation as eliminated.
+
+The contact script compares unique accessory points against the same posed body,
+using whole-body winding and a 0.02 cm penetration threshold:
+
+| Pose | Original fitted assembly | Body-surface candidate |
+| --- | --- | --- |
+| Bind | 0 inside | 0 inside |
+| Walk frame 128 | 57 inside, 1.8654 cm deepest | 95 inside, 2.1935 cm deepest |
+| Sprint frame 6 | 0 inside | 0 inside |
+
+`walk-contact-regions.json` separately sums the arm-triangle contribution to
+whole-body winding. All 57 original and all 95 candidate witnesses have an
+arm contribution above 0.55 in magnitude; none has a remaining-body contribution
+above 0.55. The arm and remainder are open subsets, so these contributions locate
+the overlap rather than certify separate closed volumes. Whole-body winding
+remains the containment test. Nearest triangle labels alone were misleading:
+some witnesses inside the arm were nearer a hip triangle.
+
+The current candidate clears the sampled sprint contact and fixes the measured
+mounting gap and severe root-weight deformation, but worsens the sampled walking
+arm overlap. It is **not accepted for shipping**. The next fit/contact work must
+address the arm envelope while retaining the closer attachment and corrected
+skinning. Do not revert the weight repair to make a broken, root-pinned flap
+appear clear. Do not change the shared gameplay skeleton or install a global
+arm rotation as a shortcut.
+
+Front/side/back/quarter reviews are saved with the original captured poses.
+These remain Workbench views without final material opacity, body masks or cloth
+replay. Native import/cook, facial regeneration, body-morph limits and live checks
+have not been performed for this accessory candidate.
+
+### Cleanup and recovery
+
+Rejected `peony-hipfit1`, `3`, `4` and `5` mesh JSON files were losslessly gzip
+compressed, then decompressed in a stream and SHA-256 compared before removing
+the redundant raw JSON. Their `archive-receipt.json` files explain restoration.
+Recipes, audit files, measurements and images remain. This reclaimed
+411,962,997 bytes (about 393 MiB). The rotation input (`2`) and current candidate
+(`6`) remain uncompressed for ongoing work. Original inputs, cooked packages
+and installed files were not changed.
+
+The first `peony-hipfit6/repair.py` run saved its mesh and audit, then failed
+while serializing a NumPy integer into the receipt. The recovery run converts
+that integer explicitly and verifies the existing mesh/audit bytes against its
+fresh calculation before writing the missing receipt. It did not replace the
+geometry being inspected. Both logs are retained.

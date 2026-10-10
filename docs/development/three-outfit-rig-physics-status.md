@@ -10,6 +10,17 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**Latest hip-accessory candidate:** rotating the mounting edge inward and
+transferring only the accessories' weights from the underlying torso/legs removes
+the severe root-weight deformation in all 435 captured gait frames. Both measured
+mount gaps are 0.25 cm. Bind and sampled sprint body contact are clear, but walk
+frame 128 still has 95 arm-overlap witnesses, versus 57 in the original fitted
+assembly. Region winding localizes those witnesses to the arm, even where the
+nearest body triangle belongs to a hip. `peony-hipfit6` is retained for continued
+fit work, not accepted or installed. Four rejected raw mesh drafts were losslessly
+compressed and verified, reclaiming about 393 MiB. Full evidence is in the
+[hip-accessory findings](../research/2026-10-10-peony-hip-accessory-fit.md).
+
 **User visual rejection:** the circled pieces are the rigid hip accessories,
 material 29 (`Peony_hip_accessories_Lower_1`), not the simulated panels in
 slots 34/38. Pixel-to-triangle tracing resolves that distinction. The fitting
