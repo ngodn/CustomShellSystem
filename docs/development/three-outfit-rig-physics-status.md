@@ -10,6 +10,13 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+**Astral material preparation:** four Peony ghost parents, four culling variants
+and one mask placeholder pass fresh-process saved-asset checks. A sampler change
+found in the first trial is corrected without changing existing shared textures.
+Source controls and dependencies are preserved. Compilation, rendering, cooking
+and runtime integration remain. See the
+[Astral evidence](../research/2026-10-11-peony-astral-materials.md).
+
 **Cloth GPU comparison:** all 22 normal/facial held-pose cases pass using 44
 GPU readbacks. The shared graph restores the expected cloth morph offsets,
 with a maximum 0.014997 cm residual and no non-cloth position changes. Both

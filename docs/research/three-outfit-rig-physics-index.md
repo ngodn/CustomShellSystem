@@ -2,6 +2,11 @@
 
 Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Peony's [Astral companions](2026-10-11-peony-astral-materials.md) pass fresh
+reload after correcting a saved mask-sampler mismatch. Four parents and their
+culling variants preserve customization controls and shared-only dependencies.
+Compilation, rendering, cooking and runtime integration remain unverified.
+
 Peony's [cloth GPU comparison](2026-10-11-peony-cloth-gpu.md) passes 22
 normal/facial cases and two negative controls. Cloth corrections match exported
 morphs, non-cloth positions remain unchanged, and source assets are preserved.
