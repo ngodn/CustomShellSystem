@@ -18,10 +18,13 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 The [wardrobe study](../research/2026-10-11-slipstream-wardrobe-fit.md) assigns
 31,625 source clothing triangles to six removable groups, including their trim.
 All 116 components are accounted for; source/body preservation and negative
-ownership controls pass. The first torso fitting method improves visible
-sleeve/skirt coverage but causes severe local compression and leaves clipping.
-The second fit is rejected for export. Its exact triangle witnesses are retained
-for a continuous surface-deformation repair. No Slipstream runtime package is
+ownership controls pass. The rejected direct projection is replaced by a
+continuous offset field with garment and triangle-interior clearance constraints.
+Candidate 10 detects no inward samples in the 50,811-sample primary-body screen.
+One over-90-degree normal rotation has positive sampled field determinants and
+agrees with transported orientation; local compression and moving fit remain
+unaccepted. Boots are visibly unfitted. Exact source data, the accepted body
+and all six wardrobe groups are preserved. No Slipstream runtime package is
 installed, and this work does not complete either new outfit.
 
 ### Reusable attachment follow-up found in the existing log

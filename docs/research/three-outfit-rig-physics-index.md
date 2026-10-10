@@ -3,10 +3,11 @@
 Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
 Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
-maps six removable garment groups while preserving the source data. The first
-torso projection remains unsuitable for export because it compresses local
-geometry and leaves intersections. Its recorded triangle witnesses guide the
-next fitting change. Peony's installed trial remains pending gameplay review.
+maps six removable garment groups while preserving the source data. Its latest
+continuous fit clears the sampled primary-body contact screen. Differential
+checks distinguish a strongly rotated chest-panel normal from a sampled
+inversion. Footwear, local compression, moving fit and runtime preparation still
+need work. Peony's installed trial remains pending gameplay review.
 
 The [Peony combined trial](2026-10-11-peony-combined-trial.md) is installed with
 verified hashes and external rollback copies. It preserves all six existing
