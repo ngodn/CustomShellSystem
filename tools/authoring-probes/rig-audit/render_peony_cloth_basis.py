@@ -9,7 +9,7 @@ import unreal
 
 
 stage = Path(os.environ['CSS_PEONY_GPU_STAGE']).resolve(strict=True)
-assert stage.name in {'peony-clothgpu1', 'peony-clothgpu2', 'peony-clothgpu3'}
+assert stage.name in {'peony-clothgpu1', 'peony-clothgpu2', 'peony-clothgpu3', 'peony-clothgpu4'}
 assert Path(unreal.Paths.project_dir()).resolve() == stage / 'editor'
 captures = stage / 'captures'
 captures.mkdir()

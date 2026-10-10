@@ -90,7 +90,7 @@ def check_mesh(mesh, structure, groups):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--stage', choices=('peony-windows3', 'peony-windows4', 'peony-windows5'), required=True)
+    parser.add_argument('--stage', choices=('peony-windows3', 'peony-windows4', 'peony-windows5', 'peony-windows6'), required=True)
     args = parser.parse_args()
     stage = EVE / 'work' / args.stage / 'readback1'
     output = stage / 'validation.json'
@@ -117,7 +117,7 @@ def main():
         ('SK_Peony_Face', '/Game/CSS/eins0fx/EveSB/Faces/Peony/SK_Facial1', 137),
     ):
         mesh, = [e for e in meshes[package] if e['Type'] == 'SkeletalMesh']
-        native = EVE / 'work' / ('peony-clothgpu3' if args.stage == 'peony-windows5' else 'peony-clothgpu1')
+        native = EVE / 'work' / ('peony-clothgpu4' if args.stage == 'peony-windows6' else 'peony-clothgpu3' if args.stage == 'peony-windows5' else 'peony-clothgpu1')
         structure = load(native / (name + '-structure.json'))
         groups = load(native / (name + '-cloth-morphs.json'))['groups']
         row = check_mesh(mesh, structure, groups)

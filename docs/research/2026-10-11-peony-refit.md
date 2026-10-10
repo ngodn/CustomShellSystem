@@ -366,3 +366,214 @@ This removed 134,191,539 logical bytes, with zero immediate available-space
 change observed. The process check found no active user of the old cache.
 `work/peony-gpu-cache-duplicates-20261011.json` retains the exact paths, hashes
 and measurement. Source assets, captures, packages and rollback were untouched.
+
+
+## Installed refit rejected: lower gap and world distortion
+
+The user rejected `peony-refit1` after testing. Rear/side screenshots show a
+large gap beneath the black lower straps, and a separate world screenshot shows
+a folded/distorted lower panel during movement. The existing acceptance remains
+open. The attachment-cap change is authorized if valid outfits require it, but
+is queued behind this fit repair.
+
+`peony-lower-gap1/audit.json` measures the unchanged installed-source geometry.
+Outward-facing upper-stocking triangle centers reach 5.943 cm from the retained
+body. The previous `peony-stockingfit6` was a local outward clearance repair and
+did not address these oversized regions. Its local clearance result must not be
+used as evidence of a fitted overall silhouette.
+
+The first inward candidate is rejected: it closes much of the neutral gap but
+its nine-case screen detects exterior contacts, including a neutral depth of
+0.799 cm. Nothing from that candidate is installed.
+
+The preserved source comparison also identifies damage from the earlier radial
+fit in the stocking, not only the underwear recovered previously. For example,
+face 186508 originally has edges of 0.988, 0.881 and 0.529 cm. Two edges in the
+first inward candidate remain roughly 8.8 and 8.6 cm. Source and fitted vertex
+positions are retained in `peony-lower-gap1/source-check.json`. Recovery must
+start before that radial distortion. The loose-panel simulation still needs a
+separate runtime diagnosis; this finding does not establish its cause.
+
+A read-only player probe timed out, and the following process check found no
+running game process. No live settings or character controls were changed.
+
+
+The user clarified that the lower garment is detached while stationary as well
+as during movement. No further user animation comparison is needed to establish
+that symptom. The neutral proxy audit confirms that the panel's existing fixed
+particles are roughly 0.54..3.05 cm from the body (`panel-anchor-audit.json`).
+
+The new private study is `peony-lower-gap1`. Candidate 4 recovers the stockings
+before the distorted radial fit, closes their oversized regions, transfers body
+morphs/weights and resolves local surface intersections. Its independent screen
+samples about 59,000 points in each of nine body cases: no sampled stocking
+penetration, minimum 0.0888 cm in the combined maximum case. Crotch bridging
+still contributes to the raw maximum surface distance; this is not proof of
+an all-angle textured fit. Candidate 8 fits the lower straps as a separate layer;
+its nine-case exterior screen passes, while buried trim backs retain roughly
+0.2 cm contacts. Those contacts are not silently counted as passed.
+
+The upper-panel frame-transport trial (candidate 5) is rejected because it
+introduces visibly jagged trim. Candidates 1, 2, 5 and 6 are archived with
+per-file hash verification under theark's `CSS/authoring-rejected/peony-lower-gap1`.
+Original work paths are symlinks. Logical archived size is 536,180,531 bytes.
+
+Candidate 10 combines the fitted lower surfaces with a closer upper-panel rest
+shape, body-matched attachment weights/morphs and a tapered attachment band.
+Pins increase from 16 per panel to 25 left and 24 right, with the lower panels
+still simulated. This addresses the fixed/free transition that failed the prior
+`peony-panelattachmentfit2` experiment; native motion must validate it, so it is
+not accepted yet. The selected old rejected panel fit was not copied into this
+candidate. Exact interchange verification preserves the body, skeleton, other
+garments, topology and unrelated data. Floating-point noise in untouched morph
+rows was restored to the original values before staging.
+
+`peony-refitnative3` stages 115 verified dependencies and is the native check for
+this candidate. Do not install it or claim gameplay success before its native
+cloth, morph, facial, cook and package checks pass. The installed game remains
+on rejected `peony-refit1` during this work.
+
+### Closer attachment exposes an oversized hip collider
+
+Native import, binding, cloth rebuilding and inspection complete successfully
+for `peony-refitnative3`. All six saved-setting motion screens fail near the
+new attachment band, so this candidate is not ready to install. Failed frame
+counts are 111/41/25 for left walk/jog/sprint and 130/27/13 for the right.
+
+The left walking controls use the same saved mesh and restore temporary
+settings after each capture. Disabling body collision gives zero gross-strain
+frames; disabling self-collision leaves 114, and raising iterations to 12
+leaves 35. These are diagnostic controls only. Neither collision removal nor
+the higher iteration count is adopted.
+
+The native contact trace at walking frame 31 identifies the upper-thigh tapered
+capsule. Pinned particle 64 is 1.906 cm inside it. Its free neighbor 65 has a
+skinned target 2.630 cm inside it but gets pushed to 0.306 cm outside. Their
+1.648 cm rest edge stretches to about 3.76 cm. This directly explains the
+fixed/free conflict in this trial.
+
+`fit_hip_collision.py` bounds only the two upper-thigh endpoint radii against
+the retained neutral body; unrelated collision geometry is preserved. The
+existing radii are approximately 12.15 cm, while the measured nearest body
+surfaces are 7.26 and 7.07 cm from their centers. Separate `PA_LeftRefitHip` and
+`PA_RightRefitHip` candidates use 6.91 and 6.72 cm radii, including a 0.35 cm
+margin for the 0.3 cm collision thickness. This is an endpoint containment
+measurement, not proof of full animated coverage. The six-gait collision
+override trial must pass and its mapped garment appearance must be reviewed
+before binding these assets into a new saved candidate. Full body and
+self-collision remain enabled in that trial. Installed files remain unchanged.
+
+The fitted-hip override passes five of six independently verified gait screens.
+Right sprint fails one frame (46), at free lower-hem particle 466 rather than
+the hip attachment. A repeat with contact tracing does not reproduce this
+single-frame failure. Eight iterations also pass that comparison; CCD fails
+six frames and is rejected. Timing from these captures overlaps Blender work
+and must not be used for a performance comparison.
+
+The mapped two-panel reviews at walk frame 31 and sprint frame 78 show the
+closer hip fit, but the loose fabric still bunches excessively. A strain pass
+alone would not make that appearance acceptable. `peony-refitnative4` copies
+the exact candidate mesh and dependencies, binds the fitted hip collision, and
+tests bending stiffness 0.65 against the previous 0.15. Four iterations, two
+substeps, animation drive and body/self-collision remain unchanged. This private
+fabric comparison is not an installed fix. Its saved-settings motion and visual
+checks are pending.
+
+`peony-refitnative4` preserves inspected geometry, maps, morphs, rig bindings
+and unrelated staged files exactly. Its firmer fabric reduces the bunching in
+the mapped walking view, but the four-iteration right sprint still fails one
+frame (142). The eight-iteration trial then passes all eight anchor/strain
+checks: six gaits plus two extra right-sprint runs, each 145 frames at 60 Hz.
+Body collision and self-collision stay enabled. These results are retained in
+`iter8-summary.json`; they are not a game-performance or textured-fit claim.
+
+The editor command's `iter8.exit.json` records return code zero. The outer tool
+session later reports 143 while inherited UnrealTraceServer output reports its
+normal sponsor shutdown. Keep both facts; do not replace or rewrite the exit
+evidence. The completed captures independently pass their verifiers.
+
+`peony-refitnative5` now saves eight iterations with the fitted collision and
+firmer fabric. Its saved-setting checks run without diagnostic overrides.
+`check_preservation.py` checks the intentional iteration change, and
+`build_face.py` is prepared to rebuild/reload 115 expressions plus all 22
+authored morphs only after the saved motion screen passes. That facial step
+has not run yet. Cloth-buffer authoring, GPU checks, Windows cooking, packaging
+and installation remain after native acceptance. The installed game files and
+CSS core are still unchanged.
+
+The saved `peony-refitnative5` candidate passes all six 145-frame gait screens
+without overrides. Its preservation check passes for 123 protected files and
+the retained geometry, maps, morphs and rig data. Fresh editor readback confirms
+both panels use bending 0.65, eight iterations, two substeps, self-collision and
+their fitted hip physics assets. The first settings probe used Python aliases
+unavailable on the base-class wrapper and failed before changing assets.
+`author_face.failed1.py` and its log are retained. The retry uses the exact
+reflected UE property names, as supported by local 5.6.1 `PyWrapperObject.cpp`.
+It passes and has authored the facial duplicate. Fresh facial reload and all
+22 authored-morph readbacks are still running through `build_face.py`; inspect
+`face-verification.json` before treating that phase as finished.
+
+The current orchestration is `peony-refitnative5/build_face.py`, logging to
+`/tmp/css-peony-native5-face-retry.log`. The mapped saved-candidate reviews are
+generated by `review.py`. Do not redo the successful fitting or collision
+isolation. After native acceptance, continue with the existing cloth-buffer,
+GPU, Windows cook/readback and assembly pipeline using new output directories.
+No candidate from this follow-up has been installed.
+
+The native phase is now complete: `face-verification.json` passes, fresh reload
+retains all 137 morphs, all 22 authored shapes pass on both meshes, changed-delta
+negative controls are rejected, and normal/facial cloth inspection is equal.
+All successful commandlets exit zero. `finalize.py` freezes
+`native-verification.json` and a 200-file `study-receipt.json`; raw logs remain
+separate because UnrealTraceServer can append after editor completion.
+
+For the next cloth-buffer/cook stages, explicitly include the new dependencies
+`/Game/CSS/eins0fx/EveSB/Peony/Physics/PA_LeftRefitHip` and `PA_RightRefitHip`.
+The older clothmorph staging input list does not contain these new assets.
+Continue from native5, keeping the accepted shared graph and catalog controls.
+Do not reuse the old GPU/cooked deformation proof for changed panel geometry.
+The two mapped saved-candidate views are diagnostic, without final materials;
+they are not player acceptance. All follow-up installation remains pending.
+
+The native5 follow-up now passes cloth-basis authoring and fresh reload in
+`peony-clothmorph4`. `peony-clothgpu4` passes 44 captures, 22 comparisons
+and two negative controls, with maximum residual 0.0149969 cm. Its frozen
+receipt covers 408 files. Canonical preparation uses `peony-cookprep4` and
+explicitly replaces the two old hip physics dependencies with the fitted
+left/right assets; no runtime or catalog change is required. Raw editor logs
+are retained separately from immutable snapshots to avoid late trace-server
+appends invalidating receipts. Windows6 and refit2 support is prepared in the
+existing package tools. No follow-up candidate is installed at this point.
+
+Canonical preparation passes with exactly the expected four changed packages
+and unchanged ownership counts. A matched four-run cloth timing comparison
+(4, 8, 8, 4 iterations; 240 measured frames after 30 warmup frames per run)
+measures medians 1.521/2.068/2.098/1.514 ms and p95 values
+2.039/2.595/2.743/2.062 ms. The mean-of-run-medians increase is 0.566 ms.
+These measure the complete component clothing tick plus its completion wait
+in the Linux editor, excluding animation refresh and rendering. No other
+authoring editor or Blender process ran during these captures. They do not
+measure game frame time or establish an FPS guarantee. The bounded additional
+cloth cost is acceptable for the private fitted trial because eight iterations
+removed the observed sprint strain failure; release performance acceptance
+still requires live measurement. `peony-refitnative5/cost-summary.json` retains
+all four capture hashes and the scope. Windows6 cooking is now running.
+
+### Lower-fit replacement installed
+
+`peony-windows6` cooks successfully in 80.0 seconds with inputs unchanged.
+Cooked readback passes for both meshes and 12 shader materials, with two
+negative controls and a maximum cloth-buffer residual of 0.0149885 cm.
+`fitted-physics-check.json` confirms the fitted hip endpoints, bending 0.65,
+eight iterations, two substeps and self-collision survive the Windows cook
+on both normal and facial meshes.
+
+`peony-refit2` assembles successfully with 642 uniquely owned assets and
+passes combined imports, catalog behavior, unchanged six prior Eve variants,
+CW/Genessa adapters and facial-curve preservation checks. It was installed
+with Mortal Shell II closed. `deployment.json` records verified installed
+hashes and rollback at `/run/media/eins0fx/theark/CSS/peony-before-refit2`.
+The CSS core remains `6d751cbdab2cab4c`; no save or user setting was edited.
+The user can now relaunch this candidate. Live lower-fit acceptance, body-slider
+checks, gameplay and performance regression remain pending. Do not call the
+broader three-outfit goal or Peony release complete from this installation.

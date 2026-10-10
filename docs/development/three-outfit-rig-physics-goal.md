@@ -68,6 +68,10 @@ Commander White's current E9 facial replacement preserves 206 morphs and the opt
 - Treat **Natural chest, Bouncy glutes and Bouncy other regions** as the user's reference test setup. Retain adjustable settings; do not overwrite saved defaults without an explicit requirement.
 - October 9 cloth trial: the user accepts the corrected Genessa rear-panel fit in the game world and explicitly accepts the remaining player/CSS-menu clipping for now. Preserve the world correction, record the preview limitation, and continue the other checks. Do not count preview parity as passed or reopen that limitation as a release blocker without new evidence or user direction.
 - Do not impose an arbitrary attachment/bone limit such as 128. Follow verified engine constraints and actual asset counts, with explicit diagnostics for unsupported data.
+  October 11 clarification: the user authorizes increasing the CSS attachment
+  limit when valid outfits require it. Preserve array validation and verify
+  attachment recovery and facial playback above the old limit. Keep this queued
+  behind the current Peony fit repair.
 - Preserve gameplay collision responses and damage/parry behavior. Private block-all collision tests do not authorize shipping block-all responses.
 - No desktop focus changes, camera automation or gameplay input for diagnostics without task-specific authorization. Use existing logs/dumps first. Verify game process state before installation; do not claim core hot reload is safe.
 
@@ -238,6 +242,10 @@ finished body fit. Original inputs and the accepted Eve body remain unchanged.
   The user reiterated that visible gaps around the breasts and buttocks are
   unacceptable. Check those silhouettes explicitly with the matching body-slider
   values; a clearance check alone does not establish a close fit.
+  The installed `peony-refit1` remains rejected: the latest rear/side screenshots
+  show oversized black lower straps standing away from the hips and buttocks.
+  Reproduce that gap with the actual selected body values and identify the
+  responsible garment sections before fitting them to the body.
 - The user authorizes a redesigned corset neckline: a fitted sweetheart curve
   with a lower center opening for visible cleavage. The follow-up explicitly
   requests more cleavage: deepen and widen the center opening while retaining
@@ -256,6 +264,14 @@ finished body fit. Original inputs and the accepted Eve body remain unchanged.
   and body-morph correction using the established Genessa/Eve work. Keep cloth
   simulation and the intended panel shape; do not hide or remove the panels as
   a substitute for this repair.
+  The latest `peony-refit1` world screenshot also shows a lower panel folded and
+  distorted during movement. This remains an open runtime defect, separate from
+  the oversized straps. Prior import, cook and cloth-buffer checks did not prove
+  that the panel behaves correctly in gameplay.
+  User clarification: the lower garment hangs away from the body even while
+  standing still, as well as during movement. Do not require another animation
+  comparison to establish this fit/attachment defect. Fix the stationary fit
+  first, then verify motion independently.
 
 Evidence includes the screenshots supplied in this conversation and
 `/home/eins0fx/Pictures/screenshot-2026-10-11_03-18-49.png` (world fabric) and

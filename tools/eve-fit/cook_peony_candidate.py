@@ -23,12 +23,13 @@ def sha(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--stage', choices=('peony-windows1', 'peony-windows4', 'peony-windows5'), required=True)
+    parser.add_argument('--stage', choices=('peony-windows1', 'peony-windows4', 'peony-windows5', 'peony-windows6'), required=True)
     parser.add_argument('--single-thread', action='store_true',
                         help='Disable cooker workers for the observed vertex-attribute build crash')
     args = parser.parse_args()
-    repaired = args.stage == 'peony-windows5'
-    meshes = EVE / 'work' / ('peony-cookprep3' if repaired else 'peony-cookprep1')
+    repaired = args.stage in ('peony-windows5', 'peony-windows6')
+    lower_refit = args.stage == 'peony-windows6'
+    meshes = EVE / 'work' / ('peony-cookprep4' if lower_refit else 'peony-cookprep3' if repaired else 'peony-cookprep1')
     astral = EVE / 'work/peony-astral2'
     output = EVE / 'work' / args.stage
     if output.exists():
@@ -40,7 +41,7 @@ def main():
         for phase in phases:
             if read(stage / (phase + '-exit.json'))['exit_code'] != 0:
                 raise ValueError('Failed editor phase: ' + str(stage / phase))
-    gpu = EVE / 'work' / ('peony-clothgpu3' if repaired else 'peony-clothgpu1')
+    gpu = EVE / 'work' / ('peony-clothgpu4' if lower_refit else 'peony-clothgpu3' if repaired else 'peony-clothgpu1')
     if not read(gpu / 'gpu-comparison.json')['passed'] or not read(astral / 'reloaded.json')['passed']:
         raise ValueError('GPU/reload verification missing')
     protected = {}
@@ -127,7 +128,7 @@ def main():
         shutil.copy2(row['path'], target)
     seed = EVE / 'work/peony-character2/windows-cook1/out/ddc'
     if repaired:
-        previous = EVE / 'work/peony-windows4'
+        previous = EVE / 'work' / ('peony-windows5' if lower_refit else 'peony-windows4')
         previous_exit = read(previous / 'exit.json')
         if (previous_exit['returncode'] != 0 or not previous_exit['sources_unchanged']
                 or read(previous / 'inputs.json')['engine'] != version):

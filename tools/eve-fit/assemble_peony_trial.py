@@ -57,7 +57,11 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--repair', action='store_true',
                         help='Replace the installed combined3 Peony with the verified refit')
+    parser.add_argument('--lower-refit', action='store_true',
+                        help='Replace refit1 with the fitted lower garment and hip collision candidate')
     args = parser.parse_args()
+    if args.lower_refit and not args.repair:
+        parser.error('--lower-refit requires --repair')
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=False)
     shutil.copy2(__file__, out / Path(__file__).name)
@@ -81,7 +85,7 @@ def main():
         write(out / (label + '-exit.json'), dict(returncode=result.returncode))
         result.check_returncode()
 
-    cook = EVE / 'work' / ('peony-windows5' if args.repair else 'peony-windows4')
+    cook = EVE / 'work' / ('peony-windows6' if args.lower_refit else 'peony-windows5' if args.repair else 'peony-windows4')
     cook_proof = read(cook / 'readback1/receipt.json')
     if not cook_proof['passed'] or not read(cook / 'readback1/validation.json')['passed']:
         raise ValueError('Peony cook checks are incomplete')
@@ -99,7 +103,7 @@ def main():
         protect(catalog_dir / name, expected)
     installed_proof = None
     if args.repair:
-        proof_path = WORK / 'peony-combined3/assembly.json'
+        proof_path = WORK / ('peony-refit1/assembly.json' if args.lower_refit else 'peony-combined3/assembly.json')
         protect(proof_path)
         installed_proof = read(proof_path)
         if not installed_proof['passed']:

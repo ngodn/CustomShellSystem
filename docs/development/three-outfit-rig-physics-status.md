@@ -2,12 +2,18 @@
 
 Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
-Latest installed trial: `peony-refit1`, replacing the rejected `peony-combined3`
-Eve/shared packages. The core remains `6d751cbdab2cab4c`. The six previous Eve
-variants and current CW/Genessa adapters are preserved. Installation hashes
-pass; player fit and gameplay acceptance are pending. Rollback is on theark
-at `CSS/peony-before-refit1`. See the latest
-[refit evidence](../research/2026-10-11-peony-refit.md#replacement-trial-installed).
+Latest installed trial: `peony-refit2`, replacing the rejected `peony-refit1`
+Eve/shared packages. The core remains `6d751cbdab2cab4c`. The lower garment
+has been fitted inward and the oversized upper-thigh collision endpoints
+corrected. Native gait, body/facial preservation, 22 GPU deformation comparisons,
+Windows cook/readback, cooked physics and combined package/catalog checks pass.
+Installation completed with the game closed and installed hashes verified.
+Rollback is on theark at `CSS/peony-before-refit2`. The six previous Eve
+variants and current CW/Genessa adapters are preserved. Live fit and full
+regression/performance acceptance remain pending. The matched editor cloth
+comparison measured +0.566 ms median cost for the eight-iteration stability
+setting; this is not game frame time or an FPS guarantee. See the latest
+[refit evidence](../research/2026-10-11-peony-refit.md).
 
 **October 11 user rejection:** the installed Peony trial is not accepted. The
 user reports an oversized jacket/corset, lower-front body clipping and ragged
@@ -54,6 +60,34 @@ Canonical preparation, Windows cooking and cooked readback now pass. The
 replacement was assembled, installed with the game closed and hash-verified.
 Player fit, moving cloth and gameplay checks remain pending. See the
 [refit evidence](../research/2026-10-11-peony-refit.md).
+
+**Lower-fit investigation behind refit2:** `peony-lower-gap1/candidate10`
+recovers distorted stocking geometry, fits the stockings and
+lower straps, and changes the panel attachment rest shape, weights and motion
+limits. Nine body-shape screens pass on the repaired exterior surfaces. Exact
+preservation of the body, skeleton and unrelated garments passes. The original
+panel pins were up to 3.05 cm from the body; the new rest anchors are closer,
+with a broader, tapered attachment band. `peony-refitnative3` imports and rebuilds
+both panels, but all six gait screens fail at the fixed/free boundary. A native
+contact trace identifies an upper-thigh capsule pushing the free endpoint away
+from its pinned neighbor. The isolated no-body-collision control passes; removing
+self-collision or increasing iterations does not solve it. Fitted hip collision
+assets remove those attachment failures; five gait screens pass and right
+sprint retains one transient lower-hem failure. Mapped reviews still show
+excessive loose-panel bunching. `peony-refitnative4` improves that bending; an
+eight-iteration trial passes all eight anchor/strain checks, including three
+right-sprint runs. `peony-refitnative5` saves those settings with fitted hip
+collision and full simulation. Its six saved-setting gait checks now pass
+without diagnostic overrides, and 123 protected files plus the retained mesh
+data pass preservation checks. Facial rebuilding and fresh readback pass with
+137 morphs; all 22 authored morphs pass on normal and facial meshes, including
+the changed-delta rejection check. Native evidence is frozen in this candidate's
+`native-verification.json` and 200-file `study-receipt.json`. Cloth-buffer
+integration, GPU checks and cooking subsequently passed for installed refit2;
+live fit acceptance remains required. The user clarified that the defect
+also occurs while standing, so do not ask them for more animation comparisons
+before repairing the stationary fit. The authorized attachment-limit adjustment
+stays queued behind Peony.
 
 Previous installed core: `718f76c3b60a8315`, with the CW hair trial. The user
 reports the requested CW Iris Out/hair/eyes/interruption check looks fine.
