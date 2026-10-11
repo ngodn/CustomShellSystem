@@ -1,6 +1,6 @@
 # Three-outfit implementation status
 
-Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
+Updated 2026-10-12. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
 **Peony source corrected by the user:** the V2 CNS and Recolors Texture ZIPs
 replace the previously supplied Better Cleavage RAR. The build records confirm
@@ -182,6 +182,18 @@ and six morphs. Continue from this private copy. The added 3,670 vertices still
 need export/performance review; full-animation contact, footwear coverage and
 the previously recorded glove/morph/seam defects remain open. Frozen evidence is
 in `binding-collar1-receipt.json`. No V2 trial is installed.
+
+The current private copy is `binding-footwear3`. It excludes the rejected lining
+from the active garment list and partitions 4,944 covered body faces for the V2
+boot toggle. The old 42-cm mask hid skin inside visible calf openings; the new
+boundary restores 384 faces and includes crossing triangles below the fitted
+calf region. Identical-camera rays verify the opening and clipping corrections.
+All 118 meshes preserve geometry/weights/UVs/shapes, and fifteen neutral, maximum,
+walking, sprint and barefoot views were inspected. Original heels are unchanged.
+Both rejected coverage copies are hash-verified in the external archive, freeing
+181 MB locally. Export/catalog slot mapping, toggle-dependent height, full motion,
+individual body-control/seam checks and the remaining outfit work are pending.
+No V2 trial is installed. See the binding study for evidence and limitations.
 
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left

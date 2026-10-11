@@ -1,7 +1,7 @@
 # Peony V2 body controls and target binding
 
 Status: private authoring study, not installed or accepted for release. Continue
-from `binding-collar1` for body-control and motion repairs. The preceding neutral
+from `binding-footwear3` for body-control and motion repairs. The preceding neutral
 baseline remains `neckline-contact3`; the additional glove edits still have
 unresolved whole-surface contact. All supplied palette templates and the
 black-and-white floral Hydrangea default remain required.
@@ -184,3 +184,79 @@ dependency hashes, saved provenance and rendered evidence. The blend SHA-256 is
 `0a3df186276abe52b602b0f08d7d18568068d5b187e3e6c59aa67f2f8429a503`.
 Authoring files remain outside CSS Git. The installed game files, saves and
 settings are unchanged. No V2 trial is installed and no game test is requested.
+
+## V2 closed-boot coverage and bare-foot restoration
+
+The binding reviewer still included the rejected heeled lining. This caused the
+exposed toes and lower-leg skin in its renders. The earlier closed-boot study
+already established that the source-preserving heels should use reversible
+covered-body visibility. The V2 binding now excludes that lining from the active
+garment list. It remains in the private blend as an unchanged hidden diagnostic
+object, not an export part.
+
+`prepare_peony_v2_footwear3.py` retains the original heel, ankle-connection and
+calf geometry. V2 source slots 4, 17 and 30 belong to the boot switch. The script
+uses accepted-body import face identities to create covered material aliases on
+the separate bound body, preserving the accepted source body itself. The bare
+body, body controls, garment geometry, weights and UVs are unchanged.
+
+The unmaterialed body study initially has no material slots. The first recipe
+invocation stopped before saving when it tried to copy one. The working recipe
+reconstructs body-face material ownership from the verified accepted import
+before creating aliases. It does not reuse the retired garment's section IDs.
+
+Two coverage candidates were rejected before retaining `binding-footwear3`:
+
+- `binding-footwear1` reused the old 5,328-face, 42-cm partition. It removes
+  skin visible through the V2 calf openings. In the front camera, pixels
+  `(200,312)`, `(200,324)` and `(200,336)` hit the far side of the calf instead of
+  body faces 5109, 5108 and 5097. Hidden-body rays identify those missing surfaces
+  at heights 39.65, 38.80 and 37.94 cm.
+- `binding-footwear2` lowers the partition to the 27-cm start of the previously
+  fitted outer calf. The openings are filled, but hiding only triangles wholly
+  below the cutoff leaves two crossing triangles exposed. Pixels `(244,520)`
+  and `(655,520)` hit body faces 6257 and 3172 through the closed calf shell.
+  Their vertices span 24.36 to 27.25 cm. The breakthrough occurs at 24.85 cm,
+  below the fitted outer-calf region.
+
+`binding-footwear3` includes triangles crossing that cutoff in the closed-boot
+coverage. It hides 4,944 body faces, preserving 384 faces that the old partition
+incorrectly hid. The three calf-opening witnesses now hit visible skin; the two
+closed-calf witnesses hit garment faces 1536 and 2828. Both use the same recorded
+neutral camera. This repairs the visibility boundary without expanding the shoe
+or deforming the accepted body.
+
+| Source body material | Covered faces | Private alias slot |
+| --- | ---: | ---: |
+| Eve Covered Feet | 218 | 24 |
+| SkinCovered_1 | 3,890 | 25 |
+| SkinCovered_6 | 836 | 26 |
+
+These are private body-copy slots, not final catalog/export slots. With boots
+shown, 56,870 body triangles remain visible. Hiding boots restores all 61,814
+body triangles and removes the three boot objects. The rejected lining is absent
+in both states. Measured boot-dependent placement is 9.738332 cm above the bare
+body placement; wire this to the established CSS toggle-height rule during
+catalog assembly, preserving the manual Ground Height override.
+
+`binding-footwear3-preservation.json` independently reloads both copies. It checks
+geometry, weights, UVs and shape coordinates across all 118 meshes, verifies
+material-face ownership against the original import, and checks both visibility
+sets and the sole-height calculation. Fifteen front/rear/side views were inspected:
+neutral, all-six-maximum, walking frame 36, sprint frame 12 and boots hidden.
+The closed heels retain their design, the calf openings retain skin, and the
+bare legs/feet restore. This is still a limited offline check, not full-animation,
+material, contact-with-terrain or gameplay acceptance.
+
+Continue from `binding-footwear3.blend`, SHA-256
+`844fca930c9e9c6b0f9bd509564d8441fe63a76b495d66619ca2f1f6f723130f`.
+`binding-footwear3-receipt.json` freezes 45 recipes, reports, renders and
+dependencies. The two rejected blends were copied to the external CSS archive,
+hash-verified and removed locally, reclaiming 181,319,135 bytes. Their small
+receipts, frozen recipes and diagnostic evidence remain local.
+
+Next complete the individual body-control and seam/contact checks, then carry
+the V2 face partition into the actual export and catalog. Remaining glove
+contact, all supplied materials/palettes, physics, cooking and coordinated
+release work remain open. No V2 trial is installed; game files, saves, settings,
+camera and character input are unchanged.
