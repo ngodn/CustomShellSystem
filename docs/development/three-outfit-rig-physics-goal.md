@@ -342,8 +342,15 @@ The V2 implementation adds preserved rest-space flow UVs to all 18 parts and
 optional upper trim, lower-panel border and hip-strap emission across the four
 palette recipes. Fresh editor readback, Windows cooking, package/shader readback
 and cooked surface checks pass their limited checks. Cooked UV1 retains the
-common flow coordinates. Full-character assembly, native visual review, CSS
-controls, profiles and gameplay verification are still required. See the
+common flow coordinates. A private full-character assembly now preserves the
+accepted Eve body/hair, 22 body/hand morphs and the V2 garments; its facial
+variant adds the accepted 115 expressions. Fresh editor reload verifies the
+shared rig, nine virtual bones, material bindings and boot-coverage sections.
+Windows cooking and full-character cooked geometry/UV, rig-link, skin-weight
+and body/facial-morph readback also pass. Tangent fallback remains on 430
+vertices, with visual impact unverified. This is not a fit or cloth acceptance:
+native visual review, cloth, stockings, CSS controls, profiles and gameplay
+verification are still required. See the
 [flow implementation record](../research/2026-10-12-peony-v2-materials.md#first-v2-flow-implementation).
 
 Keep outfit-specific meshes, materials, physics and palette definitions in the Eve mod under `/Game/CSS/eins0fx/EveSB/...`; put only genuinely reusable assets in `CSS_SharedAssets_P`. Make supporting CSS changes where needed while preserving existing controls and saved selections.

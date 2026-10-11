@@ -231,3 +231,62 @@ flow-coordinate reconstruction error is 0.0000127 cm. This closes the UV1
 export/cook question for the private garment. Cooked morph deltas, posed
 deformation, full-character/shared-skeleton assembly, native materials/stockings,
 CSS controls and gameplay remain separate work. Nothing was installed.
+
+## V2 character assembly
+
+The garment's `cooked-deformation-verified.json` now compares decoded skin
+weights and all six morph delta streams with the verified interchange. No new
+bone assignments appear. Weight differences and discarded small influences
+remain within the cook's 8-bit quantization bounds. Retained morph components
+differ by at most 0.002008 cm; omitted deltas remain within the 0.015 cm build
+threshold plus the measured floating-point tolerance. This verifies cooked
+deformation data, not posed fit or cloth behavior.
+
+`/mnt/eins0fxE/CSS-Development/peony-v2-character1` combines the accepted Eve
+body and three hair/ponytail parts with all 18 V2 garment parts. Its interchange
+contains 138,132 points, 183,191 triangles, 379 bind bones, 41 material slots and
+22 body/hand morphs. `assembly-verified.json` compares geometry, winding, corner
+attributes, skin weights and morph deltas with both source inputs. The assembly
+changes only part selection, offsets and the planned boot-coverage material
+partition. It does not refit the accepted body or garments.
+
+The V2 coverage receipt supplies exactly 4,944 body triangles in three dedicated
+skin aliases. Boots use source parts 4, 17 and 30, with the measured 9.738332 cm
+placement offset. Hiding boots must restore those skin aliases and the bare-foot
+offset; connecting and testing that CSS behavior remains pending.
+
+The private UE import succeeds. The facial variant adds the accepted 115 Eve
+expressions to the existing 22 morphs. Fresh editor readback verifies 406,473
+expression deltas, with maximum retained error 0.000095176 cm, and preserves the
+base mesh description and render sections. Both meshes are saved with the shared
+Skeleton, Eve body Physics Asset and secondary-animation graph. The assembly
+still has no cloth asset. Editor dependency stand-ins must not be shipped over
+the accepted cooked Eve materials or animation graph.
+
+Fresh binding reload passes for both meshes: 41 material bindings, the original
+379 mesh bind bones and all nine rebuilt virtual bones (388 component bones).
+The shared Skeleton and staged dependencies remain unchanged. Windows UE
+5.6.1 cooking finishes with zero errors and warnings. The private 114-package
+IoStore candidate resolves against the hash-pinned accepted Eve and shared
+containers, rather than shipping the recooked editor stand-ins.
+
+Cooked readback retains all 183,191 triangles, three UV channels, 41 material
+bindings and the expected rig links. Both variants contain 140,616 render
+vertices and identical base skin/topology/surface streams. Separate deformation
+checks pass for the 22 body morphs and all 137 facial-variant morphs, including
+skin-weight quantization and source-normal preservation. This also preserves
+the garment flow coordinates within the assembled character.
+
+Tangent-frame checks explicitly do not pass universally: 430 render vertices
+use the engine's unit-X fallback where primary-UV triangles have zero area.
+`tangent-fallback-locations.json` locates 284 in existing body/face/hair-attachment
+sections and 146 in V2 underwear, jacket, corset and trim. Their visual impact
+has not been established. Inspect them during native material review; do not
+call the cooked-data pass a shading or outfit-fit acceptance.
+
+`character-assembly1-receipt.json` freezes the evidence and 14 tool revisions,
+including the exact earlier garment-verifier revision. No game files were
+changed. The workspace Docker daemon was stopped after its cook completed.
+Remaining Peony work includes source fabric detail and stockings, garment cloth,
+native visual review, all supplied palette/component choices, CSS controls and
+saved profiles, followed by the required preview/gameplay checks.
