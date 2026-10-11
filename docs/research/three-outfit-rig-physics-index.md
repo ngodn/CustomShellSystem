@@ -30,6 +30,16 @@ across 98 mesh objects. This is not whole-outfit or runtime acceptance. The
 records the retained sequence, excluded lining experiment, limits and external
 archive cleanup. Morphs, weights, all source palettes and motion remain open.
 
+The next [corset and neckline correction](2026-10-11-peony-v2-source.md#corset-contact-and-deeper-neckline)
+advances the cumulative candidate to `neckline-contact3`. It resolves the
+measured front corset intersections and adds the requested deeper curved
+opening. The independently inspected 2,364-face original fabric island and all
+three trim parts pass body-edge checks; jacket/corset layering still passes.
+Three-view review and saved-file preservation pass for these neutral changes.
+Internal contacts, gloves, coverage, morphs, binding, materials and moving poses
+remain unfinished. Neither rejected normal-based neckline fit is carried into
+the current candidate. No V2 trial is installed.
+
 Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
 maps six removable garment groups while preserving the source data. Its latest
 continuous fit clears the sampled primary-body contact screen. Differential

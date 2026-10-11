@@ -712,3 +712,83 @@ Rejected fit5, fit6 and the set-aside lining4 blends were copied to
 then removed locally, reclaiming 248,435,500 bytes. The archive manifest records
 each file. No original archive, accepted body, installed package, save or
 appearance setting changed. No V2 game test is requested yet.
+
+## Corset contact and deeper neckline
+
+The outer corset's small visible spots are actual body intersections. The
+independent edge test finds 4 garment-edge and 30 reverse body-edge crossings
+on its radially classified exterior, plus 6/2 on trim slot 25. The witnesses
+all belong to `Eve Body` at heights 131.89 to 138.25 cm. Running the same audit
+on `corset-profile5` gives the same exterior and slot-25 counts. This rules out
+the later waist correction and an omitted body material as the causes of those
+specific defects. The earlier sparse sample pass did not exclude small
+intersections between sample locations.
+
+`corset-contact1`, built on `jacket-layered-choker1`, corrects upper corset and
+trim contacts with a shared smooth field. Coordinates at or below 127 cm remain
+fixed, protecting the previous waist-layer fit. Two guarded correction steps
+clear the checked outer corset and all three trim parts. Maximum movement is
+0.588 cm; main-fabric sampled clearance is at least 0.297 cm. Front/rear/side
+review shows the small front spots resolved. The jacket/corset edge check still
+passes, and full lower-layer crossing counts are unchanged.
+
+The requested deeper sweetheart design is authored separately in `neckline1`.
+It uses the earlier Peony neckline approach on the corrected V2 geometry, with
+one smooth vertical map for fabric and trim. The 4 cm depth and 6 cm width are
+design parameters, not a final opening measurement. A 12 cm vertical blend
+keeps the map locally positive; maximum measured initial drop is 3.981 cm.
+The initial design has no tested triangle reversal, with minimum sampled
+Jacobian 0.508 and minimum area ratio 0.426. It requires further body fitting:
+the first front render and edge test show intersections at the new neckline.
+
+`neckline-contact1` is rejected. Its fixed normal-based donor selection omits
+faces that turn outward during fitting. Faces 1911, 1921, 1924 and 1925 still
+intersect the body after the sampled margin passes. Expanding that selection
+per iteration in `neckline-contact2` is also rejected: it admits inner UV-island
+1, whose witnesses demand corrections approaching 4 cm. That result fails
+the contact gate. Do not extend its iterations or use it as a baseline.
+
+`neckline-face-audit1.json` identifies the true source fabric as UV island 1086,
+with 2,364 faces. Highlighted original front/rear/side views in
+`review-corset-main-source1` verify that island covers the exterior fabric,
+including the neckline faces missed by the normal threshold. The complete
+inspected face list is retained in `corset-main-island1086.json`.
+
+`neckline-contact3` starts again from `neckline1` and fits the upper region of
+that original fabric island, moving its attached trim through the same field.
+It does not include either rejected contact candidate. Five guarded correction
+steps give a 0.299 cm minimum sampled main-fabric clearance. The independent
+edge test then checks the entire 2,364-face island, not just the fitted upper
+samples: both garment-to-body and body-to-garment crossings are zero. Complete
+slots 25, 26 and 27 also have zero crossings, and jacket/main-corset crossings
+remain zero in both directions. The verifier additionally retains previously
+checked exterior faces so rotation cannot silently remove them from its set.
+
+Final front/rear/side views in `review-neckline-contact3` were inspected. The
+front opening is deeper and curved, the fabric remains continuous, and rear
+lacing and the lower waist remain in place. These are neutral opaque authoring
+views. Shading, textured appearance, all six body controls and moving poses
+remain to be verified. The whole slot-24/body check still finds 173/277 crossings
+outside the inspected fabric island, so full-mesh internal-surface clearance is
+not accepted. Lower hip/corset full-mesh counts are unchanged at 19/2 for slot
+9, 393/236 for slot 10 and 13/2 for slot 11. These remain tracked separately from
+the previously checked outer-waist fit.
+
+The current cumulative candidate is `neckline-contact3.blend`, SHA-256 recorded
+in its receipt. Its retained sequence adds `corset-contact1 -> neckline1 ->
+neckline-contact3` to `jacket-layered-choker1`. Saved-file preservation passes
+across 98 mesh objects for all three steps: accepted body, topology, original
+positions, UVs, weights, source IDs and previous shape coordinates are unchanged.
+The neckline recipe is frozen as `shape_peony_v2_neckline1.py`, SHA-256
+`110bfddd582121df186bf6aac89e57130eea78bd405e6e08e115159fa3815de7`;
+the final contact recipe is `fit_peony_v2_neckline_contact3.py`, SHA-256
+`f3515c950f5c64fd58689691f120f678b38052c095f17d0a101b596e2df45a3b`.
+The original contact and both rejected recipes are retained too. Authoring
+tools and blends remain outside the CSS Git repository.
+
+Rejected contact1 and contact2 blends were SHA-256 verified in the external
+rejected-fit archive before local removal, reclaiming 166,000,379 bytes.
+Glove fit, remaining internal contacts/coverage, body morphs, target binding,
+source materials and every supplied palette, physics/motion and runtime
+acceptance remain open. No game files, settings or saves changed. No V2 trial
+is installed and no game test is requested yet.

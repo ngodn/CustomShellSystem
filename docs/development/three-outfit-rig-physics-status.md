@@ -112,6 +112,19 @@ See the V2 source record for the retained build chain and test limits. The
 unrelated lining experiment is excluded, and rejected blends were hash-verified
 in the external archive before local removal. No V2 trial is installed.
 
+The current candidate advances to `neckline-contact3`. A corset body-edge audit
+reproduces the small front defects and establishes that the old sample pass
+missed them. The upper contact correction removes those intersections while
+keeping the lower waist fixed. The requested deeper sweetheart neckline is
+then shaped and fitted using the inspected original main-fabric UV island.
+All 2,364 faces in that island, all three corset trim parts and the jacket/corset
+boundary pass the independent bidirectional body/layer edge checks. Final
+front/rear/side views and 98-object saved-file preservation checks are complete.
+Normal-based neckline trials that missed newly exposed fabric or admitted
+internal faces are rejected and archived. Full-mesh internal contacts, gloves,
+coverage, all six body controls, target binding, materials/palettes and motion
+remain open. This is neutral authoring progress, not an installed gameplay fix.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
