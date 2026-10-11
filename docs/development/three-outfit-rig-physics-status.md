@@ -117,6 +117,18 @@ skirt surface with contoured waist anchors and a maximum sampled render gap of
 `work/slipstream-native-study1/receipt.json`. Native cloth simulation, collision, full-character assembly, materials
 and gameplay are not yet verified. See the same binding report for limitations.
 
+First native simulation follow-up: `slipstream-cloth-native1` retains all 53
+protected Eve dependencies and passes independent waist-anchor checks across
+three 145-frame captures. Walking passes the gross-strain screen; jogging fails
+134 frames and sprinting 136, so this remains rejected. The separate trim's
+shared cloth binding also fails during rebuild before saving. The existing
+Peony combined-section approach has been adapted in `slipstream-skirtmerge1`,
+preserving all 8,000 skirt triangles and all mesh data except declared material
+indices/UV2 selectors. That prepared interchange still needs native binding and
+combined materials. The fabric-only motion capture is diagnostic, not an
+installable outfit. Next: isolate captured cloth contact failures and complete
+the combined fabric/trim binding. No game files changed during this follow-up.
+
 The [wardrobe study](../research/2026-10-11-slipstream-wardrobe-fit.md) assigns
 31,625 source clothing triangles to six removable groups, including their trim.
 All 116 components are accounted for; source/body preservation and negative

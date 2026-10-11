@@ -159,3 +159,59 @@ runtime DLL changed during this work.
 contact diagnosis, current scripts, export/readback, cloth proxy and native
 topology result. Native logs are copied into immutable snapshots after their
 processes exit, so later trace-server output cannot invalidate those snapshots.
+
+### First native cloth simulation
+
+`slipstream-cloth-native1` stages 53 immutable Eve dependencies and the private
+garment import. A private copy of the UE 5.6.1 editor helper now accepts the exact
+canonical Slipstream mesh and collision paths. The Peony partition-specific
+guard remains unchanged. The module builds successfully; its project and binary
+hashes are pinned in `editor-module.json`. Shared authoring source and installed
+game files are unchanged.
+
+`bind_slipstream_cloth_trial.py` checks the measured bone names and parents,
+retains the mesh bind pose and six body morphs, sets the existing Eve skeleton,
+physics and secondary graph, and copies the existing cloth collider into the
+private Slipstream namespace. All 53 protected dependency hashes still match.
+
+The first complete cloth binding attempt fails before saving: the independent
+`Slipstream_skirt_Hardware` section loses its shared cloth mapping during mesh
+rebuild. The saved garment hash remains equal to the pre-cloth binding receipt.
+Do not bypass this guard or ship a skirt with independently skinned trim.
+
+The existing Peony combined-section method has been adapted in
+`merge_slipstream_skirt_sections.py`. `slipstream-skirtmerge1` retains all 8,000
+skirt triangles (2,082 fabric and 5,918 trim), using UV2 to distinguish their
+material families in one section. Undoing only the declared material-index/UV2
+edits reconstructs the original interchange exactly. Empty material slots are
+retained, so other ownership indices do not move. This is prepared interchange,
+not a native-imported or material-complete replacement yet.
+
+For collision diagnosis only, the primary fabric section was then bound without
+the separate trim. One invocation had an incorrect config path and exited
+without saving; the corrected invocation succeeded. These are diagnostic assets,
+not a complete outfit candidate. The saved-setting native captures contain
+145 frames each at 60 Hz, with the same 624-particle proxy2 and original copied
+collider. Independent skinning verifies every native kinematic particle using
+the engine's below-0.1-cm distance threshold:
+
+| Capture | Maximum anchor error (cm) | Failing strain frames / 145 |
+| --- | ---: | ---: |
+| Walk | 0.0000249 | 0 |
+| Jog | 0.0000283 | 134 |
+| Sprint | 0.0000257 | 136 |
+
+The strain guard requires an edge to exceed both twice its rest length and an
+additional 1 cm. Jog reaches 5.497 cm maximum extension, sprint 4.645 cm. The
+candidate is rejected. Correct waist attachment does not establish cloth fit,
+collision quality, body-shape behavior or acceptable motion. The retained
+starting collider and proxy constraints need contact isolation next, using the
+recorded failing frames rather than a blind settings sweep. Native merged
+fabric/trim binding and combined materials remain mandatory before full-outfit
+acceptance. Secondary motion was not enabled in this first diagnostic batch.
+
+`work/slipstream-cloth-study1/receipt.json` freezes 154 evidence files, including
+the private helper sources, copied final logs, retained dependency assets,
+motion captures, independent checks and merged-section preparation. Both the
+corrected primary binding and the motion batch exit successfully. Test failures
+above are garment-quality failures despite successful commandlet execution.
