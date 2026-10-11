@@ -345,3 +345,117 @@ Rejected bridge snapshots remain local for diagnosis. The requested external
 archive reports only 72 KB available during this checkpoint, so neither snapshot
 was moved or deleted. Preserve the frozen recipes and evidence when archive
 space becomes available; do not remove unrelated files to make room.
+
+## Bridge weight and clearance correction
+
+The bridge's source weights primarily follow the neck and upper spine. Copying
+the fitted jacket weights introduced shoulder influence into this short strap.
+`bridge-clearance1` shows that moving the transferred binding forward by up to
+6 mm still leaves sprint jacket crossings. Moving along the anchor normals
+also fails (`bridge-clearance2`). These are rejected clearance-only controls.
+
+Restoring the original V2 bridge weights through the existing semantic bone
+mapping, while retaining its two-anchor body-control offsets, clears the tested
+contacts with a 6-mm forward translation. The finer 4.5/5/5.5-mm comparison still
+finds moving jacket crossings at 5.5 mm. Six millimeters is the smallest passing
+tested offset, not a proven optimum. Translating Basis and all six shapes
+together preserves their deltas and the bridge's shape.
+
+The saved `binding-bridge3` passes `bridge-clearance6`: zero edge crossings in
+both directions against the complete body and jacket in neutral, all controls
+at maximum, walking frame 36 and sprint frame 12, with each moving pose tested
+at zero and maximum controls. The saved-file check independently verifies all
+294 restored vertex weights and the uniform translation, preserving the other
+117 meshes, topology, UVs, skeleton, body and footwear partition. Maximum
+weight error is 2.97e-8; translation error is below 9.84e-8 cm.
+
+Matched-camera front and side renders retain the bridge through those motions.
+The two earlier sprint pixel witnesses now hit the bridge first: `(547,399)`
+places it before body face 6956, and `(449,393)` before jacket face 8736. This
+accepts this local repair for continued fitting. It does not clear every
+animation, coplanar contact, shoulder seam, front cord or hip trim.
+
+A comparison restoring the whole jacket's source weights (`binding-bridge4`)
+clears the bridge test with 4 mm but visibly exposes skin through the shoulder
+in sprint and gives a poor walking underarm fold. It is rejected. Keep the
+fitted jacket weights and restore source weights only on the bridge. The live
+binder now preserves slot 20's source weights while using jacket correspondence
+for its morphs; the later two-anchor and clearance recipes are still required
+to reproduce the complete candidate.
+
+Continue from `binding-bridge3.blend`, SHA-256
+`6c1d60c03b9dc91b3b5021e2f668ea025834aa69f626473639d91ac3dccec6a9`.
+`binding-bridge3-receipt.json` freezes 60 evidence/recipe/dependency files and
+records three blend hashes. The rejected, regenerable `binding-bridge4.blend`
+was removed after hash verification, reclaiming 90,633,321 logical bytes.
+Its input, recipe, metadata and rejection renders remain local. It was not
+archived because the requested external volume is full; cleanup is recorded
+in `binding-bridge4-cleanup.json`.
+
+The shoulder seam and compressed front cords remain visibly unresolved. No V2
+trial is installed, and no game test is requested at this checkpoint.
+
+## Shoulder trim diagnosis
+
+The retained shoulder decorations still used their pre-refinement jacket
+binding. A matched sprint ray at `(337,237)` in
+`review-bridge3-shoulder-probes/report.json` hits jacket face 4589 before trim
+slot 23 face 967. Their depth difference is 0.11222 cm. This is a separate
+trim/jacket overlap, not the repaired front bridge or exposed body.
+
+`binding-shoulder1` rebinds slots 22 and 23 to the refined jacket, excluding the
+known 150-face inner fan. Neutral geometry stays fixed in the recipe. The old
+pixel witness now hits trim first, and slot 22's body crossings disappear in
+the six audited cases. Slot 23 still intersects the body and jacket during
+motion. Rebinding alone is not sufficient.
+
+`binding-shoulder2` adds 957 vertices to slot 23 by splitting edges longer than
+6 mm, producing 2,113 vertices and 3,636 faces. New points use the refined
+jacket's weights and morph offsets. This retains the neutral parent surfaces
+in the construction, but does not by itself remove the moving contacts. Edge
+counts across different topology are not a measure of improvement.
+
+The direct nearest-jacket-normal offset is rejected. At 3 mm,
+`binding-shoulder3` reverses six neutral triangles and seven body-tone triangles;
+walking also retains body crossings. Its maximum neutral area ratio is 5.8268.
+Do not promote that file or repeat a discontinuous normal offset.
+
+The next diagnostic copy, `binding-shoulder4`, averages the jacket-normal field
+within a 12-mm compact spatial kernel before applying a 4-mm field amplitude.
+The field is not renormalized, so actual displacement is bounded by 4 mm.
+The same displacement is applied to Basis and all six keys. No triangles
+reverse in the construction check: area ratios across the seven shapes remain
+within 0.84979 through 1.40886, and normal cosine is at least 0.96815.
+
+`shoulder-contact-shoulder4.json` reloads the saved file. Both trim slots have
+zero body crossings in both edge directions across neutral, all-maximum,
+walk36 and sprint12 at zero and maximum controls. Slot 23 also clears the
+jacket at neutral and all-maximum. Moving trim/jacket crossings remain:
+
+| Pose | Slot 22 vs jacket | Slot 23 vs jacket |
+| --- | --- | --- |
+| Walk36 | 91 / 46 | 73 / 65 |
+| Sprint12 | 145 / 36 | 77 / 73 |
+| Walk36, maximum controls | 92 / 48 | 55 / 53 |
+| Sprint12, maximum controls | 141 / 38 | 74 / 69 |
+
+Each pair counts trim-edge/jacket then jacket-edge/trim hits. Complete meshes
+include undersides and attachment details; classify these witnesses before
+further displacement. Neutral/back and moving/front/side views improve the
+plate coverage but do not establish complete seam acceptance. The two later
+sprint probes `(368,194)` and `(374,274)` hit jacket faces 5089 and 9287 and miss
+both trim slots. They locate visible jacket folds, not trim clipping proof.
+
+Retain `binding-shoulder4.blend` for diagnosis, SHA-256
+`ca7b295dbc57582be5cc7b59dc4115a7f1dfd25f0612b28bc7f7b568495195dc`.
+Independent preservation checks for the three shoulder-edit stages and
+classification of the remaining jacket contacts are still required. The
+accepted cumulative baseline remains `binding-bridge3`, not this candidate.
+The next correction must follow those witnesses rather than increasing a
+global offset again.
+
+`binding-shoulder4-receipt.json` freezes 60 files and records the five input/
+candidate blend hashes. The rejected, regenerable shoulder3 blend was removed
+after hash verification, reclaiming 90,644,521 logical bytes. Its recipe,
+input, spacing study and metadata remain; no external copy was claimed.
+See `binding-shoulder3-cleanup.json`. No game file was changed.

@@ -209,6 +209,28 @@ contacts remain unresolved. The [binding study](../research/2026-10-12-peony-v2-
 records the exact scope, frozen recipes and limitations. All supplied palettes
 with the black-and-white floral default remain required. No V2 trial is installed.
 
+The next cumulative copy is `binding-bridge3`. Restoring only the jacket
+bridge's original neck/spine weights and adding 6 mm of forward clearance
+removes the recorded body/jacket crossings in six saved neutral/maximum/walk/
+sprint cases. Independent reload preserves all other meshes and verifies the
+bridge weights, translation and unchanged shape deltas. Matched-camera views
+and the two earlier sprint pixel witnesses support this local repair. A
+whole-jacket source-weight comparison is rejected for visible shoulder
+breakthrough. Its regenerable blend was removed after recording hashes,
+recipe and rejection evidence; the external archive remains full. Shoulder
+seams, chest cords, hip trim and the other previously recorded outfit work
+remain open. No V2 package or new game trial is installed.
+
+The shoulder follow-up isolates stale trim correspondence after the jacket
+refinement. Updating that correspondence, subdividing the broad decoration
+and smoothing a bounded clearance field gives private `binding-shoulder4`.
+Its saved body-contact checks clear both trim slots in six cases, with no
+triangle reversals in the construction check. Moving jacket/trim contacts
+and independent preservation checks remain unresolved, so keep bridge3 as
+the cumulative baseline. The direct-normal offset is rejected for reversed
+faces and its regenerable blend was removed with a retained receipt. The
+binding study records the exact next witnesses and limitations.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
