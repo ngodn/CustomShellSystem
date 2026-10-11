@@ -972,3 +972,76 @@ editor lock; `duplicate-content-cleanup.json` records their 399,441,048 logical
 bytes and the exact restore source. This is not a claim about physical free
 space. Source assets, the unique native16 garment, modules and captures remain.
 No game package, core, save or profile was changed.
+
+## Native mapping application and cook archive proof
+
+`slipstream-mappingnative1` starts from the original 624-particle garment in
+`slipstream-mappingbasis1`, using a private copy of the full-basis commandlet.
+The candidate is the complete `slipstream-mappingbasisfit9` correction. The
+helper validates the section dimensions, retained positions, blend flags and
+weights, particle indices, platform vertex order and cloth-buffer section
+offsets before applying it. Render resources are released and flushed before
+buffer replacement, then initialized again. This probe runs with NullRHI;
+matching CPU buffers is not evidence of rendered appearance.
+
+Native application and immediate save readback match all 723 corrections.
+Unchanged model geometry, skin weights and authored shading vectors match the
+retained export. However, the next process loads the original mapping again.
+A forced build after invalidating the derived-data GUID also restores every
+original row. Do not distribute the edited source asset assuming a normal save
+preserves this correction. The recipe must run after mesh generation in the
+authoring/render/cook paths that use it.
+
+The Windows-target archive probe first requests platform data, then applies
+the verified correction and calls native package serialization through a
+private `ICookedPackageWriter` that retains the resulting archive segments.
+Its target uses Epic's Windows platform templates. This is hosted in the exact
+Linux UE 5.6.1 editor, with shader compilation disabled. It does not replace the
+required Windows editor shader cook or produce an assembled release package.
+
+The independent reader checks the exact 64-byte `FMeshToMeshVertData` layout
+from `SkeletalMeshTypes.h` and the bulk-array serializer in
+`Rendering/SkeletalMeshVertexBuffer.h`. It finds one complete 6,412-row buffer
+at archive offset 2,848,854, including all position, normal and tangent
+coefficients, source indices, blend flags and weights. The section-offset
+array has twelve entries with the one cloth entry `(3166, 0, 6412)`.
+A deliberately damaged normal fails the comparison.
+
+An unmodified cook control produces an equal-length 3,616,008-byte archive.
+The only differences are the corrected 410,368-byte mapping region and the
+20-byte package SavedHash. The latter's location at bytes 24 through 43 is
+confirmed by the exact `PackageFileSummary.cpp` layout; the checker rejects
+other header versions before excluding it. All bytes outside those two regions
+match, and a deliberately modified unrelated header byte is detected. See
+`cook-preservation-check.json`, `cook-final-check.json`, `apply-check.json` and
+`reload-check.json`. This proves serialization and bounded preservation, not
+physical fit, moving shading, FPS or gameplay compatibility.
+
+The first direct cook probe failed an assertion because it omitted a package
+writer. The next supplied a generic writer and failed because cooking requires
+`ICookedPackageWriter`. Both were isolated authoring-process failures, with
+logs and terminal receipts retained. The corrected writer and unmodified
+control both return zero with no errors; the warning summary concerns blocked
+writes to the read-only global editor settings. The initial helper also needed
+a shared-reference compile correction and replacement of a non-exported
+`GetClothMappingData` call. Final sources and build receipts are preserved.
+
+Readback caveat: the current CUE4Parse `FSkeletalMeshVertexClothBuffer` parser
+skips the vertex array. Its existing `cloth_mapping_sha256` therefore does not
+prove mapping coefficient equality. The parser also assigns the LOD-bias
+stride into `MappingOffset`. Neither parser behavior was changed here. Use the
+new complete-array check for this proof and address that reader before relying
+on its digest for a shipping mapping audit.
+
+Next: integrate the post-generation correction into a private native rendered
+comparison and the actual Windows cook, then assess the captured moving
+shading witnesses. The separate body-contact and travel/target conflicts remain
+open. Preserve the stationary close-fit requirement and CSS body-shape behavior;
+serialization success does not waive either one.
+
+Only the copied private garment changed among 62 editor assets. No game
+package, runtime, save or profile changed. All jobs terminated. Three redundant
+pre-cook reports were verified as exact subsets of the retained final report,
+then removed under the editor lock: 53,864,783 logical bytes. Unique logs,
+source assets, captures and the compiled helper remain. Recipes and evidence
+are frozen in `work/slipstream-cloth-study13/receipt.json`.

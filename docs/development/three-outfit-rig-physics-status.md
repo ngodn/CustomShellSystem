@@ -11,8 +11,9 @@ vertices in the independent static check, including normal/tangent directions
 and rejection of a damaged-normal control. This does not establish moving fit:
 two captured strides still expose short shading vectors and large differences
 from the old mapping. Two local-triangle ranking comparisons do not resolve
-those witnesses and are not accepted. Native application, rebuilt/cooked
-persistence and moving shading remain unresolved. Continue from the captured
+those witnesses and are not accepted. The later native trial below establishes
+application and Windows-target archive serialization, but ordinary reload and
+rebuild lose the correction. Moving shading remains unresolved. Continue from the captured
 motion witnesses and local target/constraint work; do not accept a static-only
 repair or repeat the rejected triangle-ranking rules. Source assets remain
 preserved. No new trial
@@ -27,8 +28,20 @@ has much larger static errors and sprint still fails 15/13 frames. A separate
 offline mapping correction improves its basis but leaves nine unresolved
 vertices. Keep the original 624-particle surface. The complete original-surface
 mapping correction still needs a private native application/rebuild/render
-test; its motion diagnostics alone do not prove a visible regression or a
+test at this point; its motion diagnostics alone do not prove a visible regression or a
 finished repair. See the [surface comparison](../research/2026-10-11-slipstream-binding.md#thin-triangle-and-outer-surface-comparison).
+
+**Native mapping follow-up:** `slipstream-mappingnative1` applies all 723 corrected
+rows to the model and render buffer with exact float32 readback. A normal save
+does not persist through load: UE restores all original rows, and a forced
+rebuild with a new cache key does the same. Applying the correction after
+Windows-target data generation survives native cooked serialization. An
+independent binary check finds the complete 6,412-row buffer and rejects a
+damaged normal. Compared with an unmodified control, the 3,616,008-byte archive
+differs only in the mapping and its 20-byte SavedHash. This is a Linux-hosted
+Windows-target archive probe, not a complete Windows editor/shader cook or
+rendered fit acceptance. Production cook integration and moving GPU review
+remain. See the [native persistence study](../research/2026-10-11-slipstream-binding.md#native-mapping-application-and-cook-archive-proof).
 
 Latest installed trial: `peony-refit2`, replacing the rejected `peony-refit1`
 Eve/shared packages. The core remains `6d751cbdab2cab4c`. The lower garment
