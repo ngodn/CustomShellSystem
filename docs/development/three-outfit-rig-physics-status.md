@@ -231,6 +231,20 @@ the cumulative baseline. The direct-normal offset is rejected for reversed
 faces and its regenerable blend was removed with a retained receipt. The
 binding study records the exact next witnesses and limitations.
 
+Independent saved-file checks now pass for shoulder1/2/4, preserving the body,
+unrelated meshes, UVs and rig. Source-face and visibility comparisons show
+that some moving jacket/trim contacts are new. A plate-only source-weight
+comparison disconnects the cords in sprint, so it is rejected on its own.
+Private `binding-shoulder7` couples those cord ends to the fitted plate and
+reduces the sampled maximum sprint attachment gap from 1.44802 to 0.159928 cm.
+Its saved geometry, skinning and six-control checks pass with no reversed
+faces, and the reviewed cords stay connected. Remaining moving jacket
+contacts prevent shoulder acceptance; bridge3 remains the accepted local
+baseline. The unsmoothed shoulder6 variant was rejected and removed after
+retaining its recipe, input and receipt. See the
+[attachment comparison](../research/2026-10-12-peony-v2-binding.md#coupled-shoulder-attachments)
+for exact witnesses and limits. No V2 trial is installed or ready for a game test.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the

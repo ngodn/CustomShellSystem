@@ -459,3 +459,79 @@ candidate blend hashes. The rejected, regenerable shoulder3 blend was removed
 after hash verification, reclaiming 90,644,521 logical bytes. Its recipe,
 input, spacing study and metadata remain; no external copy was claimed.
 See `binding-shoulder3-cleanup.json`. No game file was changed.
+
+## Coupled shoulder attachments
+
+Independent reload checks now pass for shoulder1's binding, shoulder2's
+refinement and shoulder4's spacing. They verify the saved coordinates, weights,
+six controls, topology and UVs against their respective inputs, with all
+unrelated meshes, body, rig and footwear preserved. Shoulder2 starts from
+1,808 plate faces and 1,156 vertices, adding 957 vertices. The refinement
+preserves the parent surfaces and original vertices. These checks resolve the
+preservation questions above; they do not resolve moving jacket contact.
+
+The contact classifier tests each recorded edge witness from 24 directions
+against the assembled opaque surfaces. A second comparison maps refined faces
+back to the untouched source. Shoulder4's visible neutral cord contacts all
+match original attachment overlaps, but many walking and sprint witnesses do
+not. They cannot all be dismissed as hidden or inherited from the source.
+See `shoulder-contact-visibility1.json` and `shoulder-source-contacts1.json`.
+
+Restoring source weights on the plate alone reduces several moving contacts,
+but `binding-shoulder5` visibly separates the cord ends in sprint. Across 379
+cord vertices originally within 1 mm of the plate, its maximum sprint gap is
+1.44802 cm. Restoring source weights on the cords themselves worsens jacket
+contacts. Neither comparison is an acceptable standalone correction.
+
+`binding-shoulder7` keeps the plate's source weights and couples the cord ends
+to its fitted surface, weights and body controls. Original-source distance
+defines the attachment region: full influence within 1 mm, smoothly falling
+to zero at 8 mm. A 12-mm spatial kernel smooths the neutral displacement field
+to retain the cord cross-sections. This affects 1,275 of 3,311 cord vertices.
+The unsmoothed shoulder6 variant is rejected for 33 reversed faces.
+
+The saved shoulder7 preservation check passes. The other 117 meshes, body,
+rig, footwear, topology and UVs remain unchanged from shoulder5. Maximum
+neutral displacement is 0.358273 cm. Across Basis and all six keys, the minimum
+normal cosine is 0.926179 and area ratios stay within 0.864703 through
+1.223512. No faces reverse. Body-control correspondence agrees with the
+accepted body to at most 0.000021763 cm.
+
+The same 379 attachment samples now have maximum gaps of 0.166997 cm in
+neutral, 0.161753 cm in walk36 and 0.159928 cm in sprint12, all at maximum
+controls. Sprint's median gap is 0.031504 cm. The reviewed neutral front/back
+and maximum-control moving front/side views retain connected cords. These are
+finite attachment samples and offline poses, not full animation acceptance.
+
+Both trim slots remain clear of the body in both edge directions across all
+six saved cases. Jacket contacts remain. The table gives visible witnesses
+followed by those sharing an exact original-source contact face pair:
+
+| Case | Cord slot 22, visible / source match | Plate slot 23, visible / source match |
+| --- | --- | --- |
+| Neutral | 4 / 4 | 0 / 0 |
+| Maximum controls | 5 / 4 | 0 / 0 |
+| Walk36 | 14 / 5 | 28 / 21 |
+| Sprint12 | 4 / 0 | 40 / 9 |
+| Walk36, maximum controls | 8 / 4 | 8 / 7 |
+| Sprint12, maximum controls | 13 / 0 | 39 / 14 |
+
+See `shoulder-contact-visibility2.json` and `shoulder-source-contacts2.json`
+for exact edge/face witnesses. Matching source face pairs identifies existing
+attachment overlap, not an automatic visual pass. Conversely, new face pairs
+need inspection before displacement. The classifier uses opaque geometry,
+24 view directions and a 0.02-cm depth tolerance; it does not test material
+alpha, coplanar overlap or the full motion range.
+
+Continue the shoulder investigation from `binding-shoulder7.blend`, SHA-256
+`c3cc027f967a583b7dbb5d5022fd2bcbb095b366d129fb215dd44d401f4c2d45`.
+The accepted local baseline remains bridge3 until the remaining moving trim
+contacts are resolved. Main jacket folds, front cords, hips, gloves, source
+materials, all supplied palettes and the remaining export/runtime work are
+still open. No V2 trial is installed.
+
+`binding-shoulder7-receipt.json` records 113 recipe/evidence files and four
+blend hashes. The rejected shoulder6 blend was removed after hash and open-file
+checks, reclaiming 90,635,362 logical bytes. Its input, frozen recipe and
+metadata remain. No external archive is claimed because that volume is full;
+see `binding-shoulder6-cleanup.json`.
