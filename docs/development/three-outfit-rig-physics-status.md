@@ -183,7 +183,7 @@ need export/performance review; full-animation contact, footwear coverage and
 the previously recorded glove/morph/seam defects remain open. Frozen evidence is
 in `binding-collar1-receipt.json`. No V2 trial is installed.
 
-The current private copy is `binding-footwear3`. It excludes the rejected lining
+The footwear copy `binding-footwear3` excludes the rejected lining
 from the active garment list and partitions 4,944 covered body faces for the V2
 boot toggle. The old 42-cm mask hid skin inside visible calf openings; the new
 boundary restores 384 faces and includes crossing triangles below the fitted
@@ -194,6 +194,20 @@ Both rejected coverage copies are hash-verified in the external archive, freeing
 181 MB locally. Export/catalog slot mapping, toggle-dependent height, full motion,
 individual body-control/seam checks and the remaining outfit work are pending.
 No V2 trial is installed. See the binding study for evidence and limitations.
+
+The cumulative fitting baseline is now `binding-breast1`. An individual-control
+audit finds maximum-breast intersections in the main corset; a guarded correction
+to that garment shape clears both edge directions in 16 tested control cases.
+Independent reload preserves all 118 meshes apart from the specified breast
+shape changes. Neutral fit, other controls and the accepted body stay unchanged.
+The jacket bridge was also incorrectly following the corset. Its donor is now
+corrected in the live binder, but two private rebinding studies still fail full
+motion review: the second improves walking and still intersects in sprint.
+Keep `binding-bridge2` as diagnostic evidence, not the cumulative accepted copy.
+Front-cord compression, collar/shoulder seams, sprint hip trim and previous glove
+contacts remain unresolved. The [binding study](../research/2026-10-12-peony-v2-binding.md)
+records the exact scope, frozen recipes and limitations. All supplied palettes
+with the black-and-white floral default remain required. No V2 trial is installed.
 
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left

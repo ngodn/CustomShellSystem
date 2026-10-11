@@ -260,3 +260,88 @@ the V2 face partition into the actual export and catalog. Remaining glove
 contact, all supplied materials/palettes, physics, cooking and coordinated
 release work remain open. No V2 trial is installed; game files, saves, settings,
 camera and character input are unchanged.
+
+## Individual body controls and jacket bridge
+
+The six controls were rendered separately from `binding-footwear3`. The lower
+garment stays close in the inspected hip, glute and thigh views; this does not
+clear its internal contacts or moving seams. The torso inspection found two
+separate problems: maximum breast size intersects the main corset, and the
+jacket's front bridge follows the wrong garment.
+
+`body-controls1.json` tests the inspected 2,364-face corset UV island against the
+complete accepted body in both edge directions. Maximum breast size produces
+21 garment-edge/body crossings and seven body-edge/garment crossings. All six
+controls at maximum produce 16 and six. The witnesses cluster along the center
+front and one area below the left cup. Neutral, the other individual controls,
+all controls at one half and the previously reported breast/glute values have
+no crossings in this limited surface test.
+
+`binding-breast1` changes only `PBMBreastsSize` on bound source slots 24 through
+27. It uses the earlier guarded continuous contact field against the morphed
+body, with a fixed lower waist. Neutral fit, topology, UVs, weights, skeleton,
+body, the other five controls and footwear partition remain unchanged. The
+largest correction is 1.63335 cm on the main corset and 0.42930 cm on its front
+trim. Main-corset triangle areas remain between 0.72746 and 1.38830 of their
+previous maximum-breast areas; no tested triangle reverses. The sampled margin
+is at least 0.29629 cm on the selected main fabric.
+
+`body-controls2.json` finds no crossings in either edge direction for 16 cases:
+neutral, each individual maximum, all-half, all-maximum, the reported
+breast/glute values, and breast values 0.25/0.5/0.75 with the other controls at
+zero or maximum. `binding-breast1-preservation.json` independently reloads both
+files and verifies all 118 meshes, permitting only the four specified shape
+changes. This is an explicit garment-shape correction after body correspondence;
+the corrected shape is no longer solely the original interpolated body delta.
+The front cord already hangs below the cups at neutral size. Its compression
+at large breast sizes still needs trim review, separate from the repaired body
+crossings. The maximum-breast render is not full visual acceptance.
+
+Continue cumulative fitting from `binding-breast1.blend`, SHA-256
+`edaef0c389fb9083fe4ad89e69cab53154dda20d8e379b2f1fc924b0b690ded1`.
+
+The bridge investigation identifies source slot 20 as the short front jacket
+strap and its two buttons: three components, 294 vertices, 456 faces, heights
+148.78 through 151.35 cm. Its original binding incorrectly used corset slot 24,
+12.15 through 15.82 cm away for the main strap. The jacket is at most 2.563 cm
+away. `bridge-donors1.json` records each component's bounds and distances.
+The live binder now assigns slot 20 to jacket slot 19; the frozen old binder
+remains available to reproduce the defect.
+
+Two private bridge studies remain rejected for complete motion acceptance:
+
+- `binding-bridge1` replaces every bridge vertex's weights and six controls
+  with the nearest exterior jacket triangle's interpolation. It preserves
+  neutral geometry and stops the breast slider pulling the strap upward, but
+  creates uneven folds in the walking pose.
+- `binding-bridge2` uses two button-center anchors on the jacket. Each button
+  shares one binding; the strap blends laterally between them. This improves
+  the walking outline. The sprint front view still shows intersections at the
+  strap and attachment area, so it is a diagnostic candidate, not the next
+  accepted cumulative baseline.
+
+The identical-camera sprint rays make this rejection concrete. At `(547,399)`,
+body face 6956 is in front of bridge face 344 by 0.04610 cm along the camera ray.
+At `(449,393)`, jacket face 8736 is in front of bridge face 229 by 0.05076 cm.
+The third probe, `(567,418)`, misses the bridge and cannot establish a bridge
+intersection. `review-bridge2-sprint-probes/report.json` retains the hits and
+their weights for the next attachment-clearance correction. Do not treat every
+skin-colored pixel around the strap as a clipping witness.
+
+Both saved-file bridge checks preserve the other 117 meshes and all neutral
+geometry, UVs, materials, skeleton and footwear partition. They independently
+reconstruct all 294 vertices' new weights and six shape offsets from the jacket
+donors. These checks establish correspondence, not collision-free movement.
+The diagnostic torso views also expose unresolved collar/shoulder irregularities
+and sprint hip-trim separation. The previous collar repair only cleared its
+three recorded witnesses; it did not clear the whole seam.
+
+The frozen body-control and bridge recipes, checks and images are indexed in
+`binding-body-controls1-receipt.json`. No V2 trial is installed. All supplied
+palette templates and the black-and-white floral default remain required;
+material matching, export, physics and release work are still open.
+
+Rejected bridge snapshots remain local for diagnosis. The requested external
+archive reports only 72 KB available during this checkpoint, so neither snapshot
+was moved or deleted. Preserve the frozen recipes and evidence when archive
+space becomes available; do not remove unrelated files to make room.
