@@ -628,3 +628,87 @@ receipts and source/candidate renders are retained under `work/peony-v2-source1`
 Fit2 has no saved blend. Rejected blends 1, 3 and 4 are moved to the external
 rejected-fit archive after SHA-256 verification; their receipts and renders
 remain local. No V2 game trial, core update, save or appearance setting changed.
+
+## Jacket and choker layer correction
+
+The five previously classified exterior reversals all belong to source UV island
+0, a 150-triangle interior fan. The original UVs and highlighted source views
+identify that island inside the neck/chest opening, not on the outer back.
+`jacket-face-audit2.json` and `jacket-inner-island0.json` retain the face IDs.
+Keep this geometry, but exclude it from exterior fit drivers. That exclusion
+alone does not solve the deformation: `jacket-fit6` still has 20 reversals and
+minimum local Jacobian -0.364, so it is rejected.
+
+`jacket-flow1` instead composes small fitting steps from the original aligned
+source. Each step limits displacement and gradient, tests transported face
+orientation and holds interior bone references. All 30 steps pass their local
+orientation guard. This is not a proof against all self-intersections. The main
+jacket still fails its total area-ratio screen (0.107 to 3.942) and has ten
+classified outer faces with inside samples. `jacket-contact1` corrects those
+residual contacts in three guarded passes. All 2,513 classified exterior faces
+then have positive sampled body clearance, with a 0.296 cm minimum.
+
+Slot 21 is the choker, including its pendant and hardware. Its original aligned
+band reaches the target jaw. A separate placement audit tests vertical offsets
+from 0 to -2.5 cm. `jacket-choker1` places it 2 cm lower and applies one affine
+cross-section adjustment to the entire original part. It clears all 1,490
+triangles in the body-contact sample screen. Front/rear/side review nevertheless
+shows an overlap with the jacket's standing collar and defects at the jacket's
+lower hem. Body clearance alone did not resolve garment layering.
+
+The independent edge audit identifies the remaining layer conflicts: 150/107
+crossings between choker and jacket, and 103/106 between jacket and corset.
+The affected jacket UV islands differ from island 0. The `jacket-lining4`
+harmonic interior-fan experiment therefore does not address those defects and
+is set aside. Its geometry is not included in the current candidate.
+
+The retained sequence is:
+
+`calf-surface2 -> jacket-flow1 -> jacket-contact1 -> jacket-choker1 -> jacket-layer1 -> jacket-layered-choker1`.
+
+`jacket-layer1` uses the earlier waist-layer approach: constrain the jacket
+against the classified outer corset while retaining body clearance. It changes
+slots 19, 20, 22 and 23, keeping the choker fixed. Three guarded passes clear the
+tested overlap. `jacket-layered-choker1` then fits the complete choker around
+both body and the standing collar. The final independent edge results are:
+
+| Surfaces | First-surface edge crossings | Reverse edge crossings |
+| --- | ---: | ---: |
+| Classified outer jacket / complete body | 0 | 0 |
+| Complete choker / complete body | 0 | 0 |
+| Complete choker / complete jacket | 0 | 0 |
+| Complete jacket / main corset | 0 | 0 |
+| Complete jacket / complete body | 237 | 284 |
+
+The full jacket/body crossings remain outside the classified exterior and are
+unresolved. The test excludes edge endpoints and does not establish coplanar
+overlap, full self-intersection or animation safety. Exterior jacket sampled
+clearance is 0.296 to 2.372 cm; complete choker sampled clearance is 0.481 to
+1.753 cm, including its pendant and hardware. Do not interpret those maxima as
+uniform cloth-to-skin gaps.
+
+Final front/rear/side images in `review-jacket-layered-choker1` were inspected.
+They show a continuous jacket hem and choker without the preceding layer cuts.
+Small corset surface defects remain visible in front. This is the current
+cumulative authoring candidate, not an accepted outfit or runtime trial.
+Resolve remaining inner contacts, corset/cleavage and glove fit, exact lower
+body coverage, all six morphs, target weights and moving poses. All supplied
+source palettes, material matching and the black-and-white floral default also
+remain required before cooking and gameplay acceptance.
+
+Saved-file preservation checks pass across 98 mesh objects for each retained
+stage. Only its declared shape keys change; original source coordinates, UVs,
+weights, IDs, previous shape coordinates and the accepted body remain intact.
+The layer recipes are frozen as `fit_peony_v2_jacket_layer1.py` (SHA-256
+`c7b8bdbbf4ca33025af98e0f3e7bfde476a273e30e90b50362c424791a0b17f8`)
+and `fit_peony_v2_choker_layer1.py` (SHA-256
+`960e38d9ea3213a4d894d2418c99f23b8fc171bb703f9465d97a8ce17af32a65`).
+These authoring files live outside the CSS Git repository; the documentation
+commit does not commit their contents. JSON receipts, preservation reports,
+edge witnesses and frozen intermediate recipes remain beside the candidate.
+
+Rejected fit5, fit6 and the set-aside lining4 blends were copied to
+`/run/media/eins0fx/theark/CSS/peony-v2-rejected-20261011`, SHA-256 verified and
+then removed locally, reclaiming 248,435,500 bytes. The archive manifest records
+each file. No original archive, accepted body, installed package, save or
+appearance setting changed. No V2 game test is requested yet.

@@ -99,6 +99,19 @@ remaining face distortions and choker fit before cooking. See the V2 source
 record for witnesses, recipes and rejected-candidate cleanup. No V2 trial is
 installed.
 
+The latest cumulative authoring candidate is now `jacket-layered-choker1`.
+An original UV-island audit separates the interior fan from exterior fitting
+drivers. Small guarded steps improve the jacket fit; subsequent body and layer
+corrections clear the tested outer-jacket/body, choker/body, choker/jacket and
+jacket/corset edge crossings. Front/rear/side views show the earlier collar and
+hem cuts resolved. Saved-file preservation passes across 98 mesh objects for
+each stage. This does not accept the whole garment: full jacket/body inner
+crossings and small visible corset defects remain, alongside glove/cleavage fit,
+lower-body coverage, all six morphs, target weights, palettes and moving poses.
+See the V2 source record for the retained build chain and test limits. The
+unrelated lining experiment is excluded, and rejected blends were hash-verified
+in the external archive before local removal. No V2 trial is installed.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the

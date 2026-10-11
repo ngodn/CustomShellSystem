@@ -9,7 +9,7 @@ as the default. Installed Peony refit2 is rejected, including its upper garment
 and lower fit. Older trial notes below do not establish acceptance. Rebuild from
 V2 while preserving the accepted body and requested customization/removals.
 
-The latest private V2 candidate is `calf-surface2`, built on `thigh-surface3`
+The lower-garment V2 baseline is `calf-surface2`, built on `thigh-surface3`
 and `waist-layers3`.
 The waist correction removes the visible waistband/corset overlap. The thigh
 correction follows the leg more closely after switching to exterior fabric
@@ -19,11 +19,16 @@ these limited changes. Full-mesh contact still fails outside those regions;
 boot coverage, jacket/glove fit, morphs, material matching and motion remain
 open. The V2 source record contains the limits. No V2 trial is installed.
 
-The later jacket studies are rejected. `jacket-fit5` improves shoulder coverage
-after separating interior fan faces from fitting donors and anchoring the
-garment core, but still has failed geometry checks, visible defects and choker
-clipping. It is diagnostic evidence, not a replacement for the cumulative
-baseline above. The V2 source record identifies the remaining faces to inspect.
+Jacket studies 1 through 6 remain rejected. The latest cumulative authoring
+candidate, `jacket-layered-choker1`, uses guarded fitting steps and separate body
+and garment-layer constraints. Tested exterior jacket/body and complete
+choker/body, choker/jacket and jacket/corset edge crossings are zero. Three-view
+review confirms the earlier hem and collar cuts are gone; small corset defects
+remain. The full jacket/body inner contact gate still fails. Preservation passes
+across 98 mesh objects. This is not whole-outfit or runtime acceptance. The
+[V2 source record](2026-10-11-peony-v2-source.md#jacket-and-choker-layer-correction)
+records the retained sequence, excluded lining experiment, limits and external
+archive cleanup. Morphs, weights, all source palettes and motion remain open.
 
 Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
 maps six removable garment groups while preserving the source data. Its latest
