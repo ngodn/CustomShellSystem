@@ -2,17 +2,16 @@
 
 Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
-**Latest private Slipstream result:** two rigid thigh distance grids load and
-participate correctly in UE 5.6.1 cloth. They reduce the frame-119 uncovered
-body witnesses from 93 to 34, but worsen the strain result to 30/31 failing
-sprint frames. The existing center-weight alternative fails 39/41 frames.
-Both candidates are rejected. An additional posed containment check finds
-that the seven-pose grid fit extends outside the body in frames 88 and 120,
-by up to 0.599 cm. Next work must include the full recorded stride when
-fitting these volumes; the original and trial pose snapshots match exactly.
-Native data readback and retained source-asset checks pass, but garment fit
-does not. No new game trial is installed or ready for a player test. See the
-[rigid thigh comparison](../research/2026-10-11-slipstream-binding.md#rigid-thigh-level-set-comparison).
+**Latest private Slipstream result:** collision fitting now covers the complete
+145-frame sprint capture plus reference pose. Revised grids and spheres pass
+their independent sampled containment checks, but native cloth still stretches
+and clips, so both candidates remain rejected. A native constraint-copy trace
+shows a rear edge relaxing from 3.524 to 1.775 cm under its spring constraint,
+clear of body/backstop collision, but requiring more travel than its 12 cm
+limit. Increasing travel alone also fails. Next: inspect actual tether data and
+sequential constraint copies to identify what prevents this edge correction.
+Source assets remain preserved. No new trial is installed or ready for a
+player test. See the [full-stride comparison](../research/2026-10-11-slipstream-binding.md#full-stride-collision-bounds-and-the-remaining-constraint-conflict).
 
 Latest installed trial: `peony-refit2`, replacing the rejected `peony-refit1`
 Eve/shared packages. The core remains `6d751cbdab2cab4c`. The lower garment

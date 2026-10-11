@@ -603,3 +603,73 @@ finished, the native9 rebuildable Intermediate cache was removed, reclaiming
 373.9 MiB. Its source, successful module, assets and evidence remain retained;
 the pinned module hashes pass again after cleanup.
 Installed packages, CSS runtime, saves and profiles remain unchanged.
+
+## Full-stride collision bounds and the remaining constraint conflict
+
+`slipstream-levelset2` intersects reference occupancy with every one of the
+145 recorded sprint poses. Retained interior cells decrease from 46,129 to
+42,230 on the left and 44,476 to 41,426 on the right. The 0.5 cm inset passes
+149,504 independent sampled boundary checks across these 146 poses. It reaches
+61/93 of the earlier clipping witnesses. This establishes sampled containment
+over this capture, not other gaits, body morphs or continuous containment.
+
+Native11 imports the new grids with the original regional spheres and unchanged
+garment. Fresh grid readback and native sample checks pass, as do all 188
+anchors. Sprint/secondary sprint still fail 13/15 strain frames, versus 30/31
+with the seven-pose grids. Frame 119 has 51 uncovered inward body samples,
+worst 2.253 cm. The candidate is rejected. All 60 copied source assets remain
+unchanged, and creation, readback and motion commands exit zero.
+
+An independent sphere audit then finds seven retained spheres outside the body
+at selected poses, with up to 0.487 cm overfill at frames 88/120. The new
+`fit_slipstream_sphere_envelopes.py` follows oriented rays from each sphere
+center to the first exit from the body union, preserving overlaps rather than
+mistaking an internal surface for the outer skin. It bounds radii using 168
+directions at all 146 poses with a 0.15 cm inset. Twenty-five radii decrease;
+the largest reduction is left-thigh sphere 3, 7.636 to 6.383 cm, limited by
+frame 26. Centers, bones, grid values and the remaining definition are identical.
+
+A separate classification check uses 198 sphere directions and passes all
+925,056 sampled surface checks. Native12 confirms the changed sphere definitions
+within 0.000000215 cm and two transformed grids in the actual solver. That does
+not establish garment fit: sprint/secondary sprint fail 11/19 strain frames,
+and frame 119 has 87 inward witnesses, worst 2.612 cm. All 61 copied source
+assets remain unchanged. Reject this candidate as well.
+
+The rear edge between particles 314 and 572 stretches similarly across these
+collision changes. A 39-frame native constraint-copy capture isolates frame 38.
+Its reference length is 1.719 cm; the current edge is 3.524 cm. An independent
+edge-spring pass reduces it to 1.775 cm, and the reference-pose spring residual
+is only 0.000016 cm. The corrected endpoints remain 2.832/1.985 cm outside the
+body colliders. Reconstructed nonlegacy backstop geometry matches the native
+backstop replay within 0.000011 cm; both endpoints also remain clear of those
+backstop bounds. Neither body contact nor backstop excludes this specific
+edge-spring correction at the captured final state.
+
+Particle 314, however, is already 11.996 cm from its animation target against a
+12 cm travel limit. The spring correction would put it 13.358 cm away. Particle
+316 similarly needs 12.848 cm. This is a measured constraint incompatibility,
+not proof that max distance alone explains the live ordering. A diagnostic
+component travel scale of 1.25 still fails 18/14 strain frames and retains 72
+inward witnesses, worst 3.211 cm. Reject increasing travel alone as the repair.
+Pins remain intact and no saved configuration is changed by this diagnostic.
+
+Next: extend the existing independent-copy probe to apply edge correction
+followed by each other constraint, and export the actual tether endpoints,
+lengths and maximum-distance scale. The exact 5.6.1
+`PBDLongRangeConstraintsBase.h` exposes `GetTethers`, `GetStartParticle`,
+`GetEndParticle`, `GetRefLength` and `GetTargetLength`. Current native properties
+show geodesic tethers enabled with stiffness/scale one. They need direct
+inspection; do not blame or disable them without evidence. Existing copies
+start each constraint from the same final state and cannot show which later
+projection undoes the edge correction.
+
+The first trace invocation accidentally combined mutually exclusive
+`CollisionTrace` and `ContactTrace` flags. The commandlet rejected it before
+writing a capture. The owned failed diagnostic was stopped with SIGTERM during
+shutdown and returned one; the corrected CollisionTrace-only invocation exits
+zero. Keep this invocation error separate from cloth-fit failures.
+
+Evidence is frozen in Eve's `work/slipstream-cloth-study8/receipt.json`.
+The whole garment and release goal remain incomplete. No game assets, runtime,
+profiles, saves or solver mode were changed.
