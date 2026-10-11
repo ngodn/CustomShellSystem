@@ -41,8 +41,8 @@ Footwear studies now use the V2 parts and correct source-to-target foot yaw.
 Separating toe translation from arch rotation produces a more useful covered-foot
 pose, but boot/cuff intersections remain. The radial lining contraction was
 rejected after it produced an ankle spike. The latest `heel-lining3` is a private
-pose study, not an accepted fit. Fit the footwear upper to that pose while
-preserving the heel/sole design, then finish the rest of the garment. The goal's
+pose study, not an accepted fit. The later coverage comparison below supersedes
+fitting the entire closed shoe around that lining. The goal's
 remaining fixed palette counts have been reconciled: every supplied Peony scheme,
 black-and-white floral by default, and five Slipstream templates.
 
@@ -50,9 +50,16 @@ The latest shoe-upper study isolates a fitting error: internal collar surfaces
 were driving exterior expansion. Source visibility queries identify the largest
 bad drivers, and excluding them improves the outline in `shoe-upper6`. Toe/ankle
 clipping and excessive local area changes remain, so this is still rejected for
-release. Fit the toe box and collar locally next; do not repeat whole-shoe
-inflation or the earlier foot contraction. See the V2 source record for measured
-failures, recipes and archived candidates. No new game trial is installed.
+release. Two further toe-box studies also fail the visual check. Reviewing the
+source-preserving heel with existing body coverage removes the exposed toe, but
+reveals a gap at the calf-to-shoe junction. The controlled source comparison now
+identifies removed ankle fittings as the cause of that gap, before fitting.
+`ankle-restored1` restores those original heel connections and passes saved-file
+coordinate checks and front/side/rear visual review of the junction. Existing
+fabric fit, source UVs/weights and the accepted body are unchanged. This does
+not accept the remaining calf/thigh fit, body coverage, morphs or motion.
+See the V2 source record for measured failures, recipes and archived candidates.
+No new game trial is installed.
 
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left

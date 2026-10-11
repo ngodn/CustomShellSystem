@@ -223,7 +223,8 @@ active.
 
 Use the references in `CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/reference/new-eve-outfit`:
 
-- `Peony Better Cleavage-1851-v1-0-1755197848.rar`
+- `ALL-IN-ONE - Peony-Hydranega V2 CNS-1724-2-1-1763118109.zip`
+- `Recolors Texture-1724-1-2-1755607929.zip` (Peony/Hydrangea colors)
 - `DOAXVV Slipstream CNS-3108-1-0-1778702686.zip`
 
 Add both outfits to the current Eve mod alongside its existing six outfits. Inspect the archives before deciding the final component breakdown or display names. Preserve the reference designs and keep original inputs unchanged.
@@ -251,6 +252,9 @@ fabric with black trim and dark lower fabric. Preserve the source pattern and
 material contrast. The earlier five-template count no longer limits Peony;
 body-shape variants are not additional color palettes. Retain manual tint and
 optional flowing glow controls. This does not change Slipstream's palette scope.
+The user's latest reference confirms this default again. Match its light floral
+panels, black edging and dark leg fabric; do not substitute the previous gold-trim
+trial. Use the included schemes as templates rather than inventing replacements.
 
 The user rejected the installed Peony trial's fit and world-space cloth behavior.
 Correct these before continuing Slipstream binding. Reuse the earlier Eve

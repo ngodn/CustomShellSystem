@@ -333,3 +333,61 @@ Recipes and diagnostic scripts are retained under `recipes`. Rejected shoe-upper
 3/4/5 blends were SHA-256 verified in the external archive and removed locally,
 recovering 247,393,159 bytes. Their receipts, logs and rendered evidence remain
 available. No game file changed.
+
+## Closed-boot coverage comparison
+
+Two further private toe-box studies (`toebox1` and `toebox2`) remain rejected.
+Their side views retain an abrupt arch transition and change the source shoe
+shape. Do not continue expanding the shoe around every posed foot vertex.
+
+The earlier [customization binding work](2026-10-10-peony-customization-bindings.md)
+already supports hiding exact covered-body faces when boots are shown and
+restoring them when removed. Reuse that mechanism with V2 face identities and
+new catalog bindings, not the retired garment's section numbers.
+
+`review-closed-boot-coverage` renders `heel-lining3.blend` with its original
+source-preserving heel profile. The temporary scene hides the covered body faces
+and the study's added lining. All three renders were inspected: the exposed toe
+is gone and the original shoe outline remains, but the side view shows an open
+gap between the calf fabric and shoe collar. Coverage alone therefore does not
+produce an accepted boot. This is a neutral geometry comparison, not a material,
+motion or runtime test. The renderer does not overwrite the input blend.
+
+Next resolve the calf-to-shoe junction against the original source assembly,
+then determine which body faces can be hidden and which openings need visible
+skin. Keep coverage reversible when removable parts are hidden. Do not hide
+unrelated fit defects or reshape the accepted bare body. The full garment fit,
+all supplied palette templates, morphs, skinning and release scope remain open.
+
+## Original heel connections restored
+
+`audit_peony_v2_ankle_junction.py` compares the complete source, retained source
+pieces before fitting, and the fitted assembly. `ankle-junction1` establishes
+that removing source slot 4's low ankle fittings opens the calf-to-shoe junction
+even before fitting. Evaluated coordinates match the intended boot profile to
+within 0.000004 cm, ruling out shape-key composition as this gap's cause. The
+user explicitly retained the original heels, so their connecting fittings belong
+in the retained wardrobe.
+
+`ankle-restored1.blend` restores slot 4 components 3, 5, 9, 10, 11, 12, 13, 14,
+15 and 16: 2,372 triangles using 1,606 vertices. Their source bounds are below
+24.22 cm; unrelated knee/thigh ornaments remain removed. The repair copies
+original topology, UVs and source weights and applies the same ankle-anchored
+heel transform. Checks verify every previously retained fabric face and fit
+coordinate, all other existing shape coordinates, and the accepted body remain
+unchanged. `prepare_peony_v2_wardrobe.py` now retains these components on future
+rebuilds as well.
+
+Fresh-process `ankle-junction2` verifies the saved profile coordinates, and
+`review-ankle-restored1` provides inspected front, side and rear views with
+covered foot faces hidden. The original ankle connection is present again
+without inflating the shoe. This accepts only the restoration of that source
+detail, not the unfinished lower-garment fit or gameplay behavior. Exact V2
+covered-body bindings, removable-part combinations, target weights, six morphs
+and motion checks remain pending. The old section IDs must not be reused.
+
+Recipes are frozen under `recipes/*-ankle1.py`; the saved candidate receipt
+records source/input/script hashes. Rejected `toebox1`, `toebox2` and
+`shoe-upper6` blends were copied to the external CSS archive, hash-verified and
+removed locally, recovering 247,402,906 bytes. Their measurements, recipes and
+rendered evidence remain available. No game package or settings changed.
