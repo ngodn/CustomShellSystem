@@ -14,11 +14,13 @@ retained parts, with seven independent arm-color options. Black-and-white floral
 is the default; white/pink and the source schemes remain available. Offline
 textured neutral and sprint previews are recorded, with the accepted fitting
 blend unchanged. Optional glowing, flowing black trim now has a first V2
-implementation: shared rest-space UVs on all 18 parts, upper-trim emission,
-and 72 native palette instances verified in a fresh editor. Windows UE 5.6.1
-material cooking passed with zero errors and warnings. Offline previews
-cover glow off and two pulse positions. Lower trim, native mesh UV retention,
-stockings, source-material matching, CSS controls and installation remain
+implementation: shared rest-space UVs on all 18 parts, upper/lower trim emission,
+and 72 native palette instances verified in a fresh editor. The private garment
+and materials pass Windows UE 5.6.1 cooking and package/shader readback. Cooked
+surface checks preserve all 67,762 triangles, texture/flow coordinates and 18
+material bindings. Offline previews cover glow off, pulse positions and the
+lower border in black/white and white/pink. Full-character assembly, stockings,
+native source-material matching, CSS controls and installation remain
 unfinished. See the
 [material record](../research/2026-10-12-peony-v2-materials.md).
 

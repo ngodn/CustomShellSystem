@@ -181,3 +181,53 @@ Remaining: finish lower trim coverage, inspect native rendered materials,
 preserve UV1 through mesh export/cook, adapt stockings and source fabric detail,
 connect CSS controls and templates, then test profiles, modular parts and doubles.
 No V2 game trial is installed.
+
+## Lower trim and V2 garment export
+
+`prepare_peony_v2_flow_masks.py` reuses the earlier Peony mask method on the
+correct V2 structural mask. It selects green within ten pixels of the red
+panel region, excluding that region plus a one-pixel margin. The red output
+channel contains the full border and green contains its narrow edge detail.
+The mask has 41,373 full-coverage pixels, 27,588 detail pixels and no overlap
+with the protected region. This is pixel-level evidence; filtered/mipmapped
+appearance remains a rendering check.
+
+The same structural mask is used across recolors, whose source material masks
+assign different colors to the same physical regions. `flow-lower1/palettes.json`
+adds border emission to source slot 8 and flowing emission to the separate hip
+band/strap meshes in slots 9 and 11. Original palette values and source textures
+remain intact. Gloves, boots and body are excluded from these additions.
+`review-lower-flow1/side.png` and `review-lower-flow1-pink/back.png` were inspected:
+the side-panel border and hip details emit while the broad fabric panels do not.
+The offline shader remains an approximation of the source material.
+
+`/mnt/eins0fxE/CSS-Development/peony-v2-materials2` contains the expanded native
+materials, selected through a hashed `material-input.json`. A fresh editor
+passes 1,572 checks over 112 packages and 72 palette instances, including 48
+flowing-trim instances. The Windows material cook succeeds with zero errors
+and warnings. Strength still defaults to zero.
+
+The existing garment exporter now has an explicit V2 mode. Its output in
+`/mnt/eins0fxE/CSS-Development/peony-v2-garments1` contains all 18 retained parts,
+44,777 used points, 67,762 triangles, 379 measured bind bones and six body
+morphs. The independent saved-Blender comparison passes for topology/winding,
+skin weights, body deltas, section ownership and UV channels. UV0 retains the
+texture convention; UV1 retains the common rest-space flow convention without
+a V flip. The spare third channel is zero. These are interchange checks, not
+proof of cooked UV retention or final shared-skeleton compatibility.
+
+The private Unreal import then retains 67,762 triangles, 18 sections and all
+six morph targets. Its 44,828 render vertices include normal/UV splits. All 18
+slots are bound to the black-and-white V2 instances. The garment and dependencies
+pass Windows UE 5.6.1 cooking with zero errors and warnings, followed by an
+IoStore roundtrip and import-resolution check for 114 packages. All five material
+masters contain SM5 and SM6 shader code, including normal skinning and cloth
+vertex-factory variants. Compiled cloth variants do not establish cloth simulation.
+
+`cooked-surface-verified.json` compares decoded cooked triangles against the
+verified interchange. Positions, UVs and winding match in every section;
+all 18 material bindings, 379 bind bones and six morph names survive. Maximum
+flow-coordinate reconstruction error is 0.0000127 cm. This closes the UV1
+export/cook question for the private garment. Cooked morph deltas, posed
+deformation, full-character/shared-skeleton assembly, native materials/stockings,
+CSS controls and gameplay remain separate work. Nothing was installed.

@@ -338,11 +338,12 @@ all supplied Peony palettes, saved profiles and supported astral doubles in prev
 gameplay. This remains in progress and is not installed.
 October 12 reminder: retain this glowing, flowing trim requirement in the V2
 material rebuild. The minor-clipping deferral does not defer or remove it.
-The first V2 implementation adds preserved rest-space flow UVs to all 18 parts
-and authors optional upper-trim emission in the four palette recipes. Fresh
-editor readback and offline off/on phase previews pass their limited checks.
-Lower trim coverage, native mesh UV retention, CSS controls, profiles and
-gameplay verification are still required. See the
+The V2 implementation adds preserved rest-space flow UVs to all 18 parts and
+optional upper trim, lower-panel border and hip-strap emission across the four
+palette recipes. Fresh editor readback, Windows cooking, package/shader readback
+and cooked surface checks pass their limited checks. Cooked UV1 retains the
+common flow coordinates. Full-character assembly, native visual review, CSS
+controls, profiles and gameplay verification are still required. See the
 [flow implementation record](../research/2026-10-12-peony-v2-materials.md#first-v2-flow-implementation).
 
 Keep outfit-specific meshes, materials, physics and palette definitions in the Eve mod under `/Game/CSS/eins0fx/EveSB/...`; put only genuinely reusable assets in `CSS_SharedAssets_P`. Make supporting CSS changes where needed while preserving existing controls and saved selections.
