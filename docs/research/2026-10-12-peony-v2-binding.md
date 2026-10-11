@@ -598,3 +598,83 @@ Retain shoulder7 as the before-state. `binding-neck-donors1-receipt.json` freeze
 the recipes, reports, renders and input/output identities. No V2 package or
 new runtime trial is installed. Other jacket contacts, trim, cords, hips,
 gloves, all source palettes and the remaining goal work are not complete.
+
+## Underarm contact isolation
+
+`jacket-contact-locations1.json` places the remaining exterior jacket contacts
+around the underarms and lower jacket, with neutral heights approximately
+134.85 through 144.06 cm. They hit Eve Body and Eve Arms surfaces, not the
+Head-section donor defect repaired above. At one failing triangle, adjacent
+vertices 78 and 80 have upper-arm weights of approximately 0.05359 and 0.91554.
+The union of the four moving contact sets contains 187 garment vertices.
+
+Three isolated comparisons from neck-donors1 are rejected:
+
+| Copy | Change | Walk36 exterior crossings | Sprint12 exterior crossings |
+| --- | --- | --- | --- |
+| neck-donors1 baseline | Existing fitted weights | 90 / 23 | 110 / 27 |
+| underarm1 | Geodesic 12-mm weight smoothing | 89 / 21 | 101 / 29 |
+| underarm2 | Source weights with the same regional falloff | 79 / 16 | 121 / 41 |
+| underarm3 | Refine recorded contact faces to 6-mm edges | 237 / 24 | 263 / 40 |
+
+Pairs count jacket-edge/body then body-edge/jacket intersections on the
+retained exterior face set. Underarm3 changes topology, so its jacket-edge
+counts cannot be used as a percentage improvement or regression. It still
+fails the contact screen and the matched close-up. Both weight comparisons
+affect 390 vertices including the falloff region and retain neutral geometry
+and body controls in their recipes. Source weights are aggregated after bone
+mapping; do not use a dictionary comprehension that overwrites source bones
+mapping to the same target bone.
+
+Underarm3 adds 867 vertices, giving 13,372 jacket faces. Its independent saved
+preservation check passes: original vertices, weights and keys are preserved,
+other meshes and rig are unchanged, child triangles cover their parent
+surfaces, and UV error is zero. Maximum neutral error is 0.000005961 cm and
+maximum new weight error is 4.86e-8. Those structural results do not make the
+moving fit acceptable. Source-weight restoration also produces an unwanted
+fold under the arm in the reviewed sprint side view.
+
+The 24-direction assembled-geometry check confirms that these are not all
+hidden crossings. `jacket-contact-visibility1.json` records 30 visible witnesses
+in walk36, 49 in sprint12, 29 in maximum-control walk36 and 62 in
+maximum-control sprint12. This uses opaque geometry and a 0.02-cm depth
+tolerance, not final material rendering or a complete motion test.
+
+The earlier positive-X side view misses the exposed negative-X underarm in
+maximum-control sprint. The reviewer now supports an optional `--both-sides`
+view. `underarm-contact-cameras1.json` centers a matched 14-cm close-up on
+25 witnesses visible from negative X. The baseline and subdivision close-ups
+both show skin breaking through a jagged garment edge. Do not advance either
+on the basis of the opposite-side view alone.
+
+In `review-underarm-contact-probes1/report.json`, negative-X pixel `(440,600)`
+hits body face 10036 before jacket face 3286 by **0.238820 cm** along the view
+ray. Pixel `(420,560)` hits jacket face 3232 only 0.012803 cm before the body.
+Pixel `(320,650)` hits jacket face 878 before the body and a second jacket
+surface. These rays distinguish exposed skin, a nearly contacting edge and
+an overlapping garment fold. The 0.238820-cm difference is a view-ray depth,
+not a measured rest-normal displacement or a universal correction amount.
+
+Continue from neck-donors1. Neither smoothing, restoring source weights nor
+adding triangles alone solves this region. The shoulder trim remains dependent
+on the corrected jacket and is still open.
+
+**Subsequent user direction, October 12:** minor clipping that is unobtrusive
+during normal play may wait for later improvement. This supersedes the proposed
+local-clearance experiment. The 14-cm crop and geometric witnesses establish
+contact, not its severity at normal viewing scale. Review ordinary-scale
+visibility before further fitting; defer inconspicuous cases and prioritize
+obvious fit, silhouette and functional defects. Do not describe deferred
+clipping as fixed, or use contact counts alone to reject the whole outfit.
+
+`underarm-study1-receipt.json` freezes 60 recipe/evidence files and records the
+input plus three rejected blend identities. The three regenerable rejected
+blends were removed after hash and open-file checks, reclaiming 271,717,118
+logical bytes. The common input, frozen recipes, metadata, refinement origins,
+reports and renders remain. No external archive is claimed because that volume
+is full. See `underarm-study1-cleanup.json`. No game file was changed.
+
+Subsequent whole-outfit review and source-material work are recorded in
+[Peony V2 materials](2026-10-12-peony-v2-materials.md). The fitting copy stays
+at neck-donors1. The user's minor-clipping deferral moves material, palette,
+stocking and flowing-trim implementation ahead of further underarm refinement.

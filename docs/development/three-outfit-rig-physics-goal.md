@@ -67,6 +67,7 @@ Commander White's current E9 facial replacement preserves 206 morphs and the opt
 - Do not silently rebind all meshes, replace whole skeletons, remap animation tracks, or overwrite saved settings to make one test look correct.
 - Treat **Natural chest, Bouncy glutes and Bouncy other regions** as the user's reference test setup. Retain adjustable settings; do not overwrite saved defaults without an explicit requirement.
 - October 9 cloth trial: the user accepts the corrected Genessa rear-panel fit in the game world and explicitly accepts the remaining player/CSS-menu clipping for now. Preserve the world correction, record the preview limitation, and continue the other checks. Do not count preview parity as passed or reopen that limitation as a release blocker without new evidence or user direction.
+- October 12 acceptance clarification: minor clipping that is hard to notice during normal play may be deferred for later improvement. Record it as a known limitation, not a repaired defect. Close-up intersections or contact counts alone must not block progress. Obvious deformation, detached or oversized clothing, conspicuous clipping and broken customization still require correction. Apply this threshold to the current Peony work and subsequent outfit checks.
 - Do not impose an arbitrary attachment/bone limit such as 128. Follow verified engine constraints and actual asset counts, with explicit diagnostics for unsupported data.
   October 11 clarification: the user authorizes increasing the CSS attachment
   limit when valid outfits require it. Preserve array validation and verify
@@ -93,7 +94,7 @@ Commander White's current E9 facial replacement preserves 206 morphs and the opt
 - Inspect both hands, thumb articulation, finger lengths in pose, wrist orientation and grips. Check weapon sockets and intentional animation release phases before changing anatomy.
 - Check feet inside each shoe: arch, ankle, toe clearance, heel height and left/right fit. Keep rest shape, weights, morph deltas and shoe alignment coherent. Use runtime IK only where the game graph and contact phase require it.
 - Preserve virtual-bone targets and the 19 repaired movement mappings. Do not mutate compressed body motion as a side effect of lookup repair. Verify all affected skeleton variants and shared facial replacements.
-- Recheck every existing body morph and permitted combinations at neutral and supported limits. Garments and fitted ornaments must follow the same intended surface without separation or clipping introduced by the repair.
+- Recheck every existing body morph and permitted combinations at neutral and supported limits. Garments and fitted ornaments must follow the same intended surface without conspicuous separation or clipping introduced by the repair. Record minor unobtrusive clipping under the October 12 deferral instead of requiring zero intersections.
 
 **Exit:** before/after deformation evidence and import/cook readback show the intended improvement, with no unexplained skeletal, morph or attachment changes.
 
@@ -335,10 +336,22 @@ in the Eve mod, with any reusable material function in CSS_SharedAssets_P.
 Validate glow off/on, flow continuity across garment seams, removable parts,
 all supplied Peony palettes, saved profiles and supported astral doubles in preview and
 gameplay. This is queued material work, not an implemented or installed feature.
+October 12 reminder: retain this glowing, flowing trim requirement in the V2
+material rebuild. The minor-clipping deferral does not defer or remove it.
 
 Keep outfit-specific meshes, materials, physics and palette definitions in the Eve mod under `/Game/CSS/eins0fx/EveSB/...`; put only genuinely reusable assets in `CSS_SharedAssets_P`. Make supporting CSS changes where needed while preserving existing controls and saved selections.
 
 **Acceptance:** both outfits are selectable, modular visibility and all required palette templates work and persist, and fit/physics/gameplay checks are recorded. Verify that a new Peony selection uses black-and-white floral and saved palette choices restore correctly. Track them separately from the nine existing repair variants. Release inclusion/version remains to be settled when this queued work is reached; do not silently change the coordinated release targets or report these outfits as completed.
+
+## Low-priority follow-up: minor outfit clipping
+
+The user explicitly defers small, unobtrusive clipping on October 12. Keep a
+record of the affected outfit, part and known pose/body settings for later
+polish. Assess visibility at normal viewing scale before spending more fitting
+iterations on magnified intersections. This is not blanket acceptance of all
+remaining Peony defects: obvious gaps, broken silhouettes and loose garments
+remain in the current repair scope. No extra user test is needed solely to
+confirm an inconspicuous close-up intersection.
 
 ## Deferred follow-up: Genessa Form after switching save games
 

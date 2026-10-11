@@ -2,6 +2,22 @@
 
 Updated 2026-10-12. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
+**October 12 acceptance threshold:** defer minor clipping that is hard to notice
+during normal play. Keep those cases as known limitations for later polish;
+zero geometric intersections are not required. Prioritize obvious fit and
+deformation defects, usable customization, materials and the remaining release
+work. This does not accept the rejected installed Peony garment.
+
+**Peony material progress:** inherited source settings and all supplied CNS
+texture options are now resolved into four material recipes across all 18
+retained parts, with seven independent arm-color options. Black-and-white floral
+is the default; white/pink and the source schemes remain available. Offline
+textured neutral and sprint previews are recorded, with the accepted fitting
+blend unchanged. Optional glowing, flowing black trim remains required after
+the user's reminder. V2 UE materials, stockings, flow masks and installation
+are still unfinished. See the
+[material record](../research/2026-10-12-peony-v2-materials.md).
+
 **Peony source corrected by the user:** the V2 CNS and Recolors Texture ZIPs
 replace the previously supplied Better Cleavage RAR. The build records confirm
 that RAR was the prior source. Rebuild the garment from V2; do not continue
@@ -257,6 +273,19 @@ private copy, with shoulder7 retained for comparison. Other exterior jacket
 contacts and dependent trim remain unresolved; this is a local repair, not
 whole-outfit acceptance. See the
 [donor correction](../research/2026-10-12-peony-v2-binding.md#lower-neck-donor-correction).
+
+The remaining jacket contacts are now localized to the underarms and lower
+jacket. Local weight smoothing, regional source-weight restoration and a
+surface-preserving subdivision all fail the moving fit check. The optional
+opposite-side review exposes a skin breakthrough that the earlier positive-X
+side view missed. A matched ray measures body face 10036 in front of jacket
+face 3286 by 0.238820 cm in maximum-control sprint. Continue from neck-donors1.
+The user's subsequent minor-clipping deferral supersedes the proposed next
+clearance experiment: assess this region at normal scale and defer it if
+unobtrusive. A magnified breakthrough alone is not a release blocker.
+The three rejected private blends were removed with their recipes and evidence
+retained. See the [underarm comparison](../research/2026-10-12-peony-v2-binding.md#underarm-contact-isolation).
+No V2 trial is installed; the full fitting and release goal remains active.
 
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
