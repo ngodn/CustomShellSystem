@@ -97,6 +97,19 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Slipstream preparation
 
+Latest private comparison: `slipstream-cloth-native3` restores the original
+garment weights and improves fitted-collision strain, but still fails. A
+dedicated posed-body sphere fit leaves eight failing frames in each sprint
+capture. `native5` then shortens cloth travel and reduces sampled penetration,
+but introduces strain in 121/122 frames, so it is rejected. Standard multiple
+mapping influences in `native4` also worsen rest reconstruction. A separate
+position-only triangle diagnostic resolves the 401 large rest errors, but
+normal/tangent mapping and cook persistence remain open. Evidence is retained
+in `work/slipstream-cloth-study4/receipt.json`; none of these candidates is
+installed. Continue from the center-fabric opposing-thigh-weight witness rather
+than tightening movement limits further. Peony refit2 remains installed and
+awaits live fit acceptance; its seven installed file hashes were rechecked.
+
 The [binding and shape study](../research/2026-10-11-slipstream-binding.md)
 now covers nine garments, the measured 379-bone rig and all six body sliders.
 Neutral preservation, weights and independent posed-skinning checks pass.

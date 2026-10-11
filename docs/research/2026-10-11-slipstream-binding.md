@@ -367,3 +367,48 @@ All three native commandlets exited successfully; the negative strain verdicts
 remain recorded. No game package, installed core, save or profile changed. The
 goal remains active. Peony refit2's live stationary-fit acceptance is still open;
 the user's clarification that standing fit must work remains the requirement.
+
+## Follow-up: original weights, fitted collision and shorter travel
+
+The retained native3 comparison changes only proxy skin weights from proxy2's
+free-panel pelvis blend to the original fitted garment weights. Geometry,
+distance maps and six body-morph arrays remain unchanged. Original collision
+then fails two sprint frames and one secondary-sprint frame out of 145; fitted
+thigh collision fails 51 and 48. All waist-anchor checks pass. Removing backstop,
+adding a gradual pose start or enabling CCD does not repair the fitted trial.
+These are rejected cloth candidates, not installed outfit changes.
+
+`slipstream-surfacecollision1` fits 32 dedicated skirt-region spheres against
+the complete body in the reference pose and six captured poses. It preserves
+0.15 cm sampled containment margin and 0.909 cm minimum reference-proxy
+clearance. This is sampled neutral-body evidence, not full morph acceptance.
+The native3 surface-collision comparison still fails eight frames in each
+sprint capture. The diagnostic asset remains in the authoring helper's allowed
+Peony namespace; it must not be published there as a Slipstream dependency.
+
+`slipstream-cloth-proxy4` changes only maximum travel, retaining the waist taper
+and limiting free movement to body clearance plus 0.5 cm, bounded to 0.75..3 cm.
+The native5 trial reduces frame-119 inward nearest-surface witnesses to 17,
+with a worst distance of 0.983 cm, but fails 121/145 sprint and 122/145 secondary
+sprint strain frames. Reject it. The first-frame edge 583-584 stretches from
+3.511 to 8.614 cm. Adjacent center-fabric vertices carry opposing thigh weights;
+measure their skinned target separation before selecting a localized weight
+correction. A closer travel limit does not establish a better garment fit.
+
+The separate native4 standard multi-influence mapping comparison also fails:
+maximum rest reconstruction error grows from 1.570 to 1.608 cm. Reject it.
+The position-only `slipstream-mappingfit3` diagnostic corrects all 401 rows above
+0.1 cm by permitting no greater barycentric extrapolation than each source row.
+Its remaining maximum error is 0.0946 cm. It has not been applied to a native
+asset, and does not validate normal/tangent mappings or persistence through
+mesh rebuilding and Windows cooking.
+
+Evidence is frozen in Eve's `work/slipstream-cloth-study4/receipt.json`:
+354 files are hashed and 142 small recipes/reports/logs are snapshotted.
+Large captures and assets remain at their recorded source paths without extra
+copies. All commandlets terminate successfully, all three private projects
+retain their 53 protected dependencies, and pinned modules match. Candidate
+rejection is based on the output, not the command exit status. Native4's stopped
+build cache and two already-preserved duplicate mapping files were removed;
+the cleanup receipt does not claim an equivalent increase in physical free space.
+No game asset or CSS core changed during these comparisons.
