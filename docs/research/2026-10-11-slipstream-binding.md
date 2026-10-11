@@ -304,3 +304,66 @@ Its `precision-followup.json` records the verifier refinement that measures
 position error against the original interchange coordinates after the float32
 spatial lookup. `skirt-verified2.json` passes the same bounds. Native game
 acceptance, materials, morph rendering and performance work remain open.
+
+### Fitted thigh collision and mapping follow-up
+
+`slipstream-collisionfit1` replaces the sparse thigh sphere cloud with six
+tapered capsule connections fitted to the accepted body's cross-sections.
+The other 21 spheres stay unchanged. Eight thigh endpoints bring the total to
+29 spheres. Neither the body nor the garment is edited. Reconstructed baseline
+collision distances match the native trace within 0.000383 cm. The candidate
+contains no reference-pose proxy vertices or attachment points; its minimum
+rest clearance is 0.488 cm. This is a useful rest check, not posed acceptance.
+
+The existing collision commandlet creates the diagnostic asset at
+`/Game/CSS/eins0fx/EveSB/Peony/Physics/PA_SlipstreamFitTrial1` inside the isolated
+Slipstream project, using its existing guarded authoring path. The native motion
+test selects it through a temporary collision override. This is not a published
+path or a change to Peony. Any accepted final asset belongs under Slipstream's
+own `Physics` namespace. The saved garment and all 53 protected dependencies
+retain their previous hashes.
+
+The fitted collider reduces the recorded secondary-sprint frame 119 inward
+body-surface witnesses from 102 to 42, and the deepest from 8.019 to 2.619 cm.
+Those are oriented nearest-surface samples, not a closed-volume proof. The
+native render replay still shows rear clipping and distorted cloth. Both full
+sprint captures fail badly, so reject this candidate:
+
+| Diagnostic | Failing frames | Maximum additional edge length |
+| --- | ---: | ---: |
+| Fitted collider, sprint | 111/145 | 15.147 cm |
+| Fitted collider, secondary sprint | 110/145 | 15.147 cm |
+| Fitted collider, backstop excluded | 111/145 | 15.156 cm |
+| Fitted collider, 60-frame reference-pose lead-in | 110/145 | 15.003 cm |
+
+All four captures retain valid independent attachment checks. Removing backstop
+or easing startup does not resolve this failure. Those exclusions are diagnostic
+controls, not proposed shipping settings. The largest first-frame split is edge
+149–151, which grows from 1.642 to 16.790 cm. Both proxy vertices currently follow
+the pelvis entirely, with travel limits of 8.920 and 8.297 cm. Next inspect the
+posed target/contact relationship at this witness and compare the original
+fitted garment weights before changing more collision radii or solver settings.
+
+The mapping audit now identifies the stored formula rather than speculating
+about backstop normals. All 401 render vertices with rest reconstruction error
+above 0.1 cm match the triangle-plane fallback coefficients within 0.0002.
+The worst row is vertex 5966 on proxy triangle 474/476/506; its saved barycentric
+weights are approximately 0.306, 2.253, -1.559, a substantial extrapolation beyond
+the triangle. Exact UE source is `ClothingMeshUtils.cpp`, functions
+`GetPointBaryAndDist` and `GetPointBaryAndDistWithNormals`.
+
+Two position-only diagnostics search 48 nearby triangles and solve the normal
+offset polynomial, retaining the existing simulation blend and source geometry.
+Both correct 207 affected vertices after float32 coefficient storage. Allowing
+mixed fixed/free triangles makes no additional improvement. The remaining 194
+vertices include the worst 1.570 cm error, so neither is a finished mapping fix.
+No native mapping was patched. A complete repair must also preserve normal and
+tangent mapping, address the missing nearby support at the waist, and pass fresh
+native readback and moving render checks.
+
+`work/slipstream-cloth-study3/receipt.json` freezes 41 files, including both exact
+mapping recipes, contact/strain evidence, rendered views and the private collider.
+All three native commandlets exited successfully; the negative strain verdicts
+remain recorded. No game package, installed core, save or profile changed. The
+goal remains active. Peony refit2's live stationary-fit acceptance is still open;
+the user's clarification that standing fit must work remains the requirement.

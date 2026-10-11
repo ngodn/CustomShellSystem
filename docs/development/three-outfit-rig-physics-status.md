@@ -141,6 +141,18 @@ posed-body collision coverage and render mapping. Source normals are deliberatel
 body-facing for backstops; their difference from triangle normals alone is not
 a demonstrated defect. See the binding report for captures and acceptance limits.
 
+The subsequent fitted-thigh collision trial reduces the sampled deep clipping,
+but fails 111/145 sprint and 110/145 secondary-sprint strain frames. Excluding
+backstop or adding a gradual reference-pose start does not repair it. Reject the
+trial; no installed asset changed. The separate rest-mapping audit confirms that
+all 401 bad rows use the triangle-plane fallback. Nearby-triangle position solves
+correct 207 rows, leaving 194 and the worst waist distortion unresolved. Continue
+from the recorded pelvis-target/contact witness and missing mapping support,
+retaining full cloth and source geometry. Evidence and exact recipes are frozen
+in `work/slipstream-cloth-study3/receipt.json`; all 53 protected dependencies and
+the saved garment are unchanged. These are diagnostic results, not outfit
+acceptance. See the same binding report for limits and next checks.
+
 The [wardrobe study](../research/2026-10-11-slipstream-wardrobe-fit.md) assigns
 31,625 source clothing triangles to six removable groups, including their trim.
 All 116 components are accounted for; source/body preservation and negative
