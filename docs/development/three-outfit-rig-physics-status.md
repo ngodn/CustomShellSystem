@@ -2,6 +2,30 @@
 
 Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
+**Native render comparison rejected as unmatched:** the first three private captures
+crashed because the commandlet disabled client rendering and created a null
+scene. Enabling client rendering only within the capture scope resolves that
+crash. Advancing the engine frame counters also resolves repeated images;
+six distinct captured poses now exist. Explicit synchronous material compilation
+also removes the WorldGrid fallback. The final control and candidate each
+capture six frames, two views and lit/normal outputs with the intended material.
+All 723 corrected mapping rows survive rendering. However, their independently
+run cloth states diverge by up to 7.699284 cm in a coordinate, so image differences
+cannot isolate the mapping's effect. Both inspected motion results remain
+visibly distorted. The image comparison correctly fails; no fit acceptance or
+production mapping change follows. Next compare mappings against one held cloth
+and skeletal pose, then address the simulation-surface defects. The game files
+are unchanged. The stationary Peony fit
+requirement remains mandatory and does not depend on the user identifying an
+animation.
+
+**New Slipstream topology finding:** the original 624-particle proxy passes the
+old edge-incidence check but has 49 invalid vertex fans and 11 connected
+boundary groups. A new checker detects these and passes an analytic tube
+control. This establishes malformed simulation connectivity, not its contribution
+to a particular rendered defect. Retaining the original proxy remains the
+comparison baseline, not a claim that its topology is acceptable.
+
 **Latest private Slipstream result:** a ten-particle travel correction improves
 the measured rear seam from 3.532 to 2.007 cm, but the full stride and rendered
 body contact still fail. A denser simulation surface also fails more frames

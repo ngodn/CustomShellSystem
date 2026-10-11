@@ -1045,3 +1045,117 @@ pre-cook reports were verified as exact subsets of the retained final report,
 then removed under the editor lock: 53,864,783 logical bytes. Unique logs,
 source assets, captures and the compiled helper remain. Recipes and evidence
 are frozen in `work/slipstream-cloth-study13/receipt.json`.
+
+## Native rendered comparison preparation
+
+The next private helper compiles successfully with UE 5.6.1 and its existing
+C++20 module setting (`build-render.exit.json`). It creates an offscreen Vulkan
+preview with the garment, full cloth, secondary graph and a diagnostic material.
+It requests lit and normal captures from two views at sprint frames 0, 44, 76,
+119, 141 and 144, and records the corresponding simulation positions and normals.
+This is a garment-only rendering diagnostic, not a body-fit or gameplay pass.
+
+`tools/run_slipstream_mesh.py --render` enables the existing isolated project to
+render without changing the default NullRHI path. The root filesystem remains
+read-only and only the private work directory is writable. The first control
+run was still active at that checkpoint; renderer and material compilation took
+longer than expected. No image comparison has completed. Do not describe the
+new render helper or its image checker as validated yet. Job details and the
+next candidate command are retained in `render-pending.json`.
+
+The private cache was seeded with 1,550 missing `.udd` files from the earlier
+Peony GPU study, 182,926,049 logical bytes. Files were copied to temporary paths
+and published atomically without overwriting existing records. The source cache
+and source assets were not modified. This does not establish cache-hit rates;
+already dispatched shader jobs continue compiling. Keep this cache for the next
+comparison instead of repeating the cold start.
+
+The proposed comparison checker requires nonblank, varied images and matching
+captured cloth states before attributing pixel changes to the mapping. Pixel
+differences alone cannot establish improved shading or fit. The candidate must
+also retain all corrected model/render rows after capture and receive actual
+visual review. No game package, core, profile or save changed in this preparation.
+
+## Render harness correction and vertex-fan audit
+
+The first render control terminated with SIGSEGV after its cold shader compile.
+An actor-registration comparison and a legacy update-method comparison both
+failed at the same native mesh-render update. Retained terminal receipts are
+`render-control.exit.json`, `render-control-actor.exit.json` and
+`render-control-legacy.exit.json` under `work/slipstream-mappingnative1`.
+
+The final core (PID 235478) shows an invalid
+`FSkeletalMeshUpdateChannel` pointer in `FSkeletalMeshUpdateHandle::Update`.
+The exact 5.6.1 source explains this path: `CSSEveClothCommandlet` sets
+`IsClient=false`; `FRendererModule::AllocateScene` consequently selects
+`FNULLSceneInterface`. The GPU mesh constructor only assigns its update handle
+when a scene updater exists. The handle's Channel field has no default
+initializer in this build. This is the private harness failure, not evidence
+that the installed game crashed or a mapping row caused it.
+
+The renderer now guards `GIsClient=true` only for the capture lifetime, checks
+that rendering is allowed and that the preview has a skeletal updater, and
+restores the previous flag after scene destruction. `render-control-client`
+completes successfully. Its images exposed another harness limitation: frame
+counters had not advanced, leaving repeated GPU frames. The corrected
+`render-control-frames` has six distinct images per view/mode and six distinct
+cloth states, with engine-frame offsets matching the requested sample frames.
+Its lighting is overexposed, so it is not accepted for shading review. Light
+intensity is now an explicit recorded diagnostic setting, and the image checker
+rejects frozen frames, underexposure, overexposure and mismatched simulation.
+
+`tools/audit_slipstream_proxy_topology.py` also checks each vertex's triangle
+link, rather than only the number of incident faces per edge. The original
+624-particle, 976-triangle proxy has 1,642 edges, Euler characteristic -42,
+356 boundary edges, 11 connected boundary groups and 49 invalid vertex fans.
+It remains one connected component with no edge incident to more than two
+triangles. Thus the old edge-only validation missed pinched/disconnected fans.
+The checker passes a regular annular tube and rejects two sheets touching at
+one vertex, even though the latter passes edge incidence. Evidence is retained
+in `proxy3-vertex-topology.json`. This finding warrants a clean simulation-surface
+comparison; it does not independently prove the cause of the user's screenshot.
+
+## First completed native capture pair: unmatched cloth states
+
+`render-materialprobe.json` establishes that the initial shader-map readiness
+check was insufficient: the component held the intended transient material, but
+the render thread selected WorldGridMaterial in all six samples. PSO default
+fallback was false. Explicit `ForceRecompileForRendering(Synchronous)` inside
+a material update context resolves this. The diagnostic now rejects either
+render-thread material fallback or PSO default fallback. No production material
+or renderer setting was changed.
+
+The final pair is `render-control-review` and `render-candidate-review`, both
+terminal exit 0, light intensity 20, six samples at frames 0/44/76/119/141/144,
+two views and two capture modes (24 images each). Both use Material_0 without
+fallback. The native mapping checker confirms all 723 replacement rows remain
+exact in the model and render buffer after capture; geometry/weights remain
+unchanged and its damaged-normal control is detected.
+
+The image checker correctly rejects this pair. Frame 0 cloth states match
+exactly, but later maximum coordinate differences are 0.025519, 4.437195,
+7.699284, 5.278893 and 4.521598 cm. Independent simulation runs therefore do not
+provide a controlled pixel comparison. `render-review-check.json` retains the
+per-frame differences. Visual inspection of frame 44 from the rear and frame
+141 from the side shows distorted lower cloth in both versions. This is not
+accepted as a fit fix and does not isolate a shading improvement or regression.
+
+Next use one held simulation and skeletal pose for both mappings, rather than
+relaxing the comparison tolerance or repeatedly rerunning divergent cloth.
+The protected `USkeletalMeshComponent::CurrentSimulationData` and virtual
+`GetUpdateClothSimulationData_AnyThread` provide private harness seams; any
+implementation must wait for simulation/render tasks, preserve the exact bone
+pose and coordinate transforms, and remain outside production/runtime code.
+The newly diagnosed invalid vertex fans still require a separate clean-surface
+comparison. Rechecking 62 source assets found none changed; only the previously
+saved private garment differs from its staged source manifest.
+
+All render jobs are terminal. Evidence and eight frozen recipe copies are
+recorded in `work/slipstream-cloth-study14/receipt.json`; `render-pending.json`
+now records the completed, rejected comparison rather than a stale running
+process. Six rejected setup capture sets (JSON and PNG outputs) were compressed
+to `/run/media/eins0fx/theark/CSS/slipstream-render-rejected-20261011.tar.zst`.
+Every archived file was read back and SHA-256 checked before removing its local
+copy. The archive retains 105,571,025 logical bytes in 42,386,544 bytes on theark.
+Unique logs, terminal receipts, final comparison captures and source assets
+remain local. `rejected-render-archive.json` records each recoverable file.
