@@ -792,3 +792,76 @@ Glove fit, remaining internal contacts/coverage, body morphs, target binding,
 source materials and every supplied palette, physics/motion and runtime
 acceptance remain open. No game files, settings or saves changed. No V2 trial
 is installed and no game test is requested yet.
+
+## Glove alignment and contact study
+
+`glove-terminal1` branches from `neckline-contact3`. It applies palm-frame roll
+and the previous Eve fitting method's measured terminal-finger tails to the
+retained V2 glove and glow geometry. The old RAR supplies no geometry here.
+Primary glove components are 5/6 in slot 3; slot 14 contains retained glow.
+The source and target palm normals differ by about 19.17 degrees under the
+initial one-axis alignment. Terminal corrections move retained glove points by
+at most 2.664 cm. This improves the finger alignment, but the initial hand
+surface still clips heavily. Original-glove isolated and assembled renders are
+retained; clipping against the original supplied body does not establish that
+the source game masks that body.
+
+`glove-fit1` incorrectly assigns no forearm support to `Ab-L-Forearm-Tw0` and
+its right counterpart. Its source-to-target name lookup omits the ancestor
+inheritance used by the original alignment and previous bound-glove workflow.
+As a result, it applies triangle-interior pressure to every cuff face. The
+largest residual wrist vertex is still about 1.21 cm inside and the cuff
+inflates. This candidate is rejected.
+
+`glove-fit2` follows source bone parents to a mapped ancestor and sums weights
+that reach the same target bone. This restores vertex-only cuff treatment for
+446 faces per hand. Maximum fitting movement falls to 1.794 cm. Left-front,
+rear and side views show the inflated cuff removed, but small wrist and
+knuckle defects remain. Full-body nearest-vertex checks find 19/18 inside
+vertices, reaching 0.212/0.270 cm. This is a useful diagnostic comparison, not
+an accepted glove fit. Its saved-file preservation check passes.
+
+`glove-fit3` tests the union of contributing digit surfaces at mixed-weight
+webbing. Whole-body witnesses still include neighboring digits outside that
+donor set. For example, left glove vertex 3542 has full source middle-finger
+weight but intersects an accepted-body index-finger surface. Body face IDs
+must be resolved through the import's wedges before querying point weights.
+The independent bidirectional edge audit finds 186/232 left crossings and
+186/225 right crossings (garment edges/body edges). Of those, the 2,278-face
+main UV islands account for 152/201 and 154/191. A separate 38-face island
+accounts for most remaining crossings; its physical purpose is not yet
+verified. Source-coincident seam groups have no measured separation above
+0.001 cm, so opened duplicate seams do not explain these defects.
+
+`glove-fit4` allows all corresponding-hand surfaces after terminal alignment,
+including neighboring fingers and nails. It does not solve the contact fit:
+left/right full edge counts are 192/259 and 185/261, and close-ups still show
+distorted details. It is rejected too. Whole-hand nearest projection is not
+accepted merely because most vertices clear the body. Neither candidate is a
+reason to hide or shrink the accepted hands. The next correction must preserve
+the glove's surface shape and resolve the specific exterior edge witnesses,
+with original UV-island ownership checked before deciding which surfaces can
+drive contact. Do not repeat a blind iteration or donor-radius sweep.
+
+The audit reports face-area ratios and normals opposed to the pre-fit normals.
+Those normal counts alone are not proof of inversion, because a valid local
+rotation can reverse that dot product. The edge witnesses and rendered defects
+already reject these candidates. Endpoint/coplanar contacts, self-intersections,
+body controls and moving poses remain outside this neutral check.
+
+Saved-file preservation passes across 98 mesh objects for terminal alignment
+and fit2/3/4: source coordinates, topology, UVs, original weights, previous
+shape coordinates and accepted body remain unchanged. No candidate here adds
+target skinning or body morphs. `neckline-contact3` remains the cumulative
+baseline; `glove-terminal1` and `glove-fit2` remain local diagnostic inputs.
+
+`glove-study1-receipt.json` freezes the study reports and recipes under
+`work/peony-v2-source1`. The final diagnostic fitter is frozen as
+`fit_peony_v2_gloves4.py`, SHA-256
+`8b6d33a6f04f22cbbb44bd9cc95122704808460da588881ee49f8d3d9007ac83`.
+Recipes for earlier fitting variants, alignment, auditing and rendering remain
+beside it. Authoring files are outside the CSS Git repository. Roll-only,
+fit1, fit3 and fit4 blends were copied to the external rejected-fit archive,
+SHA-256 verified and removed locally, reclaiming 332,419,086 bytes. Logs,
+renders and receipts remain local. No installed package, save or settings
+changed; no V2 game test is requested.

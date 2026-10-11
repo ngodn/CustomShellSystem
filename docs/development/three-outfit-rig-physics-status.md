@@ -125,6 +125,18 @@ internal faces are rejected and archived. Full-mesh internal contacts, gloves,
 coverage, all six body controls, target binding, materials/palettes and motion
 remain open. This is neutral authoring progress, not an installed gameplay fix.
 
+The V2 glove study reuses the earlier Eve terminal-finger and cuff-fitting
+method on the new geometry. It finds and corrects a missing ancestor mapping
+for the source forearm twist weights: 446 cuff faces per hand now receive the
+intended vertex-only treatment, removing the inflated wrist result. The surface
+fit still fails independent body-edge checks and close-up review. Mixed-digit
+and whole-hand contact alternatives also fail; do not cook any of them.
+`neckline-contact3` remains the cumulative baseline. `glove-terminal1` and
+`glove-fit2` are retained for diagnosis only. The accepted body and source data
+pass the saved-file preservation checks. Exact witnesses, recipes and rejected
+blend locations are in the V2 source record. Every supplied palette and the
+black-and-white floral default remain required. No V2 trial is installed.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
