@@ -164,3 +164,75 @@ The four rejected profile blend files are archived under
 freeing 380,998,142 bytes locally. Their receipts, logs and review images remain
 in the work directory. `rejected-fit-archive.json` records each destination.
 The exact profile5 script is retained in `recipes/fit_peony_v2_corset_profile5.py`.
+
+## V2 component removals and lower fit
+
+The source component renderer now accepts a V2 identity and the source's camera
+orientation. Separate textured reviews identify calf fabric (slot 4, components
+6/7), thigh fabric (slot 8, components 3/4), glove parts, and hip slots 7/9/11.
+Slot 9 contains decorative fabric bands; slot 11 contains long decorative straps.
+Keep both. Slot 7 contains the small hardware pieces with separate glow in 16.
+These source IDs are specific to V2 and were not copied from the retired RAR.
+
+`prepare_peony_v2_wardrobe.py` produces `wardrobe1.blend` from corset-profile5:
+
+- Remove both pockets, arm ornaments/stickers, leg-mounted hardware and its
+  corresponding glow. Preserve the inspected glove components and glove glow.
+- Preserve decorative hip fabric/straps, underwear, jacket/collar, corset and
+  default heels/glow. Exclude the alternate heel set and optional nails, which
+  were disabled in the source descriptor. The ponytail is an existing Eve part
+  outside this source garment and has not been changed.
+- Verify retained face identity, winding, UVs, source weights and every shape
+  coordinate after removing faces. The accepted body stays unchanged.
+- Remove 477,703 triangles from the selected variant, including the optional
+  442,783-triangle nail set. Dead vertices remain temporarily to preserve key
+  indices. Compact them during final export. Final CSS controls remain pending.
+
+The initial removal run stopped on a NumPy integer assigned to a Blender custom
+property. Converting the recorded IDs to Python integers fixes that diagnostic
+property, and the rerun passes all preservation checks. A lower-fit invocation
+made before that corrected run stopped because no wardrobe receipt existed;
+it produced no candidate. The successful lower-fit run uses wardrobe1's hash.
+
+`fit_peony_v2_leg_profiles.py` aligns the original leg fabric continuously using
+ankle, knee, thigh and spine landmarks, then fits radial profiles. It retains
+the original Basis and adds separate leg-alignment and fit keys. This reuses the
+earlier leg-section fitting approach but is not yet an accepted lower garment:
+
+- `legs-profile1` has no transported-normal reversals, but contact checks fail
+  on 160 calf faces and 66 thigh faces per side. The calf has up to 12.04 times
+  its initial triangle area and a 5.77 cm exterior gap. Reject it.
+- The worst ankle witnesses include inward cuff-closure vertices close to the
+  leg axis. Those surfaces should not drive the exterior profile. The source
+  foot joint is 14.96 cm high; the target foot joint is 7.87 cm high. The cuff
+  extends below the ankle landmark, so its relationship to the preserved heel
+  and fitted foot must be resolved, not hidden by broad fabric inflation.
+- `legs-profile2` excludes source radial hits below 1.8 cm from profile donors
+  and uses the wardrobe with hardware removed. The calf's exterior gap falls
+  to 1.32 cm, but contact still fails on 180 calf faces and 66 thigh faces per
+  side; the largest area ratio remains 12.04. Its front/side render has a cleaner
+  cuff outline, but this is still rejected. Do not call it fitted or ready.
+- The next script revision explicitly rejects an area ratio above 4 as well as
+  the existing orientation, collapse, displacement and contact failures. The
+  exact scripts used for profiles 1 and 2 are retained in `recipes`.
+
+`legs-profile1-witness.json` records the deepest contacts and largest moves.
+`legs-profile1-centers.json` checks actual body slices against joint placement:
+the target ankle center is consistent with the body, so a guessed skeleton-axis
+shift is not supported. Inspect exterior fabric versus folded closures, and
+coordinate ankle/heel fitting with the existing footwear workflow before another
+lower fit. Keep the contact failures visible until the geometry and visual
+evidence distinguish internal closures from exposed clipping.
+
+The source also has a stocking material on body slot 0. Its CNS controls set
+`ML_STK_SkinTint`, `ML_STK_StockingTint`, and the `Stockings Legs` texture option
+(`Mask_Stocking`, Stockings/No Stockings). The exported `0_Body_46` material has
+stocking intensity/roughness parameters and a black mask default, while the CNS
+selection uses the white mask. Preserve that effective runtime selection when
+adapting the stocking layer to the accepted Eve body. Transferring only the outer
+fabric would miss part of the requested appearance. The neutral geometry renders
+do not show this material layer and are not palette acceptance evidence.
+
+Neither the wardrobe nor either lower-fit study is installed. Jacket, gloves,
+footwear, hip/crotch fit, stocking materials, all six morphs and posed validation
+remain unfinished, alongside the rest of the coordinated release goal.

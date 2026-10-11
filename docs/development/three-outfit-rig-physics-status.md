@@ -29,6 +29,14 @@ retained hip overlaps, morphs, target skinning and motion remain unfinished.
 The V2 source record documents earlier failures and the corrected orientation
 test; do not use a sample pass as permission for another unreviewed cook.
 
+The V2 wardrobe copy now removes the inspected pockets and mechanical pieces,
+preserving gloves, collar, default heels and decorative hip bands/straps. Retained
+faces, UVs, weights and shape coordinates pass preservation checks. Lower profile
+studies remain rejected: cuff closures contaminate the exterior fitting profile,
+and ankle/heel fit plus remaining thigh contacts need repair. The source's stocking
+layer is partly a body material controlled by CNS and must also be adapted to the
+accepted body. See the V2 record for component IDs, witnesses and rejected results.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
