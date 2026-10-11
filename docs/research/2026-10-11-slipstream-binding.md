@@ -215,3 +215,92 @@ the private helper sources, copied final logs, retained dependency assets,
 motion captures, independent checks and merged-section preparation. Both the
 corrected primary binding and the motion batch exit successfully. Test failures
 above are garment-quality failures despite successful commandlet execution.
+
+### Combined skirt and convergence follow-up
+
+The next controlled captures use the same mesh, proxy and collider. All retain
+correct native waist anchors. The counts below apply the existing edge strain
+guard, not a silhouette or collision acceptance criterion:
+
+| Diagnostic, 145 frames | Jog failures | Sprint failures |
+| --- | ---: | ---: |
+| Original settings, one iteration/one substep | 134 | 136 |
+| Body collision excluded | 68 | 105 |
+| Backstops excluded | 14 | 74 |
+| Self collision excluded | 134 | 136 |
+| Animation drive excluded | 109 | 132 |
+| Four iterations, all features retained | 42 | 92 |
+| Eight iterations, all features retained | 26 | 42 |
+| Eight iterations/two substeps, all features retained | 0 | 0 |
+
+The exclusions diagnose constraint interaction; none is a shipping choice.
+Increasing convergence while retaining the same constraints removes this
+particular gross-strain failure in the single-node clips. The saved candidate
+still needs coverage and visual review, as the following results demonstrate.
+
+`slipstream-cloth-native2` imports the combined 8,000-triangle skirt, binds its
+single fabric/trim section successfully, and saves eight iterations/two
+substeps. It retains the original 624-particle proxy, all backstops, body
+collision, self collision and animation drive. The trim-binding failure is
+resolved at the native section level. Its final material is not authored yet.
+
+Fresh native readback and `check_slipstream_native_skirt.py` compare the saved
+8,000 triangles and winding, 6,412 render vertices, weights and six source body
+shapes. Source geometry matches; maximum bone-weight error is 0.00002242 and
+retained morph-delta error is 0.00001336 cm. The initial verifier incorrectly
+required tiny filtered deltas to remain present. The corrected check reads the
+actual native build threshold, 0.015 cm, and separately bounds omitted deltas
+and retained-delta error, following the established Eve facial verifier.
+Maximum filtered magnitude is 0.01464994 cm. An altered native delta of 0.1 cm
+is rejected by the same check. This is not a claim that all source deltas remain
+unfiltered, or that cloth rendering already responds to the body sliders.
+
+All six saved-setting gait captures pass independent native kinematic-anchor
+checks. Walk, jog and sprint without secondary physics pass the strain screen;
+walk and jog with secondary physics also pass. Secondary sprint fails at frames
+90, 118 and 119 on a few short edges. Thus five of six screens pass, and the
+candidate remains unaccepted. Editor cloth-step means are approximately
+1.26..1.53 ms in this batch, excluding animation refresh and rendering. These
+are not game frame-time measurements or an isolated performance comparison.
+
+Native render mapping is independently replayed at sprint frame 132. The saved
+mapping's reference reconstruction has a 1.570 cm maximum error, with 401 of
+6,412 vertices above 0.1 cm. Diagnostic front/side/rear images visibly show rear
+body clipping. Keep this failure even though most strain screens pass. The
+surface contact screen is only an oriented-nearest-surface measurement, not
+proof of closed-volume containment.
+
+The saved proxy normals differ from triangle-averaged normals by design: the
+existing preparation uses body-facing backstop normals. Exact UE 5.6.1 source
+also confirms cloth render binding constructs a separate averaged-normal
+surface (`ClothingAsset.cpp`, `ClothingMeshUtils.cpp`). That difference alone
+does not identify a bug and no normal rewrite has been made. The projection
+code has a triangle-normal fallback; its involvement in the recorded mapping
+error is a hypothesis requiring a targeted check.
+
+A separate secondary-sprint contact capture records frame 119. All 32 native
+collider transforms match the recorded bone transforms, with maximum actual
+matrix error 0.00004197. Native particle coordinates match readback within
+0.00000106 cm. No particle penetrates the collision shapes in this frame:
+minimum native signed distance is 0.30000035 cm. However, 102 of 624 particles
+have an inward nearest-body-surface sample below -0.2 cm while remaining outside
+the collision shapes. The worst witnesses are near the right thigh and glute
+weights. Combined with the visible clipping, this directs the next work toward
+coverage of the posed body and the render mapping, rather than another arbitrary
+solver increase or a bone-transform rewrite. The repeat is a separate simulation
+capture and is not assumed bit-identical to the earlier secondary sprint.
+
+Next: repair demonstrated collision coverage and mapping failures in the
+complete skirt; recheck rest fit, all body shapes, posed fit, secondary physics,
+cloth stability and cost. The source body and garment designs remain preserved.
+No installed package changed. The stopped private `native1/editor/Intermediate`
+cache was removed after locking and verifying pinned binaries: 391,289,005
+logical bytes, with zero immediate available-space change. Required source,
+assets, binaries and diagnostic evidence remain available.
+
+`work/slipstream-cloth-study2/receipt.json` freezes 202 evidence files, final
+log snapshots and authoring recipes, with all 53 protected dependencies unchanged.
+Its `precision-followup.json` records the verifier refinement that measures
+position error against the original interchange coordinates after the float32
+spatial lookup. `skirt-verified2.json` passes the same bounds. Native game
+acceptance, materials, morph rendering and performance work remain open.

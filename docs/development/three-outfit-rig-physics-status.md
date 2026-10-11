@@ -129,6 +129,18 @@ combined materials. The fabric-only motion capture is diagnostic, not an
 installable outfit. Next: isolate captured cloth contact failures and complete
 the combined fabric/trim binding. No game files changed during this follow-up.
 
+The subsequent `slipstream-cloth-native2` successfully binds the combined skirt
+as one native cloth section and preserves all 8,000 skirt triangles, skin weights
+and body deltas within verified engine import bounds. Eight iterations/two
+substeps retain all cloth features and pass five of six gait strain screens;
+secondary sprint has three failing frames. Visual replay still shows rear body
+clipping and a mapping reconstruction error, so this candidate is rejected for
+release. The recorded collider transforms are correct, but 102 cloth particles
+have inward body-surface witnesses outside the collision shapes. Continue with
+posed-body collision coverage and render mapping. Source normals are deliberately
+body-facing for backstops; their difference from triangle normals alone is not
+a demonstrated defect. See the binding report for captures and acceptance limits.
+
 The [wardrobe study](../research/2026-10-11-slipstream-wardrobe-fit.md) assigns
 31,625 source clothing triangles to six removable groups, including their trim.
 All 116 components are accounted for; source/body preservation and negative
