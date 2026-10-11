@@ -572,3 +572,59 @@ The next upper-garment baseline, `review-jacket-baseline1`, shows shoulder skin
 through the front jacket and an oversized back/sleeve outline. These views were
 inspected and remain rejected. Correct the jacket and sleeve alignment before
 using its contact data to fit it. No new game trial is installed.
+
+## Jacket projection diagnosis
+
+The source skin is absent around the shoulders. Inspected source skin-slot 1
+and 2 renders confirm that neither is a complete shoulder fitting reference.
+`review-source-jacket1` records the original jacket from front, rear and side;
+its source geometry is retained. The raw-source camera faces +X, while the
+aligned camera faces -Y. Their different camera axes are intentional.
+
+`jacket-fit1` is rejected. Its nearest-surface projection omitted `Eve Face`
+from the body reference, pulling upper collar samples down toward the lower
+neck. More seriously, its exterior classification admitted internal jacket
+faces. Face 869 has source-aligned edges over 10 cm and joins vertex 547 near
+the spine. Forcing that interior fan onto the body demanded a 4.39 cm contact
+correction. The resulting field inverted geometry despite passing its sampled
+clearance check. A clear sample margin is not an acceptance result.
+
+The follow-up uses source visibility, outward directions relative to the source
+bone segments, and exclusion of faces touching the skeleton core. The 1.5 cm
+core test identifies internal fan poles, not the body's skin boundary. Both
+source skin occlusion and normal agreement alone leave interior fan faces in
+the donor set. `jacket-projection-audit6.json` records the remaining worst first
+stage contact at the arm, about 2.06 cm inside, after those poles are excluded.
+No source faces, UVs or original shape coordinates are removed by this study.
+
+`jacket-fit2` aborts before saving when a source-facing projection cannot find a
+matching body normal. `jacket-fit3` and `jacket-fit4` also fail. Front/rear/side
+review of fit4 shows improved shoulder coverage but a large left shoulder fold
+and a collar defect. Fit4's contact field extrapolates into the jacket core,
+moving some used vertices as far as 16.49 cm. It is not a usable candidate.
+
+`jacket-fit5` adds 48 source-to-target bone references inside the garment and
+holds those references fixed during the contact correction. It changes only
+the private jacket study, not the accepted body or skeleton. The core-anchor
+contact drift is below 0.000001 cm, and the maximum used-vertex displacement
+falls to 7.81 cm. The large left shoulder fold is gone in the inspected views,
+but a small front defect, lower back hem defects and choker clipping remain.
+The geometry gate still fails: main slot 19 has minimum local Jacobian -0.262,
+40 transported-normal reversals, including five faces classified as exterior,
+and triangle area ratios from 0.0168 to 5.443. Slots 20 through 23 pass that local
+orientation/area screen, which does not establish their body clearance.
+
+Keep `calf-surface2` as the previous cumulative fitting baseline. Fit5 is retained
+only for diagnosis. Next inspect the original topology/UVs of faces 740, 870,
+871, 907 and 910 and the associated interior fan; resolve their deformation
+without deleting useful source fabric or accepting the classification blindly.
+The choker also needs its own body-contact assessment. Do not cook or install
+these jacket studies. Full garment fit, source materials and every included
+palette, all six morphs, target weights, gameplay and the broader goal remain
+unfinished. Black-and-white floral Hydrangea remains the required default.
+
+Recipes `fit_peony_v2_jacket1.py` through `fit_peony_v2_jacket5.py`, projection
+receipts and source/candidate renders are retained under `work/peony-v2-source1`.
+Fit2 has no saved blend. Rejected blends 1, 3 and 4 are moved to the external
+rejected-fit archive after SHA-256 verification; their receipts and renders
+remain local. No V2 game trial, core update, save or appearance setting changed.

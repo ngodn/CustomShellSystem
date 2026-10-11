@@ -19,6 +19,12 @@ these limited changes. Full-mesh contact still fails outside those regions;
 boot coverage, jacket/glove fit, morphs, material matching and motion remain
 open. The V2 source record contains the limits. No V2 trial is installed.
 
+The later jacket studies are rejected. `jacket-fit5` improves shoulder coverage
+after separating interior fan faces from fitting donors and anchoring the
+garment core, but still has failed geometry checks, visible defects and choker
+clipping. It is diagnostic evidence, not a replacement for the cumulative
+baseline above. The V2 source record identifies the remaining faces to inspect.
+
 Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
 maps six removable garment groups while preserving the source data. Its latest
 continuous fit clears the sampled primary-body contact screen. Differential

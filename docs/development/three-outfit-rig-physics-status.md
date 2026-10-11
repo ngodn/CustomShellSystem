@@ -90,7 +90,14 @@ original heel junction. Front/rear/side views and saved-file preservation were
 checked. Lower boot/body contacts, inner surfaces, exact removable-part coverage,
 morphs and motion remain unresolved. The full contact gate still fails. The
 next jacket baseline visibly clips at the shoulders and is oversized behind
-the sleeves; its alignment and fit are next. No V2 trial is installed.
+the sleeves. Jacket studies identify an incomplete neck reference and interior
+fan faces incorrectly driving the surface fit. The latest `jacket-fit5` improves
+shoulder coverage and removes the earlier large fold, but still fails geometry
+and visual review, including choker clipping. It is retained for diagnosis;
+`calf-surface2` remains the prior cumulative baseline. Resolve the specific
+remaining face distortions and choker fit before cooking. See the V2 source
+record for witnesses, recipes and rejected-candidate cleanup. No V2 trial is
+installed.
 
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
