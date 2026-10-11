@@ -97,6 +97,16 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Slipstream preparation
 
+Native8 tests five corrected thigh radii after the regional-surface audit found
+internal body overlaps limiting some spheres. Captured definitions match and
+all 58 staged source assets remain unchanged, but both sprint captures still
+fail seven strain frames and body clipping remains. Removing animation drive
+raises that count to ten and does not solve clipping, so reject that approach.
+Connected capsules also improve sampled coverage only slightly. Continue with
+the uncovered body contour, using the earlier Eve regional-shape findings as
+evidence rather than repeating count/travel/drive sweeps. The current trial is
+not installed or accepted. Evidence: `work/slipstream-cloth-study6/receipt.json`.
+
 The center-weight follow-up is now measured and rejected. Independent skinning
 confirms that the old close-travel constraints cannot preserve a 3.511 cm strip
 whose targets separate by 14.426 cm. Native6 corrects those central targets but

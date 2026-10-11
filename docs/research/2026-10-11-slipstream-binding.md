@@ -464,3 +464,57 @@ snapshots 58 small reports, recipes, logs and images. All six commandlets exit
 zero and both private projects retain 53 protected dependencies. Large captures
 and assets remain hash-referenced at their retained source paths. The installed
 Peony repair, core, saves and settings remain unchanged.
+
+## Collision connections and internal limiting surfaces
+
+`slipstream-surfaceconnections1` tests connecting the retained spheres without
+increasing the number of collision objects. Of 120 same-bone, noncontained
+pairs, 36 pass sampled swept-ball containment and reference cloth clearance.
+Sixteen selected connections produce 30 collision objects. Median/p95/worst
+sampled body gaps improve only from 1.331/2.977/4.525 cm to
+1.264/2.917/4.312 cm. This is insufficient coverage progress to adopt the
+candidate. It has not been imported or simulated. The analytic swept-ball
+distance matches independent one-dimensional minimization within 0.00000266 cm
+on 200 points; that does not establish native tapered-capsule parity.
+
+The preceding Peony regional-surface method suggests another cause of undersized
+spheres: nearest surfaces can belong to an internal body overlap. The retained
+32-sphere fit has ten limiting nearest surfaces whose outward samples remain
+inside the body under the existing three-ray classification. Three clear
+examples are sphere 3 on the left thigh limited by right-thigh face 5276,
+sphere 13 on the right thigh limited by left-thigh face 1429, and sphere 29 on
+the right thigh twist limited by left-thigh face 1379. This is evidence of an
+internal-surface fitting problem, subject to the source topology/classifier
+limits, not proof that it explains every clipping point.
+
+`slipstream-regionalcollision1` keeps the same centers, bones and sphere count.
+It bounds thigh radii against their own anatomical surface and checks 168
+directions at seven poses against the whole body, including a 0.1 cm margin.
+Five radii change, by approximately 0.589, 0.119, 0.007, 0.134 and 0.114 cm.
+This is sampled containment, not a continuous sphere or full morph proof.
+
+Native8 imports that asset into a private authoring path and tests the unchanged
+original-weight, original-travel mesh. Captured native sphere definitions match
+the authored data within 0.000000096 cm, and all 58 staged source assets remain
+unchanged. Sprint and secondary sprint each fail seven strain frames; anchors
+pass. Frame 119 still has 93 inward body witnesses, worst 2.495 cm. The candidate
+remains unaccepted. Do not characterize the difference from the previous
+eight-frame results as a proven performance or stability improvement.
+
+A separate native8 diagnostic removes animation drive only, retaining gravity,
+body collision, self-collision and cloth simulation. It fails ten frames in
+both captures and retains 84 inward witnesses, worst 2.376 cm. Reject disabling
+animation drive as the repair. Saved mesh/configuration data remain unchanged.
+
+The next fitting work should address the uncovered body contour rather than
+repeat a sphere-count, travel-limit or animation-drive sweep. The earlier Eve
+regional hull study is available under `CustomShellSystem/work/eve26/region-hulls`;
+its large regional hulls also overfilled parts of the body, so they are a
+reference to inspect, not a ready replacement. A more local shape must pass
+posed containment and cloth clearance before native testing. Rest render
+mapping, other garment fit, body morphs, full character assembly and release
+validation remain open.
+
+Evidence is frozen in Eve's `work/slipstream-cloth-study6/receipt.json`.
+Native creation and both motion batches exit zero; negative fit verdicts remain
+recorded. No game package, core, save, profile or solver mode was changed.
