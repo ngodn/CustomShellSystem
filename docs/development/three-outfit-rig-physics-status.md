@@ -97,7 +97,18 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Slipstream preparation
 
-Latest private comparison: `slipstream-cloth-native3` restores the original
+The center-weight follow-up is now measured and rejected. Independent skinning
+confirms that the old close-travel constraints cannot preserve a 3.511 cm strip
+whose targets separate by 14.426 cm. Native6 corrects those central targets but
+still fails 18/19 strain frames and clips visibly. Combining it with closer
+travel in native7 fails all frames. Stop tightening travel. A separate
+96-sphere coverage screen reaches only 27 of 78 previous clipping witnesses;
+that definition is not imported or accepted. Continue from the uncovered body
+regions and compatible garment deformation. All 53 protected dependencies per
+project remain unchanged, and evidence is frozen in
+`work/slipstream-cloth-study5/receipt.json`. No game installation changed.
+
+Earlier private comparison: `slipstream-cloth-native3` restores the original
 garment weights and improves fitted-collision strain, but still fails. A
 dedicated posed-body sphere fit leaves eight failing frames in each sprint
 capture. `native5` then shortens cloth travel and reduces sampled penetration,

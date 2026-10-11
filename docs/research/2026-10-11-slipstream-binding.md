@@ -412,3 +412,55 @@ rejection is based on the output, not the command exit status. Native4's stopped
 build cache and two already-preserved duplicate mapping files were removed;
 the cleanup receipt does not claim an equivalent increase in physical free space.
 No game asset or CSS core changed during these comparisons.
+
+## Center-weight conflict and remaining collision coverage
+
+`fit_slipstream_center_weights.py` independently skins the captured source pose.
+At frame zero, edge 583-584 has a 3.511 cm rest length but its two animated targets
+are 14.426 cm apart. Even allowing each endpoint 3 cm of movement forces at least
+8.426 cm separation. This proves a constraint conflict in the rejected short-
+travel trial; raising solver iterations cannot make those limits compatible.
+
+`slipstream-cloth-proxy5` changes 164 free-particle weight rows. It uses the
+existing pelvis depth fade within 4 cm of the center and blends back to original
+weights at 8 cm, preserving all 188 native waist anchors and every other proxy
+field, including morph arrays. The five central edge witnesses retain their rest
+target lengths across the capture. This establishes target consistency only.
+
+The native6 comparison retains the original 12 cm travel and dedicated 32-sphere
+collision. Anchors pass, but sprint and secondary sprint fail 18 and 19 strain
+frames. The frame-119 body screen finds 78 inward witnesses, worst 2.551 cm.
+The mapped rear review visibly clips, so reject it. Fresh mesh readback matches
+native3 except the regenerated clothing binding GUID; the existing 1.570 cm
+rest-mapping error remains unresolved.
+
+Native7 combines those center weights with the previous close-travel map. It
+fails all 145 frames in both captures, with maximum extension about 14.27 cm.
+At frame 120, edge 322-536 stretches from 2.691 to 16.961 cm. Although only 13
+inward nearest-body witnesses remain at frame 119, that does not justify the
+distortion. Reject this combination and stop tightening the movement envelope.
+All 251 native anchors still pass; a coordinate/order failure is not indicated.
+
+`slipstream-surfacecollision2` separately evaluates a 96-sphere fit using the
+same 3,405 candidates and seven body poses. Median/p95/worst sampled body gaps
+improve from 1.331/2.977/4.525 cm to 0.869/2.320/4.184 cm. An analytic check at
+native6 frame 119 reaches only 27 of its 78 previously uncovered clipping
+witnesses, leaving 51 outside collision thickness. The definition has not been
+imported, simulated or cooked. More spheres alone have not solved coverage.
+
+The local UE 5.6.1 collider reads dynamic sphere/connection counts in
+`ChaosClothingSimulationCollider.cpp:90`; the private collision-authoring
+commandlet's 32/16 guards are not demonstrated engine limits. Do not confuse
+this with CSS attachment limits or claim that raising a count fixes the outfit.
+Complex skinned collision also needs solver compatibility checked before any
+implementation: that same collider excludes complex shapes for its legacy
+solver. No solver mode, helper count guard or game setting changed here.
+
+Continue with targeted coverage of the remaining thigh/body witnesses and
+compatible cloth deformation, preserving the rendered garment. Do not adopt
+either center-weight candidate solely from its target-separation result.
+Eve's `work/slipstream-cloth-study5/receipt.json` hashes 180 evidence files and
+snapshots 58 small reports, recipes, logs and images. All six commandlets exit
+zero and both private projects retain 53 protected dependencies. Large captures
+and assets remain hash-referenced at their retained source paths. The installed
+Peony repair, core, saves and settings remain unchanged.
