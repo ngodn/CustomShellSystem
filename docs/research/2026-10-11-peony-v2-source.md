@@ -286,3 +286,50 @@ earlier versions whose SHA-256 hashes match their receipts. The rejected
 existing external archive, SHA-256 verified and removed locally, recovering
 247,050,754 bytes. Their receipts and review evidence remain local. The latest
 heel/lining studies and their input files remain available for further fitting.
+
+## Shoe-upper constraints and internal collar surfaces
+
+`fit_peony_v2_shoe_upper.py` tests the boot upper against the uncontracted
+`heel-lining3` foot. It uses inspected main shoe components 6/7 from slot 30,
+561 vertices and 930 faces per side. Heel mechanism components 0 through 5
+remain unchanged, as do the accepted body and covered-foot lining. Nearby upper
+trim/glow follows the fitted field. These are private geometry studies only.
+
+- The nearest-normal field does not converge within 400 or 4,000 iterations.
+  Those runs save no blend. The latter residual is 0.0843 cm against a 0.015 cm
+  tolerance. The existing shared authoring solver now accepts an explicit finite
+  iteration limit while preserving its 400-iteration default for other callers.
+- `shoe-upper3` allows 40,000 iterations and converges after 6,303 left and 5,988
+  right steps. Its rendered shape is badly distorted: maximum displacement is
+  12.84 cm, area ratios exceed 22 and 112/104 faces still have sampled contacts.
+  Reject it. Numerical convergence is not fit acceptance.
+- `shoe-upper4` uses a radial ratio around the calf/arch/toe axis. Contacts drop
+  to 12 faces per side, but it expands by 9.41 cm and area ratios exceed 47.
+  Reject it. `shoe-upper5` uses additive radial offsets instead, but still moves
+  up to 6.55 cm, has area ratios above 38 and exposes toes in the side render.
+- `shoe-upper5-donors.json` and `shoe-upper6-donors.json` trace the drivers. The
+  largest requested offsets come from inner collar surfaces, not the outer shoe.
+  For example, vertex 3370 requests 5.975 cm while lying 6.714 cm behind the
+  source exterior along that ray. Vertex 3365 lies 6.418 cm behind the exterior.
+  Do not use these hidden folds as the outer profile to inflate around the foot.
+- `shoe-upper6` excludes those occluded drivers. Maximum shift falls to 3.64 cm,
+  no faces reverse in the raw normal comparison, and the front/side outline is
+  substantially less distorted. It still has 111/113 sampled contact faces and
+  a maximum area ratio of 13.49. The toe and ankle remain visibly exposed through
+  the shoe. This is not accepted and must not be cooked as a finished fit.
+
+The next fit must address the toe box and collar locally, preserving folded
+layers coherently. Inspect the posed toe against both the sole and upper surface
+before changing its height or expanding the shoe. Do not resume fitting all
+inner collar faces as exterior constraints, and do not contract the foot by the
+previous 7 cm projection. The calf/thigh failures and all remaining upper-outfit,
+material, morph, skinning, physics and release requirements remain active.
+
+`heel-lining3-geometry.json` records a separate pose screen: 5,328 faces, area
+ratios 0.2335 through 2.0372 and six raw normal-direction reversals. These raw
+normal comparisons do not account for transported orientation and do not prove
+that the lining is free of self-intersections. Do not label it validated footwear.
+Recipes and diagnostic scripts are retained under `recipes`. Rejected shoe-upper
+3/4/5 blends were SHA-256 verified in the external archive and removed locally,
+recovering 247,393,159 bytes. Their receipts, logs and rendered evidence remain
+available. No game file changed.

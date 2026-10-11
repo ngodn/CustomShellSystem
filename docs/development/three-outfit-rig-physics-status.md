@@ -46,6 +46,14 @@ preserving the heel/sole design, then finish the rest of the garment. The goal's
 remaining fixed palette counts have been reconciled: every supplied Peony scheme,
 black-and-white floral by default, and five Slipstream templates.
 
+The latest shoe-upper study isolates a fitting error: internal collar surfaces
+were driving exterior expansion. Source visibility queries identify the largest
+bad drivers, and excluding them improves the outline in `shoe-upper6`. Toe/ankle
+clipping and excessive local area changes remain, so this is still rejected for
+release. Fit the toe box and collar locally next; do not repeat whole-shoe
+inflation or the earlier foot contraction. See the V2 source record for measured
+failures, recipes and archived candidates. No new game trial is installed.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
