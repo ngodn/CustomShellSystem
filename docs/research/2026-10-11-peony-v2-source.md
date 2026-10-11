@@ -528,3 +528,47 @@ to the external CSS archive and hash-verified before removing local blends,
 recovering 330,740,459 bytes. Measurements and rendered evidence remain local.
 The latest thigh candidate and its waist input are retained. No game package,
 save or settings changed.
+
+## Calf shaft and preserved heel junction
+
+`calf-surface1` stops before saving because the thigh skin filter excludes
+`Eve Covered Feet`. The follow-up donor audit locates a missing ray at height
+41.753 cm; its nearest complete-body surface is that material, only 0.346 cm
+away. The material covers part of the calf as well as the foot. The calf fitter
+therefore includes it explicitly instead of guessing a replacement surface.
+
+`calf-surface2` changes only slot 4's retained fabric components 6 and 7. The
+restored ankle hardware and original heel remain in place. Initial alignment
+blends the preserved boot profile into the leg alignment. A smooth field is
+fixed below 16 cm and reaches full fitting strength at 27 cm. Contact correction
+is restricted to the outer shaft above that transition. This is deliberate
+preservation of the original heel connection, not clearance of the lower boot
+against the unposed bare foot.
+
+The independent audit checks 1,272 classified exterior faces wholly above the
+27 cm transition: no inside samples, with 0.291 to 0.856 cm clearance. All
+retained calf fabric has positive local Jacobians (minimum 0.917), no
+transported-normal reversals, and area ratios from 0.936 to 1.944. The largest
+move among used fabric vertices is 2.691 cm. The older fit receipt's 5.017 cm
+maximum includes unused source vertices; `calf-surface2-contact2.json` records
+the relevant used-vertex measurement and future fit receipts use that scope.
+
+The saved-file preservation check passes across 98 mesh objects, with only the
+new calf shape active on slot 4. The 1,606 restored hardware vertices and 974
+lower anchor vertices match the preserved boot profile within 0.000006 cm.
+Front, rear and side renders show the heel connection still present. Those
+renders use the existing covered-foot preview partition; they do not establish
+the final V2 runtime coverage bindings or removable-boot behavior.
+
+The full contact gate still fails: 912 classified exterior faces intersect the
+unposed body below the transition, and 175 non-exterior faces above it have
+inside samples. Resolve these through the exact geometry/covered-body and
+visibility assessment before acceptance, rather than treating a shaft-only pass
+as a finished boot. Body morphs, target skinning, pose/ground placement and motion
+remain open. The untouched accepted body and all existing source data remain
+preserved. Recipes and the three-view record are frozen for this candidate.
+
+The next upper-garment baseline, `review-jacket-baseline1`, shows shoulder skin
+through the front jacket and an oversized back/sleeve outline. These views were
+inspected and remain rejected. Correct the jacket and sleeve alignment before
+using its contact data to fit it. No new game trial is installed.

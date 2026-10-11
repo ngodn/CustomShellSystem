@@ -9,13 +9,15 @@ as the default. Installed Peony refit2 is rejected, including its upper garment
 and lower fit. Older trial notes below do not establish acceptance. Rebuild from
 V2 while preserving the accepted body and requested customization/removals.
 
-The latest private V2 candidate is `thigh-surface3`, built on `waist-layers3`.
+The latest private V2 candidate is `calf-surface2`, built on `thigh-surface3`
+and `waist-layers3`.
 The waist correction removes the visible waistband/corset overlap. The thigh
 correction follows the leg more closely after switching to exterior fabric
-donors where source skin is absent. Neutral views and saved-file preservation
-pass for these limited changes. Full-mesh contact still fails outside the
-classified exterior; calf/jacket/glove fit, morphs, material matching and motion
-remain open. The V2 source record contains the limits. No V2 trial is installed.
+donors where source skin is absent. The upper calf now fits while retaining
+the original heel junction. Neutral views and saved-file preservation pass for
+these limited changes. Full-mesh contact still fails outside those regions;
+boot coverage, jacket/glove fit, morphs, material matching and motion remain
+open. The V2 source record contains the limits. No V2 trial is installed.
 
 Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
 maps six removable garment groups while preserving the source data. Its latest

@@ -84,6 +84,14 @@ knee junction, jacket/gloves, all six morphs, target skinning, source materials
 and motion remain open. The full contact gate still fails outside the classified
 exterior faces. See the V2 source record for evidence and archived failures.
 
+`calf-surface2` now builds on that thigh candidate. The upper calf's classified
+outer surface passes neutral contact/orientation checks while preserving the
+original heel junction. Front/rear/side views and saved-file preservation were
+checked. Lower boot/body contacts, inner surfaces, exact removable-part coverage,
+morphs and motion remain unresolved. The full contact gate still fails. The
+next jacket baseline visibly clips at the shoulders and is oversized behind
+the sleeves; its alignment and fit are next. No V2 trial is installed.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
