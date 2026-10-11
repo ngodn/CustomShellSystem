@@ -518,3 +518,88 @@ validation remain open.
 Evidence is frozen in Eve's `work/slipstream-cloth-study6/receipt.json`.
 Native creation and both motion batches exit zero; negative fit verdicts remain
 recorded. No game package, core, save, profile or solver mode was changed.
+
+## Rigid thigh level-set comparison
+
+`slipstream-levelset1` samples the accepted full body's occupied volume in each
+thigh's local space, at 0.5 cm spacing. It retains the intersection of the
+reference pose and recorded sprint frames 0, 36, 72, 108, 119 and 132. Oriented
+ray counts preserve overlapping body regions that odd/even parity would erase;
+all three ray axes must agree. A single cube and overlapping cubes pass exact
+occupancy controls. The body has some open rays and axis disagreements, so
+this remains a sampled authoring method, not a watertight-body proof. Thirty-two
+interior probes per shape and pose also agree with independent solid-angle
+winding classification.
+
+Two 50 by 46 by 42 grids use cell-center signed distances, generated with SciPy
+1.17.1. The initial 0.15 cm inset reaches 80/93 recorded native8 clipping
+witnesses but fails boundary containment and is rejected. Increasing the inset
+to 0.5 cm allows more room for the 0.5 cm voxel's spatial uncertainty. That candidate
+reaches 74/93 witnesses and passes 512 boundary probes per shape across all
+seven poses, 7,168 checks in total. Minimum reference cloth clearance is
+0.754 cm left and 0.908 cm right, above the 0.3 cm contact thickness. Body
+morphs, intervening gait frames and continuous containment remain unverified.
+
+The exact local UE 5.6.1 source supports rigid level sets in its existing
+legacy cloth solver. `ChaosClothingSimulationCollider.cpp` includes them among
+simple colliders and wraps each grid in its bone-local transform. This does
+not require changing `p.ChaosCloth.UseLegacyEvolution`. `ArrayND.h` uses Z as
+the fastest index, matching the exported C-order values; `UniformGrid.h`
+locates samples at cell centers. In this engine version,
+`FKLevelSetElem::GetLevelSetData` returns X/Y dimensions swapped, while
+`GridResolution()` returns the actual dimensions. Native readback must use
+the latter and record both, rather than silently transpose the values.
+
+`slipstream-cloth-native9` is a private copy of native8. It retains the 32
+regional spheres and adds these two rigid thigh grids. It uses the unchanged
+original-weight, original-travel garment and existing cloth settings. The
+private helper adds explicit grid inspection and native distance samples.
+Its first compile failed on the case-sensitive `Chaos/Levelset.h` include;
+the corrected compile passes. All 59 copied source assets pass initial hash
+comparison. This is an authoring trial, not a package installed in the game.
+
+Fresh native9 load preserves both 96,600-cell grids within 0.000000474 cm.
+The 1,522 native distance queries at cell centers agree within 0.000000361 cm.
+The 32 original sphere definitions are preserved within 0.000000096 cm. The
+motion capture confirms 32 spheres and two transformed level sets in the actual
+cloth solver, not just in the saved physics asset.
+
+Both 145-frame sprint captures retain all 188 anchors within 0.000026 cm, but
+fail the strain screen in 30 and 31 frames. Worst extensions are 2.412 and
+2.440 cm. Frame 119 has 34 uncovered inward witnesses, worst 1.724 cm, compared
+with native8's 93 witnesses and 2.495 cm. The matched render replay and rear
+review still show visible skirt/body intersection. Better coverage does not
+make this an accepted garment. Rest render-mapping error is unchanged at
+1.570 cm worst and 0.545 cm p99.
+
+Native10 reuses the already checked center-weight mesh from native6 with the
+same new collider. It changes neither travel limits nor cloth configuration.
+Both anchor checks pass, but strain fails in 39 and 41 frames, with worst
+extensions 3.303 and 3.184 cm. Frame 119 retains 43 inward witnesses, worst
+2.000 cm. Reject this combination too. All 59 staged source assets in each
+project remain unchanged. Creation, fresh readback and both motion batches
+exit zero, which establishes execution only. Timing recorded during these
+authoring runs is not controlled game performance evidence.
+
+A follow-up checks 512 boundary points per thigh at eight newly failing
+frames: 6, 22, 38, 55, 88, 102, 120 and 135. Frames 88 and 120 expose the
+seven-pose fitting limit. Each has 35 outside left-thigh samples, up to
+0.599 cm, and 24 outside right-thigh samples, up to 0.443 cm. The other six
+sampled poses pass. Original fit-source and new native9 local bone snapshots
+match exactly throughout all 145 frames, ruling out a mismatched pose input
+for this comparison. These witnesses do not explain every remaining strain
+failure, but they reject the current rigid surface's full-stride containment.
+
+Next: bound these local volumes over the full recorded stride before further
+native trials, rather than enlarge them or repeat the center-weight change.
+Keep the six initially passing failure poses as separate contact/constraint
+witnesses. Full morph coverage, other gaits, the residual render mapping and
+the remaining outfit work still need validation. The current rigid-level-set
+candidate is rejected; the method is not yet established as a shipping fix.
+
+Evidence is frozen in Eve's `work/slipstream-cloth-study7/receipt.json`.
+It hashes 161 files and retains 132 small snapshots. After all editor jobs
+finished, the native9 rebuildable Intermediate cache was removed, reclaiming
+373.9 MiB. Its source, successful module, assets and evidence remain retained;
+the pinned module hashes pass again after cleanup.
+Installed packages, CSS runtime, saves and profiles remain unchanged.
