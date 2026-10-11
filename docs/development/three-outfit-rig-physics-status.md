@@ -137,6 +137,18 @@ pass the saved-file preservation checks. Exact witnesses, recipes and rejected
 blend locations are in the V2 source record. Every supplied palette and the
 black-and-white floral default remain required. No V2 trial is installed.
 
+The next glove comparison establishes an exact UV-triangle match with the
+earlier source: 2,632 matching triangles and 1,502 unambiguous UV points per
+hand. The old fitting recipe can therefore be compared through real source
+correspondence rather than guessed component proximity. Original-shape renders
+also identify the thumb and inner wrist closure separately. Guarded whole-hand
+flow and subsequent contact expansion still distort a finger and fail contact;
+both are rejected and archived. Terminal-only replay (`glove-terminal2` and
+`glove-fit5`) is retained as another diagnostic, not a replacement baseline.
+Continue with source-matched finger correspondence, preserving the original
+shell and details. Do not extend the rejected whole-hand expansion. The full
+V2 binding, morph, palette, motion and release work remains open.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the

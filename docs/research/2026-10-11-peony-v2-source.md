@@ -865,3 +865,84 @@ fit1, fit3 and fit4 blends were copied to the external rejected-fit archive,
 SHA-256 verified and removed locally, reclaiming 332,419,086 bytes. Logs,
 renders and receipts remain local. No installed package, save or settings
 changed; no V2 game test is requested.
+
+## Original glove surface and earlier-fit correspondence
+
+The original-shape renderer now reads preserved Basis coordinates from a V2
+wardrobe copy, leaving the file unchanged. It uses that copy's retained face
+indices, avoiding a mismatch with the unfiltered source library. Highlighted
+front/rear/side views establish that left UV island 91 is the thumb (316
+faces), 5392 is the main shell (2,278 faces), and 5426 is an inner wrist closure
+(38 faces). The corresponding right islands are 317, 5192 and 5464. The
+316-face islands are not cuffs. `glove-surface1.json` additionally classifies
+original face direction against its weighted source bone segments. Its
+highlighted low-radial faces include the wrist interior and narrow folds near
+the knuckles. This is a driver classification, not proof that every excluded
+face is invisible.
+
+`glove-flow1` stops before saving: a wrist sample has no target surface within
+3 cm agreeing with its direction. `glove-flow2` excludes those inspected
+inward-facing drivers while retaining and moving their geometry. It uses 2,455
+driver faces per hand, moving the entire glove and its details through one
+smooth field. Each hand completes 35 guarded steps. Minimum per-step sampled
+Jacobian is 0.803 left and 0.799 right; no tested per-step triangle reversal is
+detected. These checks do not establish a correct final shape. The main shell
+still has 188/271 left and 191/264 right garment/body edge crossings. Full
+slot-3 face-area ratios reach 17.48 relative to the terminal-aligned input.
+Front/rear/side review does not accept the remaining finger fit.
+
+`glove-contact1` applies the corset contact-inequality method to that result,
+using actual vertex/edge-midpoint/face-center sample interpolation in the
+shared field. It completes 16 guarded steps per hand and reduces some edge
+crossings, but visibly bulges a finger and displaces retained glove geometry
+by up to 2.965 cm. The main shells still have 85/235 and 85/232 crossings.
+This is rejected, not a reason to increase iterations. A smooth spatial field
+over the whole hand can spread one finger's contact correction into its
+neighbor. The next correction must respect source finger correspondence and
+the reference silhouette; numerical orientation checks do not override the
+rendered failure.
+
+The earlier glove source can be compared directly. `glove-source-comparison1`
+and `glove-source-comparison2` read the preserved source surfaces in
+`new-outfits-gloves5.blend` and the V2 copy. All 2,632 UV-triangle signatures
+match per hand, with 1,502 unambiguous matching UV points. After a fitted
+similarity transform, the maximum source-position difference is 0.01797 cm.
+Both studies reference the same accepted body file and hash. This verifies a
+useful source correspondence; it does not import the retired garment or prove
+that the earlier glove passed all current contact checks. Its earlier acceptance
+was limited to the recorded neutral and selected posed views.
+
+`glove-terminal2` replays the earlier terminal-direction-only method, without
+the newly introduced palm/proximal roll adjustment. `glove-fit5` then replays
+the frozen fit2 recipe with correct forearm ancestor mapping. Median neutral
+position difference from the earlier fitted glove is 0.0468/0.0447 cm; the
+95th percentiles are 0.1833/0.1887 cm. Maximum differences reach 3.336/3.331 cm
+and require individual witness inspection before attributing them to any
+part. The V2 main-shell edge checks still fail at 150/197 and 145/194. The
+left-front close-up also shows a small breakthrough. These are retained
+diagnostics, not an accepted fit or a reason to copy old displaced geometry
+without checking it. Use the verified UV correspondence to compare each
+finger's source position, fitted position and binding explicitly.
+
+Saved-file preservation passes across all 98 mesh objects for flow2, contact1,
+terminal2 and fit5. Body, source coordinates, topology, UVs, original weights
+and previous shape coordinates are unchanged. The cumulative authoring baseline
+remains `neckline-contact3`. No V2 binding or motion claim
+is made from these neutral studies.
+
+`glove-study2-receipt.json` freezes reports and scripts. The final rejected
+contact recipe is `fit_peony_v2_glove_contact1.py`, SHA-256
+`937ed8494c49d38594ab6f3fb89a2c0ca743a31c7790ceb45227e9338d198b05`.
+The terminal-only recipe is `align_peony_v2_gloves2.py`, SHA-256
+`4d8ee4f341b34b8308ce613091b3417d8689b7f3253d5e75611e606d1a78765b`.
+Frozen scripts run with the authoring `tools` directory on Python's module
+path; a frozen script's work directory alone cannot resolve shared helpers.
+The final source-comparison, original-shape renderer and face-direction
+inspection scripts are also frozen beside the receipts. These authoring files
+remain outside the CSS Git repository.
+
+Flow2 and contact1 blends were copied to the external rejected-fit archive,
+SHA-256 verified and removed locally, reclaiming 166,280,034 bytes. The source
+archives, accepted body, installed packages, settings and saves are unchanged.
+All supplied palette templates and the black-and-white floral default remain
+required. No V2 trial is installed and no game test is requested.
