@@ -8,8 +8,12 @@ their independent sampled containment checks, but native cloth still stretches
 and clips, so both candidates remain rejected. A native constraint-copy trace
 shows a rear edge relaxing from 3.524 to 1.775 cm under its spring constraint,
 clear of body/backstop collision, but requiring more travel than its 12 cm
-limit. Increasing travel alone also fails. Next: inspect actual tether data and
-sequential constraint copies to identify what prevents this edge correction.
+limit. Increasing travel alone also fails. The ordered-copy follow-up confirms
+that maximum distance reopens the corrected edge; tethers and backstop do not
+move its endpoints. Actual scale readback passes at both 1 and 1.25. Increasing
+the scale still leaves the same conflict. Next: repair the local animation
+target/travel relationship, then rerun full-stride strain and body-contact
+checks before considering a shipping candidate.
 Source assets remain preserved. No new trial is installed or ready for a
 player test. See the [full-stride comparison](../research/2026-10-11-slipstream-binding.md#full-stride-collision-bounds-and-the-remaining-constraint-conflict).
 

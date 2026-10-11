@@ -673,3 +673,56 @@ zero. Keep this invocation error separate from cloth-fit failures.
 Evidence is frozen in Eve's `work/slipstream-cloth-study8/receipt.json`.
 The whole garment and release goal remain incomplete. No game assets, runtime,
 profiles, saves or solver mode were changed.
+
+## Ordered constraint copies and tether readback
+
+`slipstream-cloth-native13` preserves native12's 62 content assets and builds a
+private diagnostic from native9's source. It adds an edge projection followed
+by each other constraint on independent final-state particle copies. No live
+particles or saved cloth settings are modified. Both 39-frame secondary sprint
+captures and the helper build return zero; all copied content hashes remain
+unchanged.
+
+At frame 38 with actual maximum-distance scale 1, edge 314–572 measures
+3.532322 cm. Its resting length is 1.718937 cm. The copied edge projection
+reduces it to 1.764883 cm. Applying the next copied constraint gives:
+
+| Following constraint | Edge length, cm |
+| --- | ---: |
+| Edge spring again | 1.721945 |
+| Bending springs | 1.757028 |
+| Area | 2.264527 |
+| Tethers | 1.764883 |
+| Maximum distance | 3.132464 |
+| Backstop | 1.764883 |
+| Animation drive | 1.769887 |
+
+Maximum distance moves endpoint 314 by 1.373897 cm after the spring pass.
+The spring-corrected endpoints have body-collider signed distances 2.759117
+and 1.904333 cm. Tether readback records anchor 233 for endpoints 314, 572,
+316 and 318. After the edge correction those tethers retain 2.543–4.244 cm
+of slack. They do not oppose this local correction. This does not establish
+that every tether elsewhere is inactive.
+
+The comparison with `TravelScale=1.25` reports an actual scale of 1.25,
+excluding a silently ignored component setting. The same edge starts at
+2.871763 cm, relaxes to 1.670716 cm, then opens to 2.525456 cm after maximum
+distance. Area opens it to 2.069101 cm; tethers and backstop preserve the
+spring result. The spring-corrected first endpoint is now only 0.225723 cm
+from a collider, below the configured 0.3 cm collision thickness. Consequently
+this comparison is not evidence that the corrected pose is collision-safe.
+The previous complete larger-travel trial remains rejected.
+
+These are copied projections with X=P, not an instrumented live iteration or
+velocity reconstruction. They identify a local target/travel conflict and an
+area response, not a complete diagnosis of the garment. Next work should
+address the regional animation target and permitted travel together, preserve
+the pins and fitted body, and recheck the whole stride and body contact. Do not
+disable tethers or enlarge all travel limits based on this trace.
+
+Evidence, recipes, module identity and reports are frozen in
+`work/slipstream-cloth-study9/receipt.json` under Eve: 27 hashed files, with
+small files copied into the snapshot. After all jobs exited and module hashes
+passed, 391,549,518 bytes of generated native13 build intermediates were
+removed. Source, module, assets and captures remain. No new game package is
+installed, and no player test is requested.
