@@ -236,3 +236,53 @@ do not show this material layer and are not palette acceptance evidence.
 Neither the wardrobe nor either lower-fit study is installed. Jacket, gloves,
 footwear, hip/crotch fit, stocking materials, all six morphs and posed validation
 remain unfinished, alongside the rest of the coordinated release goal.
+
+## Cuff witnesses and covered-foot pose
+
+`review_peony_v2_leg_contacts.py` maps rejected contact face IDs back onto the
+untouched source. The eight views in `review-leg-contact-source2` distinguish
+internal calf cuff closures from exposed thigh seam patches. Several failures
+are folded internal surfaces, but others are visible fabric. Do not discard all
+contact failures or inflate the entire garment to satisfy them.
+
+The existing footwear tools now accept the inspected V2 identity and separate
+shoe, glow and cuff slots. Private studies retain the accepted bare body and
+source Basis:
+
+- `heels-profile1` preserves the source heel profile around the target ankle,
+  with uniform scale about 1.149. The heel extends roughly 9.44 cm below Z=0.
+  This is not a verified runtime ground offset. The source toe direction has
+  about 9.67 degrees of horizontal yaw, which the initial tool assumed was zero.
+- `heel-lining1` duplicates 2,689 accepted-body vertices and 5,328 faces below
+  42 cm, with original UVs and six body morphs. Rotating both arch and toes
+  together leaves obvious foot/boot intersections in the front and side views.
+- `heel-lining2` tests the existing radial inside-boot projection against slot
+  30 only, excluding cuff closures. It moves 704 vertices, misses 687 rays and
+  displaces one vertex by 7.065 cm. The render has a pointed ankle artifact.
+  Reject this fit; do not ship the contracted lining.
+- `heels-profile2` corrects yaw using both source and target foot directions
+  and asserts that they align. It still preserves the heel's local shape.
+- `heel-lining3` keeps toes in their bind orientation while translating their
+  ball pivot with the rotated arch. This avoids treating the whole foot as a
+  rigid downward-pointing segment. No radial shrink is applied. Its render has
+  level toes, but they and the ankle still intersect the boot. This is a useful
+  pose study, not accepted footwear or a repair of the full lower garment.
+
+`review_peony_v2_source.py --focus-feet` hides only the accepted-body faces
+replaced by the lining in the temporary review scene. It now frames actual
+face-owned evaluated vertices, includes the lining and accounts for image aspect
+ratio, so both feet fit in the front view. It never saves over the input blend.
+All three lining reviews completed. No V2 asset has been installed.
+
+Next fit the boot upper and cuff to the separately posed foot, preserving the
+source heel/sole design. Check contact, shape and body coverage together before
+any morph or motion acceptance. The calf and thigh studies still fail, and the
+jacket, hip pieces, target weights, final materials and release checks remain
+unfinished. Do not continue the 7 cm lining contraction as a shortcut.
+
+Exact heel and lining recipes are retained under `recipes`, including reconstructed
+earlier versions whose SHA-256 hashes match their receipts. The rejected
+`heels-profile1`, `heel-lining1` and `heel-lining2` blend files were copied to the
+existing external archive, SHA-256 verified and removed locally, recovering
+247,050,754 bytes. Their receipts and review evidence remain local. The latest
+heel/lining studies and their input files remain available for further fitting.

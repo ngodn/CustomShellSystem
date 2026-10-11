@@ -306,15 +306,15 @@ Evidence includes the screenshots supplied in this conversation and
 CSS/player preview and gameplay. Check neutral, individual slider endpoints,
 intermediate and combined settings, idle/walk/jog/sprint, turns and action
 interruption. Verify normal/facial meshes, Iris Out, eyes, clothing visibility,
-five palettes, glow, saved settings and supported doubles. Record remaining
+all supplied palette templates, glow, saved settings and supported doubles. Record remaining
 defects honestly. Private fitting renders do not establish a runtime fix.
 These corrections supersede preserving the rejected Peony design unchanged;
 the rest of the three-outfit goal remains active.
 
-Each new outfit must have modular, individually removable garment components through CSS customization, allowing the outfit to be undressed, plus **five distinct template color palettes per outfit (ten total)**. Use the established customization and saved-profile behavior. Validate component combinations, palette application, body-shape fit, skin weights, collision, garment physics and animation/facial compatibility in both preview and gameplay. Apply the same performance and regression gates as the existing outfits.
+Each new outfit must have modular, individually removable garment components through CSS customization, allowing the outfit to be undressed. Peony must include **every distinct color scheme supplied by the corrected V2 and Recolors Texture archives**, with black-and-white floral as the default. Slipstream retains **five distinct template color palettes**. Use the established customization and saved-profile behavior. Validate component combinations, palette application, body-shape fit, skin weights, collision, garment physics and animation/facial compatibility in both preview and gameplay. Apply the same performance and regression gates as the existing outfits.
 
 October 9 palette direction: include the user's supplied black-and-white
-Hydrangea/Peony reference among Peony's five templates. Use pearl-white fabric
+Hydrangea/Peony reference, confirmed on October 11 as Peony's default. Use pearl-white fabric
 with the existing pattern visible in soft gray, glossy black edging, straps
 and hardware, sheer black stockings, and warm amber emissive accents. Compare
 the result in neutral preview and warm/cool world lighting. This is a palette
@@ -329,12 +329,12 @@ color, strength and coverage controls; expose flow speed through the established
 customization system where supported. Keep Peony masks and material instances
 in the Eve mod, with any reusable material function in CSS_SharedAssets_P.
 Validate glow off/on, flow continuity across garment seams, removable parts,
-all five palettes, saved profiles and supported astral doubles in preview and
+all supplied Peony palettes, saved profiles and supported astral doubles in preview and
 gameplay. This is queued material work, not an implemented or installed feature.
 
 Keep outfit-specific meshes, materials, physics and palette definitions in the Eve mod under `/Game/CSS/eins0fx/EveSB/...`; put only genuinely reusable assets in `CSS_SharedAssets_P`. Make supporting CSS changes where needed while preserving existing controls and saved selections.
 
-**Acceptance:** both outfits are selectable, modular visibility and all ten palette templates work and persist, and fit/physics/gameplay checks are recorded. Track them separately from the nine existing repair variants. Release inclusion/version remains to be settled when this queued work is reached; do not silently change the coordinated release targets or report these outfits as completed.
+**Acceptance:** both outfits are selectable, modular visibility and all required palette templates work and persist, and fit/physics/gameplay checks are recorded. Verify that a new Peony selection uses black-and-white floral and saved palette choices restore correctly. Track them separately from the nine existing repair variants. Release inclusion/version remains to be settled when this queued work is reached; do not silently change the coordinated release targets or report these outfits as completed.
 
 ## Deferred follow-up: Genessa Form after switching save games
 
@@ -423,6 +423,6 @@ For rejected trials, retain the small recipe, parameters, failure reason and use
 
 Record deleted paths or groups, why they were safe to remove and measured space recovered in the work log. Cleanup must preserve reproducibility and the ability to recover the current working build.
 
-Completion requires all scoped variants accounted for, the two queued Eve outfits and their ten palettes completed or explicitly deferred by the user, Unholy Genessa facial support accepted, agreed defects repaired or explicitly deferred, shared-pack organization accepted, locomotion review and remaining native-human conversions accounted for, regression results recorded, source-to-package provenance complete and a concise list of remaining limitations. Do not mark the goal complete from a Blender preview alone.
+Completion requires all scoped variants accounted for, the two queued Eve outfits and their required palettes completed or explicitly deferred by the user, Unholy Genessa facial support accepted, agreed defects repaired or explicitly deferred, shared-pack organization accepted, locomotion review and remaining native-human conversions accounted for, regression results recorded, source-to-package provenance complete and a concise list of remaining limitations. Do not mark the goal complete from a Blender preview alone.
 
 **First implementation steps when activated:** verify the installed gameplay-interruption baseline, pin the nine-variant/current-facial manifest, then capture matched poses to prioritize the first demonstrated deformation defect.

@@ -37,6 +37,15 @@ and ankle/heel fit plus remaining thigh contacts need repair. The source's stock
 layer is partly a body material controlled by CNS and must also be adapted to the
 accepted body. See the V2 record for component IDs, witnesses and rejected results.
 
+Footwear studies now use the V2 parts and correct source-to-target foot yaw.
+Separating toe translation from arch rotation produces a more useful covered-foot
+pose, but boot/cuff intersections remain. The radial lining contraction was
+rejected after it produced an ankle spike. The latest `heel-lining3` is a private
+pose study, not an accepted fit. Fit the footwear upper to that pose while
+preserving the heel/sole design, then finish the rest of the garment. The goal's
+remaining fixed palette counts have been reconciled: every supplied Peony scheme,
+black-and-white floral by default, and five Slipstream templates.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
