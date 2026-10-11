@@ -891,3 +891,84 @@ independent acceptance requirement. Evidence and recipes are frozen in Eve's
 `work/slipstream-cloth-study11/receipt.json`: 59 hashed files, 26 small snapshots,
 plus the position replay script identity. Large captures and candidate maps
 remain at their recorded paths.
+
+## Thin-triangle and outer-surface comparison
+
+The original proxy has 118 triangles below 0.1 normalized area quality and
+199 below 0.2, where an equilateral triangle has quality one. The minimum is
+0.016269. One thin triangle is the support used by an earlier short-vector
+witness. Most thin triangles have normals nearly transverse to the retained
+body-facing backstop normals. This motivated a topology comparison, not a
+claim that all those faces are invalid.
+
+`retriangulate_slipstream_proxy.py` uses Blender's triangle-edge rotation
+operation ([API reference](https://docs.blender.org/api/5.3/bmesh.ops.html#bmesh.ops.beautify_fill)),
+verified by execution in the pinned Blender 5.2.2. It permits rotation across
+edges with at most five degrees between adjacent faces. It changes 206
+triangles, but leaves all 118 triangles below 0.1 quality. Its acceptance guard
+rejects that result before writing a proxy. Connectivity-only beautification
+does not resolve the identified worst triangles; do not adopt it from the
+improved median quality alone.
+
+`slipstream-cloth-shell1` separately retains triangles whose normal dot the
+local body-facing backstop direction exceeds 0.25. This removes transverse
+rim faces from the simulation only. The visible mesh is unchanged. The result
+has 508 particles and 777 triangles. All retained coordinates, normals, weights,
+distance maps and six morph arrays are exact subsets of the previous values.
+The new topology is connected and manifold by edge incidence, and both exact
+pins and all 148 native kinematic particles cover every 30-degree waist sector.
+The maximum increase in nearest render-vertex distance is 0.221863 cm. This is
+a sampled coverage comparison, not proof that trimming the simulation surface
+preserves final deformation.
+
+Native16 rebuilds and inspects that surface with the existing full-basis helper.
+Only `SK_SlipstreamGarments.uasset` changes among the 62 copied assets. Visible
+positions, triangles, skin weights, authored shading vectors, body morphs,
+skeleton, mesh physics and post-process bindings remain identical. Fresh map
+readback matches within 0.000000469 cm. However, the standard native render
+mapping is worse: maximum resting position error is 41.853490 cm, normal
+endpoint error 67.347373 cm and tangent endpoint error 51.434813 cm. Replaying
+with float32 source geometry also retains the large error. This candidate
+cannot ship with its generated mapping.
+
+Native17 copies that exact garment into a separate motion project using the
+retained constraint-capable module. Its first invocation mistakenly selected
+the unrelated Eve-motion commandlet; it returned code one without a capture.
+After that process terminated, the corrected cloth-motion batch returned zero.
+Both 145-frame anchor checks pass below 0.000026 cm. The unchanged collision and
+solver configuration still fails the strain screen in 15 frames without
+secondary motion and 13 with it; maximum extensions are 2.764612 and 2.553326 cm.
+Mean diagnostic cloth-step times are 1.703 and 1.650 ms, not gameplay FPS.
+The frame-119 oriented body screen finds 50 inward witnesses among 508 particles,
+worst 2.617417 cm. Raw witness counts differ in sampling density from the
+624-particle baseline and cannot establish a contact improvement by themselves.
+
+The independent offline correction `slipstream-mapping-shell1` solves 491 of
+500 problem vertices, preserving unrelated native data and passing the damaged
+normal negative control. Its secondary-stride replay has no vectors below
+0.01 cm among those changed rows and fewer abrupt-direction witnesses. It is
+still incomplete: vertices 3288, 3290 through 3296, and 3504 remain unresolved.
+Searching all 777 triangles (`shell2`) makes no further correction. Permitting
+UE's three-times-point-to-triangle-distance limit when it exceeds the previous
+3 cm diagnostic bound (`shell3`) also changes none of those cases. The latter
+rule follows `GetPointBaryAndDistWithNormals` in the exact 5.6.1 source and was
+checked independently against point-to-triangle distances. Neither comparison
+is a native asset patch or an accepted garment repair.
+
+Keep the 624-particle surface as the retained baseline. This comparison does
+not justify wholesale rim removal, increased density, or another diagonal
+rotation sweep. The original-surface coupled correction already passes its
+static check; next establish its private native application, fresh rebuild
+behavior and actual rendered result. The earlier short-vector/large-delta
+motion diagnostics identify inspection points, not independent proof of a
+visible defect. Physical contact and target/travel conflicts remain separate
+requirements and must still be resolved before accepting the full garment.
+
+Evidence is frozen in `work/slipstream-cloth-study12/receipt.json`: 56 hashed
+files and 43 small snapshots, plus the uniquely rebuilt garment identity.
+All editor and Blender jobs have terminated. Native17's 62 duplicate content
+files were verified identical to native16 and removed after acquiring its
+editor lock; `duplicate-content-cleanup.json` records their 399,441,048 logical
+bytes and the exact restore source. This is not a claim about physical free
+space. Source assets, the unique native16 garment, modules and captures remain.
+No game package, core, save or profile was changed.

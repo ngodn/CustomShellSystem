@@ -20,6 +20,16 @@ is installed or ready for a player test. See the
 [regional comparison](../research/2026-10-11-slipstream-binding.md#regional-travel-comparison)
 and the [static/moving mapping comparison](../research/2026-10-11-slipstream-binding.md#static-basis-reconstruction-and-moving-checks).
 
+The subsequent topology comparison is also rejected. Rotating eligible
+diagonals leaves all 118 worst thin triangles. Removing transverse simulation
+rim faces preserves retained particle fields, but its fresh native mapping
+has much larger static errors and sprint still fails 15/13 frames. A separate
+offline mapping correction improves its basis but leaves nine unresolved
+vertices. Keep the original 624-particle surface. The complete original-surface
+mapping correction still needs a private native application/rebuild/render
+test; its motion diagnostics alone do not prove a visible regression or a
+finished repair. See the [surface comparison](../research/2026-10-11-slipstream-binding.md#thin-triangle-and-outer-surface-comparison).
+
 Latest installed trial: `peony-refit2`, replacing the rejected `peony-refit1`
 Eve/shared packages. The core remains `6d751cbdab2cab4c`. The lower garment
 has been fitted inward and the oversized upper-thigh collision endpoints
