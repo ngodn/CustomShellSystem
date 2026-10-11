@@ -9,6 +9,13 @@ as the default. Installed Peony refit2 is rejected, including its upper garment
 and lower fit. Older trial notes below do not establish acceptance. Rebuild from
 V2 while preserving the accepted body and requested customization/removals.
 
+The latest private V2 candidate is `waist-layers3`. It corrects the visible
+waistband/corset overlap after separating exterior body donors from internal
+anatomy. Neutral views and saved-file preservation pass for that limited change.
+The full-mesh intersection gate still fails outside the classified main corset
+exterior, and leg/jacket/glove fit, morphs, material matching and motion remain
+open. The V2 source record contains the measured limits. No V2 trial is installed.
+
 Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
 maps six removable garment groups while preserving the source data. Its latest
 continuous fit clears the sampled primary-body contact screen. Differential

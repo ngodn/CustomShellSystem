@@ -391,3 +391,85 @@ records source/input/script hashes. Rejected `toebox1`, `toebox2` and
 `shoe-upper6` blends were copied to the external CSS archive, hash-verified and
 removed locally, recovering 247,402,906 bytes. Their measurements, recipes and
 rendered evidence remain available. No game package or settings changed.
+
+## Hip fitting donors and waist overlap
+
+The initial hip field used nearest points on the complete accepted body. That
+body contains internal anatomy as well as exterior skin. `pelvis-origin.json`
+records rays that encounter those internal surfaces before reaching the skin;
+using them as fitting donors produces incorrect corrections. This is not
+evidence that the whole body has reversed normals. The body remains unchanged.
+
+`hip-surface1` leaves groin intersections. Enforcing clearance against unfiltered
+donors in `hip-surface2` produces 84 orientation reversals in the underwear and
+a 12.40 cm maximum displacement. Both are rejected. The radial alternatives
+also fail and are not a production path. Excluding the entire anatomy material
+in `hip-surface3` misses exposed detail and leaves complete-body intersections.
+
+`hip-surface4` uses identified exterior body/leg materials plus 333 visible
+detail triangles for fitting. Internal detail is excluded only from donors,
+not removed from the body or the intersection test. One shared smooth field
+fits slots 9, 10 and 11, with triangle-center and edge-midpoint constraints.
+All three pass the measured neutral body-contact check, have positive local
+Jacobians and no transported-normal reversals. Bidirectional edge tests find
+no intersections with the complete 61,814-triangle body. Minimum sampled skin
+clearance is 0.293 cm; the largest remaining sample distance is 1.840 cm, so
+this does not establish a uniformly close fit. A fresh-process preservation
+check passes for existing geometry, UVs, weights, shape coordinates and the
+saved evaluated fit. Recipes are frozen under `recipes/*hip4.py` and
+`recipes/fit_peony_v2_hip_surface4.py`.
+
+Front, side and rear close-ups still reject the assembled waist: the fitted
+underwear waistband protrudes through the independently fitted corset.
+`review-hip-surface4-owner/front.png` highlights slot 10 and identifies that
+piece directly. The first spacing audit includes inward-facing corset closures,
+so its 1.200 cm worst overlap and sub-0.1 cm clearance must not be interpreted
+as measurements of the outer fabric alone. The paired solver restricts its
+corset contact surface to outward-facing main fabric. Its initial maximum
+required correction is 0.965 cm. Do not describe the neutral body-contact pass
+as visual, morph or gameplay acceptance.
+
+The lower leg fabric, jacket and gloves still need fitting. Target skinning,
+all six body morphs, V2 visibility bindings, source material/palette matching,
+motion and runtime checks remain open. The installed rejected garment is not
+changed by these private studies.
+
+Rejected `hip-surface1` through `hip-surface3` and `underwear-radial1`/`2`
+blends were copied to the external CSS archive, hash-verified, then removed
+locally, recovering 412,830,895 bytes. Receipts, logs, recipes and rendered
+evidence remain local. The current candidate and its input are retained.
+
+## Paired waist-layer correction
+
+`waist-layers1` was stopped before saving: it attempted to move existing inward
+corset closures out of the body, creating a 6.655 cm constraint. This repeats
+the distinction between garment exterior and internal closures; never fit
+every source triangle as if it were visible fabric.
+
+`waist-layers2` fits slots 9/10/11 and corset slots 24/25/26/27 together using
+two smooth fields. The accepted body stays fixed, the trim follows its fabric,
+and upper corset anchors limit unrelated movement. Neutral renders remove the
+waistband stripe through the front. An edge intersection test still finds one
+underwear/main-corset crossing that the point sampling missed.
+
+`waist-layers3` adds direct edge-contact constraints for that gap in coverage.
+The fresh `waist-layer-audit4` finds no sampled overlaps or bidirectional edge
+crossings against the classified exterior main corset fabric. Minimum sampled
+layer margins are 0.243, 0.062 and 0.304 cm for slots 9, 10 and 11. Maximum
+additional movements are 0.382 cm for underwear and 0.932 cm for the main corset.
+All seven parts retain positive local Jacobians and have no transported-normal
+reversals; triangle area ratios remain between 0.902 and 1.123. This is a
+neutral layer correction, not proof of close fit everywhere or motion support.
+
+Front, rear and side views in `review-waist-layers3` were inspected. The visible
+front overlap is absent, while the leg fabric is still visibly unfinished.
+The full-mesh intersection gate still fails outside the classified exterior
+main fabric; do not discard those findings as harmless without inspecting the
+remaining closures and bindings. Existing corset/body intersections also need
+classification. No whole-outfit acceptance is recorded.
+
+`waist-layers3-preservation.json` passes across 98 mesh objects, with only the
+seven intended active shape edits. Original face/vertex identities, UVs,
+weights and existing shape coordinates remain unchanged, and saved evaluated
+coordinates match the new key. Frozen fit/audit recipes and a separate visual
+review record preserve this candidate's evidence. No V2 game trial is installed.

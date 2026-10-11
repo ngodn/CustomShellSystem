@@ -61,6 +61,20 @@ not accept the remaining calf/thigh fit, body coverage, morphs or motion.
 See the V2 source record for measured failures, recipes and archived candidates.
 No new game trial is installed.
 
+`hip-surface4` corrects fitting donors that previously included internal body
+surfaces. Slots 9, 10 and 11 now pass neutral body-contact/orientation checks
+and the saved-file preservation check. Full-body edge tests detect no crossings
+for these parts. The assembled waist still fails visual review: the underwear
+waistband cuts through the separately fitted corset. An ownership render and
+spacing audit identify that overlap. The subsequent `waist-layers3` paired
+correction removes the visible front stripe and passes the sampled layer and
+edge-intersection checks against the classified exterior main corset fabric.
+Front/rear/side views and saved-file preservation were checked. Remaining
+non-exterior crossings, leg/jacket/glove fit, morphs and motion are still open;
+the full-mesh gate does not pass. See the V2 source record for evidence and
+archived studies. All supplied palettes and the confirmed black-and-white
+floral default remain required. No V2 game trial is installed.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
