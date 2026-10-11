@@ -6,16 +6,19 @@ Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coor
 the measured rear seam from 3.532 to 2.007 cm, but the full stride and rendered
 body contact still fail. A denser simulation surface also fails more frames
 and costs more; retain the lower-density base. Neither trial is accepted.
-The separate mapping repair now handles positions, normals and tangents
-together: 423 of 723 problematic vertices reconstruct correctly in an
-independent offline check, including rejection of a damaged-normal control.
-The remaining 300, native application, rebuilt/cooked persistence and moving
-shading remain unresolved. Continue the coupled mapping repair and local
-target/constraint work; do not publish a position-only mapping or accept the
-garment from fewer failing frames. Source assets remain preserved. No new trial
+The separate mapping repair now reconstructs all 723 identified problem
+vertices in the independent static check, including normal/tangent directions
+and rejection of a damaged-normal control. This does not establish moving fit:
+two captured strides still expose short shading vectors and large differences
+from the old mapping. Two local-triangle ranking comparisons do not resolve
+those witnesses and are not accepted. Native application, rebuilt/cooked
+persistence and moving shading remain unresolved. Continue from the captured
+motion witnesses and local target/constraint work; do not accept a static-only
+repair or repeat the rejected triangle-ranking rules. Source assets remain
+preserved. No new trial
 is installed or ready for a player test. See the
 [regional comparison](../research/2026-10-11-slipstream-binding.md#regional-travel-comparison)
-and subsequent mapping evidence.
+and the [static/moving mapping comparison](../research/2026-10-11-slipstream-binding.md#static-basis-reconstruction-and-moving-checks).
 
 Latest installed trial: `peony-refit2`, replacing the rejected `peony-refit1`
 Eve/shared packages. The core remains `6d751cbdab2cab4c`. The lower garment

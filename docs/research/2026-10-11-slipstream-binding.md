@@ -824,3 +824,70 @@ Evidence is frozen in Eve's `work/slipstream-cloth-study10/receipt.json`:
 verification jobs have terminated. Successful commandlets have zero exit
 receipts; the unusable interrupted contact capture remains explicitly separate.
 No game package, CSS core, profile or save was changed.
+
+## Static basis reconstruction and moving checks
+
+The exact 5.6.1 `GpuSkinVertexFactory.ush` reconstructs the position's third
+barycentric coefficient, but uses the stored coefficient for the normal and
+tangent endpoints. It then normalizes the endpoint-minus-position vectors.
+The checker now follows both distinctions. Positive endpoint length can
+change while preserving the resting shading direction; that does not establish
+that the direction remains stable under deformation.
+
+The intermediate fit2..7 comparisons separate insufficient triangle search
+from endpoint reach. Searching all 976 triangles did not clear the remaining
+114 cases. Shorter positive endpoints, with the full original unit-endpoint
+reach envelope, subsequently solve all 723 identified problem vertices.
+`slipstream-mappingbasisfit9` reproduces that result directly from the original
+mapping without a resume chain. Its source recipe was recovered from the
+subsequent edit and verified against the recorded recipe hash before retention.
+No preserved-position fallback rows are used.
+
+The independent checker retains original geometry, skin weights, blend flags,
+influence weights and unrelated data, verifies actual proxy triangle indices,
+and rejects a deliberately damaged normal coefficient. Maximum errors among
+changed position, normal and tangent endpoints are 0.000000549, 0.000078547 and
+0.000083245 cm. Float32 direction errors are below 0.018065 and 0.020128 degrees.
+Across the entire section, including untouched rows, maximum endpoint errors
+are 0.094635, 0.094904 and 0.098124 cm. This passes the chosen static tolerance;
+it is not zero-error reconstruction of every row.
+
+`check_slipstream_mapping_motion.py` then replays all 723 changed rows over
+145 verified particle frames from each of native3 and native12. It uses exact
+capture/anchor hashes, float32 endpoint arithmetic and component scale one.
+These are already rejected cloth captures, so abrupt orientation changes or
+large old/new position differences are witnesses, not standalone proof that
+the new mapping caused a visible regression.
+
+| Mapping | Native3 short-vector samples | Native12 short-vector samples | Native3 steps over 90 degrees | Native12 steps over 90 degrees |
+| --- | ---: | ---: | ---: | ---: |
+| Original | 0 | 0 | 7,209 | 7,360 |
+| fit9, endpoint length first | 1 | 2 | 7,508 | 7,215 |
+| fit10, local position first | 100 | 82 | 10,863 | 9,422 |
+| fit11, local position breaks equal-length ties | 1 | 2 | 9,571 | 8,604 |
+
+A short-vector sample means a normal or tangent endpoint lies within 0.01 cm
+of its mapped position. Fit10 and fit11 also pass static reconstruction, but
+neither improves the motion evidence sufficiently to accept. Fit10 makes the
+small-vector problem much worse; fit11 retains it and increases abrupt-step
+witnesses in both captures. Do not ship either ranking rule. Keep fit9 as the
+static reconstruction reference, not an approved native asset correction.
+
+Fit9's largest old/new position differences are 12.341854 cm at native3 frame
+44 and 12.371462 cm at native12 frame 141, both at vertex 5859. At rest its
+replacement triangle has extrapolated position coordinates and a 2.240200 cm
+normal offset. Native3 frame 44 was rendered with original and revised
+positions on the same particles. Rear and side views retain visible cloth
+bunching and penetration; the mapping repair does not solve the physical fit.
+The position renderer now labels both position-only and coupled experimental
+mappings as hypothetical rather than claiming saved native mapping evidence.
+These previews do not exercise the revised normal/tangent shading in UE.
+
+Native save/rebuild/cook persistence and moving GPU shading are still pending.
+No native mapping was patched, and no game package, core, profile or save was
+changed. Resume at the measured motion/triangle witnesses, not another global
+travel or density sweep. The fitted body's stationary silhouette remains an
+independent acceptance requirement. Evidence and recipes are frozen in Eve's
+`work/slipstream-cloth-study11/receipt.json`: 59 hashed files, 26 small snapshots,
+plus the position replay script identity. Large captures and candidate maps
+remain at their recorded paths.
