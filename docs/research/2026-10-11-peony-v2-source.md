@@ -1000,3 +1000,8 @@ then removed locally, reclaiming 83,110,908 bytes. Logs and rendered evidence
 are retained. The initial render invocation omitted the required source-library
 argument and failed before creating output; the corrected invocation completed.
 Installed files, saves and settings are unchanged. No V2 trial is installed.
+
+The next [V2 binding study](2026-10-12-peony-v2-binding.md) traces the visible
+knuckle patch, retains a limited correction and builds the first measured
+target-binding/body-control copy. It records the new posed defects and the
+next repairs. The complete outfit remains unaccepted.

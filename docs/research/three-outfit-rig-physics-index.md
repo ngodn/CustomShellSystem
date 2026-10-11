@@ -1,6 +1,6 @@
 # Three-outfit rig and physics research index
 
-Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
+Updated 2026-10-12. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
 **Current priority:** the user retired the Better Cleavage source and selected
 the [Peony/Hydrangea V2 CNS and recolor sources](2026-10-11-peony-v2-source.md).
@@ -8,6 +8,13 @@ All supplied color schemes are required, with black-and-white floral Hydrangea
 as the default. Installed Peony refit2 is rejected, including its upper garment
 and lower fit. Older trial notes below do not establish acceptance. Rebuild from
 V2 while preserving the accepted body and requested customization/removals.
+
+The newest [V2 binding study](2026-10-12-peony-v2-binding.md) retains a measured
+knuckle-patch correction and creates a private copy with the 379-bone body rig
+and six body controls. Source-preservation, saved correspondence and independent
+pose-skinning checks pass. Neutral, maximum-body, walking and sprint views reveal
+remaining rear collar, footwear and detailed seam/morph work. Continue from
+`binding2` for those repairs; it is not an installed or accepted release.
 
 The lower-garment V2 baseline is `calf-surface2`, built on `thigh-surface3`
 and `waist-layers3`.

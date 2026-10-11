@@ -160,6 +160,19 @@ recipe and checks; `neckline-contact3` remains the cumulative baseline.
 Isolate the visible knuckle contact before another fitting change. No V2 trial
 is installed, and no game test is requested.
 
+The [first V2 binding study](../research/2026-10-12-peony-v2-binding.md) now
+provides `binding2` for the next offline body-control and motion repairs.
+An identical-camera trace resolves the specific visible knuckle patch, while
+other glove contacts remain open. Eighteen garment sections and the existing
+heeled lining are copied onto the measured 379-bone reference with all six body
+controls. Fresh reload verifies 20 baked surfaces, and a separate check
+preserves all 98 original mesh objects and the saved control correspondence.
+Walking/sprint poses agree with independent skinning calculations. Twelve
+neutral, maximum-body and posed views were inspected. Walking exposes a rear
+collar/jacket gap; footwear coverage and detailed morph/seam checks remain.
+Continue from the binding copy to repair those demonstrated defects. This is
+not neutral-fit, physics, material or runtime acceptance. No V2 trial is installed.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
