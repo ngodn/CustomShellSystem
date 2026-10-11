@@ -111,3 +111,56 @@ Do not relax the geometry gates or cook a candidate to hide the failures. Check
 seam/lacing deformation alongside skin clearance. Jacket, arms, footwear, lower
 garments, morph transfer and final material reconstruction remain unfinished.
 All original inputs and installed game packages remain unchanged.
+
+## Corset alignment and cross-section study
+
+The original source back view has evenly spaced lower lacing. The joint-aligned
+view already compresses those rows before surface fitting. The alignment uses
+different segment transforms blended by source skin weights. Preserving that
+aligned Z coordinate in a later fitter preserves the unwanted compression too.
+
+`fit_peony_v2_corset_profile.py` now offers a single affine torso alignment from
+the original Basis, using pelvis/thigh-root and neck landmarks. Its height scale
+is 1.06278955. A radial control field then fits the torso cross-sections while
+keeping these uniformly aligned heights unchanged. Main fabric and trim slots
+24 through 27 receive the same field. Source Basis, source weights, UVs, topology
+and the accepted body remain unchanged. This does not replace final target
+skinning or body-morph transfer.
+
+- `corset-profile1` retains the earlier joint alignment. Its raw profile field
+  distorts lacing and fails geometry checks.
+- `corset-profile2` starts from the original affine torso alignment but its
+  unsmoothed field still fails geometry checks.
+- `corset-profile3` smooths the control field over 1 cm, without smoothing mesh
+  vertices. The trim checks improve, but 18 exterior face-center samples remain
+  inside the body, at most 0.0662 cm deep. Rejected.
+- `corset-profile4` raises radial clearance from 0.6 to 0.7 cm. Four face-center
+  samples still penetrate, at most 0.0221 cm. Rejected.
+- `corset-profile5` uses 0.8 cm radial clearance and expands contact sampling to
+  vertices, edge midpoints and centers of exterior main-fabric faces. All 14,763
+  samples are outside the body; minimum signed distance is 0.00364 cm. Four
+  corset slots pass the local orientation, area and displacement checks. The
+  front/back/side renders are saved in `review-corset-profile5`.
+
+The orientation check needed correction: comparing a face normal directly with
+its undeformed normal calls rotations over 90 degrees reversals. Six bottom hem
+faces have that result, but all retain their winding relative to the normal
+transported by the deformation Jacobian. The latest check requires a positive
+Jacobian determinant and a positive transported-normal dot product, alongside
+the existing area and displacement thresholds. Both raw and transported results
+are retained. The lowest determinant across the four slots is 0.26045, with no
+transported-normal reversals. This is a local geometry check, not a proof against
+all self-intersections or all possible poses.
+
+The neutral corset result is useful progress, not an accepted outfit. Its minimum
+contact margin is small. The renders still show the untouched jacket, arms and
+leg pieces intersecting the body, and retained hip parts overlap the lower back
+corset. Refit/remove those parts as specified, review the full reference silhouette
+and material match, then validate morphs, target skinning and motion before cook.
+No V2 game trial has been installed.
+
+The four rejected profile blend files are archived under
+`/run/media/eins0fx/theark/CSS/peony-v2-rejected-20261011` after SHA-256 verification,
+freeing 380,998,142 bytes locally. Their receipts, logs and review images remain
+in the work directory. `rejected-fit-archive.json` records each destination.
+The exact profile5 script is retained in `recipes/fit_peony_v2_corset_profile5.py`.

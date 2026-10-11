@@ -19,11 +19,15 @@ three body variants do not mean three palettes. See the
 [V2 source record](../research/2026-10-11-peony-v2-source.md). No V2 trial is installed.
 
 The three V2 variants are joint-aligned to the accepted body. NRS is the closest
-torso/hip starting point in the area-weighted distance comparison. Private fitting
-renders still show clipping. Correcting remote ray donors improves the isolated
-corset, but its front contact and lacing are not accepted; stronger fitting and
-vertical-preservation experiments hit the geometry gates. Continue from the
-recorded witnesses, not the retired garment or another unreviewed cook.
+torso/hip starting point in the area-weighted distance comparison. The initial
+joint alignment already compresses the back lacing. The latest corset study
+instead aligns the original torso uniformly, then fits its cross-sections while
+preserving seam heights. `corset-profile5` passes local orientation/area checks
+and 14,763 exterior contact samples, with only 0.00364 cm minimum margin. This
+is neutral corset evidence, not outfit acceptance. Jacket, arms, lower garments,
+retained hip overlaps, morphs, target skinning and motion remain unfinished.
+The V2 source record documents earlier failures and the corrected orientation
+test; do not use a sample pass as permission for another unreviewed cook.
 
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
