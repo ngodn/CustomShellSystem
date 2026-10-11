@@ -2,6 +2,13 @@
 
 Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+**Current priority:** the user retired the Better Cleavage source and selected
+the [Peony/Hydrangea V2 CNS and recolor sources](2026-10-11-peony-v2-source.md).
+All supplied color schemes are required, with black-and-white floral Hydrangea
+as the default. Installed Peony refit2 is rejected, including its upper garment
+and lower fit. Older trial notes below do not establish acceptance. Rebuild from
+V2 while preserving the accepted body and requested customization/removals.
+
 Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
 maps six removable garment groups while preserving the source data. Its latest
 continuous fit clears the sampled primary-body contact screen. Differential

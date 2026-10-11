@@ -230,6 +230,28 @@ Add both outfits to the current Eve mod alongside its existing six outfits. Insp
 
 ### Immediate Peony correction, October 11
 
+**Corrected source, confirmed by the user on October 11:** use
+`reference/new-eve-outfit/ALL-IN-ONE - Peony-Hydranega V2 CNS-1724-2-1-1763118109.zip`
+and `reference/new-eve-outfit/Recolors Texture-1724-1-2-1755607929.zip`
+under the Eve project. Retire `Peony Better Cleavage-1851-v1-0-1755197848.rar`
+from this implementation. Preserve it only as historical input, not as the
+garment to keep fitting. Rebuild from the corrected V2 source while retaining
+the accepted Eve body, CSS customization requirements and requested removals.
+The October 11 16:49 screenshots reject the whole installed garment, including
+jacket, corset, back lacing and trim, as well as the lower sections. Compare
+against the supplied V2 references: clean structured fabric, intact trim and
+lacing, and a close body-following silhouette. Previous geometry, strain and
+cook checks do not establish visual acceptance. Review the actual source
+variants before choosing one; do not carry damaged fitted geometry forward.
+
+**Palette correction:** include every distinct color scheme supplied by the V2
+CNS and Recolors Texture archives as a CSS customization template. The default
+must match the user's black-and-white floral Hydrangea reference: light patterned
+fabric with black trim and dark lower fabric. Preserve the source pattern and
+material contrast. The earlier five-template count no longer limits Peony;
+body-shape variants are not additional color palettes. Retain manual tint and
+optional flowing glow controls. This does not change Slipstream's palette scope.
+
 The user rejected the installed Peony trial's fit and world-space cloth behavior.
 Correct these before continuing Slipstream binding. Reuse the earlier Eve
 garment-fitting, skin-weight transfer and body-morph workflows, including the
@@ -272,6 +294,9 @@ finished body fit. Original inputs and the accepted Eve body remain unchanged.
   standing still, as well as during movement. Do not require another animation
   comparison to establish this fit/attachment defect. Fix the stationary fit
   first, then verify motion independently.
+  The user rejected installed `peony-refit2` with the October 11 16:37 world
+  screenshots. Lower panels still bunch and distort. This is the current
+  priority; do not treat its earlier strain/GPU/cook passes as fit acceptance.
 
 Evidence includes the screenshots supplied in this conversation and
 `/home/eins0fx/Pictures/screenshot-2026-10-11_03-18-49.png` (world fabric) and

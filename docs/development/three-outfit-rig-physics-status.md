@@ -2,6 +2,55 @@
 
 Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
+**Peony source corrected by the user:** the V2 CNS and Recolors Texture ZIPs
+replace the previously supplied Better Cleavage RAR. The build records confirm
+that RAR was the prior source. Rebuild the garment from V2; do not continue
+fitting the retired garment. The 16:49 screenshots also reject the upper jacket,
+corset, lacing and trim. Source mismatch does not excuse the visible deformation
+in the installed candidate. Keep the accepted body and requested customization.
+
+Palette scope now includes all distinct supplied source color schemes, with
+the black-and-white floral Hydrangea reference as the default. The old five-color
+limit does not apply to Peony. The corrected source has been extracted: all three
+mesh variants match isolated/retail audits, and all 96 editable source parts pass
+the source-preservation check. Four recolor containers have separate texture and
+material inventories. Exact material matching and CSS fitting remain pending;
+three body variants do not mean three palettes. See the
+[V2 source record](../research/2026-10-11-peony-v2-source.md). No V2 trial is installed.
+
+The three V2 variants are joint-aligned to the accepted body. NRS is the closest
+torso/hip starting point in the area-weighted distance comparison. Private fitting
+renders still show clipping. Correcting remote ray donors improves the isolated
+corset, but its front contact and lacing are not accepted; stronger fitting and
+vertical-preservation experiments hit the geometry gates. Continue from the
+recorded witnesses, not the retired garment or another unreviewed cook.
+
+The private stronger-drive `peony-refitnative6` experiment is not accepted:
+both walking captures pass the extension screen, but sprint fails in one left
+frame and seven right frames. It was never installed and does not address the
+corrected source or whole-garment rejection.
+
+**Peony refit2 rejected in game, current priority:** the user supplied October 11
+16:37 screenshots showing the lower panels remain distorted. All seven installed
+file hashes match the deployment receipt. A read-only live snapshot confirms
+SK_Peony, enabled cloth with blend weight 1, the shared cloth-morph deformer
+instance, breast size 0.42 and glute size 0.68. The earlier mapped walking review
+also shows bunched edges. Its strain pass did not establish acceptable shape.
+Resume Peony correction before further Slipstream work. Keep the source fit,
+body sliders and full cloth physics; validate the actual panel silhouette and
+rendered folds, not only edge-extension limits.
+
+**Continuous Slipstream surface tested, not accepted:** `slipstream-cloth-continuous2`
+replaces the malformed simulation topology with 640 particles and 1,152 triangles,
+one connected surface and two boundary loops. Fresh native readback preserves all
+8,000 visible skirt triangles, weights and six body morphs. Both 145-frame sprint
+captures pass anchor checks, but gross extension still fails in 10 frames without
+secondary motion and four with it. No production package changes follow. The
+corrected rest mapping check has no position error over 0.1 cm, but one normal
+endpoint exceeds it; moving fit remains unverified. See the latest continuous
+surface comparison in the research log. Peony `refit2` remains installed, and the
+user has now been asked to check stationary lower fit, walking and body sliders.
+
 **Native render comparison rejected as unmatched:** the first three private captures
 crashed because the commandlet disabled client rendering and created a null
 scene. Enabling client rendering only within the capture scope resolves that
