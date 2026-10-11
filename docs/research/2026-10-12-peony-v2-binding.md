@@ -1,7 +1,7 @@
 # Peony V2 body controls and target binding
 
 Status: private authoring study, not installed or accepted for release. Continue
-from `binding2` for body-control and motion repairs. The preceding neutral
+from `binding-collar1` for body-control and motion repairs. The preceding neutral
 baseline remains `neckline-contact3`; the additional glove edits still have
 unresolved whole-surface contact. All supplied palette templates and the
 black-and-white floral Hydrangea default remain required.
@@ -94,9 +94,9 @@ ratios up to 40.12 in walking and underwear ratios up to 40.01 in sprint.
 Separate thin/internal faces from visible defects before attributing a cause.
 Do not equate correct linear skinning with acceptable deformation.
 
-Next: isolate the rear collar opening in the retained walking pose and repair
-its binding/contact, then check individual body controls, seam continuity,
-footwear coverage and further motion. Keep the measured glove improvement but
+The collar comparison below addresses the traced rear opening. Next check
+individual body controls, seam continuity, footwear coverage and further motion.
+Keep the measured glove improvement but
 its remaining contact work open. Full materials, all palettes, modular controls,
 physics, export/cook readback, gameplay and coordinated releases remain pending.
 
@@ -119,3 +119,68 @@ SHA-256 before freezing. Its blend was copied to
 and removed locally, reclaiming 90,197,108 bytes. Its adjacent receipt, local
 correspondence data, failure logs and corrected recipes are retained. No package,
 game setting, save, camera or character input was changed.
+
+## Rear collar refinement
+
+The walking opening is skin crossing a continuous jacket triangle, not a missing
+seam. Pixel rays in `review-binding2-collar-probe1` identify jacket faces 3257,
+2742 and 3263, source triangles 70750, 70235 and 70756. All belong to slot 19,
+component 0. Their coarse neck/spine weight interpolation differs from the
+accepted body's interpolation beneath the triangle interiors.
+
+`collar-walk36-correspondence1.json` maps each posed ray hit back to its neutral
+triangle. Sampling body weights at that neutral interior point predicts this
+change in signed distance to the posed body:
+
+| Rear pixel | Original distance (cm) | Body-weighted prediction (cm) |
+| --- | ---: | ---: |
+| 430,192 | -0.007671 | 0.302046 |
+| 448,192 | -0.495391 | 0.245648 |
+| 416,190 | -0.157050 | 0.199992 |
+
+Those are point predictions. `binding-collar1` then tests actual mesh refinement:
+split shared edges longer than 6 mm around the rear neck transition, preserving
+the original neutral triangle surfaces. The known inner collar island is not a
+refinement driver. Adjacent triangles share edge splits. New points receive body
+weights and all six body-control deltas. Original points and their weights remain
+unchanged. Original source meshes are untouched; only the private bound jacket
+changes. Other bound garments, including shoulder trim, are unchanged.
+
+The jacket grows from 2,755 vertices / 4,477 triangles to 6,425 vertices / 11,696
+triangles. This adds 3,670 vertices and 7,219 triangles; export influence limits
+and runtime performance still require review. UVs and inherited source-face
+identities remain intact. Appended points have source-vertex ID -1 and explicit
+parent-face/barycentric provenance rather than invented original identities.
+
+The same three walking pixel rays now hit jacket fabric before skin. Front,
+rear and side views were inspected for walking frame 36, sprint frame 12 and
+all six controls at maximum. The rear walking band is covered. These nine views
+do not establish clearance through an entire animation or all control mixtures.
+The full-jacket area extreme of 40.12 remains elsewhere; the refinement is not a
+claim that every jacket triangle is repaired. Footwear/body coverage and other
+previously recorded defects remain visible and unresolved.
+
+`binding-collar1-preservation.json` independently reloads both files and checks:
+
+- All 117 other mesh objects unchanged, including the original source meshes
+  and accepted body.
+- All 2,755 original jacket vertices, weights and shape coordinates unchanged.
+- Child triangles cover their original parent surface without reversed winding;
+  maximum parent area difference is 1.047e-9 square metres.
+- Neutral interpolation differs by at most 0.000005961 cm after float storage;
+  UV difference is zero.
+- New body weights and six saved morph correspondences match. The largest
+  morph difference is 0.000011901 cm, below two float32 coordinate steps.
+
+The first recipe invocation stopped before saving because the attribute copier
+handled integer source IDs but not source normal/tangent colors. The corrected
+recipe also interpolates point colors and custom corner normals. The first
+preservation invocation used an absolute morph tolerance smaller than the
+separate Basis/key float32 rounding bound; the final check derives its bound
+from two stored-coordinate steps and reports the actual residual.
+
+`binding-collar1-receipt.json` freezes the recipe, inspector, verifier, reviewer,
+dependency hashes, saved provenance and rendered evidence. The blend SHA-256 is
+`0a3df186276abe52b602b0f08d7d18568068d5b187e3e6c59aa67f2f8429a503`.
+Authoring files remain outside CSS Git. The installed game files, saves and
+settings are unchanged. No V2 trial is installed and no game test is requested.

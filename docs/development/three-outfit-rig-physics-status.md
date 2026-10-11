@@ -173,6 +173,16 @@ collar/jacket gap; footwear coverage and detailed morph/seam checks remain.
 Continue from the binding copy to repair those demonstrated defects. This is
 not neutral-fit, physics, material or runtime acceptance. No V2 trial is installed.
 
+The rear walking gap is now traced to coarse jacket neck/spine interpolation.
+`binding-collar1` refines that transition while preserving its neutral surface
+and original vertices. Three identical-camera witnesses now show fabric before
+skin; nine walking, sprint and maximum-control views were inspected. Independent
+reload preserves all 117 other meshes and verifies child surfaces, UVs, weights
+and six morphs. Continue from this private copy. The added 3,670 vertices still
+need export/performance review; full-animation contact, footwear coverage and
+the previously recorded glove/morph/seam defects remain open. Frozen evidence is
+in `binding-collar1-receipt.json`. No V2 trial is installed.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the
