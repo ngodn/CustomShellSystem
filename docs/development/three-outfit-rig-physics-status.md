@@ -245,6 +245,19 @@ retaining its recipe, input and receipt. See the
 [attachment comparison](../research/2026-10-12-peony-v2-binding.md#coupled-shoulder-attachments)
 for exact witnesses and limits. No V2 trial is installed or ready for a game test.
 
+The next close-up isolates a binding error behind the jagged neck ridge: the
+original binder excluded lower-neck faces stored in the body's Eve Head section,
+while the collar refinement could use them. `binding-neck-donors1` corrects 185
+jacket vertices' donors without moving neutral geometry or changing the body.
+The ridge disappears in the matched sprint view. Saved preservation passes,
+and the repaired exterior region clears body crossings in all six checked
+neutral/maximum/walk/sprint cases without adding exterior crossings elsewhere.
+The live binding recipe now includes the missing neck faces. Continue from this
+private copy, with shoulder7 retained for comparison. Other exterior jacket
+contacts and dependent trim remain unresolved; this is a local repair, not
+whole-outfit acceptance. See the
+[donor correction](../research/2026-10-12-peony-v2-binding.md#lower-neck-donor-correction).
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the

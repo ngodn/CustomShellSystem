@@ -535,3 +535,66 @@ blend hashes. The rejected shoulder6 blend was removed after hash and open-file
 checks, reclaiming 90,635,362 logical bytes. Its input, frozen recipe and
 metadata remain. No external archive is claimed because that volume is full;
 see `binding-shoulder6-cleanup.json`.
+
+## Lower-neck donor correction
+
+The shoulder7 close-up identifies a separate jacket defect. In sprint12,
+side pixel `(367,448)` hits jacket face 11002, whose vertex 2559 has 65.65%
+neck influence while adjacent vertex 6022 has 18.81%. Pixel `(366,527)` hits
+jacket face 11495. The jagged ridge is jacket geometry, not a shoulder cord.
+See `review-shoulder7-close-probes/report.json` for the full rays and weights.
+
+The original binder excluded the accepted body's `Eve Head` material, despite
+that section containing part of the lower neck. It allowed `Eve Face` neck
+faces instead. The collar refinement later used the complete body surface,
+so new vertices could select the missing Head faces while original vertices
+remained pinned to the more distant Face seam. At vertex 2559, the original
+donor is body point 16841 at 1.990247 cm distance. Head face 7683 supplies a
+closer donor at 0.455528 cm, spanning body points 2267, 1957 and 2268.
+
+`binding-neck-donors1` adds the 228 Head-section faces with neck influence
+above 0.05 to this jacket comparison. It changes only vertices for which
+that section provides a closer donor: 185 jacket vertices' weights and
+body-control offsets. Neutral coordinates remain fixed. The matched sprint
+close-up removes the jagged ridge. Maximum-control sprint front and walking
+back views were also reviewed. The live binder now includes those Head neck
+faces alongside the existing Face neck faces; the frozen prior recipe remains
+available. This does not imply a fresh complete bind has been accepted.
+
+The independent saved-file check passes across all 118 meshes, preserving
+neutral coordinates, topology, UVs, accepted body, rig, footwear and unrelated
+meshes. Unchanged jacket vertices retain their weights and keys. Maximum
+weight error against recorded body donors is 4.54e-8; maximum body-offset
+error is 0.000005937 cm. No key triangles reverse. BodyTone's local area ratio
+range is 0.631207 through 2.260643 relative to the prior incorrect mapping;
+the other five controls are unchanged. These are correspondence and
+preservation results, not a blanket distortion pass.
+
+`neck-donors1-contact-comparison.json` maps the retained 2,513 original exterior
+jacket faces through the refinement. In all six cases, the exterior faces
+affected by the repair have zero remaining body crossings in both edge
+directions. No new exterior contact edge/face pairs appear elsewhere.
+Remaining exterior contacts outside the repaired region are still open:
+
+| Case | Before, jacket/body edges | After, jacket/body edges |
+| --- | --- | --- |
+| Neutral | 0 / 0 | 0 / 0 |
+| Maximum controls | 0 / 0 | 0 / 0 |
+| Walk36 | 280 / 51 | 90 / 23 |
+| Sprint12 | 325 / 55 | 110 / 27 |
+| Walk36, maximum controls | 262 / 52 | 82 / 28 |
+| Sprint12, maximum controls | 325 / 52 | 110 / 29 |
+
+Complete jacket meshes also include unclassified internal contacts. This
+comparison does not clear them or establish full-motion coverage. Both shoulder
+trim slots remain clear of the body in these six cases, but plate/jacket
+contacts increase in several moving cases because the dependent trim has not
+yet been updated. The corrected jacket must drive that next comparison, not
+another plate offset over the old jagged surface.
+
+Continue fitting from `binding-neck-donors1.blend`, SHA-256
+`433d066c78e762fc7ed638bc39bf251f59c04c5741880aa443b4a571c8b0c610`.
+Retain shoulder7 as the before-state. `binding-neck-donors1-receipt.json` freezes
+the recipes, reports, renders and input/output identities. No V2 package or
+new runtime trial is installed. Other jacket contacts, trim, cords, hips,
+gloves, all source palettes and the remaining goal work are not complete.
