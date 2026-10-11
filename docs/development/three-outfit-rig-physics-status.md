@@ -2,20 +2,20 @@
 
 Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
-**Latest private Slipstream result:** collision fitting now covers the complete
-145-frame sprint capture plus reference pose. Revised grids and spheres pass
-their independent sampled containment checks, but native cloth still stretches
-and clips, so both candidates remain rejected. A native constraint-copy trace
-shows a rear edge relaxing from 3.524 to 1.775 cm under its spring constraint,
-clear of body/backstop collision, but requiring more travel than its 12 cm
-limit. Increasing travel alone also fails. The ordered-copy follow-up confirms
-that maximum distance reopens the corrected edge; tethers and backstop do not
-move its endpoints. Actual scale readback passes at both 1 and 1.25. Increasing
-the scale still leaves the same conflict. Next: repair the local animation
-target/travel relationship, then rerun full-stride strain and body-contact
-checks before considering a shipping candidate.
-Source assets remain preserved. No new trial is installed or ready for a
-player test. See the [full-stride comparison](../research/2026-10-11-slipstream-binding.md#full-stride-collision-bounds-and-the-remaining-constraint-conflict).
+**Latest private Slipstream result:** a ten-particle travel correction improves
+the measured rear seam from 3.532 to 2.007 cm, but the full stride and rendered
+body contact still fail. A denser simulation surface also fails more frames
+and costs more; retain the lower-density base. Neither trial is accepted.
+The separate mapping repair now handles positions, normals and tangents
+together: 423 of 723 problematic vertices reconstruct correctly in an
+independent offline check, including rejection of a damaged-normal control.
+The remaining 300, native application, rebuilt/cooked persistence and moving
+shading remain unresolved. Continue the coupled mapping repair and local
+target/constraint work; do not publish a position-only mapping or accept the
+garment from fewer failing frames. Source assets remain preserved. No new trial
+is installed or ready for a player test. See the
+[regional comparison](../research/2026-10-11-slipstream-binding.md#regional-travel-comparison)
+and subsequent mapping evidence.
 
 Latest installed trial: `peony-refit2`, replacing the rejected `peony-refit1`
 Eve/shared packages. The core remains `6d751cbdab2cab4c`. The lower garment

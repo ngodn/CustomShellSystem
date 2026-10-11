@@ -726,3 +726,101 @@ small files copied into the snapshot. After all jobs exited and module hashes
 passed, 391,549,518 bytes of generated native13 build intermediates were
 removed. Source, module, assets and captures remain. No new game package is
 installed, and no player test is requested.
+
+## Regional travel comparison
+
+`slipstream-cloth-proxy7` adds travel around the measured rear-seam witnesses
+314 and 316, using the native13 spring-recovery distance plus 0.25 cm. Added
+travel tapers by 0.5 cm per cm of mesh distance. Ten particles change, with
+a maximum allowance of 13.623897 cm. Geometry, skin weights, backstop maps,
+six morph arrays and all 188 native kinematic particles are preserved. This
+is a measured local comparison, not a claim that a single pose defines the
+final cloth envelope.
+
+`slipstream-cloth-native14` rebuilds only the private garment asset with that
+map. Fresh reload matches the maps within 0.000000470 cm; the other 61 copied
+assets retain their hashes. Rebuild, motion, inspection and the final contact
+capture return zero. Both 145-frame anchor checks pass, worst residual below
+0.000026 cm. The complete strain screen still fails:
+
+| Sprint comparison | Original map | Regional map |
+| --- | ---: | ---: |
+| Secondary disabled, failing frames | 11 | 19 |
+| Secondary enabled, failing frames | 19 | 12 |
+
+The measured secondary frame-38 edge 314–572 improves from 3.532322 to
+2.006705 cm, while edge 172–173 worsens from 2.997034 to 3.191795 cm. New
+failures appear elsewhere, including edge 149–151 at frames 56 and 57.
+The frame-119 oriented body-contact screen finds 64 uncovered inward samples,
+versus 87 previously, but the worst remains 2.610246 cm. Front and rear native
+render-mapping previews visibly retain body penetration. The regional map is
+therefore rejected as a complete repair; it isolates a real local conflict
+without solving the garment.
+
+The first offline contact audit lacked native collider fields because the
+initial batch omitted ContactTrace. The separate first contact command lost
+its process handle and had no exit receipt, no remaining matching process,
+and a zero-byte report despite success text in its log. That capture is
+unusable. A separately named retry completed and produced the contact evidence
+above. Neither interruption is counted as a gameplay crash or a cloth pass.
+
+The existing native render mapping still has 1.569900 cm maximum rest error.
+Next comparison: retain more of the cleaned outer fabric surface in the
+simulation proxy, then inspect fresh native mapping, motion, contact and cost.
+Do not keep adding travel globally or treat fewer failing frames as acceptance.
+
+## Denser simulation surface and coupled mapping repair
+
+`prepare_slipstream_cloth.py` now accepts `--reduction-ratio`, defaulting to the
+existing 0.6. `slipstream-cloth-proxy8` uses 1.0 with the same cleaned outer
+fabric, contoured waist, 0.2 cm short-edge collapse and source skinning rules.
+This produces 940 particles and 1,566 triangles, including 291 native
+kinematic particles. It does not alter visible garment geometry. Geometry,
+skin weights, indices, authored morphs, skeleton, body physics and post-process
+bindings match the original native render inspection after rebuilding.
+Fresh native map readback passes; only the private garment asset changes,
+with 61 copied assets unchanged.
+
+`slipstream-cloth-native15` is rejected. Both 145-frame anchor checks pass
+below 0.000025 cm, but strain fails 53 frames without secondary physics and
+46 with it. Maximum extensions are 2.815537 and 2.823237 cm. Mean captured
+cloth-step times are 2.529 and 2.271 ms, versus 1.642 and 1.630 ms in the
+regional-map comparison. These are editor diagnostic timings, not game frame
+time or a general performance estimate. The frame-119 oriented screen finds
+104 inward samples among 940 particles, worst 2.436466 cm. Its raw count is
+not directly comparable to the 624-particle trials. Native render mapping
+rest error improves to maximum 0.677126 cm and p99 0.292646 cm, but still fails
+the fit requirement. Higher density alone does not repair the outfit.
+
+`slipstream-mappingbasis1` reads the original lower-density, single-influence
+garment using the retained native4 inspection module. It exports normals,
+tangents and their mapping coordinates without changing any copied asset.
+The exact UE 5.6.1 source in `ClothingMeshUtils.cpp`, lines 476–478, maps the
+position, position plus normal, and position plus tangent onto the same
+simulation triangle. A position-only coefficient correction therefore leaves
+the surface basis unverified.
+
+`slipstream-mappingbasisfit1` solves those three endpoints together. It searches
+the original and 48 nearby triangles, retains each source endpoint's existing
+extrapolation bound, preserves blend/influence weights, and rejects fully
+pinned replacement triangles. Coefficients are rounded to native float32
+before checking. Of 723 vertices with at least one endpoint error above
+0.1 cm, 423 are corrected. Remaining endpoint failures above 0.1 cm are 115
+position, 154 normal and 152 tangent entries across 300 vertices. Overall
+worst errors remain unchanged at 1.569900, 4.094051 and 3.872438 cm, so this is
+not a complete mapping repair.
+
+The independent checker verifies unchanged native data outside the three
+mapping arrays and reconstructs each changed endpoint using the native
+coordinate convention. Maximum errors for the corrected rows are
+0.000000667, 0.000000616 and 0.000000520 cm. A deliberately altered normal
+distance is rejected. Native application, rebuild/cook persistence and moving
+shading remain unverified. Next: inspect the unresolved common-triangle and
+extrapolation cases before applying any native correction. Do not apply the
+earlier position-only solution as though it fixes normals and tangents.
+
+Evidence is frozen in Eve's `work/slipstream-cloth-study10/receipt.json`:
+90 files hashed, 75 small files snapshotted. All owned editor, Blender and
+verification jobs have terminated. Successful commandlets have zero exit
+receipts; the unusable interrupted contact capture remains explicitly separate.
+No game package, CSS core, profile or save was changed.
