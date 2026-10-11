@@ -75,6 +75,15 @@ the full-mesh gate does not pass. See the V2 source record for evidence and
 archived studies. All supplied palettes and the confirmed black-and-white
 floral default remain required. No V2 game trial is installed.
 
+The current private candidate is `thigh-surface3`, built on `waist-layers3`.
+Its outer thigh fabric passes neutral sampled contact and orientation checks,
+with a closer outline in front/rear/side views. The untouched V2 source confirms
+the knee folds already exist. Saved-file preservation passes across 98 mesh
+objects, with only the intended thigh shape changed. Inner contacts, calf fit,
+knee junction, jacket/gloves, all six morphs, target skinning, source materials
+and motion remain open. The full contact gate still fails outside the classified
+exterior faces. See the V2 source record for evidence and archived failures.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the

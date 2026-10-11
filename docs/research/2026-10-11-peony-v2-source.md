@@ -473,3 +473,58 @@ seven intended active shape edits. Original face/vertex identities, UVs,
 weights and existing shape coordinates remain unchanged, and saved evaluated
 coordinates match the new key. Frozen fit/audit recipes and a separate visual
 review record preserve this candidate's evidence. No V2 game trial is installed.
+
+## Thigh fit and remaining waist contacts
+
+`waist-layer-audit5` classifies the remaining waist contacts without dismissing
+them. The main corset faces involved are inward-facing, with radial normal dot
+products from -1.000 to -0.401. Eighteen contacting faces belong to source
+component 1, a small back section. These still need inspection and a binding or
+geometry decision. The outer main-fabric pass does not cover them.
+
+The first thigh studies show why the hip method cannot simply be applied to the
+whole leg. The source skin stops at 57.83 cm, while the retained thigh garment
+extends to 47.32 cm. A torso-aligned, source-body-only field therefore
+extrapolates below its support and produces visible bulges. `thigh-surface-base1`
+also has a negative minimum Jacobian and four transported-normal reversals.
+The unrestricted contact variant `thigh-surface1` is rejected as well.
+
+`thigh-surface2` uses the existing ankle/knee/thigh/spine alignment and constrains
+only outward-facing fabric. It removes the orientation reversals, but retains
+up to 3.851 cm sampled separation and a visibly oversized outline. This is not
+accepted fit. The earlier `fit_nextgen_garments.py` stocking workflow separates
+fabric from trim, uses per-leg projection, and checks triangle interiors. The
+next V2 study uses those same distinctions instead of projecting inward cuffs.
+
+`thigh-surface3` fits slot 8's retained fabric using per-leg exterior body rays
+and a shared smooth displacement field. It preserves the source-aligned seam
+heights in the initial projection and excludes unused ornament vertices and
+inward closures from fitting constraints. The maximum displacement is 3.372 cm;
+the minimum local Jacobian is 0.595, there are no transported-normal reversals,
+and triangle-area ratios range from 0.645 to 2.112. The independent contact audit
+checks 3,356 classified exterior faces at vertices, edge midpoints and centers:
+no inside samples, with 0.290 to 1.207 cm clearance. This is a sampled neutral
+exterior pass, not a full intersection or close-fit guarantee.
+
+Front, rear and side renders in `review-thigh3` show a closer leg outline. The
+isolated untouched slot 8 views in `review-thigh-original` confirm that the knee
+folds are present in the V2 source. They must not be reported as introduced by
+this fit. Calf fit, the knee junction and the source stocking material still need
+review. Another 386 faces outside the exterior classification have inside
+samples, so the full-mesh contact gate remains failed. Do not call the outfit
+ready from the exterior subset alone.
+
+Fresh-process `thigh-surface3-preservation.json` passes across 98 mesh objects;
+only slot 8's new active shape changes. Existing source topology, UVs, weights,
+shape coordinates and the accepted body remain unchanged. The exact fitted
+recipe is frozen as `recipes/fit_peony_v2_thigh_surface3.py`, with matching
+receipt hash. Its legacy `source_skin_slot: 0` field names the source body
+reference; `fabric_leg_donors: true` and the review record identify slot 8 as
+the actual fitting donor. Future receipts include that donor slot explicitly.
+Morph transfer, target skinning, materials, motion and runtime remain pending.
+
+Rejected thigh studies 1, base1 and 2, plus superseded waist-layers2, were copied
+to the external CSS archive and hash-verified before removing local blends,
+recovering 330,740,459 bytes. Measurements and rendered evidence remain local.
+The latest thigh candidate and its waist input are retained. No game package,
+save or settings changed.
