@@ -13,9 +13,13 @@ texture options are now resolved into four material recipes across all 18
 retained parts, with seven independent arm-color options. Black-and-white floral
 is the default; white/pink and the source schemes remain available. Offline
 textured neutral and sprint previews are recorded, with the accepted fitting
-blend unchanged. Optional glowing, flowing black trim remains required after
-the user's reminder. V2 UE materials, stockings, flow masks and installation
-are still unfinished. See the
+blend unchanged. Optional glowing, flowing black trim now has a first V2
+implementation: shared rest-space UVs on all 18 parts, upper-trim emission,
+and 72 native palette instances verified in a fresh editor. Windows UE 5.6.1
+material cooking passed with zero errors and warnings. Offline previews
+cover glow off and two pulse positions. Lower trim, native mesh UV retention,
+stockings, source-material matching, CSS controls and installation remain
+unfinished. See the
 [material record](../research/2026-10-12-peony-v2-materials.md).
 
 **Peony source corrected by the user:** the V2 CNS and Recolors Texture ZIPs

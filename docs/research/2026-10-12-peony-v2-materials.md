@@ -94,8 +94,9 @@ No V2 trial is installed.
 The user's October 12 reminder keeps optional glowing, flowing black edging
 mandatory. `palettes2.json` records the shared `MF_TrimFlow` function and
 `GlowColor`, `GlowStrength`, `GlowFill`, `FlowSpeed`, `FlowPhase` controls.
-V2-specific masks and continuous rest-space coordinates still need authoring;
-the old garment's masks are not proof of correct V2 coverage. Keep glossy black
+At that initial recipe stage, V2 masks and continuous rest-space coordinates
+were still pending; the implementation below supersedes that state for upper
+trim. The old garment's masks are not proof of correct V2 coverage. Keep glossy black
 trim with glow off and exclude floral fabric, skin and stockings from the
 flowing trim mask. Verify this across palette selections and removable parts.
 
@@ -112,3 +113,71 @@ exports remain. No source archive or released artifact was removed.
 the exporter DLL identity and the unchanged fitting input. `palettes2.json`
 adds the glowing-trim requirement to the recipe; its palette values and source
 controls are identical to `palettes1.json` used for the recorded renders.
+
+## First V2 flow implementation
+
+`binding-flow1.blend` adds UV1 to all 18 retained garment parts using one shared
+rest-space X/Z origin and scale. The input is still `binding-neck-donors1.blend`.
+The saved-copy check protects 2,314 existing fields across the scene, including
+positions, topology, material assignments, skin weights, original UVs, body
+controls, CSS attributes and rig hierarchy/rest/pose. It passes after reloading.
+Maximum coordinate reconstruction error is 0.0000051 cm. Geometry is unchanged.
+The new blend SHA-256 is
+`9ba5f98e2099faf1e8b0ba00ced1a4dfb04d8c3c1df807bf110b03d1f65afa7c`.
+
+The upper source mask separates red fabric from blue trim and cyan details.
+The narrow mask is `saturate(B - R - G)`, with coverage extending to
+`saturate(B - R)` through `GlowFill`. All four upper palette recipes use the
+red fabric channel. This pass covers slots 19 through 27 only; the lower mask
+uses different regions and is not yet adapted. Gloves and heel emissions keep
+their separate source material path.
+
+`peony_v2_preview_materials.py` evaluates the shared pulse formula using UV1,
+while every source texture explicitly uses UV0. The `review-flow2-off`,
+`review-flow2-on` and `review-flow2-phase` views show the floral fabric excluded
+from the upper trim emission and the pulse moving to a different position.
+The cyan review color and strength 8 are diagnostic settings. Native defaults
+are amber with strength zero, keeping flowing trim optional.
+
+`review-flow2-baseline` renders the original fitting input without a flow graph.
+Decoded front and side pixels exactly match glow off on the UV1 copy. The back
+differs by at most one 8-bit channel level, with mean difference below 0.000016
+per channel. `flow-off-comparison.json` records that the PNG files are not
+byte-identical; `flow-off-pixels.json` records the actual pixel comparison.
+Neither receipt is relabeled as exact equality. These comparisons cover the
+Blender preview, not native engine shading.
+
+Native assets are staged separately from the game at
+`/mnt/eins0fxE/CSS-Development/peony-v2-materials1`, since the root filesystem is
+nearly full. `author_peony_v2_materials.py` uses the existing graph/import helpers
+and the shared `MF_TrimFlow`, with outfit assets under
+`/Game/CSS/eins0fx/EveSB/PeonyV2`. It creates 109 packages, including 72 palette
+instances and 36 upper-flow instances. `verified.json` passes 1,430 checks in
+a fresh UE 5.6.1 editor, including saved parameters, texture identity/color
+spaces, optional glow defaults and unchanged source/package hashes.
+
+The authoring API has a known setter return-value issue in this engine range;
+values are checked by readback rather than relying on that Boolean alone.
+See [Epic UE-291403](https://issues.unrealengine.com/issue/UE-291403).
+
+The workspace Docker daemon was stopped. After restarting it, the first cook
+attempt could not see the larger drive because the helper binds its state over
+`/mnt` inside its private namespace. The helper now preserves the original
+drive mounts under `work/docker1/host-mnt` before that bind, and the cook runner
+translates external staging paths into that namespace. No host drive mounts,
+game packages or settings were changed. `windows-cook1` retains the failed
+mount receipt; `windows-cook2` is the compilation attempt after correcting access.
+That Windows UE 5.6.1 cook exits zero with zero errors and warnings, compiling
+the new material graphs for SM5 and SM6. Its receipt confirms authoring sources
+were unchanged. This establishes compilation, not native appearance or runtime
+control binding. `cook-validation.json` inventories the cooked Peony packages.
+The failed first attempt's duplicate staging project was removed after checking
+its material assets against the retained editor inputs; logs and receipts remain.
+This reclaimed 41,919,642 bytes. `flow-materials1-receipt.json` freezes 14 tool
+recipes and 23 reports/previews, with tool copies in the native staging project's
+`recipes` directory. The temporary workspace daemon was stopped after cooking.
+
+Remaining: finish lower trim coverage, inspect native rendered materials,
+preserve UV1 through mesh export/cook, adapt stockings and source fabric detail,
+connect CSS controls and templates, then test profiles, modular parts and doubles.
+No V2 game trial is installed.
