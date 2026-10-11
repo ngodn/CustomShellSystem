@@ -149,6 +149,17 @@ Continue with source-matched finger correspondence, preserving the original
 shell and details. Do not extend the rejected whole-hand expansion. The full
 V2 binding, morph, palette, motion and release work remains open.
 
+An equivalent neutral contact audit now establishes that the earlier fitted
+gloves also intersect the accepted body. Their limited rendered acceptance is
+not a whole-glove clearance pass. A local contact correction on V2 fit5 reduces
+some crossings without the previous broad finger bulge, but a small knuckle
+breakthrough remains in the side view. That candidate is unaccepted and its
+blend is verified in the external archive. Source/body preservation passes
+across 98 mesh objects. `glove-study3-receipt.json` records the comparison,
+recipe and checks; `neckline-contact3` remains the cumulative baseline.
+Isolate the visible knuckle contact before another fitting change. No V2 trial
+is installed, and no game test is requested.
+
 The private stronger-drive `peony-refitnative6` experiment is not accepted:
 both walking captures pass the extension screen, but sprint fails in one left
 frame and seven right frames. It was never installed and does not address the

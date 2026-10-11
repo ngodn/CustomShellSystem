@@ -40,6 +40,13 @@ Internal contacts, gloves, coverage, morphs, binding, materials and moving poses
 remain unfinished. Neither rejected normal-based neckline fit is carried into
 the current candidate. No V2 trial is installed.
 
+The [glove comparison](2026-10-11-peony-v2-source.md#earlier-glove-baseline-and-local-contact-comparison)
+verifies source UV correspondence and finds that the earlier fitted gloves also
+fail the same neutral body-contact check. A local correction reduces some V2
+crossings, but a knuckle breakthrough remains visible. It is archived as an
+unaccepted diagnostic. `neckline-contact3` remains the cumulative baseline;
+body/source preservation passes, while glove fit and full binding remain open.
+
 Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
 maps six removable garment groups while preserving the source data. Its latest
 continuous fit clears the sampled primary-body contact screen. Differential

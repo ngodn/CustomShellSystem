@@ -946,3 +946,57 @@ SHA-256 verified and removed locally, reclaiming 166,280,034 bytes. The source
 archives, accepted body, installed packages, settings and saves are unchanged.
 All supplied palette templates and the black-and-white floral default remain
 required. No V2 trial is installed and no game test is requested.
+
+### Earlier glove baseline and local contact comparison
+
+`glove-old-baseline1.json` applies the same neutral accepted-body check to the
+earlier bound `new-outfits-gloves5` primary gloves. It finds 160/233 garment/body
+edge crossings on the left and 157/253 on the right, with 25/24 vertices inside
+the body. The deepest points are 0.345/0.337 cm inside near the index knuckles.
+The earlier limited rendered acceptance did not establish whole-glove contact
+clearance. Do not describe copying that fitted geometry as a verified repair.
+This audit reads its neutral Basis, not a posed or morphed result.
+
+`glove-source-comparison3.json` makes matched UV ordering deterministic and
+records the twelve largest fitted differences per hand. The largest difference
+on both sides uses UV `(0.389160, 0.971344)`: the old fitted points are at
+approximately `(±39.498, -17.14, 114.85)` cm and the V2 points at
+`(±36.613, -17.02, 113.19)` cm. The point is in the wrist region; its membership
+in the inner closure has not been verified. Most matched source points remain
+within the previously reported sub-2-mm 95th-percentile difference.
+
+`glove-local-contact1` tests local vertex constraints on `glove-fit5`, instead
+of a spatial field shared by neighboring fingers. Contact drivers are the
+verified thumb and main-shell UV islands. The separate inner wrist closure
+is not a driver. The recipe welds coincident source seams, includes exact
+garment-edge/body intersections, limits each step to 0.5 mm and total movement
+to 6 mm, and checks per-step triangle area and orientation. Ornaments follow
+the corresponding primary shell displacement. Maximum movement is 4.132 mm
+on the left and 4.852 mm on the right.
+
+This candidate is still unaccepted. The main shells retain 133/183 and 135/183
+garment/body crossings, compared with fit5's 150/197 and 145/194. Thumbs have
+zero crossings in both versions; wrist closures still intersect the body.
+The left front, rear and side views were inspected. A small skin breakthrough
+remains near the knuckle in the side view. The 98-object saved-file preservation
+check passes, including the accepted body, all previous source shapes, UVs and
+weights. A numerical improvement alone does not establish a finished glove.
+
+The cumulative baseline remains `neckline-contact3`. The next investigation
+must isolate the remaining visible knuckle contact and its source/body
+correspondence before another fitting change. Do not increase whole-hand
+expansion iterations or assume all remaining crossings are hidden surfaces.
+Binding, all six body controls, all supplied palette templates, motion and
+runtime verification remain open.
+
+`glove-study3-receipt.json` freezes the comparison, old-baseline audit, local
+contact recipe and verification reports. Frozen local-contact recipe SHA-256:
+`ed5c170f7e880ae87dd6aeb97011a0b8e9c296b9948afe63cdbb9df5f21c48ee`.
+These authoring scripts remain outside the CSS Git repository. The rejected
+blend was copied to `/run/media/eins0fx/theark/CSS/peony-v2-rejected-20261011/`,
+verified against SHA-256
+`0159d44e4da75713e49d1612ab298786da7b76c5a6bbaa7be04ca73754d25a16`,
+then removed locally, reclaiming 83,110,908 bytes. Logs and rendered evidence
+are retained. The initial render invocation omitted the required source-library
+argument and failed before creating output; the corrected invocation completed.
+Installed files, saves and settings are unchanged. No V2 trial is installed.
