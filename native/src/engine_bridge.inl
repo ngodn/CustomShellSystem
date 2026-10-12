@@ -353,10 +353,81 @@ Json EngineBridge::control_rig_trial(void* engine,Appearance& appearance,const J
     } else if(action!="status") throw std::runtime_error("Unknown rig trial action");
     return {{"active",rig_trial_deadline_!=0},{"field",rig_trial_reference_?"bSetRefPoseFromSkeleton":"AlphaScaleBias.Scale"},{"result",rig_trial_result_},{"original",rig_trial_original_},{"written",rig_trial_written_},{"deadline_ms",rig_trial_deadline_}};
 }
+void EngineBridge::finish_walk_trial(bool force) {
+    if(!walk_trial_deadline_) return;
+    bool stop=force || GetTickCount64()>=walk_trial_deadline_;
+    std::string reason=force?"stopped":"completed";
+    if(!stop) {
+        try {
+            auto* pawn=walk_trial_pawn_.Get();
+            DWORD pid=0;GetWindowThreadProcessId(GetForegroundWindow(),&pid);
+            if(!pawn || pid!=GetCurrentProcessId()) throw std::runtime_error("player or focus changed");
+            auto* movement=read<UObject*>(pawn,L"CharacterMovement");
+            if(!movement || read<uint8_t>(movement,L"MovementMode")!=1 || PerformancePlayer::waiting_for_menu(pawn))
+                throw std::runtime_error("walking mode or menu changed");
+            Call location(pawn,L"K2_GetActorLocation",1);location.run();
+            const auto position=location.get<std::array<double,3>>();
+            double distance=0;
+            for(size_t i=0;i<3;++i) distance+=(position[i]-walk_trial_origin_[i])*(position[i]-walk_trial_origin_[i]);
+            if(!std::isfinite(distance) || distance>500.*500.) throw std::runtime_error("walking distance exceeded");
+        } catch(const std::exception& error) {stop=true;reason=error.what();}
+    }
+    if(!stop) return;
+    INPUT inputs[2]{};
+    for(auto& input:inputs) {input.type=INPUT_KEYBOARD;input.ki.dwFlags=KEYEVENTF_KEYUP;}
+    inputs[0].ki.wVk=walk_trial_key_;inputs[1].ki.wVk='C';
+    if(SendInput(2,inputs,sizeof(INPUT))!=2) throw std::runtime_error("Walking trial key release failed");
+    walk_trial_deadline_=0;walk_trial_pawn_={};walk_trial_key_=0;walk_trial_result_=reason;
+}
+Json EngineBridge::walk_trial(void* engine,Appearance& appearance,const Json& query) {
+    const auto action=query.at("action").get<std::string>();
+    if(action=="stop") finish_walk_trial(true);
+    else if(action=="begin") {
+        if(walk_trial_deadline_ || appearance.performance.active()) throw std::runtime_error("Stop the prior movement and performance first");
+        auto* pawn=appearance.player(engine);
+        if(!pawn || pawn!=resolve(query.at("target")) || PerformancePlayer::waiting_for_menu(pawn))
+            throw std::runtime_error("Walking trial requires the current world player");
+        const auto key=query.at("key").get<std::string>();
+        const auto milliseconds=query.at("milliseconds").get<unsigned>();
+        if(key.size()!=1 || std::string("WASD").find(key[0])==std::string::npos || milliseconds<100 || milliseconds>2200)
+            throw std::runtime_error("Walking trial exceeds input bounds");
+        DWORD pid=0;GetWindowThreadProcessId(GetForegroundWindow(),&pid);
+        if(pid!=GetCurrentProcessId()) throw std::runtime_error("Walking trial requires focused game");
+        for(const auto k:std::string("WASDC")) if(GetAsyncKeyState(k)&0x8000) throw std::runtime_error("A movement key is already held");
+        auto* movement=read<UObject*>(pawn,L"CharacterMovement");
+        if(!movement || read<uint8_t>(movement,L"MovementMode")!=1) throw std::runtime_error("Player is not grounded");
+        Call velocity(pawn,L"GetVelocity",1);velocity.run();const auto v=velocity.get<std::array<double,3>>();
+        for(const auto value:v) if(!std::isfinite(value) || std::abs(value)>.01) throw std::runtime_error("Stop moving before the walking trial");
+        Call location(pawn,L"K2_GetActorLocation",1);location.run();
+        walk_trial_origin_=location.get<std::array<double,3>>();walk_trial_pawn_=pawn;walk_trial_key_=key[0];
+        walk_trial_deadline_=GetTickCount64()+milliseconds;walk_trial_result_="active";
+        INPUT inputs[2]{};for(auto& input:inputs) input.type=INPUT_KEYBOARD;
+        inputs[0].ki.wVk='C';inputs[1].ki.wVk=walk_trial_key_;
+        if(SendInput(2,inputs,sizeof(INPUT))!=2) {finish_walk_trial(true);throw std::runtime_error("Walking trial input rejected");}
+    } else if(action!="status") throw std::runtime_error("Unknown walking trial action");
+    return {{"active",walk_trial_deadline_!=0},{"deadline_ms",walk_trial_deadline_},{"result",walk_trial_result_}};
+}
+
 #endif
 Json EngineBridge::request(void* engine,Appearance& appearance,const Json& request) {
     const auto op=request.at("op").get<std::string>();
 #ifdef CSS_INVENTORY_DEV
+    if(op=="animation.walk_trial") return walk_trial(engine,appearance,request);
+    if(op=="animation.walk_sample") {
+        auto* pawn=appearance.player(engine);
+        if(!pawn || pawn!=resolve(request.at("target"))) throw std::runtime_error("Walking sample player changed");
+        auto* mesh=read<UObject*>(pawn,L"Mesh");auto* anim=read<UObject*>(mesh,L"AnimScriptInstance");
+        if(!anim) throw std::runtime_error("Walking sample has no animation instance");
+        (void)control_rig_alpha(anim);
+        const auto target=handle(anim);
+        Json values=Json::object();
+        for(const auto* field:{"Speed","LocalVelocityYawAngle","FootIK_Alpha","FootIK_IsEnabled",
+            "FootIK_PelvisCorrection","FootIK_FootCorrection","UseActiveBlendspace","ActiveBlendSpace","AnimGraphNode_BlendSpacePlayer"})
+            values[field]=this->request(engine,appearance,{{"op","get"},{"target",target},{"property",field}});
+        values["pose"]=this->request(engine,appearance,{{"op","call"},{"target",target},{"function","SnapshotPose"},{"args",Json::object()}});
+        values["location"]=this->request(engine,appearance,{{"op","call"},{"target",request.at("target")},{"function","K2_GetActorLocation"},{"args",Json::object()}});
+        values["tick_ms"]=GetTickCount64();return values;
+    }
     if(op=="animation.control_rig_trial") return control_rig_trial(engine,appearance,request);
     if(op=="animation.recreate_player_instance") {
         if(rig_trial_deadline_ || appearance.performance.active())

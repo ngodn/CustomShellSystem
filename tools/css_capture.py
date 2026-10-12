@@ -84,17 +84,18 @@ def recording(name):
     originals.mkdir(parents=True, exist_ok=True)
     target = originals / (name + '.mp4')
     if target.exists(): raise FileExistsError(target)
-    # Screen capture includes the final displayed frame. The game must remain
-    # fullscreen on DP-1 for the whole take; verify the workspace before starting.
+    # Capture the final displayed frame on the game's current fullscreen display.
     clients = json.loads(subprocess.check_output(['hyprctl', 'clients', '-j']))
     game = next(c for c in clients if c.get('class') == 'steam_app_2584270'
                 and c.get('title', '').strip() == 'MortalShell2')
     monitors = json.loads(subprocess.check_output(['hyprctl', 'monitors', '-j']))
-    display = next(m for m in monitors if m['name'] == 'DP-1')
-    if display['activeWorkspace']['id'] != game['workspace']['id'] or not game.get('fullscreen'):
-        raise RuntimeError('Show the fullscreen game on DP-1 before recording')
+    display = next(m for m in monitors if m['id'] == game['monitor'])
+    capture_display = display['name']
+    if (display['activeWorkspace']['id'] != game['workspace']['id']
+            or not game.get('fullscreen') or not game.get('visible')):
+        raise RuntimeError('Show the fullscreen game on its display before recording')
     with (originals / (name + '.log')).open('w') as log:
-        process = subprocess.Popen(['gpu-screen-recorder', '-w', 'DP-1',
+        process = subprocess.Popen(['gpu-screen-recorder', '-w', capture_display,
             '-f', '60', '-fm', 'cfr', '-q', 'very_high', '-k', 'h264',
             '-a', 'default_output', '-ac', 'aac', '-ab', '192',
             '-cursor', 'no', '-o', str(target)], stdout=log, stderr=log)
@@ -104,10 +105,11 @@ def recording(name):
             while not stopped.wait(.1):
                 try:
                     monitors = json.loads(subprocess.check_output(['hyprctl', 'monitors', '-j']))
-                    display = next(m for m in monitors if m['name'] == 'DP-1')
+                    display = next(m for m in monitors if m['name'] == capture_display)
                     current = json.loads(subprocess.check_output(['hyprctl', 'clients', '-j']))
                     window = next(c for c in current if c['address'] == game['address'])
                     if (display['activeWorkspace']['id'] != game['workspace']['id']
+                            or window['monitor'] != display['id']
                             or not window.get('fullscreen') or not window.get('visible')):
                         raise RuntimeError('Game left the recorded display; reject this take')
                 except Exception as error:

@@ -1,5 +1,20 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, walking comparison completed:** bounded autonomous walking now
+captures pose and controls in the same callback, with automatic key release.
+The mesh-reference trial does not show a walking improvement. A temporary native
+rig bypass removes the local leg-rotation difference, but the phase-matched
+component-space check shows that the active rig already preserves foot rotation
+within 0.0021 degrees of the imported animation. It changes foot position instead.
+Do not mistake compensating local knee/ankle rotations for the user's sideways
+tilt or ship a blanket IK bypass. Next compare animation-to-body reference
+alignment and the actual boot/bare-foot surfaces at matched phases. Captures,
+clips and corrected diagnosis are in the [native rig record](../research/2026-10-13-cw-native-foot-rig.md),
+`cw-walk-reference1`, `cw-walk-bypass2` and `cw-rig-solver1`. All overrides are
+off, keys released, Iris Out/facial playback and complete saved state restored.
+Reduced noise remains active. Current core SHA-256 starts `7a764e26757d2a6d`.
+CW feet, reload-crash and full stable-release gates remain open.
+
 **October 13, native rig reference trial:** fresh native AnimInstance/ControlRig
 recreation now restores all 13 checked initial transforms exactly. The temporary
 mesh-reference flag imports CW's audited bind transforms within 1.61e-6 cm and

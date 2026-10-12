@@ -321,6 +321,12 @@ class EngineBridge {
     std::string rig_trial_result_;
     void restore_rig_trial();
     Json control_rig_trial(void*,Appearance&,const Json&);
+    WeakObject walk_trial_pawn_;
+    uint64_t walk_trial_deadline_=0;
+    uint16_t walk_trial_key_=0;
+    std::array<double,3> walk_trial_origin_{};
+    std::string walk_trial_result_;
+    Json walk_trial(void*,Appearance&,const Json&);
     AstralLifecycle astral_lifecycle_;
     Json observe_astral(void* engine,bool poses=false);
     Json observe_astral_source(Appearance& appearance);
@@ -340,6 +346,7 @@ public:
     Json request(void* engine,Appearance&,const Json&);
 #ifdef CSS_INVENTORY_DEV
     void finish_rig_trial(bool force=false);
+    void finish_walk_trial(bool force=false);
 #endif
 };
 class InventoryUI {

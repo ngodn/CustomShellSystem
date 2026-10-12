@@ -172,3 +172,88 @@ SHA-256 `aec790e8409c73cd9c317881b34bcb318510a2a916e5b1197ba476fb22fb576d`.
 Windows C++23 build and diff checks pass. The saved appearance, Iris Out choice
 and facial playback restore; sunlight Reduced noise remains selected. The
 reload-crash release gate remains open independently of this successful trial.
+
+## Actual walking and component-space correction to the diagnosis
+
+The user authorized independent overnight gameplay tests. The new DEV-only
+`animation.walk_trial` holds the verified walk key C plus one WASD direction for
+100 to 2,200 ms. It requires a stationary grounded player, focused game, no menu
+or active performance, and no already-held movement key. Tick and unload cleanup
+release both keys; loss of focus, expired pawn, changed movement mode, menu entry
+or travel beyond five metres stops the trial. This is a diagnostic command,
+not a production movement feature. `animation.walk_sample` drains animation
+evaluation and captures Speed, direction, selected blend node, pose and location
+in one callback.
+
+`cw-walk-reference1` retains input-mapping discovery and terrain checks. The
+mapping identifies C as the walk action. The current capsule is radius 35 cm,
+half-height 96 cm, profile PlayerCapsule. Vertical traces across the short beacon
+path and a full capsule sweep establish unobstructed geometry for the selected
+route. They do not certify hazards in arbitrary scenes. Each comparison uses
+two seconds walking backward relative to the camera, then two seconds returning.
+No attack, interaction, save selection or explicit camera control was used.
+
+The reference-flag comparison contains baseline, imported mesh reference and
+restored phases. Each has seven speed-qualified samples, but only four are
+straight: the first three contain turning. Use Speed 184 within 0.01 and absolute
+LocalVelocityYawAngle below one degree. The four straight samples use the shared
+Eve walk. Nearest nine-bone local-rotation fits give baseline 5.19 to 12.99 degrees,
+reference 5.69 to 15.44 and restored 5.35 to 11.47. This does not support adopting
+the mesh-reference flag as the walking repair. Full restoration passes.
+
+`cw-walk-bypass1` stopped before gameplay input because the recorder assumed DP-1
+while the game was on DP-2. `tools/css_capture.py` now captures the current game
+monitor, requires its visible fullscreen window and rejects a monitor/workspace
+change during recording. `cw-walk-bypass2` records three successful outgoing
+passes with baseline, temporary zero rig multiplier and restored rig. The
+character returns within 4.04 cm of the surveyed origin. All keys release and
+the saved CSS state, Iris Out, facial playback and all four animation choices
+restore. The three clips and their logs are retained.
+
+The bypass changes the nearest nine-bone local fit from 5.20 to 12.72 degrees
+to below 0.001 degrees RMS. Restoring the rig returns 5.54 to 11.68 degrees.
+**This alone does not show that the rig causes the reported foot tilt.** Local
+foot rotations compensate for changes in their parent knees. An initial progress
+message overstated this result; the following component-space check supersedes
+that interpretation.
+
+`cw-rig-solver1/phase_compare.py` estimates phase from 13 upper-body and ball
+local rotations, rather than fitting the corrected leg joints. It reconstructs
+component-space feet with the audited CW mesh parents. For all 12 straight
+samples, phase-fit RMS is below 0.0053 degrees. Baseline and restored foot
+orientations differ from the imported animation by less than 0.0021 degrees,
+while their positions differ by 2.8 to 12.4 cm. The bypass control matches both
+orientation and position within 0.005 degrees and 0.0034 cm. Thus these sampled
+native rig outputs move the feet while retaining their animated orientation.
+Do not use the larger local-rotation numbers as an ankle correction or justify
+disabling ground placement with them. Phase is estimated, not directly observed;
+neutral-pose reconstruction excludes surface morphs and world floor contact.
+
+The read-only cooked rig extraction in `cw-rig-solver1/cooked.json` includes
+389 RigVM instructions. Its current bytecode references the named FootBone
+literal operands for traces and foot controls, then adjusts targets before
+PBIK. The legacy CDO maps those operands to foot_l/foot_r, but the current literal
+payload still needs verification. Static `ik_foot_*` helpers in the imported
+animation do not, by themselves, establish the cause. `disassemble.py` resolves
+serialized operand descriptors;
+the exact readback command is retained. CUE4Parse currently skips modern literal
+property-bag payloads. Legacy memory CDO values must not be presented as verified
+current literal values. No game rig package or literal was changed.
+
+Next compare the CW surface's animation-to-reference alignment, with boots and
+bare feet, at matched phases. Earlier four-bone AnimationRelative tests and the
+source/CW reference comparisons remain relevant but are not accepted fixes.
+Epic's [retargeting documentation](https://dev.epicgames.com/documentation/unreal-engine/ik-rig-animation-retargeting-in-unreal-engine)
+describes retarget poses and differing bone orientations; use the pinned 5.6.1
+implementation and actual source references for a scoped trial, not a guessed
+constant angle. Preserve floor contact and the source heel design.
+
+Installed development core:
+`css_core-development-7a764e26757d2a6d-walk-reference1.dll`, SHA-256
+`7a764e26757d2a6dd6744ff61eae49025b449c497b7352f5923c9ab11e39af1c`.
+The Windows C++23 build and controlled activation passed before the captures.
+Final `cw-rig-solver1/health.json` verifies that exact mapped module in Linux
+process 3113971, inactive movement/rig trials, multiplier one, reference flag
+false, all keys up and exact saved-state restoration. Reduced noise still owns
+one light with no error. This closes the comparison, not the foot defect or
+the separate reload-crash release gate.

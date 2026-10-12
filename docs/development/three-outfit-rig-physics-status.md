@@ -1,5 +1,17 @@
 # Three-outfit implementation status
 
+**October 13 walking result:** autonomous short walking passes and restoration
+pass. The reference-pose trial does not establish improvement. Phase-matched
+component-space analysis corrects the initial rig-bypass interpretation: the
+active rig preserves foot orientation within 0.0021 degrees of the imported walk
+while changing position by several centimetres. Large local joint differences
+do not prove the reported tilt is caused by that rig. Keep native grounding and
+investigate animation-to-body alignment next. No foot repair is accepted.
+Final health, exact state restoration and the mapped development core
+`7a764e26757d2a6dd6744ff61eae49025b449c497b7352f5923c9ab11e39af1c`
+are recorded in `work/three-outfit-rig-physics/cw-rig-solver1/health.json`.
+See [the updated rig record](../research/2026-10-13-cw-native-foot-rig.md).
+
 **October 13 native rig trial:** a bounded reference-pose diagnostic now imports
 CW's mesh reference and fully restores the original native rig, including after
 automatic timeout. Standing-pose comparison does not establish a walking fix.

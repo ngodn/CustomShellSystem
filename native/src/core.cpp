@@ -993,6 +993,7 @@ struct Core {
     void tick(void* engine, float delta) {
         current_engine=engine;
 #ifdef CSS_INVENTORY_DEV
+        engine_bridge.finish_walk_trial();
         engine_bridge.finish_rig_trial();
         auto measured=[&](FrameProfile::Phase phase,auto&& call) { frame_profile.measure(phase,call); };
 #else
@@ -1603,6 +1604,7 @@ bool stop(void* ptr) noexcept {
     try {
         core.pending_performance.clear();
 #ifdef CSS_INVENTORY_DEV
+        core.engine_bridge.finish_walk_trial(true);
         core.engine_bridge.finish_rig_trial(true);
 #endif
         core.sunlight.restore([&](const css::Json& q){return core.sunlight_query(q);});
