@@ -165,3 +165,107 @@ remain relevant; these results do not justify repeating broad global tuning.
 
 The two command receipts, captures, anchor checks and strain reports are retained
 for reproduction. No settings, renderer options or installed assets were changed.
+
+## Ordered replay and surface-normal trial
+
+The retained native13 ordered-copy module is reused through a read-only binary
+overlay, with the saved 16 cm mesh and current dependencies. Its embedded-motion
+source differs from the current mapping harness only in the independent ordered
+copies and tether export. The module hash is
+`19b0ceebbdda709e5247c6ce6636e08d5a7c75bfd8cbcd51bb0cf6d638373eed`.
+`slipstream-backstop16/ordered-trace.exit.json` records exit zero and no changed
+source/candidate assets. All 39 poses match the regular capture; particle
+positions match exactly at frame zero and differ by at most 0.00390 cm at
+frame 38. Keep the different module and non-identical later state explicit.
+
+At frame 38, front edge 169/179 has a 1.72329 cm rest length and a 4.37705 cm
+captured length. A copied edge pass shortens it to 3.13425 cm. Applying backstop
+afterward opens it to 4.22267 cm. In comparison, area gives 2.91766 cm, tethers
+3.08923 cm, maximum distance 3.13425 cm and animation drive 3.14035 cm. This
+identifies a concrete backstop conflict in that final-state replay; it is not
+a measurement of live solver ordering. The rear pair 429/439 has a different
+response and does not show that same frame-38 conflict.
+
+The two front reference normals were transferred from nearby thigh surfaces:
+approximately `(-0.460, -0.887, -0.018)` and `(0.405, -0.912, -0.069)`.
+Their dot product is 0.624. Averaged unit-face normals from the continuous
+skirt surface give a dot product of 0.996 there. This motivates changing the
+physical backstop directions, rather than repeating the earlier rejected pelvis
+weight fade. Skin weights remain a separate possible source of target stretch.
+
+`slipstream-surfacenormals16` tests only those physical normals against the
+16 cm-radius candidate. Geometry, weights, travel, distance, collision settings
+and body-shape deltas are intended to remain unchanged and are checked on fresh
+native readback. The small overlay runner now accepts `--surface-normals` and
+an explicit private output directory. Fresh readback confirms only physical
+normals change (plus the rebuilt cloth identifier); all those preservation
+checks pass. Both captures retain the same 145 baseline poses and pass all
+128 anchors. This trial is not installed.
+
+Reject the full-normal replacement: it fails strain in 74/75 frames with maximum
+ratios 3.81078/3.77243 and maximum extension about 4.59 cm. At frame 119 it has
+244/284 inward garment samples, versus 216/220 with the original normals and
+16 cm radius. Its worst signed depth improves to about 5.42/5.66 cm from
+6.41/6.55 cm, but neither this nor the frame-zero contact improvement establishes
+a better overall garment. The front pair's frame-38 ratio improves from 2.540
+to 2.248, while its worst ratio over the full stride worsens from 3.236 to
+3.664. Thus a local normal edit is not justified solely by that one-frame gain.
+
+The next diagnostic extends the retained ordered-copy module with an explicit
+`ConstraintFrame` argument. It keeps the existing frame-zero probe and defaults
+to frame 38 when no override is supplied. This lets the same actual sprint
+capture expose the rear failure at frame 119 without changing animation start
+time or copying a full content project. Source and build recipe are retained in
+`slipstream-constraint-frame1`; it is private diagnostic code, not a CSS core or
+gameplay change.
+
+The probe build passes after correcting declaration order in the new argument
+validation. The first owned build was cancelled and retained separately; no
+game or asset build was interrupted. The successful module SHA-256 is
+`2311ac816a6915fbc8edbe1c6b76ddb3615768f688b05491641f15495abe345c`.
+The 145-frame `ordered119.json` capture exits zero, preserves source/candidate
+assets and exports ordered copies at exactly frames 0 and 119. All poses match
+the regular radius trial. `ordered119-summary.json` records the measurements.
+
+At frame 119, the front pair measures 4.64023 cm. The edge pass reduces it to
+3.95178 cm, then maximum distance reopens it to 4.49603 cm. Backstop leaves
+that particular correction unchanged. The rear pair measures 2.99277 cm;
+one global edge pass actually leaves it at 3.04133 cm, a second reduces it to
+2.70103 cm, and backstop after one pass gives 3.13110 cm. Its neighbors matter;
+do not describe a single edge projection as an isolated two-particle solve.
+Together with the frame-38 result, this rules out treating one backstop-normal
+edit as a complete explanation or repair.
+
+## Preserve cutouts while repairing vertex fans
+
+The radial annulus deliberately bridges authored openings. That is a different
+connectivity from the fitted fabric. Before more parameter changes, investigate
+whether the original surface can be made manifold without those bridges.
+`tools/diagnostics/split_slipstream_proxy_fans.py` duplicates a shared vertex
+when its incident faces form disconnected fans. Its bow-tie control checks that
+two sheets touching at one point become separate valid corners.
+
+`slipstream-splitfans1` changes 624 particles to 674 and removes all 49 invalid
+vertex fans. All 976 triangles retain exactly the same corner coordinates;
+normals, weights, travel, backstop maps and all six morphs are copied from each
+original donor. It exposes 20 components, two without a native pin. Do not
+simulate this unanchored version as a usable garment.
+
+Those two islands have only two and one triangles, areas 0.13513 and 0.10006
+square centimetres. The independent Blender support check samples their
+vertices, edge midpoints and triangle centroids against the remaining surface:
+21 samples, maximum distance 0.16820 cm. This is sampled proxy support, not a
+bound on every rendered point or a successful native mapping.
+
+`slipstream-splitfans2` removes only those three simulation sliver triangles
+and their seven now-unused particle instances. It has 667 particles, 973
+triangles, valid edge/vertex topology and 18 components, all with native pins.
+Every retained triangle corner and particle attribute still matches its original
+donor. No visible garment triangles or material sections are removed, and no
+new triangles bridge the cutouts. The recipe and output hashes are retained.
+
+Next bind this candidate to the preserved garment, verify mapping and morphs,
+then compare native motion and body contact. Topology alone does not establish
+that it fixes the observed garment, and the older surface's known mapping errors
+must be checked rather than inherited. The accepted Peony installation remains
+untouched; the full outfit goal stays active.

@@ -21,6 +21,15 @@ do not ship the radius trial as a completed repair. Evidence and small staging
 recipes are in `work/three-outfit-rig-physics/slipstream-backstop16` and the
 constraint results linked above. The installed, accepted Peony package is unchanged.
 
+The full replacement of backstop normals is also rejected after two captures.
+Ordered constraint checks at frames 38 and 119 show different local conflicts.
+The next private candidate, `slipstream-splitfans2`, repairs the original proxy's
+49 invalid vertex fans while preserving its cutouts and retained triangle
+geometry. Only three tiny unanchored simulation triangles are omitted; the
+visible outfit is unchanged. All 18 components have native pins. Native binding,
+mapping/morph preservation, motion and contact remain to be verified before
+acceptance. See the same constraint record for evidence and recipes.
+
 At the user's request, the shared `ue-modding` skill has also been revised to
 cover the actual extraction, patched CUE4Parse, Blender, editor, cook and runtime
 workflows. Unsupported generalizations about editor/source availability, reload,
