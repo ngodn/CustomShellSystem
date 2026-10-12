@@ -260,6 +260,14 @@ resolution/temporal history, with quality and performance measured before a
 shipping toggle. A hard-shadow workaround would remain default off. No production
 renderer fix is installed or accepted.
 
+Further October 13 controls: subsurface minimum shadow angle 5 to 0 does not
+clear the noise. CW still has visible skin mottling with the default game idle
+and CSS performance playback inactive; original Genessa is visually cleaner in
+that idle. The completed comparisons restore CW, Iris Out and byte-identical
+saved state. This narrows the investigation beyond Iris Out alone, but remains
+a CSS-enabled, non-matched-motion comparison. See the sunlight record for the
+diagnostic's corrected deferred-save check and the Shipping visualization limit.
+
 Investigate the report from Vistani (Nexus, 2026-10-12 01:54): reflections look
 like static outdoors in direct sunlight while moving, but look normal indoors
 or outside direct sunlight. [Reported image](https://i.imgur.com/XiAVEbK.png).

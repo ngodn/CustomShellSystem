@@ -339,3 +339,53 @@ documented renderer:
 The general advice to measure frame times and isolate variables is useful.
 The article supplies no downloadable capture or reproducible project for its
 performance claims. No new game settings were changed from this article.
+
+## Subsurface and ordinary-idle controls, October 13
+
+Live readback confirms `r.Shadow.Virtual.SubsurfaceShadowMinSourceAngle=5`.
+`subsurface-angle0` changes 5 to 0 to 5. Visible noise remains on CW in Iris Out.
+All sampled camera/FOV/pawn views match exactly; customization, player and
+process match and the value restores. This rejects this single setting as a
+fix for this reproduction, not every possible material interaction.
+
+The source branch is narrower than a universal skin control:
+`VirtualShadowMapTransmissionCommon.ush:15` loads legacy Subsurface,
+Preintegrated Skin and Two Sided Foliage opacity, with a separate Substrate
+branch. It does not apply the legacy adjustment to every skin shading model.
+CW's authoring recipe uses shipped material parents and a skin SSS parameter;
+the trial does not prove which GBuffer branch each visible pixel took.
+
+`capture_native_shadow_control.py --native-idle` now compares the original
+Genessa model with its default game idle. `--keep-outfit` runs the same idle
+comparison on the current outfit. Both temporarily change the existing idle
+choice and restore it, with no character or camera input.
+
+- `native-genessa-idle1` stopped at an incorrect diagnostic assertion: transient
+  `wear` defers disk saves by 30 minutes (`core.cpp:579`), so the state file still
+  held the previous idle despite the acknowledged live change. The tool mistook
+  that for a concurrent change. `recovery.json` confirms CW/settings restored,
+  byte-identical saved state and unchanged player/process. No native crash.
+- The corrected tool uses live request and animation status. In
+  `native-genessa-idle2`, original Genessa looks much cleaner in the two inspected
+  ordinary-idle captures than during the earlier Iris Out capture. This is a
+  qualitative observation with different poses, exposed areas and materials,
+  not proof that her rendering is artifact-free.
+- `cw-native-idle1` retains CW and selects the ordinary game idle. Mottling remains
+  visible on the exposed thigh and arm, although the large dancing-pose blotches
+  are less prominent. CSS reports no engaged animation replacement, no shared
+  idle, and no active facial performance. Thus Iris Out playback alone is not
+  sufficient to explain the issue.
+
+The two completed idle controls preserve every sampled camera/FOV/pawn view
+exactly and restore the original outfit/customization/idle choices and
+byte-identical saved state, in the same game process. CSS and its movement
+choices remain installed, and neither control includes walking or combat.
+These are not unmodded-game or matched-motion comparisons.
+
+The source's standard velocity/reprojection/upscaler visualization show flags
+are fixed off in Shipping (`Engine/Public/ShowFlagsValues.inl:132-138`). Do not
+promise that the editor visualization commands will work in this game without
+checking its custom build. A GPU capture or supported game diagnostic is still
+needed to inspect actual previous-frame motion vectors. No renderer workaround
+is accepted or installed; retain the softer-shadow target and investigate actual
+render resolution/temporal history and material response before production work.
