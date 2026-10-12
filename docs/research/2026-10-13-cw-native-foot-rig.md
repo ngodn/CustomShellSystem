@@ -281,3 +281,59 @@ and saved state restore. Final readback confirms rig scale one and mesh-referenc
 flag false. Reduced noise remains active. Evidence and final health are in CW
 `work/foot-retarget2/live-ankle1`. This advances the foot repair to an installed
 trial; it does not close broader gait/slope acceptance or the reload-crash gate.
+
+
+## Short jog and sprint checks (October 13, 05:56)
+
+The development-only movement probe now distinguishes walk (C), jog (no
+modifier), and sprint (Left Shift), bounded to 2,200, 750 and 550 milliseconds
+respectively. Unknown gaits and durations outside the bounds are rejected before
+input. It retains a weak controller and verifies that it still owns the tracked
+pawn. Existing focus, grounded-state, menu and 500 cm travel guards remain.
+The synchronized pose sample also includes the mesh-to-world transform; this
+provides the missing coordinate conversion for later surface/contact analysis.
+
+Windows C++23 compilation succeeds. Both controlled core activations preserve
+Linux game process 3189742 and the complete saved CSS state. Final loaded core:
+`css_core-development-ccf2940b2158a109-gaits2.dll`, SHA-256
+`ccf2940b2158a109c31e20a6247207152db718cc2b631eed7811130807a10321`.
+The installed four-bone CW asset trial remains unchanged.
+
+Evidence is `work/three-outfit-rig-physics/cw-gait1`:
+
+- `walking`: walk reaches 184 cm/s with seven active walk samples, including four
+  straight samples. Jog reaches 540 cm/s with three active jog samples. This
+  jog moves backward relative to facing, so it is not a forward-gait comparison.
+  The initial sprint request only jogs. The driver correctly fails its sprint
+  assertion, releases input and restores settings.
+- `sprint-input`: the movement key is down while both Shift keys read false.
+  This reproduces a diagnostic input defect. It does not demonstrate a broken
+  outfit sprint animation.
+- `sprint-scancode`: specifying the Left Shift scan code for both key-down and
+  key-up makes the game read LeftShift=true and select BS_S1_Sprint at 645 cm/s.
+  The native sprint camera changes yaw by 4.77 degrees. The return-path guard
+  refuses that changed direction. `return.py` verifies the reflected
+  SetControlRotation signature, restores the captured orientation while
+  stationary, then walks back on the surveyed lane. The return finishes within
+  2.18 cm of this pass's start, with all keys up and exact settings restoration.
+- `forward-sprint`: a walk positions the character farther along the same lane;
+  a brief forward step precedes a sprint toward the original position. Sprint
+  activates at 643 cm/s, but the sampled movement angle remains 8.08 degrees
+  during acceleration and 5.44 during deceleration. The stricter straight-sample
+  assertion fails. This is an observed sprint transition, not a completed
+  straight sprint cycle. Walk corrections return within 11.43 cm of the survey
+  origin. Complete saved state, Iris Out/facial playback and Reduced noise
+  restore; no rig override remains.
+
+The pinned UE 5.6.1 WindowsApplication.cpp (key-down line 2858 and key-up line
+2936) resolves Shift handedness from the message scan code. Microsoft's
+[KEYBDINPUT contract](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput)
+documents KEYEVENTF_SCANCODE and wScan. The paired live captures establish the
+local fix; neither document alone proves Wine's behavior.
+
+Do not report the failed aggregate scripts as passed or infer that these short
+captures close foot-contact, long-stride, slope, CINE or doubles acceptance.
+Reviewed walk/jog frames show rendered boot surfaces but do not establish
+improvement against a phase-matched baseline. Preserve native IK and the
+remaining release/crash gates. The follow-up should obtain a settled forward
+sample within a surveyed route, then compare actual boot surfaces and contact.

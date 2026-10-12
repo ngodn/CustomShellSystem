@@ -322,8 +322,11 @@ class EngineBridge {
     void restore_rig_trial();
     Json control_rig_trial(void*,Appearance&,const Json&);
     WeakObject walk_trial_pawn_;
+    WeakObject walk_trial_controller_;
     uint64_t walk_trial_deadline_=0;
     uint16_t walk_trial_key_=0;
+    uint16_t walk_trial_modifier_=0;
+    std::string walk_trial_gait_;
     std::array<double,3> walk_trial_origin_{};
     std::string walk_trial_result_;
     Json walk_trial(void*,Appearance&,const Json&);

@@ -1,5 +1,17 @@
 # Three-outfit implementation status
 
+**October 13, bounded gait follow-up:** CW's installed ankle trial now has live
+walk, jog and sprint activation evidence. A developer input defect prevented
+Left Shift from reaching the game; explicit scan-code injection fixes it.
+The short sprint captures still include turning, so straight-cycle/contact
+acceptance remains open. A native sprint camera turn triggered the return guard;
+the captured orientation and surveyed position were restored separately.
+Final forward-trial position is within 11.43 cm of the survey origin, with keys
+released and full saved settings restored. Evidence: `cw-gait1` under the
+three-outfit work directory and the [native rig record](../research/2026-10-13-cw-native-foot-rig.md).
+The development core now starts `ccf2940b2158a109`; asset trial and full stable
+release scope remain unchanged. No new foot-fix acceptance or crash closure.
+
 **October 13 CW ankle trial installed:** the full-leg alternative was rejected.
 The four foot/ball AnimationRelative settings pass private editor capture,
 fresh reload, Windows cook and exact cooked-property comparison. Other outfit

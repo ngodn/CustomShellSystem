@@ -360,8 +360,10 @@ void EngineBridge::finish_walk_trial(bool force) {
     if(!stop) {
         try {
             auto* pawn=walk_trial_pawn_.Get();
+            auto* controller=walk_trial_controller_.Get();
             DWORD pid=0;GetWindowThreadProcessId(GetForegroundWindow(),&pid);
-            if(!pawn || pid!=GetCurrentProcessId()) throw std::runtime_error("player or focus changed");
+            if(!pawn || !controller || read<UObject*>(controller,L"Pawn")!=pawn || pid!=GetCurrentProcessId())
+                throw std::runtime_error("player or focus changed");
             auto* movement=read<UObject*>(pawn,L"CharacterMovement");
             if(!movement || read<uint8_t>(movement,L"MovementMode")!=1 || PerformancePlayer::waiting_for_menu(pawn))
                 throw std::runtime_error("walking mode or menu changed");
@@ -375,9 +377,15 @@ void EngineBridge::finish_walk_trial(bool force) {
     if(!stop) return;
     INPUT inputs[2]{};
     for(auto& input:inputs) {input.type=INPUT_KEYBOARD;input.ki.dwFlags=KEYEVENTF_KEYUP;}
-    inputs[0].ki.wVk=walk_trial_key_;inputs[1].ki.wVk='C';
-    if(SendInput(2,inputs,sizeof(INPUT))!=2) throw std::runtime_error("Walking trial key release failed");
-    walk_trial_deadline_=0;walk_trial_pawn_={};walk_trial_key_=0;walk_trial_result_=reason;
+    inputs[0].ki.wVk=walk_trial_key_;inputs[1].ki.wVk=walk_trial_modifier_;
+    if(walk_trial_modifier_==VK_LSHIFT) {
+        inputs[1].ki.wScan=static_cast<WORD>(MapVirtualKeyW(VK_LSHIFT,MAPVK_VK_TO_VSC));
+        inputs[1].ki.dwFlags|=KEYEVENTF_SCANCODE;
+    }
+    const unsigned count=walk_trial_modifier_?2:1;
+    if(SendInput(count,inputs,sizeof(INPUT))!=count) throw std::runtime_error("Walking trial key release failed");
+    walk_trial_deadline_=0;walk_trial_pawn_={};walk_trial_controller_={};
+    walk_trial_key_=0;walk_trial_modifier_=0;walk_trial_result_=reason;
 }
 Json EngineBridge::walk_trial(void* engine,Appearance& appearance,const Json& query) {
     const auto action=query.at("action").get<std::string>();
@@ -389,23 +397,37 @@ Json EngineBridge::walk_trial(void* engine,Appearance& appearance,const Json& qu
             throw std::runtime_error("Walking trial requires the current world player");
         const auto key=query.at("key").get<std::string>();
         const auto milliseconds=query.at("milliseconds").get<unsigned>();
-        if(key.size()!=1 || std::string("WASD").find(key[0])==std::string::npos || milliseconds<100 || milliseconds>2200)
+        const auto gait=query.value("gait",std::string("walk"));
+        const unsigned maximum=gait=="walk"?2200:gait=="jog"?750:gait=="sprint"?550:0;
+        if(key.size()!=1 || std::string("WASD").find(key[0])==std::string::npos || milliseconds<100 || milliseconds>maximum)
             throw std::runtime_error("Walking trial exceeds input bounds");
         DWORD pid=0;GetWindowThreadProcessId(GetForegroundWindow(),&pid);
         if(pid!=GetCurrentProcessId()) throw std::runtime_error("Walking trial requires focused game");
         for(const auto k:std::string("WASDC")) if(GetAsyncKeyState(k)&0x8000) throw std::runtime_error("A movement key is already held");
+        if(GetAsyncKeyState(VK_SHIFT)&0x8000) throw std::runtime_error("A sprint key is already held");
+        auto* controller=read<UObject*>(pawn,L"Controller");
+        if(!controller || read<UObject*>(controller,L"Pawn")!=pawn)
+            throw std::runtime_error("Player controller does not own the current pawn");
         auto* movement=read<UObject*>(pawn,L"CharacterMovement");
         if(!movement || read<uint8_t>(movement,L"MovementMode")!=1) throw std::runtime_error("Player is not grounded");
         Call velocity(pawn,L"GetVelocity",1);velocity.run();const auto v=velocity.get<std::array<double,3>>();
         for(const auto value:v) if(!std::isfinite(value) || std::abs(value)>.01) throw std::runtime_error("Stop moving before the walking trial");
         Call location(pawn,L"K2_GetActorLocation",1);location.run();
         walk_trial_origin_=location.get<std::array<double,3>>();walk_trial_pawn_=pawn;walk_trial_key_=key[0];
+        walk_trial_controller_=controller;walk_trial_gait_=gait;
+        walk_trial_modifier_=gait=="walk"?'C':gait=="sprint"?VK_LSHIFT:0;
         walk_trial_deadline_=GetTickCount64()+milliseconds;walk_trial_result_="active";
         INPUT inputs[2]{};for(auto& input:inputs) input.type=INPUT_KEYBOARD;
-        inputs[0].ki.wVk='C';inputs[1].ki.wVk=walk_trial_key_;
-        if(SendInput(2,inputs,sizeof(INPUT))!=2) {finish_walk_trial(true);throw std::runtime_error("Walking trial input rejected");}
+        const unsigned count=walk_trial_modifier_?2:1;
+        inputs[0].ki.wVk=walk_trial_modifier_?walk_trial_modifier_:walk_trial_key_;
+        inputs[1].ki.wVk=walk_trial_key_;
+        if(walk_trial_modifier_==VK_LSHIFT) {
+            inputs[0].ki.wScan=static_cast<WORD>(MapVirtualKeyW(VK_LSHIFT,MAPVK_VK_TO_VSC));
+            inputs[0].ki.dwFlags=KEYEVENTF_SCANCODE;
+        }
+        if(SendInput(count,inputs,sizeof(INPUT))!=count) {finish_walk_trial(true);throw std::runtime_error("Walking trial input rejected");}
     } else if(action!="status") throw std::runtime_error("Unknown walking trial action");
-    return {{"active",walk_trial_deadline_!=0},{"deadline_ms",walk_trial_deadline_},{"result",walk_trial_result_}};
+    return {{"active",walk_trial_deadline_!=0},{"deadline_ms",walk_trial_deadline_},{"result",walk_trial_result_},{"gait",walk_trial_gait_}};
 }
 
 #endif
@@ -425,6 +447,7 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
             "FootIK_PelvisCorrection","FootIK_FootCorrection","UseActiveBlendspace","ActiveBlendSpace","AnimGraphNode_BlendSpacePlayer"})
             values[field]=this->request(engine,appearance,{{"op","get"},{"target",target},{"property",field}});
         values["pose"]=this->request(engine,appearance,{{"op","call"},{"target",target},{"function","SnapshotPose"},{"args",Json::object()}});
+        values["mesh_transform"]=this->request(engine,appearance,{{"op","call"},{"target",handle(mesh)},{"function","K2_GetComponentToWorld"},{"args",Json::object()}});
         values["location"]=this->request(engine,appearance,{{"op","call"},{"target",request.at("target")},{"function","K2_GetActorLocation"},{"args",Json::object()}});
         values["tick_ms"]=GetTickCount64();return values;
     }
