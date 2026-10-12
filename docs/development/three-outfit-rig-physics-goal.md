@@ -9,6 +9,17 @@ manual customization, saved profiles and Original restoration. Keep optional
 glowing, flowing trim in the Peony integration and test the resulting behavior
 in both preview and gameplay before accepting it.
 
+**Latest acceptance, October 12:** the user answers "Motion looks right now"
+after testing Peony's Firm/Natural chest and glute motion while walking and
+playing Iris Out. The installed `peony-v2-motion-package1` is the accepted Peony
+motion baseline. A subsequent read-only live probe verifies all seven restored
+angle and travel limits; `live-accepted.json` records the answer and rig state.
+Keep this candidate's authored/cooked rig for subsequent builds. Do not rebuild
+from the older wide-limit rig without applying the retained limit-restoration
+recipe. Existing Eve variants' motion regression and the full lifecycle and
+performance matrix remain open. The following paragraphs retain the sequence
+of earlier findings; their pending Peony motion states are superseded here.
+
 The combined V2 package now passes native catalog and asset-reference checks.
 CSS also accepts explicitly declared facial meshes anywhere within the
 author/project namespace, so outfit-local meshes do not require a `Faces`
@@ -110,8 +121,8 @@ the process check found no game process and the four-file trial was installed.
 `deployment.json` and `installed-verified.json` record independent matching
 installed hashes, verified rollback and unchanged shared asset containers.
 The production motion-restoration core remains `21f761aa35fd1861...`.
-The user has been asked to reopen and compare Firm/Natural while walking and
-playing Iris Out. Native motion acceptance remains pending. The earlier
+The user reopened and accepted Firm/Natural while walking and playing Iris Out:
+"Motion looks right now." Live readback confirms the restored limits. The earlier
 simple-translation result did not cover this input.
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
@@ -141,7 +152,7 @@ reversible MISC bug-fix setting with a name and description matching its actual
 scope. Check its visual and performance costs and restoration when disabled.
 Do not ship an unproven global rendering change as a confirmed fix.
 
-While the prepared motion package waits for game closure, the
+During the earlier wait for game closure, the
 [sunlight evidence record](../research/2026-10-12-sunlight-noise.md) now retains
 the reporter's original image and a read-only live baseline of 20 console
 settings. Repeated values, player/process and customization are unchanged.

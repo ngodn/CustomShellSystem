@@ -59,8 +59,13 @@ acceptance remains pending, including the existing variants' motion behavior.
 The current motion-restoration core stays installed. The user confirmed game
 closure and the four asset files are now installed. Independent hash readback
 and rollback checks pass in `peony-v2-motion-package1/installed-verified.json`.
-Shared asset containers and the core DLL are unchanged. Firm/Natural walking
-and Iris Out visual acceptance are pending after relaunch.
+Shared asset containers and the core DLL are unchanged. After relaunch, the user
+answers "Motion looks right now" for Firm/Natural chest and glute motion while
+walking and playing Iris Out. A read-only probe of the new game process verifies
+all seven restored angle/travel limits in the active Peony rig. The receipt is
+`peony-v2-motion-package1/live-accepted.json`. Keep this as the accepted Peony
+motion baseline. The other Eve variants and broader lifecycle/performance
+regression remain open.
 The user subsequently reopened the unchanged build and reports
 "so far now its fine" about lighting. Keep the accepted materials and resume
 the remaining Peony checks; retain the earlier observations for later polish if

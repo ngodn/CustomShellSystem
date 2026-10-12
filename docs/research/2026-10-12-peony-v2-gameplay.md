@@ -23,7 +23,8 @@ or camera input was sent.
 | Iris Out face/eyes, movement or attack interruption, current-form doubles and their outfit/glow | User answered "All work"; the other form remains unverified |
 | Appearance under bright light, shadow and backlighting | User now says "so far now its fine" on the unchanged build; accepted for now, earlier observations retained |
 | Profiles and restoration | Portable upgrade checks and user save/change/reload check pass for colors, visible pieces and glow |
-| Continuous secondary motion, interruptions, resets and frame cost | New excessive-jiggle report despite Firm/Natural; investigation required |
+| Peony chest/glute motion on Firm and Natural, walking and Iris Out | User answered "Motion looks right now" after the tighter limit trial; active rig limits verified |
+| Other Eve variants, continuous motion across lifecycle resets and frame cost | Full regression and matched performance checks remain open |
 
 The captured log also contains a Genessa form request followed about 15.7 seconds
 later by `Genessa form switch cancelled or timed out`. This is a separate
@@ -461,3 +462,17 @@ the earlier awaiting-installation state, not the pending gameplay acceptance.
 The user has been asked to compare Firm and Natural on Peony while walking and
 playing Iris Out after reopening. The shared Eve body rig also affects the
 existing Eve variants; their runtime motion regression remains open.
+
+The user now answers **"Motion looks right now"** to that requested Peony check.
+This accepts the excessive-jiggle correction for the tested Firm/Natural walking
+and Iris Out behavior. A subsequent read-only capture from game process 2694933
+finds the Peony rig's angle limits at 6/6/10/10/3/3/5 degrees (within cooked
+rounding) and travel limits at 1.5/1.5/1/1/0.5/0.5/0.5 cm. Public motion inputs
+match the active rig. No settings or gameplay controls were changed for the
+capture. `peony-v2-motion-package1/live-accepted.json` retains the user's answer,
+scope and actual rig state.
+
+Use this package and `peony-v2-body-limits1` authored/cooked rig as the accepted
+Peony motion baseline. The earlier broad-limit source is retained for comparison
+and reproduction, not as the accepted successor. This acceptance does not cover
+the other Eve variants, every lifecycle transition or frame-time cost.

@@ -5,7 +5,9 @@ Updated 2026-10-12. The goal is active. See [implementation status](../developme
 Latest status takes precedence over the historical trial entries below: Peony
 V2 fit, flowing trim, facial playback, current-form doubles and customization
 restoration have user acceptance. The tighter body-motion package is installed
-with verified hashes and rollback; native motion acceptance is pending. See the
+with verified hashes and rollback. The user accepts Peony's Firm/Natural motion
+while walking and playing Iris Out; live rig readback confirms the new limits.
+Other Eve variants and broader regression remain open. See the
 [active goal](../development/three-outfit-rig-physics-goal.md) for exact scope.
 The queued [sunlight noise investigation](2026-10-12-sunlight-noise.md) has the
 reporter's image and a read-only settings capture, with no diagnosed cause or
