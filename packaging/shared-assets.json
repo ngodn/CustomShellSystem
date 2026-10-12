@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0-beta.12",
+  "container": "CSS_SharedAssets_P",
+  "required_for": "peony_shared_animations_facial_playback_and_customized_genessa_doubles",
+  "files": {
+    "CSS_SharedAssets_P.utoc": "b71dcf1a66047ca6035c9b41074aa31fa0a3f2930821a663fba749a37ee677aa",
+    "CSS_SharedAssets_P.ucas": "aecee797b0a8ed983494087c78b18267dfa7b8e30f96e9c57bf1e33de675e64d",
+    "CSS_SharedAssets_P.pak": "3fc3af368e1c01517b8e43792d3761f9b2d3e7cda333c2482d603583ff1028fc"
+  },
+  "source_candidate": "peony-v2-motion-package1",
+  "asset_containers_identical_to_accepted": true
+}

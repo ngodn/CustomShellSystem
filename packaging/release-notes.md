@@ -1,3 +1,22 @@
+### CSS 1.0.0-beta.12
+
+#### Added
+
+- Support Peony's expanded customization, texture palettes and flowing trim.
+- Support shared animations and facial playback for compatible outfits.
+
+#### Fixed
+
+- Preserve current body-motion settings when a performance restores normal animation.
+- Support Peony's outfit-local face mesh and customized double materials.
+
+#### Upgrading
+
+Install the matching unified CSS Shared Assets package. Replace the older
+CSS_SharedAssets_P folder and remove superseded CSS_AstralSharedAssets_P and
+CSS_LocomotionSharedAssets_P folders if present. Keep settings and profiles.
+Install Eve v1.5.0 separately for Peony.
+
 ### CSS 1.0.0-beta.11
 
 ### Added

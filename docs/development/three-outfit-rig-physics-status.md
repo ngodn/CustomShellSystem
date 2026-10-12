@@ -1,5 +1,12 @@
 # Three-outfit implementation status
 
+**Current delivery, October 12:** the user deferred Slipstream and requested a
+public Nexus release of the accepted Peony V2. Peony's corrected motion was
+accepted after the tighter body-limit installation. Package Eve v1.5.0 with
+CSS beta.12 and matching unified shared assets. Older pending or rejected
+Peony trial descriptions below are historical; they are not new release gates.
+Keep the wider regression limits explicit and the remaining outfit backlog open.
+
 Updated 2026-10-12. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
 **October 12 acceptance threshold:** defer minor clipping that is hard to notice

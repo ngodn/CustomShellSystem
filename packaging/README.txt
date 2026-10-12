@@ -7,8 +7,10 @@ Installation
 3. Extract the CustomShellSystem folder into:
    MortalShell2/Binaries/Win64/ue4ss/Mods/
 4. Install CSS outfit packages separately under MortalShell2/Content/Paks/~mods/.
-   For customized Genessa doubles, also install the separate CSS Astral Shared
-   Assets download for this CSS version into that ~mods folder.
+   Install the matching CSS Shared Assets download there for Peony, shared
+   animations, facial playback and customized Genessa doubles.
+   Replace CSS_SharedAssets_P and remove the superseded CSS_AstralSharedAssets_P
+   and CSS_LocomotionSharedAssets_P folders if present. Keep one shared pack.
 5. Launch the game, enter the game world, open Inventory, and select CSS.
 
 This archive contains the wardrobe runtime only. It does not include UE4SS,
@@ -49,8 +51,8 @@ Genessa Form switches once after closing the menu, then the game controls later
 death/revival/travel transitions. It is not a permanent form lock.
 NPC/enemy compatibility is partial and may have visual or animation issues.
 Unsupported appearances or missing shared assets retain the original double.
-Keep the older CSS_SharedAssets_P Eve package if installed. The new package is
-CSS_AstralSharedAssets_P and does not replace it. Existing outfit ZIPs stay valid.
+The matching CSS_SharedAssets_P download combines the shared support. Do not
+leave the older separate Astral or Locomotion shared packs installed beside it.
 Full cloth physics stays enabled. Fresh cloth-heavy doubles can briefly hitch;
 cached Faithful doubles reuse their cloth. Further optimization is planned.
 
