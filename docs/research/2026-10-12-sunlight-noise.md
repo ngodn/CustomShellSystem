@@ -468,3 +468,39 @@ concurrent CVar value.
 No default-on rendering correction follows from these comparisons. Keep full
 resolution as a diagnostic observation, not a required user setting; keep the
 sharper-sun option classified as a potential default-off visual workaround.
+
+### October 13: installed MISC source-angle option
+
+Development core `eb558e626f2979a7c64e50992dd3254bd632fd2e7e661889d19e9a3023f3d3a6`
+adds MISC > Lighting > Sunlight shadows. Default (game) does not query or mutate
+lighting while nothing is owned. Reduced noise (sharper shadows) uses the
+phase-8 trial's 0.5357-degree angle on visible, shadow-casting directional
+components of non-menu BP_SpartaLighting actors in the current player's world.
+It does not modify CVars, renderer presets, materials or cooked assets.
+
+Original values are retained by weak object identity. Disable, pawn change and
+core unload restore owned values. Different later game/mod writes relinquish
+ownership until reselect; expired targets are discarded. Failed restoration
+retains its original for retry and prevents successful core teardown.
+
+`tests/sunlight_tests.cpp` passes default inactivity, save compatibility,
+restoration, repeated ticks, expired targets, pawn changes, concurrent writers,
+failed restoration retry, inactive/menu exclusion and incompatible setter tests.
+The Windows C++23 development build passes. Controlled stationary reload checks
+the loader acknowledgement and actual DLL mapping, restores Iris Out, and
+preserves existing saved settings (allowing the new default field).
+
+`work/three-outfit-rig-physics/sunlight-misc1/validation.json` records actual
+native-bridge readback 4 to 0.535700023 to 4, one owned light, no runtime errors,
+and persistence of both choices. The process/player remain unchanged.
+
+The user reported no visible effect after installation. The immediate capture
+`user-not-working.jpg` still shows mottling with live mode Default, which the
+validation restored. The option was then enabled and intentionally left enabled
+for the user. `user-reduced-enabled.jpg` shows cleaner distinct shadow regions
+and one owned light with no error. Poses differ; this is not a matched-frame
+measurement or user acceptance. User asked which choice reproduces phase-8:
+it is Reduced noise (sharper shadows), at the bottom of MISC under Lighting.
+
+UI interaction, continuous-motion flicker, cross-map behavior and cost remain
+unverified release gates. Default-on engine-fix claims are still unsupported.

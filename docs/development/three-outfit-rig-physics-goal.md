@@ -1,5 +1,20 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, sunlight MISC trial installed:** the development core
+`eb558e626f2979a7c64e50992dd3254bd632fd2e7e661889d19e9a3023f3d3a6`
+adds MISC > Lighting > Sunlight shadows with Default (game) and Reduced noise
+(sharper shadows). New installations retain game lighting. The optional mode
+uses the same 0.5357-degree source angle as the retained phase-8 trial, with no
+CVar writes. Live readback and saved-state checks pass: 4 to 0.5357 to 4 degrees.
+Portable ownership/restoration tests and the Windows development build pass.
+The controlled core reload preserves outfit/customization and restores Iris Out.
+Receipt: `work/three-outfit-rig-physics/sunlight-misc1/`.
+After the user reported no effect, the live setting read Default, which the
+validation had restored. Reduced noise was then enabled and left enabled for
+the user; the follow-up screenshot shows cleaner, sharper shadow regions.
+Do not mark the reported rendering bug fixed or user-accepted. UI click-through,
+cross-map behavior, continuous motion and performance remain release checks.
+
 Prepared 2026-10-08. **Status: active, baseline and migration audit in progress.** See [implementation status](three-outfit-rig-physics-status.md) for current evidence, completed work and remaining checks.
 
 **Release correction, October 12:** the user reaffirmed the agreed stable

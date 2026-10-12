@@ -7,6 +7,7 @@
 #include "player_recovery.hpp"
 #include "performance_request.hpp"
 #include "startup.hpp"
+#include "sunlight_shadows.hpp"
 #include <windows.h>
 #include <atomic>
 #include <chrono>
@@ -30,6 +31,9 @@ struct Core {
     uint64_t original_shells_retry_after=0;
     State state;
     Appearance appearance;
+    SunlightShadows sunlight;
+    std::string sunlight_error;
+    Json sunlight_query(const Json& query) { return engine_bridge.request(current_engine,appearance,query); }
     AstralDoubles astral;
     std::string astral_error;
     struct GenessaFormRequest {
@@ -818,6 +822,12 @@ struct Core {
             if(choice!=(mode=="css")) { choice=mode=="css";dirty=true; }
             ui_refresh=true;
         }
+        else if(action=="sunlight_shadows") {
+            const auto mode=command.at("mode").get<std::string>();
+            if(mode!="default" && mode!="reduced") throw std::runtime_error("Unknown sunlight shadow mode");
+            sunlight.restore([&](const Json& q){return sunlight_query(q);});
+            state.sunlight_shadows=mode; dirty=true; ui_refresh=true;
+        }
         else if (action == "misc_mode" || action == "misc_reset") {
             static const char* modes[]={"default","hidden","in_use","shown"};   // shown: item rows only
             auto valid_category=[](const std::string& c){ if(css::misc_item_rule_key(c)) return true; for(const auto* k:css::misc_categories()) if(c==k) return true; return false; };
@@ -1039,6 +1049,14 @@ struct Core {
             }
         }
         auto now = GetTickCount64();
+        try {
+            sunlight.tick(state.enabled && state.sunlight_shadows=="reduced",now,
+                [&](const Json& q){return sunlight_query(q);});
+            sunlight_error.clear();
+        } catch(const std::exception& error) {
+            if(sunlight_error!=error.what()) host.log((std::string("Sunlight shadows: ")+error.what()).c_str());
+            sunlight_error=error.what();
+        }
 #ifdef CSS_INVENTORY_DEV
         sample_motion(now);
 #endif
@@ -1470,6 +1488,9 @@ struct Core {
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
         status["worn_items"]=appearance.worn_item_count();
         status["misc"]=appearance.misc_diagnostics();
+        status["sunlight_shadows"]=sunlight.diagnostics();
+        status["sunlight_shadows"]["mode"]=state.sunlight_shadows;
+        status["sunlight_shadows"]["error"]=sunlight_error;
         status["socket_fit"]=appearance.fit_diagnostics();
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
@@ -1580,6 +1601,7 @@ bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
         core.pending_performance.clear();
+        core.sunlight.restore([&](const css::Json& q){return core.sunlight_query(q);});
         if(!core.astral.clear()) throw std::runtime_error("Genessa double visuals could not be released");
         core.inventory.detach();
         core.appearance.performance.interrupt("CSS stopped");

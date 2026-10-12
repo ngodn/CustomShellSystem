@@ -33,7 +33,7 @@ historical rehearsal and is not the stable release tag.
 | CW belt physics and janky skirt | Queued after Eve, not completed | Author belt response, diagnose skirt motion, verify contact/recovery/cost |
 | CW dev/Development display qualifiers | Requested cleanup, final stable metadata not delivered | Audit names/descriptions/archive filenames; retain IDs and asset paths |
 | More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children | Live recovery/facial behavior above 128 and repeated-switch leak/lifetime checks |
-| Vistani moving sunlight reflection noise | CW and original-Genessa model controls show speckling; directional virtual-shadow softening implicated; sampling/dither controls leave noise | Validate correction and cost before MISC delivery; preserve CVar values and priority; default-on only for verified correction without material regression |
+| Vistani moving sunlight reflection noise | Default-off MISC source-angle workaround installed; live 4 to 0.5357 to 4 restoration and persistence pass; sharper shadows visible; user acceptance pending | Verify UI interaction, maps, continuous motion and cost before public delivery; no CVar mutation; do not describe workaround as a proven engine correction |
 | Genessa Stray to Faithful after another save | Reported, not reproduced or diagnosed | Save/world/player-state investigation and valid-transition regression |
 | Naylshotte hidden Tarstone effect | Reported with Barrage/Emberseed, not diagnosed | Identify effect owner and correct hiding/restoration without changing infusion |
 | Trebuchaxe hovering axe | Reported, not diagnosed | Identify object and test visibility/Tarstone transitions |

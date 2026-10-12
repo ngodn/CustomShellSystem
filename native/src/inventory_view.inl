@@ -1210,7 +1210,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const auto shell_items=appearance.misc_shell_items();
         const int position_row=4+int(shell_items.size());
         const bool has_doubles=astral_shell(appearance.shell);
-        row_=std::clamp(row_,0,position_row+(has_doubles?3:0));
+        const int sunlight_row=position_row+(has_doubles?4:1);
+        row_=std::clamp(row_,0,sunlight_row);
         auto mode_word=[&](const MiscRule& rule) {
             if(rule.mode=="hidden") row_look.value="Hidden";
             else if(rule.mode=="in_use") row_look.value="When in use";
@@ -1251,6 +1252,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const Json switch_form{{"action","genessa_form"},{"mode",stray?"faithful":"stray"}};
             row(position_row+3,"Genessa Form",switch_form,switch_form,switch_form);
         }
+        section("Lighting");
+        const bool reduced_sun=state.sunlight_shadows=="reduced";
+        const Json sunlight_toggle{{"action","sunlight_shadows"},{"mode",reduced_sun?"default":"reduced"}};
+        row_look.value=reduced_sun?"Reduced noise":"Default (game)";
+        row(sunlight_row,"Sunlight shadows",sunlight_toggle,sunlight_toggle,sunlight_toggle);
         if(row_<position_row) {
             const bool category_row=row_<4;
             const std::string key=category_row?defs[row_].key:"item:"+shell_items[size_t(row_-4)].key;
@@ -1276,6 +1282,16 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 {"default","Default (game)",{{"action","keep_default_attachments"},{"value",true}}},
             },state.keep_default_attachments?"default":"auto");
             direction_hint(true,"Choose position");
+        } else if(row_==sunlight_row) {
+            detail("Sunlight shadows",reduced_sun?"Reduced noise":"Default (game)",
+                "Reduced noise sharpens sunlight shadows across the scene. It can reduce moving shadow speckles, "
+                "but changes the game's shadow softness. Default restores lighting owned by this option. "
+                "Later lighting changes from the game or another mod take priority; reselect to apply again.");
+            choice_rows({
+                {"default","Default (game)",{{"action","sunlight_shadows"},{"mode","default"}}},
+                {"reduced","Reduced noise (sharper shadows)",{{"action","sunlight_shadows"},{"mode","reduced"}}},
+            },state.sunlight_shadows);
+            direction_hint(true,"Choose sunlight shadows");
         } else if(row_==position_row+3) {
             const bool stray=appearance.shell=="CharacterId.Player.Darkform.CorruptedGenessa";
             detail("Genessa Form",stray?"Current: Stray":"Current: Faithful",

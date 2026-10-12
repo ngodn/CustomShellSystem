@@ -768,6 +768,7 @@ State State::parse(const Json& j) {
     result.last_living_shell = j.value("last_living_shell", std::string{});
     if(!result.last_living_shell.starts_with("CharacterId.Player.Shell.") || result.last_living_shell.size()>128) result.last_living_shell.clear();
     result.keep_default_attachments = j.value("keep_default_attachments", false);
+    if(j.value("sunlight_shadows",Json{})=="reduced") result.sunlight_shadows="reduced";
     // Jog and sprint stay normal, so a state written by the 0.3.3 preview comes
     // back with the game's own run rather than the unmatched borrowed one.
     result.selections = parse_selections(j.at("selections"));
@@ -833,6 +834,7 @@ Json State::json() const {
             {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y}, {"walk_animation", walk_animation},
             {"harbinger_mirror", harbinger_mirror}, {"last_living_shell", last_living_shell},
             {"keep_default_attachments", keep_default_attachments},
+            {"sunlight_shadows", sunlight_shadows},
             {"darkform_mirror_cleaned", darkform_mirror_cleaned},
             {"animation_choices",animation_choices.json()},
             {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_custom",remembered},
