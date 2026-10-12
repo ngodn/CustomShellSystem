@@ -7,10 +7,14 @@ were restored after the stationary reload. Local `tools/css.py` builds now
 explicitly enable developer diagnostics; release builds explicitly disable them.
 See `work/three-outfit-rig-physics/css-development-20261013/result.json`.
 
-**October 13 lighting update:** the user now also reports intermittent broken
-shadows resembling Vistani's sunlight report locally. The earlier third-party-only
-status is superseded. Keep this high priority after the active CW foot work;
-no matching local capture, rendering cause or validated workaround exists yet.
+**October 13 lighting update:** the user screenshot and passive CW captures now
+reproduce the blocky artifact. A temporary directional SMRT ray-count change
+from 4 to 0 clears it into hard foliage shadows; restoring 4 restores the noise.
+Reflection/contact-shadow/cache disabling did not clear it. All six temporary
+comparisons restored settings; one adaptive-ray test had camera movement and
+is not a matched quality comparison. This narrows the path, not the underlying
+cause or an acceptable shipping workaround. See the
+[sunlight record](../research/2026-10-12-sunlight-noise.md).
 
 **October 13 CW capture:** 14 valid gameplay poses and native foot controls
 captured through the already enabled CSSX bridge, with saved state unchanged.

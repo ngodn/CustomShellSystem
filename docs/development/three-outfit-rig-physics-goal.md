@@ -53,7 +53,10 @@ this is diagnostic evidence, not an accepted foot repair. See CW's
 initially reported the blocky sunlight symptom only in Vistani's report.
 On October 13 the user also reports intermittent broken shadows on this setup,
 resembling that report. Keep the high-priority investigation queued after the
-active CW foot work; local visual capture and cause remain unverified.
+active CW foot work. The subsequent user screenshot and live CW comparison
+reproduce it: directional virtual-shadow softening is implicated by a restored
+4-to-0-to-4 ray-count test. Cause and acceptable workaround remain under
+investigation; all temporary renderer settings were restored.
 Slipstream's private continuous-cloth isolation is recorded in
 [constraint results](../research/2026-10-12-slipstream-constraint-isolation.md).
 Its normal configuration still fails the stretch screen. Disabling backstops
@@ -229,8 +232,11 @@ This does not replace the remaining native appearance and gameplay checks.
 ### High priority after Eve: moving sunlight reflection noise
 
 October 13 update: the user has also seen intermittent broken shadows resembling
-this report locally. This replaces the earlier third-party-only status. The
-affected outfit, rendering pass and reproducible trigger are not yet established.
+this report locally and supplied a clear CW screenshot. The local baseline and
+six temporary renderer comparisons are retained in the sunlight evidence record.
+Directional virtual-shadow softening is implicated; global reflections/contact
+shadow/cache toggles did not clear the pattern. All original values were restored.
+The successful diagnostic produces harder shadows and is not a completed fix.
 
 Investigate the report from Vistani (Nexus, 2026-10-12 01:54): reflections look
 like static outdoors in direct sunlight while moving, but look normal indoors

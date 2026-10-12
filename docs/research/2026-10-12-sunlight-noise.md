@@ -1,12 +1,11 @@
 # Moving sunlight noise: evidence and capture
 
-Status: high priority, now also reported intermittently by the user on this
-setup. On October 13 the user said they sometimes see broken shadows resembling
-Vistani's report. This supersedes their October 12 answer, "Only in Vistani's
-report so far". The local occurrence has not yet been captured or matched to a
-specific rendering pass. No renderer setting or material has been changed for
-this report. A reproducible visual comparison is still needed before proposing
-a MISC workaround. Continue the active CW foot investigation first.
+Status: high priority, locally reproduced and narrowed to directional virtual
+shadow softening on October 13. The user supplied a clear CW screenshot, and
+agent captures reproduce it. This supersedes the earlier third-party-only and
+uncaptured-local statuses. Temporary rendering comparisons are restored; no
+material or persistent configuration change has been made. A release workaround
+still needs visual, performance and broader outfit coverage.
 
 The user supplied Vistani's report of noise outdoors in direct sunlight during
 movement, following installation of more CSS outfits and Shared Assets. The
@@ -85,3 +84,56 @@ appearance, then package combinations if evidence warrants it. Restore each
 temporary change and measure performance and visual costs before considering a
 user-facing toggle. No speculative denoiser override is part of the prepared
 Peony motion trial.
+
+## October 13 local reproduction and isolation
+
+The user's `/home/eins0fx/Pictures/screenshot-2026-10-13_00-12-14.png` matches
+the supplied chat image. Its preserved copy is `user-local-CW-20261013.png`;
+the adjacent JSON receipt includes the source hash and subsequent runtime status.
+Blocky bright/dark patches cover CW's arms, thighs and clothing. Two passive
+Steam captures also show the symptom, without camera or gameplay input.
+Runtime identifies `eins0fx.commanderwhite/original`, `SK_Facial1`, Faithful
+Genessa and the newly loaded pawn. This establishes a local occurrence on CW,
+not an issue confined to Peony. It does not establish a common cause on every
+outfit or prove the upstream game alone is responsible.
+
+`settings-local-report-20261013.json` reads the same 20 renderer values as the
+October 12 baseline, twice. Settings, customization, player and process are
+unchanged across those reads. The user image and console reads are not atomic.
+
+`tools/diagnostics/capture_render_isolation.py` records baseline, one temporary
+change, and restored screenshots, with reflected signature checks, CVar
+readback, camera/actor samples and restoration in `finally`. Each case ran
+through the same live CSSX bridge. No input, camera, appearance, material or
+animation change was sent. Iris Out continued, so animation phase differs.
+
+| Evidence folder | Single temporary change | Inspected result |
+| --- | --- | --- |
+| `reflections-off1` | `r.Lumen.Reflections.Allow`: 1 to 0 | Blocky noise remains |
+| `contact-off1` | `r.ContactShadows`: 1 to 0 | Blocky noise remains |
+| `virtual-off1` | `r.Shadow.Virtual.Enable`: 1 to 0 | Pattern clears; returns after restoring 1 |
+| `cache-off1` | `r.Shadow.Virtual.Cache`: 1 to 0 | Blocky noise remains |
+| `adaptive-off1` | `r.Shadow.Virtual.SMRT.AdaptiveRayCount`: 1 to 0 | Noise remains, but camera changed, so not a matched comparison |
+| `directional-hard1` | `r.Shadow.Virtual.SMRT.RayCountDirectional`: 4 to 0 | Noise clears into sharp foliage shadows; restores to noise at 4 |
+
+All six cases finish with their original values restored and the same
+customization, player and process. Camera/FOV and actor-position samples match
+through five cases (roundoff below 3e-11 in the reflections case). The adaptive
+case has camera movement and must not support a comparative quality claim.
+The tool now also offers a local-light case, which has **not** been run.
+
+The decisive directional case preserves virtual shadows and eliminates the
+stochastic soft-shadow pattern, exposing sharp leaf-shaped shadows on skin,
+clothing and ground. This narrows the responsible path, rather than establishing
+why its sampling/temporal reconstruction is failing. The retained UE 5.6.1
+`VirtualShadowMapArray.cpp` documents zero SMRT ray count as disabling that
+tracing path. Epic's [virtual shadow documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/virtual-shadow-maps-in-unreal-engine?application_version=5.6)
+describes the soft-shadow sampling and noise tradeoff.
+
+Do not ship `r.Shadow.Virtual.Enable=0` as the fix. The narrower directional
+zero-ray result also changes softness visibly and is diagnostic evidence, not
+an accepted default. Next compare native and custom appearances in the same
+reproduction and distinguish sampling quality from temporal/velocity behavior.
+Evaluate a narrower workaround's quality, cost and exact restoration before
+adding a MISC option. The unrelated sidearm investigation retains its discovery
+of the current Naylshotte owner in `sidearm-visibility1/discovery.json`.
