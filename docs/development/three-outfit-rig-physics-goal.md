@@ -13,9 +13,12 @@ The combined V2 package now passes native catalog and asset-reference checks.
 CSS also accepts explicitly declared facial meshes anywhere within the
 author/project namespace, so outfit-local meshes do not require a `Faces`
 folder. Source-revision and runtime mesh/rig checks remain. The private candidate
-is `work/three-outfit-rig-physics/peony-v2-package2`; it is not installed.
-Finish the six V2 material parents' doubles/astral support before installation,
-then validate the new outfit, controls, flowing trim and gameplay in game.
+was `work/three-outfit-rig-physics/peony-v2-package2`. Its successor,
+`peony-v2-package3`, adds the six verified V2 ghost material parents and is now
+installed with the matching core. Installation hashes and rollback are recorded
+in `deployment.json`. Validate the new outfit's native fit, controls, flowing
+trim, facial playback, doubles and gameplay. User visual acceptance is pending;
+the full goal remains active.
 
 ### Workspace recovery, 2026-10-12
 

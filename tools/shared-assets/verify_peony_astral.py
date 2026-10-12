@@ -7,12 +7,14 @@ from pathlib import Path
 import unreal
 
 stage = Path(os.environ['CSS_PEONY_ASTRAL_STAGE']).resolve(strict=True)
-assert stage.name in ('peony-astral1', 'peony-astral2')
+v2 = stage == Path('/mnt/eins0fxE/CSS-Development/peony-v2-astral1')
+assert v2 or stage.name in ('peony-astral1', 'peony-astral2')
 assert Path(unreal.Paths.project_dir()).resolve() == stage / 'editor'
 output = stage / 'reloaded.json'
 assert not output.exists()
 manifest = json.loads((stage / 'authored.json').read_text())
-assert len(manifest['materials']) == len(manifest['variants']) == 4
+expected_count = 6 if v2 else 4
+assert len(manifest['materials']) == len(manifest['variants']) == expected_count
 edit = unreal.MaterialEditingLibrary
 registry = unreal.AssetRegistryHelpers.get_asset_registry()
 registry.search_all_assets(True)
@@ -37,6 +39,7 @@ for spec in manifest['materials']:
     assert isinstance(material, unreal.Material)
     assert material.get_editor_property('blend_mode') == unreal.BlendMode.BLEND_TRANSLUCENT
     assert material.get_editor_property('shading_model') == unreal.MaterialShadingModel.MSM_UNLIT
+    assert not material.get_editor_property('output_translucent_velocity')
     for prop in ('used_with_skeletal_mesh', 'used_with_morph_targets', 'used_with_clothing'):
         assert material.get_editor_property(prop)
     scalars = {str(n): edit.get_material_default_scalar_parameter_value(material, n)
@@ -84,6 +87,14 @@ for spec in manifest['variants']:
     path = stage / 'editor/Content' / (package.removeprefix('/Game/') + '.uasset')
     inputs[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
 
-output.write_text(json.dumps(dict(passed=True, materials=rows, variants=4, inputs=inputs,
+output.write_text(json.dumps(dict(passed=True, materials=rows, variants=expected_count, inputs=inputs,
     scope='Fresh-process editor parameter, texture, dependency and culling verification. '
           'Not compiled-shader, rendered-appearance or runtime acceptance.'), indent=2) + '\n')
+if v2:
+    for package, expected in manifest['packages'].items():
+        path = stage / 'editor/Content' / (package.removeprefix('/Game/') + '.uasset')
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == expected, package
+    (stage / 'verified.json').write_text(json.dumps(dict(passed=True,
+        authored_sha256=hashlib.sha256((stage / 'authored.json').read_bytes()).hexdigest(),
+        reloaded_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
+        packages=len(manifest['packages'])), indent=2) + '\n')

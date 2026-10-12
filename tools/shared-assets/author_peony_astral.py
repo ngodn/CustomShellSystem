@@ -11,7 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'diagnostics/geness
 from native_ghost_graph import build_native_ghost, node, wire
 
 stage = Path(os.environ['CSS_PEONY_ASTRAL_STAGE']).resolve(strict=True)
-assert stage.name in ('peony-astral1', 'peony-astral2')
+v2 = stage == Path('/mnt/eins0fxE/CSS-Development/peony-v2-astral1')
+assert v2 or stage.name in ('peony-astral1', 'peony-astral2')
 assert Path(unreal.Paths.project_dir()).resolve() == stage / 'editor'
 assert unreal.SystemLibrary.get_engine_version().startswith('5.6.1-')
 output = stage / 'authored.json'
@@ -50,8 +51,13 @@ def save(asset):
 
 
 try:
-    for name in ('M_PeonyFabric', 'M_PeonyHardware', 'M_PeonyPanels', 'M_PeonyStockings'):
-        source_path = '/Game/CSS/eins0fx/EveSB/Peony/Materials/' + name
+    source_paths = (['/Game/CSS/eins0fx/EveSB/PeonyV2/Materials/M_PeonyV2_' + name
+                     for name in ('Fabric', 'FlowFabric', 'FlowPanel', 'FlowStrap', 'SourceGlow')]
+                    + ['/Game/CSS/eins0fx/EveSB/PeonyV2/Stockings/Materials/M_PeonyV2_Stocking']
+                    if v2 else ['/Game/CSS/eins0fx/EveSB/Peony/Materials/' + name
+                                for name in ('M_PeonyFabric', 'M_PeonyHardware', 'M_PeonyPanels', 'M_PeonyStockings')])
+    for source_path in source_paths:
+        name = source_path.rsplit('/', 1)[1]
         source = unreal.load_asset(source_path)
         assert isinstance(source, unreal.Material)
         assert not unreal.CSSMaterialLibrary.get_expressions(source)
@@ -110,6 +116,8 @@ try:
         assert edit.connect_material_property(alpha, '', mp.MP_OPACITY)
         material.set_editor_properties(dict(shading_model=unreal.MaterialShadingModel.MSM_UNLIT,
             blend_mode=unreal.BlendMode.BLEND_TRANSLUCENT, dither_opacity_mask=False,
+            # Ghost depth fade reads scene depth, incompatible with velocity/depth output.
+            output_translucent_velocity=False,
             translucency_pass=unreal.MaterialTranslucencyPass.MTP_BEFORE_DOF,
             automatically_set_usage_in_editor=False, used_with_skeletal_mesh=True,
             used_with_morph_targets=True, used_with_clothing=True))
@@ -181,6 +189,16 @@ finally:
     for path, checksum in protected.items():
         assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == checksum, path
 
-output.write_text(json.dumps(dict(materials=rows, variants=variants, protected=protected,
+document = dict(materials=rows, variants=variants, protected=protected,
     additional_shared_assets=[neutral['Masks'].get_path_name()],
-    scope='Editor ghost companion graphs only. Compilation, rendering, Windows cook and runtime catalog integration remain unverified.'), indent=2) + '\n')
+    scope='Editor ghost companion graphs only. Compilation, rendering, Windows cook and runtime catalog integration remain unverified.')
+if v2:
+    packages = {row['material'].split('.')[0] for row in rows}
+    packages.update(row['variant'].split('.')[0] for row in variants)
+    packages.update(texture.get_path_name().split('.')[0] for texture in neutral.values())
+    packages.add('/Game/CSS/eins0fx/Shared/Materials/MF_TrimFlow')
+    document.update(packages={package: hashlib.sha256((stage / 'editor/Content' /
+        (package.removeprefix('/Game/') + '.uasset')).read_bytes()).hexdigest()
+        for package in sorted(packages)}, sources=protected,
+        engine=unreal.SystemLibrary.get_engine_version())
+output.write_text(json.dumps(document, indent=2) + '\n')

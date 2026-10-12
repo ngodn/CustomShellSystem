@@ -4,8 +4,10 @@ Updated 2026-10-12. The goal is active. See [implementation status](../developme
 
 The [combined V2 package](2026-10-12-peony-v2-package.md) now passes native
 catalog, dependency and payload readback checks. CSS's facial namespace check
-supports outfit-local replacement meshes. `peony-v2-package2` is private and
-uninstalled; complete V2 doubles/astral material support before installation.
+supports outfit-local replacement meshes. The
+[V2 astral successor](2026-10-12-peony-v2-astral.md), `peony-v2-package3`, is now
+installed with matching core and rollback. User visual acceptance and runtime
+regression remain pending.
 
 **Current priority:** the user retired the Better Cleavage source and selected
 the [Peony/Hydrangea V2 CNS and recolor sources](2026-10-11-peony-v2-source.md).

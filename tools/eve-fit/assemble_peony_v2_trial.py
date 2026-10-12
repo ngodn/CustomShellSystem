@@ -24,6 +24,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('output', 'dotnet', 'mappings', 'character', 'options', 'customize', 'catalog-test'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--astral', type=Path, help='Verified V2 ghost workspace, Windows cook/readback 2')
     args = parser.parse_args()
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=False)
@@ -122,17 +123,41 @@ def main():
                 raise ValueError('Installed accepted payload differs: ' + relative)
             stage(name, relative, baseline / 'stage' / relative, expected)
 
-    for cook in (args.character, args.options):
-        proof = read(cook / 'cooked-readback1/verified.json')
-        protect(cook / 'cooked-readback1/verified.json')
+    cooks = [(args.character, '1'), (args.options, '1')]
+    if args.astral:
+        runtime_proof = read(args.astral / 'runtime-check1/receipt.json')
+        protect(args.astral / 'runtime-check1/receipt.json')
+        if runtime_proof['materials'] != 82 or runtime_proof['parents'] != 6:
+            raise ValueError('Incomplete V2 astral validation')
+        for path, expected in runtime_proof['sha256'].items():
+            protect(Path(path), expected)
+        cooks.append((args.astral, '2'))
+    retained_shared = {'CSS/eins0fx/Shared/Materials/MF_TrimFlow'} | {
+        'CSS/eins0fx/Shared/Astral/Materials/T_Neutral' + name for name in ('Color', 'Normal', 'Linear')}
+    for cook, revision in cooks:
+        proof_path = cook / ('cooked-readback' + revision) / 'verified.json'
+        proof = read(proof_path)
+        protect(proof_path)
         if not proof['passed']:
             raise ValueError('Unverified V2 cook')
-        source_root = cook / 'windows-cook1/project/Saved/Cooked/Windows/CSSShared/Content'
+        source_root = cook / ('windows-cook' + revision) / 'project/Saved/Cooked/Windows/CSSShared/Content'
         for relative, expected in proof['payloads'].items():
             local = Path(relative).relative_to('MortalShell2/Content')
+            package = str(local.with_suffix(''))
+            if cook == args.astral and package in retained_shared:
+                protect(source_root / local, expected)
+                if relative not in payloads[NAMES[1]]:
+                    raise ValueError('Missing retained shared dependency: ' + package)
+                if local.suffix != '.uasset' and payloads[NAMES[1]][relative] != expected:
+                    raise ValueError('Shared dependency export/bulk differs: ' + relative)
+                continue
             if str(local).startswith('CSS/eins0fx/EveSB/PeonyV2/'):
                 name = NAMES[0]
             elif str(local.with_suffix('')) == 'CSS/eins0fx/Shared/Materials/MF_TrimFlow':
+                name = NAMES[1]
+            elif cook == args.astral and (package.startswith('CSS/eins0fx/Shared/Astral/Materials/M_PeonyV2_')
+                    or package.startswith('CSS/eins0fx/Shared/Astral/Materials/MI_M_PeonyV2_')
+                    or package == 'CSS/eins0fx/Shared/Astral/Materials/T_NeutralMasks'):
                 name = NAMES[1]
             else:
                 raise ValueError('Cook attempted to replace an accepted dependency: ' + str(local))
@@ -231,7 +256,9 @@ def main():
     write(out / 'assembly.json', dict(passed=True, installed=False, inputs=protected, asset_owners=owners,
         payloads=payloads, files={str(p.relative_to(out / 'pack')): sha(p)
                                 for p in (out / 'pack').rglob('*') if p.is_file()},
-        pending=['V2 astral material compatibility', 'Native visual and garment fit acceptance',
+        astral_verified=bool(args.astral),
+        pending=([] if args.astral else ['V2 astral material compatibility']) +
+                ['Native visual and garment fit acceptance',
                  'Controls, profiles, cloth, gameplay and performance regression']))
     print('Peony V2 Eve/shared package verified; not installed')
 

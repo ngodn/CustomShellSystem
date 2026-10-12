@@ -8,6 +8,20 @@ zero geometric intersections are not required. Prioritize obvious fit and
 deformation defects, usable customization, materials and the remaining release
 work. This does not accept the rejected installed Peony garment.
 
+**Peony V2 installed trial, October 12:** `peony-v2-package3` is installed with
+core `94bb1d08bc7d6dd4181e21d4605a3b87cfb7f6046c90f35194f0e090291c423b`.
+Eve owns 435 packages; shared assets now own 283. All 82 source materials match
+the six new ghost definitions, including compiled flow/pattern/stocking controls
+on SM5 and SM6. The corrected cook has zero errors and warnings. Six alternate
+culling instances also pass shader, parent and culling checks. Native catalog,
+imports and payload roundtrip pass. The first cook's inherited stocking velocity
+output conflicted with depth fade; it is disabled only on the ghost companion,
+and the regular stocking material is unchanged. Rollback is
+`/run/media/eins0fx/theark/CSS/peony-before-v2`. The user has been asked to check
+the obvious garment fit in CSS and while walking. Appearance, customization,
+facial playback, doubles, garment motion and full regression remain unaccepted.
+See [astral and installation evidence](../research/2026-10-12-peony-v2-astral.md).
+
 **Peony V2 combined package, October 12:** `peony-v2-package2` assembles the
 435-package Eve outfit container and 270-package shared container. The original
 six Eve variants and their cooked payloads remain unchanged. Peony uses its V2

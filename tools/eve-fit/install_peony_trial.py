@@ -30,6 +30,7 @@ def main():
     for name in ('trial', 'backup', 'core'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--install', action='store_true')
+    parser.add_argument('--v2', action='store_true')
     args = parser.parse_args()
     trial, core = args.trial.resolve(strict=True), args.core.resolve(strict=True)
     proof = json.loads((trial / 'assembly.json').read_text())
@@ -38,15 +39,23 @@ def main():
     if (trial / 'deployment.json').exists():
         raise FileExistsError(trial / 'deployment.json')
     check({str(trial / 'pack' / p): digest for p, digest in proof['files'].items()})
-    if len(proof['asset_owners']) != 642:
+    if len(proof['asset_owners']) != (718 if args.v2 else 642):
         raise ValueError('Unexpected Eve/shared asset inventory')
+    if args.v2 and not proof.get('astral_verified'):
+        raise ValueError('V2 astral integration is incomplete')
     for name in NAMES:
         if {p.name for p in (trial / 'pack' / name).iterdir()} != {name + s for s in ('.pak', '.utoc', '.ucas')}:
             raise ValueError('Unexpected candidate package contents')
-    runtime_inputs = json.loads((CSS / 'work/three-outfit-rig-physics/peony-astral-runtime1/source-identities.json').read_text())
-    check({str(CSS / name): digest for name, digest in runtime_inputs.items() if name.startswith('native/')})
-    # Pins the core whose successful build is recorded with the material audit.
-    expected_core = '6d751cbdab2cab4c9bfd9ea4420c3cbca1706fbf9c44a66a27f8b2e8299a3dd0'
+    if args.v2:
+        core_proof = json.loads((trial / 'core-verification.json').read_text())
+        if not core_proof['passed'] or core_proof['windows_build']['returncode'] != 0:
+            raise ValueError('V2 core build is unverified')
+        check({str(CSS / name): digest for name, digest in core_proof['source_hashes'].items()})
+        expected_core = core_proof['core_sha256']
+    else:
+        runtime_inputs = json.loads((CSS / 'work/three-outfit-rig-physics/peony-astral-runtime1/source-identities.json').read_text())
+        check({str(CSS / name): digest for name, digest in runtime_inputs.items() if name.startswith('native/')})
+        expected_core = '6d751cbdab2cab4c9bfd9ea4420c3cbca1706fbf9c44a66a27f8b2e8299a3dd0'
     if sha(core) != expected_core:
         raise ValueError('Core differs from the checked Peony build')
     ue4ss = GAME / 'Binaries/Win64/ue4ss'
