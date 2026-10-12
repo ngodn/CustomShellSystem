@@ -139,6 +139,14 @@ reversible MISC bug-fix setting with a name and description matching its actual
 scope. Check its visual and performance costs and restoration when disabled.
 Do not ship an unproven global rendering change as a confirmed fix.
 
+While the prepared motion package waits for game closure, the
+[sunlight evidence record](../research/2026-10-12-sunlight-noise.md) now retains
+the reporter's original image and a read-only live baseline of 20 console
+settings. Repeated values, player/process and customization are unchanged.
+The image shows blocky exposed-skin shading; its rendering cause and relation
+to Peony's earlier lighting concern remain unverified. No render setting was
+changed and no MISC workaround has been selected.
+
 ### Workspace recovery, 2026-10-12
 
 `CustomShellSystem/work` is now a symlink to
