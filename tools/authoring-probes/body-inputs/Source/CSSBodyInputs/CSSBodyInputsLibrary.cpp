@@ -9,8 +9,87 @@
 #include "Modules/ModuleManager.h"
 #include "Serialization/JsonSerializer.h"
 #include "UObject/UnrealType.h"
+#include "UObject/StrongObjectPtr.h"
 
 IMPLEMENT_MODULE(FDefaultModuleImpl, CSSBodyInputs)
+
+FString UCSSBodyInputsLibrary::CompareRestoreSnapshot(USkeletalMesh* Mesh, UAnimBlueprint* Blueprint)
+{
+    if (!IsRunningCommandlet() || !IsInGameThread() || !Mesh || !Blueprint ||
+        !Blueprint->GeneratedClass || Mesh->GetSkeleton()!=Blueprint->TargetSkeleton ||
+        !Mesh->GetPathName().StartsWith(TEXT("/Game/CSS/"))) return TEXT("ERROR: invalid isolated fixture");
+    FMemMark Mark(FMemStack::Get());
+    FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));
+    auto* Component=NewObject<USkeletalMeshComponent>();
+    Component->SetSkeletalMesh(Mesh);
+    Component->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    Component->SetOverridePostProcessAnimBP(TSubclassOf<UAnimInstance>(Blueprint->GeneratedClass.Get()),true);
+    Scene.AddComponent(Component,FTransform::Identity);
+    Component->InitAnim(true);
+    TStrongObjectPtr<UAnimInstance> Source(Component->GetPostProcessInstance());
+    if (!Source) return TEXT("ERROR: missing source");
+    const TCHAR* Names[]={TEXT("CSSBodyRegionFrequencies"),TEXT("CSSBodyRegionDampingRatios"),TEXT("CSSBodyRegionMotionAmounts")};
+    TArray<FArrayProperty*> Fields;
+    for (const TCHAR* Name : Names)
+    {
+        auto* Field=FindFProperty<FArrayProperty>(Source->GetClass(),Name);
+        if (!Field || !CastField<FFloatProperty>(Field->Inner)) return TEXT("ERROR: missing regional float array");
+        FScriptArrayHelper Values(Field,Field->ContainerPtrToValuePtr<void>(Source.Get()));
+        if (Values.Num()!=7) return TEXT("ERROR: wrong regional array length");
+        Fields.Add(Field);
+    }
+    auto Capture=[&](UAnimInstance* Instance) {
+        TArray<float> Result;
+        for (auto* Field : Fields)
+        {
+            FScriptArrayHelper Values(Field,Field->ContainerPtrToValuePtr<void>(Instance));
+            for (int32 I=0;I<7;++I) Result.Add(CastFieldChecked<FFloatProperty>(Field->Inner)->GetPropertyValue(Values.GetRawPtr(I)));
+        }
+        return Result;
+    };
+    auto Apply=[&](UAnimInstance* Instance,const TArray<float>& Values) {
+        int32 Index=0;
+        for (auto* Field : Fields)
+        {
+            FScriptArrayHelper Array(Field,Field->ContainerPtrToValuePtr<void>(Instance));
+            for (int32 I=0;I<7;++I) CastFieldChecked<FFloatProperty>(Field->Inner)->SetPropertyValue(Array.GetRawPtr(I),Values[Index++]);
+        }
+    };
+    TArray<float> Bouncy={1.7f,1.7f,1.65f,1.65f,1.85f,1.85f,1.75f,
+        .28f,.28f,.3f,.3f,.38f,.38f,.32f,1.8f,1.8f,1.8f,1.8f,1.35f,1.35f,1.5f};
+    TArray<float> Firm={2.6f,2.6f,2.5f,2.5f,2.8f,2.8f,2.7f,
+        .65f,.65f,.65f,.65f,.72f,.72f,.68f,.6f,.6f,.65f,.65f,.4f,.4f,.45f};
+    TArray<TSharedPtr<FJsonValue>> Cases;
+    for (bool Refresh : {false,true})
+    {
+        Apply(Source.Get(),Bouncy);
+        TArray<float> Physics=Capture(Source.Get());
+        Component->SetOverridePostProcessAnimBP(TSubclassOf<UAnimInstance>(Blueprint->GeneratedClass.Get()),true);
+        TStrongObjectPtr<UAnimInstance> Active(Component->GetPostProcessInstance());
+        if (!Active || Active.Get()==Source.Get()) return TEXT("ERROR: source instance was not replaced");
+        Apply(Active.Get(),Firm);
+        Apply(Source.Get(),Capture(Active.Get()));
+        if (Refresh) Physics=Capture(Active.Get());
+        Component->SetOverridePostProcessAnimBP(TSubclassOf<UAnimInstance>(Blueprint->GeneratedClass.Get()),true);
+        auto* Restored=Component->GetPostProcessInstance();
+        if (!Restored || Restored==Active.Get()) return TEXT("ERROR: active instance was not replaced");
+        Apply(Restored,Capture(Source.Get()));
+        Apply(Restored,Physics);
+        auto Row=MakeShared<FJsonObject>();
+        Row->SetBoolField(TEXT("refresh_before_replace"),Refresh);
+        Row->SetBoolField(TEXT("firm_preserved"),Capture(Restored)==Firm);
+        Row->SetNumberField(TEXT("chest_frequency"),Capture(Restored)[0]);
+        Row->SetNumberField(TEXT("chest_damping"),Capture(Restored)[7]);
+        Row->SetNumberField(TEXT("chest_motion"),Capture(Restored)[14]);
+        Cases.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    auto Result=MakeShared<FJsonObject>();
+    Result->SetArrayField(TEXT("cases"),Cases);
+    Result->SetStringField(TEXT("scope"),TEXT("Native instance replacement and regional snapshot ordering; not CSS core or a performance adapter"));
+    FString Json;
+    FJsonSerializer::Serialize(Result,TJsonWriterFactory<>::Create(&Json));
+    return Json;
+}
 
 FString UCSSBodyInputsLibrary::Evaluate(USkeletalMesh* Mesh, UAnimBlueprint* Blueprint, int32 Fps)
 {

@@ -31,6 +31,12 @@ The subsequent saved Peony AnimBP fixture passes 3,366 frames across both mesh
 variants at 30/60/120 fps, preserving one-time preset inputs with one update per
 frame and expected solver steps/resets. Runtime application, playback lifecycle
 and actual motion inputs remain unverified. See the gameplay record.
+An isolated native replacement check now reproduces an entry-time physics
+snapshot overwriting a newer Firm preset on both Peony meshes. The core candidate
+refreshes settings at playback restoration and preserves the original snapshot
+for failed initialization. The production Windows build and four existing
+portable test suites pass. This is not yet a reproduction of the user's gameplay
+sequence, and the candidate is not installed. Evidence is `peony-v2-body-restore1`.
 The user subsequently reopened the unchanged build and reports
 "so far now its fine" about lighting. Keep the accepted materials and resume
 the remaining Peony checks; retain the earlier observations for later polish if

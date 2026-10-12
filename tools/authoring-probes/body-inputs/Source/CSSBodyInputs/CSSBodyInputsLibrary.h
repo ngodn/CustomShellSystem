@@ -10,4 +10,7 @@ class UCSSBodyInputsLibrary : public UBlueprintFunctionLibrary
 public:
     UFUNCTION(BlueprintCallable, Category="CSS|Diagnostics")
     static FString Evaluate(class USkeletalMesh* Mesh, class UAnimBlueprint* Blueprint, int32 Fps);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Diagnostics")
+    static FString CompareRestoreSnapshot(class USkeletalMesh* Mesh, class UAnimBlueprint* Blueprint);
 };

@@ -51,12 +51,39 @@ Natural and disabled regional inputs, with one graph update per frame and the
 expected 120 Hz solver steps. This narrows the remaining investigation to CSS
 application/lifecycle, playback adapters and actual motion inputs. It does not
 reproduce or accept the reported gameplay defect.
+An isolated native replacement check now demonstrates an old physics snapshot
+overwriting a newer Firm preset during restoration. The core candidate refreshes
+that snapshot after playback deferral checks, while keeping original settings
+for failed initialization. It builds and passes existing portable regression
+tests, but is not installed. Reproduce the actual playback/UI sequence before
+calling this the cause of the user's full motion defect. See `peony-v2-body-restore1`.
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible
 settings survive, retired palettes fall back to Original, and obsolete controls
 are dropped. Evidence is in `work/three-outfit-rig-physics/peony-v2-upgrade1`.
 This does not replace the remaining native appearance and gameplay checks.
+
+### High priority after Eve: moving sunlight reflection noise
+
+Investigate the report from Vistani (Nexus, 2026-10-12 01:54): reflections look
+like static outdoors in direct sunlight while moving, but look normal indoors
+or outside direct sunlight. [Reported image](https://i.imgur.com/XiAVEbK.png).
+The reporter tried disabling hardware ray tracing, updating drivers and a
+ray-reconstruction/denoiser mod. They recall a fresh install looking normal,
+with the issue appearing after adding more CSS skins (including Eve and goth)
+and Shared Assets. These are reported observations, not verified causes or
+proof of a game denoiser defect. The user suspects a connection to Eve's earlier
+harsh lighting/reflection appearance; investigate that connection separately.
+
+Queue this behind the current Peony body-motion repair. Compare the base game,
+individual outfits and Shared Assets under matched lighting, movement and
+render settings. Establish whether the problem is material-specific, package-
+dependent or part of the game's reflection/temporal rendering before changing
+anything. If a reliable workaround is demonstrated, offer an optional,
+reversible MISC bug-fix setting with a name and description matching its actual
+scope. Check its visual and performance costs and restoration when disabled.
+Do not ship an unproven global rendering change as a confirmed fix.
 
 ### Workspace recovery, 2026-10-12
 

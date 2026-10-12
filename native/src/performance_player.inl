@@ -251,10 +251,11 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
     auto physics=astral_source_physics(component);
     if(const auto why=performance_gameplay_block(pawn);!why.empty()) throw std::runtime_error(why);
     auto layers=std::make_shared<mesh_animation_layers::Snapshot>(component);
+    auto controls_initialized=std::make_shared<bool>(false);
     WeakObject held_target(target);
     // Register rollback before the reflected setter can replace the instance.
     retained_.take(roots);
-    restore_layer_=[held_pawn,held_component,held_mesh,held_source,held_override,held_target,physics,
+    restore_layer_=[held_pawn,held_component,held_mesh,held_source,held_override,held_target,physics,controls_initialized,
                     restored_post=WeakObject{},restored_layers=std::shared_ptr<mesh_animation_layers::Snapshot>{}](UObject* changing_mesh) mutable {
         auto* body=held_component.Get();auto* expected=held_target.Get();
         if(!body || !expected) return true;
@@ -287,7 +288,14 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
             // Weapons and customization can change while restoration is deferred.
             restored_layers=std::make_shared<mesh_animation_layers::Snapshot>(body);
             auto* current=read<UObject*>(body,L"PostProcessAnimInstance");
-            if(same_mesh) performance_controls(current,source,true);
+            if(same_mesh && *controls_initialized) {
+                // Restore the latest settings, including edits made while cleanup waited.
+                // The entry snapshot would overwrite the current CSS controls below.
+                auto latest=astral_source_physics(body);
+                latest.animation_class=source->GetClassPrivate();
+                performance_controls(current,source,true);
+                physics=std::move(latest);
+            }
             performance_override(body,held_override.Get());
             restored_post=read<UObject*>(body,L"PostProcessAnimInstance");
             if(!same_mesh) {
@@ -314,6 +322,7 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
         performance_controls(source,post,true);
         physics.animation_class=target;
         astral_visual_physics(component,physics);
+        *controls_initialized=true;
     } catch(...) {
         release();throw;
     }

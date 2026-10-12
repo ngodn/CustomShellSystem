@@ -29,3 +29,12 @@ python3 tools/diagnostics/verify_body_graph_inputs.py work/three-outfit-rig-phys
 This exercises the saved normal/facial Peony meshes and secondary AnimBP.
 It does not execute CSS core, the performance adapter, native gameplay animation
 or a user's movement. A passing result does not accept the reported jiggle bug.
+
+`check_body_restore_snapshot.py` exercises a second boundary on both meshes:
+native instance replacement followed by regional-setting restoration. It starts
+with Bouncy, changes to Firm on the replacement instance, and compares applying
+an entry-time snapshot with refreshing that snapshot before replacement. The
+first loses Firm; the second preserves all three seven-region arrays. Evidence
+and commands are in `work/three-outfit-rig-physics/peony-v2-body-restore1`.
+This isolates restoration ordering. It does not execute CSS core, a playback
+adapter, or the game's UI event ordering.

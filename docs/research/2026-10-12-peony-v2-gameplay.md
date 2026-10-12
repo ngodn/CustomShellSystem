@@ -255,3 +255,35 @@ performance is active or cleanup is deferred, the older snapshot could overwrite
 new settings. This is a code-review lead, not a demonstrated explanation of the
 user's Firm result. Normal UI actions interrupt automatic playback before
 applying controls, so event ordering must be reproduced before calling it causal.
+
+### Playback restoration correction
+
+`peony-v2-body-restore1` now reproduces the stale-snapshot overwrite in an
+isolated UE 5.6.1 instance-replacement fixture on both Peony meshes. Bouncy is
+captured at entry, Firm is assigned to the replacement instance, and restoration
+copies the current settings before applying the physics snapshot. The old
+ordering ends at chest frequency 1.7, damping 0.28 and motion 1.8. Refreshing the
+snapshot before replacement preserves Firm's 2.6, 0.65 and 0.6, as well as every
+value in the three seven-region arrays. Editor exit is 0 with zero errors and
+two preference-write warnings; source hashes are unchanged.
+
+The CSS candidate now captures the latest physics settings immediately before
+restoring the original graph, after the montage/gameplay deferral checks. It
+uses the original graph's class for restoration and retains the existing
+different-mesh path. Failed adapter initialization keeps the original snapshot
+and controls: the current settings become eligible for preservation only after
+the adapter has received its initial CSS controls and physics successfully.
+
+This fixture uses actual Unreal instance replacement, but not CSS core or its
+performance adapter. It establishes the overwrite mechanism, not the user's UI
+event sequence or the cause of all reported jiggle. In particular, normal UI
+changes can interrupt playback before applying the selected preset. The exact
+runtime sequence and actual motion inputs remain to be checked. No new core,
+rig or outfit has been installed. Preserve the accepted Peony package.
+
+The production-configured Windows C++23 core builds successfully. Existing
+performance-session, control, Astral-adapter and Astral-lifecycle tests pass
+(4/4). These portable tests do not execute the reflected restoration callback.
+The native fixture's `verified.json` records its result and the candidate build
+hash; its commands, source pins and logs are retained. Rebuildable compiler
+intermediates and editor DDC were removed under the cleanup record.
