@@ -138,3 +138,34 @@ and after. Use the longer loader acknowledgement window and finish its actual
 activation before restoring idle or starting another request. If the fault
 returns, correlate the new dump's class/instance addresses with that process's
 inventory before changing asset loading or class ownership.
+
+## Three controlled reload cycles
+
+The `cw-class-reload1`, `cw-class-reload2` and `cw-class-reload3` recipes reload
+the identical 93e582f77c7c7d51 core under distinct filenames. Each first selects
+the original idle, checks a stationary pawn with no montage, captures bound
+classes, and waits up to 120 seconds for the exact loader acknowledgement.
+Only confirmed activation permits restoration of Iris Out. Actual module maps,
+process identity and complete CSS saved state pass every cycle.
+
+Each cycle then performs two rescans with twelve class-inventory checkpoints,
+followed by one reflected `KismetSystemLibrary.CollectGarbage` request and five
+more checkpoints. UE 5.6.1 KismetSystemLibrary.cpp:2852 calls
+`GEngine->ForceGarbageCollection(true)`; UnrealEngine.cpp:1837 schedules the
+purge through the engine. The live zero-argument signature is checked first.
+The object inventory counts decrease from 323758 to 323320, 323772 to 323324,
+and 323705 to 323322 respectively after those requests. All 51 post-reload
+checkpoints retain available idle/walk/jog/sprint choices, and all observed
+bound game animation classes retain sparse data. Final CW facial playback and
+sunlight ownership pass. Exact CSS state restores unchanged in the same Linux
+process 3113971. Aggregate receipt: `cw-class-reload3/aggregate.json`.
+
+The earlier crash and availability failures did not reproduce in this bounded
+sequence. This is not a crash repair. Keep the release gate open, keep the
+instrumented reproducer, and return to the primary foot-rig investigation.
+Current DLL: `css_core-development-93e582f77c7c7d51-class-reload3.dll`.
+
+Epic's [UE-215992](https://issues.unrealengine.com/issue/UE-215992) also describes
+null sparse class data, but explicitly scopes it to editor/PIE child blueprints
+and excludes standalone builds. It does not establish the cause of this shipped
+game crash or justify applying its editor workaround here.

@@ -97,3 +97,27 @@ The second reload also passes 60 samples spanning 125.8 seconds in
 `cw-asset-evidence2/soak-verification.json`. The trial remains inactive throughout
 the final check. This observation does not establish that a garbage collection
 occurred, or that the intermittent reload defect is fixed.
+
+## Next reference-pose trial: establish full restoration first
+
+The repeated-reload and collection checks are retained in the
+[crash investigation](2026-10-13-cw-reload-crash.md). Their bounded passing result
+allows a return to this investigation without declaring the crash fixed.
+
+The pinned engine's `USkeletalMeshComponent::SetAnimInstanceClass` at
+SkeletalMeshComponent.cpp:3492 does nothing when given the same class while
+already in Blueprint mode. A null class clears the current instance, and
+assigning the original class then calls `InitAnim(true)`.
+`ClearAnimScriptInstance` at line 1374 drains existing parallel evaluation,
+ends notify states, uninitializes the current instance and clears linked/cached
+animation data. That supplies a candidate way to recreate the native ControlRig
+and restore its private initial-transform state after a reference-pose trial.
+
+Validate that lifecycle first, with the original idle, zero movement, no montage,
+a retained original class, and both setter calls in one game-thread callback.
+Read back a different AnimInstance and ControlRig identity, the same native class
+and expected reference-pose flag, then verify selected locomotion, facial replay,
+settings and rig initial transforms. These are proposed validation steps, not
+completed tests. Do not merely flip `bSetRefPoseFromSkeleton` back to false and
+claim restoration; ControlRig.h:665 declares the extra reset flag as a protected,
+non-reflected field, and ControlRig.cpp:3564/3601 changes it during pose import.

@@ -11,7 +11,11 @@ defect is investigated. See the
 [crash record](../research/2026-10-13-cw-reload-crash.md). A later cold-installed
 class inventory adds component/class addresses for dump correlation. Two
 instrumented rescans also pass, including CW facial playback and all four
-selected animation choices. This is diagnostic coverage, not a crash fix.
+selected animation choices. This is diagnostic coverage, not a crash fix. Three controlled DLL reloads,
+six subsequent rescans and three explicit collection requests also pass 51
+class/availability checkpoints with exact CSS state restoration. The crash gate
+remains open; resume the native foot-rig reference comparison from its recorded
+restoration plan.
 Cold loading also exposed a sunlight ownership bug: Reduced noise stayed selected
 but the game restored its four-degree preset, leaving the workaround inactive.
 The recovery candidate recognizes a settled game preset and preserves unrelated
