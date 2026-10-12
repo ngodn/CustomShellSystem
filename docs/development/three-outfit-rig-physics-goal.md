@@ -57,6 +57,16 @@ active CW foot work. The subsequent user screenshot and live CW comparison
 reproduce it: directional virtual-shadow softening is implicated by a restored
 4-to-0-to-4 ray-count test. Cause and acceptable workaround remain under
 investigation; all temporary renderer settings were restored.
+The user requests delivery as a MISC bug-fix control and asks whether it should
+default on. Target a verified correction that can default on and be disabled.
+A provisional workaround that hardens shadows or raises rendering cost should
+default off and disclose that tradeoff. This default policy is the current
+recommendation, not proof that an acceptable correction exists yet. The new
+original-Genessa comparison also shows speckled shadows with CSS still active;
+native-model evidence does not establish a completely unmodded-game cause.
+Preserve the user's video settings and restore console-variable priority as well
+as values when disabling a future fix. See the sunlight record for the additional
+sampling controls and restoration limitation of console-based diagnostics.
 Slipstream's private continuous-cloth isolation is recorded in
 [constraint results](../research/2026-10-12-slipstream-constraint-isolation.md).
 Its normal configuration still fails the stretch screen. Disabling backstops

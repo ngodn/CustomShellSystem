@@ -16,6 +16,15 @@ is not a matched quality comparison. This narrows the path, not the underlying
 cause or an acceptable shipping workaround. See the
 [sunlight record](../research/2026-10-12-sunlight-noise.md).
 
+The subsequent original-Genessa control also shows speckled shadows; CSS remains
+active, so this is not an unmodded-game control. CW and byte-identical saved state
+are restored. Increasing rays/samples and disabling directional dither or slope
+extrapolation each leave visible noise. The game's extracted High-shadow preset
+matches the baseline 4 rays and 2 samples. MISC delivery is requested, with
+default-on appropriate for a verified correction and default-off recommended for
+a compromise workaround. Numerical CVar restoration passes; console priority is
+not restored by the diagnostic bridge and needs explicit handling in production.
+
 **October 13 CW capture:** 14 valid gameplay poses and native foot controls
 captured through the already enabled CSSX bridge, with saved state unchanged.
 Ten steady-walk samples use `EveLegacy/BS_S1_Walk`; both named foot-correction

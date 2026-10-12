@@ -137,3 +137,114 @@ reproduction and distinguish sampling quality from temporal/velocity behavior.
 Evaluate a narrower workaround's quality, cost and exact restoration before
 adding a MISC option. The unrelated sidearm investigation retains its discovery
 of the current Naylshotte owner in `sidearm-visibility1/discovery.json`.
+
+## Original-model and sampling controls, October 13
+
+The user requests a MISC bug-fix toggle, preferably default on, and explicitly
+authorizes research into the game and engine implementation. The current
+recommendation is default on only for a verified correction without a material
+quality or performance regression. A quality/performance compromise remains
+an optional, default-off workaround. No new renderer setting is shipped yet.
+
+`capture_native_shadow_control.py` temporarily selects the discovered
+`css.original_shells/genessa` catalog entry. Its available Iris Out override
+is used for a moving-pose comparison. The original Genessa model also shows
+speckling across its face and light-colored areas. Camera/FOV and pawn position
+are unchanged. CW, its customization, idle override, process and byte-identical
+saved state are restored. Receipt: `sunlight-noise1/native-genessa1/result.json`.
+CSS and the installed packages remain active, and animation phases are not
+matched. This rules against an issue unique to CW's materials, not every possible
+CSS interaction. Do not call this a clean unmodded-game reproduction.
+
+Additional one-variable controls use the same baseline/trial/restored screenshot
+loop. Images were inspected; these are visual observations, not GPU benchmarks:
+
+| Evidence folder | Change | Observation |
+| --- | --- | --- |
+| `directional-rays16` | Directional ray count 4 to 16 | Visible noise remains |
+| `directional-samples8` | Samples per directional ray 2 to 8 | Fine grain remains; no accepted fix |
+| `directional-dither0` | Directional texel dither 2 to 0 | Blocky noise remains |
+| `directional-extrapolation0` | Directional slope extrapolation 5 to 0 | Noise remains |
+
+All four cases restore their numerical settings and preserve player, process and
+customization. All four preserve sampled camera/FOV and pawn position (roundoff
+below 6e-11 in the extrapolation case).
+The native-model control also preserves those samples. None controls animation
+phase or proves a frame-time improvement.
+
+The retained game export
+`extensions/perf-tuner/work/research/ini/MortalShell2/Config/DefaultScalability.ini`
+sets directional rays to 4 and samples per ray to 2 in `ShadowQuality@2`, matching
+the live baseline. This is evidence that these particular low sampling values
+come from the game's quality preset, not proof that they explain the entire
+failure. The export is a retained extraction, not a new full game-dump audit.
+
+Epic's [virtual-shadow documentation](https://dev.epicgames.com/documentation/unreal-engine/virtual-shadow-maps-in-unreal-engine)
+describes SMRT sampling noise and the quality/cost tradeoff. The current web page
+is UE 5.8; exact local semantics were checked against the retained UE 5.6.1
+`VirtualShadowMapArray.cpp` and `VirtualShadowMapProjectionDirectional.ush`.
+The shader uses per-frame random ray directions, texel offsets and finite depth
+samples. Disabling texel dither alone did not resolve the captured symptom.
+
+### Restoration limitation and implementation requirement
+
+The diagnostic console bridge restores numerical values, not their original
+console-variable priority. UE 5.6.1 `ConsoleManager.cpp` sets commands with
+`ECVF_SetByConsole`, above scalability. Thus changing the game's quality menu
+may not update a touched variable again until restart, even with its old number
+restored. No persistent Engine.ini change was made. Existing claims of restored
+settings mean read-back values only, not restored priority metadata.
+
+A shipping MISC option must handle ownership and priority explicitly, respect
+later user/other-mod changes, and restore on disable and unload. A restart is
+needed before treating ordinary video-menu scalability changes as a fresh
+control after these diagnostic commands. Next isolate temporal reconstruction
+and native animation behavior rather than shipping the current hard-shadow
+control or a blind sample-count increase.
+
+## Source and dump review
+
+Reviewed the retained UE 5.6.1 source, the extracted game configuration above,
+and `MortalShell2/Binaries/Win64/ue4ss/CXXHeaderDump/Sparta.hpp`, `Engine.hpp`,
+`DLSSBlueprint.hpp` and `DLSSBlueprint_enums.hpp`. The dump exposes types and
+function declarations, not the game's private C++ implementation. Engine source
+is a matching-version reference, not proof that the game has no custom patches.
+
+| Evidence | What can go wrong | Consequence for a fix |
+| --- | --- | --- |
+| `VirtualShadowMapProjectionDirectional.ush`, `TraceDirectional` | Per-frame random rays, depth samples and overlapping occluders can produce unstable soft-shadow estimates | Preserve softness if possible; test the actual moving scene rather than assuming more rays is sufficient |
+| Extracted `DefaultScalability.ini`, `ShadowQuality@2` | Four rays and two depth samples limit sampling; 512 VSM pages also constrain storage | Do not blindly force maximum settings; sampling tests have not cleared the artifact, and more pages need memory/cost evidence |
+| `TemporalAA.cpp`, `GetMainTAAPassConfig` | A third-party temporal upscaler overrides the generic AA method | Detect the active path before applying TSR-only changes |
+| `LightRendering.cpp`, ray-traced versus shadow-map branches | `r.Shadow.Denoiser` selects the ray-traced shadow denoiser, not a universal filter for SMRT | Do not present changing that selector or enabling ray reconstruction as a demonstrated VSM fix |
+| `SkeletalMeshSceneProxy.cpp:136` | Incorrect previous-frame bone data can still defeat temporal reconstruction, even when velocity output is enabled | Inspect actual velocity/reprojection and compare ordinary native motion, not only a boolean or CSS Iris Out |
+| `ConsoleManager.cpp:2988` | Console writes take priority over scalability settings | Restore ownership/priority and respect subsequent user choices when toggling a production fix |
+
+The read-only `temporal-readback-20261013.json` verifies signatures before calling
+the dumped DLSS library. It reports DLSS enabled, DLAA off, ray reconstruction
+off, and DLSS mode 4 (Quality in the dumped enum). The generic AA setting remains
+4 and temporal-upscaler selection 1. `bPerBoneMotionBlur` on the current pawn mesh
+is true; the engine uses this to request velocity, which does not establish
+correct previous-frame transforms. The empty FSR3/4 CVar responses mean unavailable
+through that getter, not confirmed disabled implementations.
+
+The game/live AA quality-2 settings disable TSR flicker analysis and reprojection
+field, but this is not a reason to enable them blindly while DLSS reports active.
+Epic's [temporal-upscaler documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/temporal-upscalers-in-unreal-engine)
+describes motion-vector and reprojection diagnostics shared by these paths.
+
+`renderer-temporal-control1` sets `r.TemporalAA.Upscaler` from 1 to 0 and back to 1.
+UE 5.6.1 describes 0 as forcing the renderer's built-in temporal upscaler. Visible
+noise remains in the trial and restored captures. Camera/FOV/pawn samples,
+customization, player and process match. This control does not identify the final
+per-view TAA/TSR pass with a GPU capture, and does not prove every DLSS interaction
+absent, but bypassing the third-party selector did not clear the local symptom.
+
+Next distinguish motion-history failure from SMRT's scene sampling limitations:
+compare ordinary native idle/motion with CSS playback, inspect velocity and
+reprojection if the shipping build includes those diagnostics, and measure any
+candidate correction at unchanged resolution. Avoid material recolors, global
+shadow removal and unrelated denoiser replacements as substitutes for that test.
+The 20 original renderer values are confirmed unchanged in
+`settings-after-native-sampling-20261013.json`; the later temporal selector also
+restores numerically to 1 in its own receipt. No GPU cost measurement or universal
+fix has been established.

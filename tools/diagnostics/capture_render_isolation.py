@@ -1,4 +1,4 @@
-"""Capture one temporary renderer toggle, then restore it. Python 3.14."""
+"""Capture one temporary renderer setting, then restore it. Python 3.14."""
 import argparse
 from datetime import datetime, timezone
 import json
@@ -17,6 +17,11 @@ CASES = {'reflections': 'r.Lumen.Reflections.Allow',
          'shadow-cache': 'r.Shadow.Virtual.Cache',
          'adaptive-shadow-rays': 'r.Shadow.Virtual.SMRT.AdaptiveRayCount',
          'directional-hard-shadows': 'r.Shadow.Virtual.SMRT.RayCountDirectional',
+         'directional-rays': 'r.Shadow.Virtual.SMRT.RayCountDirectional',
+         'directional-samples': 'r.Shadow.Virtual.SMRT.SamplesPerRayDirectional',
+         'directional-dither': 'r.Shadow.Virtual.SMRT.TexelDitherScaleDirectional',
+         'directional-extrapolation': 'r.Shadow.Virtual.SMRT.ExtrapolateMaxSlopeDirectional',
+         'third-party-upscaler': 'r.TemporalAA.Upscaler',
          'local-hard-shadows': 'r.Shadow.Virtual.SMRT.RayCountLocal'}
 
 
@@ -24,15 +29,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--case', choices=CASES, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--value', type=int, choices=range(65), default=0)
     args = parser.parse_args()
+    if args.value and args.case not in ('directional-rays', 'directional-samples'):
+        parser.error('Nonzero trial values are limited to directional sampling cases')
     if args.output.exists() or len(processes()) != 1:
         raise RuntimeError('Need one running game and a new output directory')
     args.output.mkdir(parents=True)
     shot.OUT = args.output
-    result = dict(case=args.case, variable=CASES[args.case], completed=False,
+    result = dict(case=args.case, variable=CASES[args.case], trial_value=str(args.value), completed=False,
                   restored=False, gameplay_input=False, script_sha256=sha(Path(__file__)),
                   started=datetime.now(timezone.utc).isoformat(), pids=processes(),
-                  limitation='Sequential screenshots during ongoing animation; no animation phase matching or GPU timing.')
+                  limitation='Sequential screenshots during ongoing animation; no animation phase matching or GPU timing. Console writes restore values but retain SetByConsole priority until restart.')
     changed = False
 
     def engine(value):
@@ -90,12 +98,12 @@ def main():
             raise RuntimeError('Player or appearance changed before test')
         atomic(args.output / 'result.json', result)
         changed = True
-        write('0')
-        result['disabled_readback'] = read()
-        if result['disabled_readback'] != '0':
+        write(result['trial_value'])
+        result['trial_readback'] = read()
+        if result['trial_readback'] != result['trial_value']:
             raise RuntimeError('Renderer toggle did not apply')
         time.sleep(2)
-        capture('disabled')
+        capture('trial')
         result['completed'] = True
     except Exception as error:
         result['error'] = str(error)
