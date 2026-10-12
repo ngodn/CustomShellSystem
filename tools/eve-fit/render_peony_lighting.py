@@ -9,7 +9,12 @@ import unreal
 
 stage = Path(os.environ['CSS_LIGHTING_STAGE']).resolve(strict=True)
 assert Path(unreal.Paths.project_dir()).resolve() == stage / 'editor'
-out = stage / 'captures'
+variant = os.environ.get('CSS_LIGHTING_VARIANT', 'baseline')
+assert variant in ('baseline', 'flat_normal', 'cloth')
+run = stage if variant == 'baseline' else stage / variant
+if run != stage:
+    run.mkdir(exist_ok=False)
+out = run / 'captures'
 out.mkdir(exist_ok=False)
 inputs = json.loads((stage / 'inputs.json').read_text())
 sha = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -33,6 +38,7 @@ try:
     assert component.get_editor_property('disable_post_process_blueprint')
     slots = list(mesh.get_editor_property('materials'))
     wrappers, dynamics, parameter_readback = [], [], []
+    modified_parents = {}
     shown = set(range(20, 38))
     for index, slot in enumerate(slots):
         component.show_material_section(index, -1, index in shown, 0)
@@ -48,6 +54,63 @@ try:
             unreal.MaterialInstanceConstantFactoryNew())
         assert wrapper
         edit.set_material_instance_parent(wrapper, source)
+        if variant != 'baseline':
+            parent = source.get_editor_property('parent')
+            assert isinstance(parent, unreal.Material), parent
+            path = parent.get_path_name()
+            if path not in modified_parents:
+                modified = assets.duplicate_asset(parent.get_name() + '_' + variant,
+                    '/Game/CSS/UnholyGenessa/LightingProbe', parent)
+                assert modified
+                normal = unreal.MaterialProperty.MP_NORMAL
+                preserved = {prop: (edit.get_material_property_input_node(modified, prop),
+                    edit.get_material_property_input_node_output_name(modified, prop)) for prop in (
+                    unreal.MaterialProperty.MP_BASE_COLOR, unreal.MaterialProperty.MP_ROUGHNESS,
+                    unreal.MaterialProperty.MP_METALLIC, unreal.MaterialProperty.MP_EMISSIVE_COLOR)}
+                if variant == 'cloth':
+                    preserved[normal] = (edit.get_material_property_input_node(modified, normal),
+                        edit.get_material_property_input_node_output_name(modified, normal))
+                if variant == 'flat_normal' and edit.get_material_property_input_node(modified, normal):
+                    flat = edit.create_material_expression(modified, unreal.MaterialExpressionConstant3Vector)
+                    flat.set_editor_property('constant', unreal.LinearColor(0, 0, 1, 1))
+                    assert edit.connect_material_property(flat, '', normal)
+                    assert edit.get_material_property_input_node(modified, normal) == flat
+                if variant == 'cloth' and parent.get_name() in (
+                        'M_PeonyV2_Fabric', 'M_PeonyV2_FlowFabric', 'M_PeonyV2_FlowPanel'):
+                    modified.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_CLOTH)
+                    mask = edit.create_material_expression(modified, unreal.MaterialExpressionTextureSampleParameter2D)
+                    mask.set_editor_properties(dict(parameter_name='FabricMask',
+                        sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS,
+                        texture=edit.get_material_instance_texture_parameter_value(source, 'FabricMask')))
+                    channel = edit.create_material_expression(modified, unreal.MaterialExpressionVectorParameter)
+                    channel.set_editor_properties(dict(parameter_name='FabricChannel',
+                        default_value=edit.get_material_instance_vector_parameter_value(source, 'FabricChannel')))
+                    dot = edit.create_material_expression(modified, unreal.MaterialExpressionDotProduct)
+                    clamp = edit.create_material_expression(modified, unreal.MaterialExpressionSaturate)
+                    assert edit.connect_material_expressions(mask, 'RGB', dot, 'A')
+                    assert edit.connect_material_expressions(channel, '', dot, 'B')
+                    inputs_names = list(edit.get_material_expression_input_names(clamp))
+                    assert len(inputs_names) == 1
+                    assert edit.connect_material_expressions(dot, '', clamp, inputs_names[0])
+                    assert not unreal.CSSLightingLibrary.connect_cloth_weight(modified, None)
+                    assert not unreal.CSSLightingLibrary.connect_cloth_weight(parent, clamp)
+                    assert unreal.CSSLightingLibrary.connect_cloth_weight(modified, clamp)
+                    color, output_name = preserved[unreal.MaterialProperty.MP_BASE_COLOR]
+                    assert color
+                    assert edit.connect_material_property(color, output_name, unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+                for prop, expected in preserved.items():
+                    assert (edit.get_material_property_input_node(modified, prop),
+                        edit.get_material_property_input_node_output_name(modified, prop)) == expected
+                edit.recompile_material(modified)
+                modified_parents[path] = modified
+            # A direct duplicate retains the palette's parameter overrides when reparented.
+            palette = assets.duplicate_asset('MI_' + variant + '_' + str(index),
+                '/Game/CSS/UnholyGenessa/LightingProbe', source)
+            assert palette
+            edit.set_material_instance_parent(palette, modified_parents[path])
+            edit.update_material_instance(palette)
+            edit.set_material_instance_parent(wrapper, palette)
+            assert edit.get_material_instance_texture_parameter_value(wrapper, 'PatternTexture') == pattern
         edit.update_material_instance(wrapper)
         wrappers.append(wrapper)
         dynamic = component.create_dynamic_material_instance(index, wrapper)
@@ -130,16 +193,17 @@ try:
                     assert (out / name).is_file()
                     rows.append(dict(image=name, sha256=sha(out / name), view=view,
                                      key_lux=key, fill_lux=fill, glow=glow))
-                (stage / 'progress.json').write_text(json.dumps(rows, indent=2) + '\n')
+                (run / 'progress.json').write_text(json.dumps(rows, indent=2) + '\n')
 finally:
     materials.flush_rendering()
     motion.end_preview_world()
     assert all(sha(path) == digest for path, digest in inputs.items())
-(stage / 'result.json').write_text(json.dumps(dict(images=rows, compilation=compilation,
+(run / 'result.json').write_text(json.dumps(dict(images=rows, compilation=compilation,
+    variant=variant, modified_parents=sorted(modified_parents),
     inputs_unchanged=True, manual_exposure_bias=0, bloom=False, automatic_exposure=False,
     ldr_format='RTF_RGBA8_SRGB', hdr_format='RTF_RGBA16F', gray_control_emission=.18,
     parameter_readback=parameter_readback,
-    scope='Existing Peony V2 garment materials, reference pose, Vulkan offscreen. '
+    scope=f'Peony V2 garment material comparison ({variant}), reference pose, Vulkan offscreen. '
           'Body/hair hidden because editor stand-ins do not represent game skin. '
           'No environment, indirect lighting, game exposure or Windows parity claim.'), indent=2) + '\n')
 unreal.log('CSS_PEONY_LIGHTING_CAPTURED')

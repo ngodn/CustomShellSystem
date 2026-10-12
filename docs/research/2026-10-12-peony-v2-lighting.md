@@ -149,3 +149,64 @@ process. No live exposure measurement was obtained. No material, gameplay
 setting or installed package was changed. Do not ask the user to repeat the
 accepted fit/flow tests on this unchanged build. The remaining comparison must
 address shadow and highlight detail together before selecting a material trial.
+
+## Normal-map exclusion and source functions
+
+`native1/flat_normal` repeats the 24-image matrix with the garment parents'
+Normal inputs replaced by tangent-space (0, 0, 1). The parents and palette
+instances are private duplicates; base color, roughness, metallic and emissive
+connections are checked for preservation. The original 172 files remain
+unchanged. Compilation, capture and the gray-control checks pass.
+
+Removing the map changes the fixed corset crop's mean HDR brightness by only
+about -2.8% at the front and -1.2% at the rear. The weak-fill view remains dark
+and loses surface detail. Reject normal removal as a repair. This comparison
+does not validate every tangent under animation, but the map is not responsible
+for the broad weak-fill darkness in this fixture. `flat_normal/comparison.json`
+pins the measurements, recipe and command. No variant was installed.
+
+The inherited source chain was exported separately in `source-parent1`:
+`MI_CH_P_EVE_33_Upper_Black` -> `MI_CH_P_EVE_33_Upper` -> `MA_CH_P_EVE_33`.
+The master's cached function list references `MF_RoyalSilk`, `MF_ClothStandard`
+and `MF_ClothShading`. Direct exports of those functions retain identifiers but
+no expression graphs. `LoadedMaterialResources` is empty in the master export,
+and no explicit shading-model property is emitted. These files establish the
+dependencies, not the original shader equations or its effective shading model.
+Do not infer an exact silk reconstruction from the parameter names alone.
+
+The exporter commands, mapping path, raw JSON and logs are retained. The first
+parent invocation omitted the mappings argument and exited -6; the corrected
+parent, master and function exports exit 0. The 26 generated texture copies were
+removed under the cleanup record after retaining their hashes; the original
+palette exports and source containers are intact.
+
+The next private comparison used UE's Cloth response, masked to the existing
+fabric region, with base color supplying its fuzz color. It is an adaptation
+experiment, not an exact RoyalSilk port. Normal, base color, roughness, metallic
+and trim emission remain the baseline inputs. Three authoring attempts stopped
+before images: the Saturate input is unnamed, and Python cannot read the
+protected ClearCoat input even after resolving its reflected spelling.
+`cloth-attempt1` through `cloth-attempt3` retain those terminal failures.
+
+The private C++20 `CSSLighting` editor module exposes just the missing cloth
+weight connection. Its UE 5.6.1 build succeeds, with BuildId 43139311 matching
+the existing helper modules. The fixture now owns its binary directory, with
+symlinks to the unchanged existing libraries and the new helper. The accepted
+source project's binary directory is untouched. The native run checks rejection
+of a null expression and an expression owned by a different material, then
+reads back the valid connection. Normal and the four original surface/emission
+connections are also checked for preservation.
+
+Attempt 4 exits 0 and passes all 24 image/control checks. The fixed corset crop
+gets approximately 13.5-13.6% brighter at the front and 16.8% at the rear, in
+both strong and weak light. The weak-fill image remains nearly black and the
+strong/weak brightness ratio remains approximately 20. Reject this as a
+standalone repair: it does not recover shadow detail while preserving bright
+detail. `native1/cloth/comparison.json` records the metrics and pins the helper,
+project descriptor, module map, recipe and output hashes. No trial is installed.
+
+The source-map and cloth-response comparisons have now answered their narrow
+questions. Repeating them is not the next step. Obtain a comparison that includes
+the game's environment and exposure, with the same view and appearance, before
+selecting another shader change. The captured empty preview world cannot prove
+the cause of the user's skin and fabric appearance in the actual level.

@@ -28,6 +28,10 @@ The controlled lighting fixture now completes 24 calibrated PNG/HDR captures
 with unchanged source assets and a verified gray control. It narrows the search
 but does not reproduce the game's exposure or establish a fix. The installed
 trial is unchanged; the lighting report remains open.
+Two private material comparisons also completed: removing the normal map and
+adding a fabric-masked Cloth response. Neither restores the weak-light detail,
+so both are rejected as lighting repairs. The next comparison needs the game's
+environment/exposure rather than another repeat of the empty preview fixture.
 See [astral and installation evidence](../research/2026-10-12-peony-v2-astral.md).
 The [gameplay record](../research/2026-10-12-peony-v2-gameplay.md) separates this
 user acceptance from the remaining checks. A cooked secondary-binding audit
