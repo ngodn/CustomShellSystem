@@ -17,6 +17,18 @@ before preparing the coordinated stable release. Preserve the accepted
 flowing trim, facial playback, doubles and corrected motion. Slipstream remains
 explicitly deferred; retain its sources and evidence without further experiments.
 
+**Local developer mode, October 13:** the user reaffirmed that CSS must remain
+in developer mode during this work. `tools/css.py` now explicitly builds with
+`CSS_INVENTORY_DEV=ON`; the public release builder retains its explicit OFF.
+The development core `2028dcd15e7669a8de1ff3bebe6381b9668d7ead58e3427b7b7672ec3783d9f3`
+is installed and live CSS player/mesh probes pass. Controlled stationary reload
+passed loader, process and actual DLL mapping checks. Iris Out was temporarily
+replaced with the original idle, then restored; saved state matches exactly.
+Receipt: `work/three-outfit-rig-physics/css-development-20261013/result.json`.
+Keep local diagnostics enabled in subsequent trial installations and verify the
+chosen bridge before asking the user for a timed capture. This does not extend
+reload safety to active performances or mounted asset packages.
+
 The [public upgrade audit](../research/2026-10-12-peony-public-upgrade.md) now
 checks the final Eve/shared files alone and alongside the released Genessa
 v0.2.0 and CW v0.0.6-dev. All four cooked-import and native-catalog cases pass.
@@ -30,12 +42,18 @@ passes 36 saved-mesh/graph cases across the six original outfits, normal/facial
 meshes and 30/60/120 fps. All 20,196 frames preserve preset inputs, single
 animation updates and the expected solver/reset timing with the accepted tighter
 rig. This is an offline input/update check, not visual motion, cloth, gameplay
-or performance acceptance. The CW walking-foot comparison still needs moving
-poses with native foot-correction/blend values; a read-only capture was requested.
+or performance acceptance. CW's October 13 read-only capture now has 14 valid
+poses with native foot-correction/blend values, including ten steady-walk samples.
+Both named correction inputs stay zero while the shared Eve walk blendspace is
+active. Saved state is unchanged. Continue the pose/blendspace comparison;
+this is diagnostic evidence, not an accepted foot repair. See CW's
+`docs/walking-foot-report.md` and `work/walking-feet-live8/controls-summary.json`.
 
 **October 12 continuation:** Peony motion remains user accepted. The user
-confirms the blocky sunlight symptom is currently only in Vistani's report;
-keep that high-priority investigation queued without speculative renderer changes.
+initially reported the blocky sunlight symptom only in Vistani's report.
+On October 13 the user also reports intermittent broken shadows on this setup,
+resembling that report. Keep the high-priority investigation queued after the
+active CW foot work; local visual capture and cause remain unverified.
 Slipstream's private continuous-cloth isolation is recorded in
 [constraint results](../research/2026-10-12-slipstream-constraint-isolation.md).
 Its normal configuration still fails the stretch screen. Disabling backstops
@@ -209,6 +227,10 @@ are dropped. Evidence is in `work/three-outfit-rig-physics/peony-v2-upgrade1`.
 This does not replace the remaining native appearance and gameplay checks.
 
 ### High priority after Eve: moving sunlight reflection noise
+
+October 13 update: the user has also seen intermittent broken shadows resembling
+this report locally. This replaces the earlier third-party-only status. The
+affected outfit, rendering pass and reproducible trigger are not yet established.
 
 Investigate the report from Vistani (Nexus, 2026-10-12 01:54): reflections look
 like static outdoors in direct sunlight while moving, but look normal indoors

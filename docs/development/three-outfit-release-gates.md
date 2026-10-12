@@ -33,7 +33,7 @@ historical rehearsal and is not the stable release tag.
 | CW belt physics and janky skirt | Queued after Eve, not completed | Author belt response, diagnose skirt motion, verify contact/recovery/cost |
 | CW dev/Development display qualifiers | Requested cleanup, final stable metadata not delivered | Audit names/descriptions/archive filenames; retain IDs and asset paths |
 | More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children | Live recovery/facial behavior above 128 and repeated-switch leak/lifetime checks |
-| Vistani moving sunlight reflection noise | High priority; report image and read-only settings retained; not reproduced locally | Establish cause and validated optional workaround if possible; no invented MISC fix |
+| Vistani moving sunlight reflection noise | High priority; report image/settings retained; user also reports intermittent similar broken shadows locally on October 13, not yet captured | Establish cause and validated optional workaround if possible; no invented MISC fix |
 | Genessa Stray to Faithful after another save | Reported, not reproduced or diagnosed | Save/world/player-state investigation and valid-transition regression |
 | Naylshotte hidden Tarstone effect | Reported with Barrage/Emberseed, not diagnosed | Identify effect owner and correct hiding/restoration without changing infusion |
 | Trebuchaxe hovering axe | Reported, not diagnosed | Identify object and test visibility/Tarstone transitions |
@@ -80,6 +80,8 @@ outfit's actual post-process graph, including Bikini/Knit feet graphs, and both
 normal/facial meshes. See the
 [regression record](../research/2026-10-12-eve-existing-motion-regression.md).
 This is not full visual or cloth acceptance. Continue CW's demonstrated foot
-defect from its retained walking poses and the missing native foot-correction
-comparison, then the other repairs and stable-release gates above. Do not
+defect from the October 13 walking/control capture: ten steady samples use the
+shared Eve walk blendspace with both named foot-correction inputs at zero.
+Compare those poses and the actual blendspace/retarget path, then continue the
+other repairs and stable-release gates above. Do not
 repackage a beta bundle or treat Peony's acceptance as completion of the others.

@@ -1,10 +1,12 @@
 # Moving sunlight noise: evidence and capture
 
-Status: queued, not reproduced on this setup. Peony's body-motion trial is now
-installed and user accepted. On October 12, the user confirms the matching
-blocky sunlight symptom is "Only in Vistani's report so far". No renderer setting
-or material has been changed for this report. A reproducible visual comparison
-is still needed before proposing a MISC workaround.
+Status: high priority, now also reported intermittently by the user on this
+setup. On October 13 the user said they sometimes see broken shadows resembling
+Vistani's report. This supersedes their October 12 answer, "Only in Vistani's
+report so far". The local occurrence has not yet been captured or matched to a
+specific rendering pass. No renderer setting or material has been changed for
+this report. A reproducible visual comparison is still needed before proposing
+a MISC workaround. Continue the active CW foot investigation first.
 
 The user supplied Vistani's report of noise outdoors in direct sunlight during
 movement, following installation of more CSS outfits and Shared Assets. The

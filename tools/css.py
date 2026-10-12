@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Build, install, reload and operate the native CSS mod. Python 3.14."""
+"""Build and operate local CSS development builds. Use css_release.py for releases.
+
+Python 3.14. Local builds explicitly enable developer diagnostics.
+"""
 from __future__ import annotations
 import argparse
 import hashlib
@@ -48,7 +51,8 @@ def processes() -> list[int]:
 
 def build(core_only: bool = False) -> None:
     subprocess.run(['cmake', '-S', str(ROOT / 'native'), '-B', str(ROOT / 'build/windows'), '-G', 'Ninja',
-                    '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_TOOLCHAIN_FILE=' + str(ROOT / 'native/toolchain-clang-cl.cmake')], check=True)
+                    '-DCMAKE_BUILD_TYPE=Release', '-DCSS_INVENTORY_DEV=ON',
+                    '-DCMAKE_TOOLCHAIN_FILE=' + str(ROOT / 'native/toolchain-clang-cl.cmake')], check=True)
     subprocess.run(['cmake', '--build', str(ROOT / 'build/windows'), '-j', '4'] + (['--target', 'css_core'] if core_only else []), check=True)
 
 

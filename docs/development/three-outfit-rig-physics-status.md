@@ -1,5 +1,24 @@
 # Three-outfit implementation status
 
+**Local developer core, October 13:** installed and verified through direct CSS
+player/mesh probes. Core SHA-256 starts `2028dcd15e7669a8`; actual old/new module
+mapping and unchanged process passed. Iris Out and byte-identical saved state
+were restored after the stationary reload. Local `tools/css.py` builds now
+explicitly enable developer diagnostics; release builds explicitly disable them.
+See `work/three-outfit-rig-physics/css-development-20261013/result.json`.
+
+**October 13 lighting update:** the user now also reports intermittent broken
+shadows resembling Vistani's sunlight report locally. The earlier third-party-only
+status is superseded. Keep this high priority after the active CW foot work;
+no matching local capture, rendering cause or validated workaround exists yet.
+
+**October 13 CW capture:** 14 valid gameplay poses and native foot controls
+captured through the already enabled CSSX bridge, with saved state unchanged.
+Ten steady-walk samples use `EveLegacy/BS_S1_Walk`; both named foot-correction
+inputs remain zero. This narrows the comparison but does not establish a cause
+or repair. Evidence: CW `work/walking-feet-live8/controls-summary.json` and
+`docs/walking-foot-report.md`. The capture has finished; no new trial is installed.
+
 **Current release status, October 12:** not ready. The user reaffirmed CSS
 v1.0.0, Eve v1.5.0, Unholy Genessa v0.3.0 and Commander White v0.1.0.
 The Peony-only beta.12 archives are a withdrawn packaging rehearsal, not the
