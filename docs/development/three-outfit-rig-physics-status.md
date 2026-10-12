@@ -19,8 +19,11 @@ output conflicted with depth fade; it is disabled only on the ghost companion,
 and the regular stocking material is unchanged. Rollback is
 `/run/media/eins0fx/theark/CSS/peony-before-v2`. The user has been asked to check
 the obvious garment fit in CSS and while walking, and answered "Fit looks right
-in both." Flowing trim, full customization, facial playback, doubles, the wider
-motion matrix and full regression remain pending.
+in both." They subsequently accepted flowing trim in CSS/world and Iris Out
+face/eyes, interruption and current-form doubles with the outfit/glow. Full
+customization, the other Genessa form, the wider motion matrix and full regression
+remain pending. Their new shadow/bright-light appearance concern is now the
+current Peony correction; see the [lighting investigation](../research/2026-10-12-peony-v2-lighting.md).
 See [astral and installation evidence](../research/2026-10-12-peony-v2-astral.md).
 The [gameplay record](../research/2026-10-12-peony-v2-gameplay.md) separates this
 user acceptance from the remaining checks. A cooked secondary-binding audit

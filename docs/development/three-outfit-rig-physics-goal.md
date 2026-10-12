@@ -19,6 +19,12 @@ installed with the matching core. Installation hashes and rollback are recorded
 in `deployment.json`. Validate the new outfit's native fit, controls, flowing
 trim, facial playback, doubles and gameplay. The user now accepts the obvious
 fit in CSS and while walking in the world: "Fit looks right in both."
+The user also accepts flowing trim in CSS/world ("Works in both") and Iris Out
+face/eyes, interruption and current-form doubles/outfit/glow ("All work").
+Their subsequent lighting report is the current Peony correction: retain
+readable fabric detail in shadow/backlighting and bright light, investigate the
+material response and exposure before choosing a fix, and preserve accepted fit
+and motion. See [lighting investigation](../research/2026-10-12-peony-v2-lighting.md).
 The remaining native behavior and regression checks are open; the full goal
 remains active. See [gameplay evidence](../research/2026-10-12-peony-v2-gameplay.md).
 
@@ -403,7 +409,9 @@ customization system where supported. Keep Peony masks and material instances
 in the Eve mod, with any reusable material function in CSS_SharedAssets_P.
 Validate glow off/on, flow continuity across garment seams, removable parts,
 all supplied Peony palettes, saved profiles and supported astral doubles in preview and
-gameplay. The V2 implementation is now installed; its live flow check is pending.
+gameplay. The V2 implementation is installed; the user accepts flowing trim in
+CSS and the world and its appearance on current-form doubles. The complete
+palette/profile/visibility matrix and other Genessa form remain open.
 October 12 reminder: retain this glowing, flowing trim requirement in the V2
 material rebuild. The minor-clipping deferral does not defer or remove it.
 The V2 implementation adds preserved rest-space flow UVs to all 18 parts and

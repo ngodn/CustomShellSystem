@@ -17,10 +17,11 @@ or camera input was sent.
 | Check | Current evidence |
 | --- | --- |
 | Obvious fit/distortion in CSS and world walking | User accepted |
-| Flowing trim on/off, speed and unaffected fabric/skin/stockings | User check requested |
+| Flowing trim with glow/speed above zero; unaffected fabric/skin/stockings | User answered "Works in both" for CSS and world |
 | Four palettes, removable parts and stocking layers | Portable/data checks pass; native visual checks pending |
 | Body-shape endpoints and combinations | Cooked morph/weight checks pass; complete native sweep pending |
-| Facial playback and Faithful/Stray doubles | Catalog, shader and source-binding checks pass; live checks pending |
+| Iris Out face/eyes, movement or attack interruption, current-form doubles and their outfit/glow | User answered "All work"; the other form remains unverified |
+| Appearance under bright light, shadow and backlighting | New user concern, investigation open |
 | Profiles and restoration | Portable V2 upgrade checks pass; live save/reload pending |
 | Continuous secondary motion, interruptions, resets and frame cost | Pending |
 
@@ -29,6 +30,22 @@ later by `Genessa form switch cancelled or timed out`. This is a separate
 observation, not proof of the queued cross-save cause or a new Peony defect. The
 source log tail is retained. Subsequent runtime status returned to `Settings
 updated.` with no maintenance or overlay error.
+
+## October 12 lighting report
+
+After accepting fit, flowing trim and Iris Out/current-form doubles, the user
+reported that the appearance looks good in favorable lighting but "burned or
+washed out" with insufficient lighting. The supplied rear/backlit view is
+`/home/eins0fx/Pictures/screenshot-2026-10-12_14-56-08.png`; the front/lit view is
+`/home/eins0fx/Pictures/screenshot-2026-10-12_14-55-53.png`. Fabric becomes very
+dark in the former; the latter loses visible detail in bright fabric and skin.
+Different view directions and illumination prevent these screenshots alone
+from isolating a material defect, exposure behavior or the environment's fill.
+
+This reopens lighting quality, not the accepted geometry. Keep Peony first and
+preserve the accepted fit, facial playback, flow mask and current-form doubles.
+See [lighting investigation](2026-10-12-peony-v2-lighting.md). No lighting repair
+or new installed candidate is implied by the acceptance above.
 
 ## Cooked secondary-motion bindings
 
