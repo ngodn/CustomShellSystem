@@ -510,6 +510,11 @@ Declaring a palette with the id `original` is refused, for the reason above.
 
 ### Authored material settings in a palette
 
+An outfit or variant may declare up to 128 controls. Saved profiles accept the
+same limit. The previous limit was 64; Peony V2 uses 78 to retain its source
+texture choices, removable parts and accepted body settings. Packages exceeding
+64 controls require the updated core and authoring validator.
+
 The updated 1.0 core also accepts optional `parameters` on a palette. These set
 global parameters on the base materials before editable control values apply.
 Use them for complete texture sets, pattern masks and shader settings that a

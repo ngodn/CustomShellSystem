@@ -19,6 +19,18 @@ and all 34 referenced textures present. Evidence is in
 the complete visibility, body, pattern and glow controls, package integration
 and runtime acceptance. No new core or outfit has been installed.
 
+**Peony controls, October 12:** a complete metadata candidate now has 78 controls,
+four palettes, 13 independent garment/sheer-layer switches, the existing hair
+switch and body/physics controls, source finish and pattern choices, stocking
+opacity, and optional glowing/flowing trim. CSS's control/profile limit is now
+128. Native checks pass all 8,192 garment combinations and 32,768 palette/visibility
+combinations, texture selection/reset and profile preservation. A separate check
+matches 122 material bindings and 610 default/palette values against cooked
+materials. Seven finish-choice textures have verified source files but still
+need importing and cooking. Final package assembly, native visuals, cloth and
+gameplay acceptance remain open. Evidence and the pending dependency plan are
+in `work/three-outfit-rig-physics/peony-v2-customize1`; nothing is installed.
+
 **Peony stocking integration, October 12:** the recovered stocking layers now
 form part of both private native V2 character variants in
 `/mnt/eins0fxE/CSS-Development/peony-v2-character2`. The existing body and garments

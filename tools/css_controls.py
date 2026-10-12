@@ -131,7 +131,7 @@ def scalar(control) -> bool:
 
 def validate(recipe:dict) -> set[str]:
     if not isinstance(recipe,dict) or recipe.get('schema')!=1: raise ValueError('Unsupported customize schema')
-    controls=recipe.get('controls');bounded_array(controls,64)
+    controls=recipe.get('controls');bounded_array(controls,128)
     by_id={};used=set();files=set();dynamics_roots=set();rig_owner=False;body_owners=set()
     for c in controls:
         identifier(c['id'])

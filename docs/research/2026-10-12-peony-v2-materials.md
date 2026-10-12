@@ -451,3 +451,58 @@ optional glowing/flowing trim controls before packaging; fill overlapping palett
 control values, preserve black-and-white floral as the authored default, then
 check palette changes, manual overrides, reset, profile reload, preview/world
 rendering, transitions and supported doubles in the game.
+
+
+## Complete V2 customization metadata
+
+`build_peony_v2_customize.py` now produces `customize.json`, `variant.json` and
+`texture-dependencies.json` under `work/three-outfit-rig-physics/peony-v2-customize1`.
+The 78 controls retain the accepted skin-suit body, hair, dye and physics settings;
+remap body dye surfaces through the assembled source-slot map; and add 13 garment
+and sheer-layer switches, color controls, the source finish/pattern selectors,
+stocking opacity and optional flowing trim. The recipe validates and passes the
+control convention lint. All 13 referenced dye PNGs match the donor manifest.
+The variant retains the measured boot height of 9.738332312554121 cm, with zero
+lift when boots are hidden. This is metadata, not an installed catalog.
+
+The garment switch groups cover all 18 source parts. The boot switch also hides
+skin aliases 38/39/40 and stocking section 42. Stockings own sections 41/42;
+optional body, arm and hand sheer layers own 43, 44 and 45 independently. The
+first generator pass mistakenly treated a null optional boot slot as present
+on those extra layers. The independent ownership check caught this before any
+installation; the corrected output passes the exhaustive native test.
+
+Source colors that differ between parts remain independently adjustable.
+The checker confirms 122 bindings and 610 values across Original plus four
+palettes against the decoded cooked materials. Color defaults convert from
+source linear values to CSS sRGB, then back for the comparison. SourceGlow's
+unused alpha differs between source palettes; the opaque graph consumes RGB
+only, so its editable color keeps a fixed protected alpha while preserving HDR
+RGB. Other color vectors retain their authored alpha. Palette-invariant glow
+strength, coverage and flow speed are omitted from the raw palette settings;
+the original materials already supply their defaults, and manual choices now
+survive palette selection. Stocking opacity also survives palette selection.
+
+The source selectors expose 88 named texture choices across their controls.
+Seven distinct finish textures are not yet native assets. Their source paths,
+content hashes and sampler types are recorded in `texture-dependencies.json`.
+All seven source hashes pass verification. Import and cook these before building
+an installable package; an unresolved texture path is not accepted as working.
+Body tattoo selectors are not copied onto the accepted Eve body texture layout.
+
+CSS's control count and saved-control-value limit increased from 64 to 128.
+The capacity tests exercise 128 controls and saved values and reject overflow.
+The Windows C++23 build and portable controls/profiles/data tests pass, alongside
+20 Python control tests. `check_peony_v2_customize.cpp` passes all 8,192 garment
+combinations, 32,768 palette/visibility combinations, texture selection/reset,
+Original restoration and saved-profile preservation of shape, opacity, flowing
+glow, placement and expression. These checks do not prove runtime material
+switching, visibility propagation to doubles, shader appearance or cloth motion.
+
+`controls-core-verification.json` records the updated build at
+`build/cine-win/css_core.dll`, SHA-256
+`f2f0c72c6da85babb691c871347da7adb2a7772c3672a48328c8eeceda9cbe89`.
+The earlier `peony-v2-customize1/css_core.dll` is the retained palette-only build,
+not this updated candidate. No game files changed. Existing build directories
+were reused; no full project copy or cook was made. `df -h` remains 129G free on
+root, 90G on theark and 50G on the development drive.

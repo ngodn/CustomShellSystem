@@ -78,8 +78,8 @@ int main() {
                 item["id"]=id; item["bindings"][0]["slot"]=i;
                 many["controls"].push_back(item); saved.values[id]={0,0,0,1};
             }
-            expect(ControlSet::parse(many).controls.size()==64,"64 controls must be supported");
-            expect(Customization::parse(saved.json())==saved,"All 64 control values must persist");
+            expect(ControlSet::parse(many).controls.size()==128,"128 controls must be supported");
+            expect(Customization::parse(saved.json())==saved,"All 128 control values must persist");
             saved.values["overflow"]={0,0,0,1};
             rejects([&]{Customization::parse(saved.json());});
             auto extra=recipe["controls"][0]; extra["id"]="overflow";

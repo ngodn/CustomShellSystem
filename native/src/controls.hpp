@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 
 namespace css {
-inline constexpr std::size_t max_customization_controls = 64;
+inline constexpr std::size_t max_customization_controls = 128;
 using ControlValue = std::array<float,4>;
 // A physics preset: the first three channels of a spring, rig or AnimDynamics part.
 // Built-ins come from CSS (physics_presets.cpp); a package adds its own per control.

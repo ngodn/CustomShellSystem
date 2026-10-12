@@ -40,7 +40,7 @@ class ControlTests(unittest.TestCase):
             bad=copy.deepcopy(recipe);bad['controls'][0].update(change)
             with self.subTest(change=change),self.assertRaises(ValueError):validate(bad)
         many=dict(schema=1,controls=[])
-        for i in range(64):
+        for i in range(128):
             item=copy.deepcopy(control);item['id']=f'part_{i}';item['bindings'][0]['slot']=i
             many['controls'].append(item)
         validate(many)
