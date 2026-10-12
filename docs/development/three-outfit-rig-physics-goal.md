@@ -268,6 +268,14 @@ saved state. This narrows the investigation beyond Iris Out alone, but remains
 a CSS-enabled, non-matched-motion comparison. See the sunlight record for the
 diagnostic's corrected deferred-save check and the Shipping visualization limit.
 
+The active game lighting manager's sun angle is 4 degrees. A temporary reflected
+setter trial at 0.5357 degrees substantially reduces visible speckling while
+sharpening foliage shadows; restoring 4 brings dense speckling back. Camera,
+player, process and customization are preserved. Record this as a possible
+opt-in workaround with scene-wide shadow-softness changes, not an accepted
+default-on correction. Evidence: `sunlight-noise1/sun-angle05357/result.json`.
+The angle is restored and no permanent lighting change is installed.
+
 Investigate the report from Vistani (Nexus, 2026-10-12 01:54): reflections look
 like static outdoors in direct sunlight while moving, but look normal indoors
 or outside direct sunlight. [Reported image](https://i.imgur.com/XiAVEbK.png).

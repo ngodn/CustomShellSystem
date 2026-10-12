@@ -389,3 +389,33 @@ checking its custom build. A GPU capture or supported game diagnostic is still
 needed to inspect actual previous-frame motion vectors. No renderer workaround
 is accepted or installed; retain the softer-shadow target and investigate actual
 render resolution/temporal history and material response before production work.
+
+## Directional light source-angle control, October 13
+
+The active sun is a DirectionalLightComponent on the game's
+`BP_SpartaLighting_C`, using `LP_CoreWorld_Default_Slice_2`. It is not a separate
+DirectionalLight actor. The bounded discovery is retained in
+`sunlight-noise1/lighting-managers-20261013.json`. Its source angle is 4 degrees,
+soft source angle 1, and shadow source-angle factor 1. The stock 5.6.1 component
+constructor sets a 0.5357-degree source angle
+(`Engine/Private/Components/DirectionalLightComponent.cpp:1024`). The game's
+larger value is not itself proof of a bug; it can be an artistic lighting choice.
+
+`capture_sun_angle.py` uses the discovered component and reflected
+`SetLightSourceAngle(float NewValue)` setter. In `sun-angle05357`, the angle
+changes 4 to 0.5357 to 4. The trial screenshot shows substantially less dense
+speckling and more distinct foliage-shadow boundaries. The restored screenshot
+again shows dense skin and fabric speckling. This is a promising source-angle
+workaround, not proof of complete noise removal or a renderer correction.
+
+All six camera/FOV/pawn-location samples match exactly. The receipt confirms
+the same process, player and customization, and original angle restored to 4.
+Animation phases differ and there is no GPU timing or temporal video comparison.
+Only the component angle was changed in this trial, with no console-variable
+write; previous console tests' priority caveat still applies to this process.
+
+The smaller angle changes scene-wide shadow softness, including the surrounding
+world. Do not silently ship it as a default-on fix. Further evaluation should
+compare motion at the same pose and resolution, and check other lighting presets
+and maps before considering an opt-in MISC workaround. No permanent renderer or
+lighting change was installed.
