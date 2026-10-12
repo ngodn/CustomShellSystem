@@ -24,6 +24,10 @@ face/eyes, interruption and current-form doubles with the outfit/glow. Full
 customization, the other Genessa form, the wider motion matrix and full regression
 remain pending. Their new shadow/bright-light appearance concern is now the
 current Peony correction; see the [lighting investigation](../research/2026-10-12-peony-v2-lighting.md).
+The controlled lighting fixture now completes 24 calibrated PNG/HDR captures
+with unchanged source assets and a verified gray control. It narrows the search
+but does not reproduce the game's exposure or establish a fix. The installed
+trial is unchanged; the lighting report remains open.
 See [astral and installation evidence](../research/2026-10-12-peony-v2-astral.md).
 The [gameplay record](../research/2026-10-12-peony-v2-gameplay.md) separates this
 user acceptance from the remaining checks. A cooked secondary-binding audit

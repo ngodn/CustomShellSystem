@@ -33,6 +33,17 @@ and ORM resolutions differ. Under that sampling rule the upper means are
 roughness 0.9987/metallic 0.0002, and lower means 0.9348/0.0005. These rounded
 differences from the preliminary sample do not change the next diagnostic step.
 
+`tools/eve-fit/audit_peony_lighting_normals.py` also checks the hash-pinned cooked
+position, index and surface streams. `cooked-normals.json` in the same evidence
+folder records all sections. The decoded triangle winding gives negative raw
+dot products on both the accepted body and garment, so the report calibrates
+its sign against Eve Body, Legs and Arms rather than assuming a winding convention.
+Across 26,090 calf, thigh, jacket and corset triangles, no face-average normal
+is strongly reversed relative to that body convention. Median alignment is
+0.9873, 0.9980, 0.9955 and 0.9940 respectively; none of those sections has a
+degenerate face in this calculation. This descriptive reference-pose check does
+not validate tangent handedness, sampled normal maps or deformed normals.
+
 The passive runtime snapshot after the report selects `black_white_floral`, with
 Trim glow 17.25, Flow speed about 0.25 and Glow coverage 0. No fabric color override
 appears in its customization values. This is not a synchronized capture of the
@@ -100,7 +111,41 @@ The first run completed global shader compilation but failed before rendering:
 UE Python exposes `disable_post_process_blueprint` as an editor property, not
 the C++ setter name. `native1/attempt1` retains the exact failed script, log,
 exit code 255 and empty capture directory. The corrected script sets the
-property and reads it back. Attempt 2 reuses the same content links and cache;
-it has reached Peony's material compilation. Its live handle and process IDs
-are recorded in `native1/job.json`. No successful images or lighting repair
-are claimed at this point.
+property and reads it back. All four attempts are now terminal. Attempt 2
+completed, but its display encoding and reversed view labels made it unsuitable
+for the calibrated comparison. Attempt 3 corrected those details, but its gray
+control was absent because the cube's render resources were not ready. Both
+attempts retain their recipes and review notes under `native1`.
+
+Attempt 4, retained at the stage root, exits 0 with 24 captures: front/rear,
+three light pairs, glow off/on, each as a display PNG and linear HDR EXR.
+All 172 pinned inputs remain unchanged. The cube is flushed after loading and
+its transform is read back. `tools/eve-fit/check_peony_lighting.py` validates
+image hashes, dimensions, finite pixels and the gray control. The control's
+raw value is 0.180054 for an authored 0.18; its display patch is identical
+across all lighting/glow cases within each view. The same checker rejects
+attempt 3 with `Gray control is missing or incorrect`. `verified2.json` and
+`receipt.json` record the current measurements and recipe hashes.
+
+In a fixed corset crop with glow off, reducing the camera-facing light from
+3 to 0.15 lux reduces mean HDR values from 0.4422 to 0.02231 at the front and
+0.4493 to 0.02247 at the rear. That is approximately the same 20-fold reduction
+as the light itself. The crop includes narrow trim, so glow adds brightness
+at some pixels; no crop channel gets darker when glow is enabled in this
+fixed-exposure, bloom-free fixture. This does not test the game's automatic
+exposure or bloom interaction.
+
+The comparison establishes a working capture fixture, not a repair. It does
+not support blaming broad metallic assignment, reversed geometric normals or
+direct darkening by the trim graph. Normal-map/tangent behavior and the game's
+environment, exposure and skin response remain unverified. Epic's
+[exposure documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/auto-exposure-in-unreal-engine?application_version=5.6)
+describes scene-dependent exposure and local highlight/shadow adjustment;
+that is a reason to measure the game, not evidence that its settings are wrong.
+
+A subsequent read-only `css_probe` player request timed out without a matching
+acknowledgement, and the process check found no Mortal Shell or Unreal Editor
+process. No live exposure measurement was obtained. No material, gameplay
+setting or installed package was changed. Do not ask the user to repeat the
+accepted fit/flow tests on this unchanged build. The remaining comparison must
+address shadow and highlight detail together before selecting a material trial.
