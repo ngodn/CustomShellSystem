@@ -72,16 +72,22 @@ game process. The loader's stale contract was repaired against the verified
 installed beta.11 release and matching source hashes. No loader DLL was changed.
 Keep the earlier animation-worker crash as an unresolved historical limitation;
 this single controlled reload does not prove every combat/playback reload safe.
-Current live check: both chest and glute are temporarily Firm for the user's
-walking assessment. `peony-v2-body-live2/visual-firm.json` stores the original
-customization and verified temporary values. Restore the original snapshot
-after their answer; this temporary test is not a new saved default.
+The visual Firm test is awaiting the user's walking assessment.
+`peony-v2-body-live2/visual-firm.json` stores the original customization,
+verified temporary values and exact restoration readback. The original settings
+were restored before the temporary persistence deadline while the answer was
+pending. Firm is no longer applied by this diagnostic.
 The offline `peony-v2-frame-variation1` check passes 24 cases across current/V42
 rigs, three motion states and four frame-time patterns. Uneven frames stay
 stable; both rigs reset only on initialization or the deliberately long frames.
 Those resets can snap the simulated offset back to the incoming pose. This
 explains a possible hitch symptom, not the reported gameplay cause. No tuning
 change follows from the synthetic result; visual motion acceptance remains open.
+The retained default idle, Iris Out and Black Hole source animations also have
+constant local chest, glute, thigh-helper and belly poses across all 1,813 keys.
+Their pelvis poses vary, confirming that the evaluator did sample motion.
+`peony-v2-animation-tracks1` rules out changing local helper tracks in those
+three sources, not every gameplay animation or parent-bone movement.
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible

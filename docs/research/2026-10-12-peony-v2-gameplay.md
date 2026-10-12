@@ -335,8 +335,11 @@ reload only; the historical animation-worker crash and other reload states
 remain outside its evidence.
 
 For the user's visual check, `visual-firm.json` retains the original snapshot
-and verifies temporary Firm values on the live rig. Restore that snapshot after
-the user responds. Visual acceptance of excessive motion is still pending.
+and verifies temporary Firm values on the live rig. The original snapshot was
+restored and verified exactly while the visual response remained pending,
+before the temporary service write's 30-minute persistence deadline. No
+concurrent customization change was present. Visual acceptance of excessive
+motion is still pending; the diagnostic no longer forces Firm.
 
 ### Uneven frame-time response
 
@@ -370,3 +373,23 @@ frames. A separate ten-second game sample after starting this offline fixture
 reported 44.70 Hz and no hitches; it is context, not a performance comparison.
 No rig limits, physics presets or installed assets changed as a result of this
 experiment. Wait for the user's Firm visual check before retuning accepted rigs.
+
+### Animation helper-track audit
+
+`peony-v2-animation-tracks1` checks the retained migrated default idle (211
+keys), Iris Out (1,001 keys) and Black Hole (601 keys). The UE 5.6.1 commandlet
+evaluates raw local poses with retargeting disabled and no post-process or
+Control Rig. It checks pose validity, bone presence and finite transforms.
+The read-only source packages retain their hashes. Exit is 0 with two reported
+preference-file warnings from the read-only sandbox.
+
+All seven helpers (`brust001`, `brust002`, `butt001`, `butt002`,
+`thigh_twist_02_l`, `thigh_twist_02_r`, `belly`) remain locally constant across
+all 1,813 sampled keys. Translation and scale differences are zero; the maximum
+quaternion-derived angle is numerical noise below 0.000002 degrees. The pelvis
+positive control varies in every clip, so this is not a frozen evaluation.
+
+This excludes changing local helper poses in these three retained sources as
+an extra layer of jiggle. Parent transforms still move the helpers in component
+space. It does not audit every native gait or montage, cooked compression, or
+the full gameplay blend. No installed animation or physics tuning changed.
