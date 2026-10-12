@@ -449,3 +449,15 @@ and verified external hard-link rollback are ready. Installation awaits game
 closure, followed by native motion and playback acceptance. This is an asset
 change and cannot use the core DLL hot-reload path. No new core is included.
 Accepted geometry, materials, profiles and other outfit rigs remain untouched.
+
+The user subsequently confirmed game closure and requested installation. The
+process check found no running game. `install_body_limit_trial.py --install`
+completed all four replacements, with `deployment.json` retaining the exact
+old/new hashes and rollback paths. A separate installed-file readback verified
+all four hashes and their rollback copies, the unchanged shared `.utoc`/`.ucas`,
+and core `21f761aa35fd18619172db3e4b3b88318a42681bdcdac848412f45c3299acc37`.
+The receipt is `peony-v2-motion-package1/installed-verified.json`. This replaces
+the earlier awaiting-installation state, not the pending gameplay acceptance.
+The user has been asked to compare Firm and Natural on Peony while walking and
+playing Iris Out after reopening. The shared Eve body rig also affects the
+existing Eve variants; their runtime motion regression remains open.

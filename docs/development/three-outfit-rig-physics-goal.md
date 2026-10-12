@@ -105,12 +105,14 @@ are unchanged. Shared asset containers are unchanged; only 10 Eve adapter
 fingerprints in shared metadata are refreshed. All 1,535 catalog checks,
 package imports and payload round trips pass. Rollback and a four-file install
 plan are ready at `/run/media/eins0fx/theark/CSS/peony-before-body-limits1` and
-the candidate's `installation-plan.json`. The game is still running and the
-user has been asked to close it. Nothing from this limit trial is installed
-yet. After closure, use `tools/diagnostics/install_body_limit_trial.py --install`
-with the candidate, `peony-v2-package3` baseline and that backup path, then
-verify motion in game. Keep the production motion-restoration core already
-installed. The earlier simple-translation result did not cover this input.
+the candidate's `installation-plan.json`. After the user confirmed closure,
+the process check found no game process and the four-file trial was installed.
+`deployment.json` and `installed-verified.json` record independent matching
+installed hashes, verified rollback and unchanged shared asset containers.
+The production motion-restoration core remains `21f761aa35fd1861...`.
+The user has been asked to reopen and compare Firm/Natural while walking and
+playing Iris Out. Native motion acceptance remains pending. The earlier
+simple-translation result did not cover this input.
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible

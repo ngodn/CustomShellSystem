@@ -56,9 +56,11 @@ containers are unchanged; ten Eve adapter fingerprints in shared metadata are
 refreshed. The 1,535 catalog checks, imports and payload round trips pass.
 This rig is shared by Eve's variants, so the change is not Peony-only. Runtime
 acceptance remains pending, including the existing variants' motion behavior.
-The current motion-restoration core stays installed. The asset trial is not yet
-installed because the game is running; rollback and the four-file installation
-plan are ready. See the active goal for the verified installation command.
+The current motion-restoration core stays installed. The user confirmed game
+closure and the four asset files are now installed. Independent hash readback
+and rollback checks pass in `peony-v2-motion-package1/installed-verified.json`.
+Shared asset containers and the core DLL are unchanged. Firm/Natural walking
+and Iris Out visual acceptance are pending after relaunch.
 The user subsequently reopened the unchanged build and reports
 "so far now its fine" about lighting. Keep the accepted materials and resume
 the remaining Peony checks; retain the earlier observations for later polish if
