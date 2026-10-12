@@ -21,8 +21,13 @@ and the regular stocking material is unchanged. Rollback is
 the obvious garment fit in CSS and while walking, and answered "Fit looks right
 in both." They subsequently accepted flowing trim in CSS/world and Iris Out
 face/eyes, interruption and current-form doubles with the outfit/glow. Full
-customization, the other Genessa form, the wider motion matrix and full regression
-remain pending. The user subsequently reopened the unchanged build and reports
+body-motion validation, the other Genessa form and full regression remain pending.
+The user accepts the four palettes, removable controls and profile restoration.
+Excessive jiggle despite Firm/Natural is the current defect. At their direction,
+compare previous Eve/Genessa work before requesting another game check. The
+27-case offline rig comparison is recorded in the gameplay report; it does not
+reproduce the Firm gameplay failure and no motion fix has been installed.
+The user subsequently reopened the unchanged build and reports
 "so far now its fine" about lighting. Keep the accepted materials and resume
 the remaining Peony checks; retain the earlier observations for later polish if
 they recur. See the [lighting investigation](../research/2026-10-12-peony-v2-lighting.md).

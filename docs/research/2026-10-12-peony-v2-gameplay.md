@@ -158,3 +158,62 @@ camera input or animation control. A useful next capture is with Firm selected
 for both chest and glutes, Peony standing in the world. This will distinguish
 saved selections from the values reaching the active rig; it does not by itself
 measure jiggle amplitude or prove whether another solver also runs.
+
+### Previous Eve and Genessa comparison, at the user's direction
+
+The user declined the Firm capture request and asked to use the previous Eve
+and Unholy Genessa implementation first. The live request is no longer pending;
+do not ask them to repeat it. No game interaction or installed change was made.
+
+Evidence: `work/three-outfit-rig-physics/peony-v2-motion-compare1`.
+`comparison.json` pins the metadata and cooked readbacks. Peony's four body rig
+controls exactly match all six preceding Eve variants. Its body and facial
+meshes use the same secondary graph as Black Pearl and Planet Diving. Current
+Eve and Genessa cooked body defaults match for region tuning, moments, angular
+limits and maximum travel. Their recorded post-process paths each contain one
+body rig. This does not prove that all active game animation layers have one owner.
+
+The older validated V42 implementation differs from those current rigs:
+
+| Setting | V42 | Current Eve/Genessa |
+| --- | --- | --- |
+| Chest angle limit | 6 degrees | 28 degrees |
+| Glute angle limit | 10 degrees | 24 degrees |
+| Chest travel limit | 1.5 cm | 11 cm |
+| Glute travel limit | 1 cm | 5 cm |
+
+The later `gemini-work/build_cr_body_jiggle.py` recipe contains the wider limits;
+the cooked readbacks confirm those values independently. CSS Firm/Natural supply
+frequency, damping and acceleration strength, not angle/travel limits. Reduced
+rig-default moments are not automatically the live moments: the AnimBP/native
+geometry inputs also supply moments and offsets.
+
+`tools/diagnostics/compare_body_rig_response.py` runs retained native rigs with
+identical public geometry/contact inputs and Firm/Natural regional values.
+It compares current, current with V42 angle/travel limits, and V42, at 30/60/120
+fps, including disabled-region cases. The pelvis input moves 10 cm sinusoidally
+for two seconds, followed by two seconds at rest. The game is not involved.
+The project uses read-only source content and writes only its private stage.
+
+At 60 fps, peak left/right chest response in degrees:
+
+| Rig | Firm | Natural |
+| --- | --- | --- |
+| Current | 3.242 / 3.242 | 8.810 / 8.810 |
+| Current with old limits | 3.242 / 3.242 | 3.833 / 3.823 |
+| V42 | 3.021 / 3.021 | 3.833 / 3.823 |
+
+All 27 cases completed, disabled regions produced zero relative motion, and
+source hashes remained unchanged. Current Firm chest peaks range from 3.122
+to 3.243 degrees across the three rates. The fixture settles after the motion.
+`response.json` retains samples, `command.json` the editor invocation, and
+`exit.json` records exit 0. The editor reported 192 warnings, including unrelated
+assets in the shared read-only content mount and denied editor preference writes;
+it reported zero errors. This was not a clean package cook.
+
+Conclusion: wider limits materially increase Natural's response in this fixture.
+Tightening them does not explain or reproduce the user's Firm failure. Do not
+install a limit-only change as a claimed repair. This direct rig fixture bypasses
+CSS preset delivery, the AnimBP event/update path, animation layering and actual
+gameplay motion. Those integration paths remain the investigation priority.
+Keep Peony's accepted fit, materials and controls intact.

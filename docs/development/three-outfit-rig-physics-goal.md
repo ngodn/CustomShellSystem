@@ -37,6 +37,14 @@ priority: body motion still jiggles wildly after selecting Firm or Natural and
 appears possibly duplicated. Investigate preset propagation, actual active
 animation/physics owners and solver response. Do not treat material/profile
 acceptance as acceptance of body motion or assume duplication without evidence.
+The user declined the requested Firm game capture and directed comparison with
+the previous Eve and Unholy Genessa work first. Do not repeat that request.
+The offline comparison now covers installed metadata, retained cooked rig
+defaults and 27 native editor response cases. Current Eve/Genessa defaults
+match; the older validated V42 rig has tighter movement limits. These limits
+reduce Natural's chest response in the fixture but do not explain the reported
+Firm failure. Continue tracing preset/animation integration before changing
+the installed rig. See the gameplay record for measurements and limitations.
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible
