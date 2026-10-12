@@ -92,3 +92,9 @@ a global height offset from that evidence. See CW `docs/walking-foot-report.md`,
 remaining full-cycle and terrain checks, then continue the
 other repairs and stable-release gates above. Do not
 repackage a beta bundle or treat Peony's acceptance as completion of the others.
+
+Actual original-package booted/bare straight walks now also confirm pre-existing
+boot penetration and bare-foot clearance. Trial samples show lower mean bank,
+but phases differ and do not establish a contact change. Original rollback and
+all comparison evidence are retained; trial restoration/health passes. See CW
+`docs/straight-walk-contact.md#actual-original-package-comparison`.

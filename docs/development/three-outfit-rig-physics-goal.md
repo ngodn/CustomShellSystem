@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, actual CW baseline compared:** original packages were cold-loaded
+and tested in booted/bare straight walks, then the ankle trial restored.
+Sampled mean bank is lower with the trial, consistent with the matched editor
+study. Original packages also show boot penetration and bare-foot clearance;
+those are pre-existing contact limitations. Separate phases prevent claiming
+planted-contact improvement. Final health passes in process 3263279, with full
+saved state and camera/facing restored. Normal Continue leaves a 9.255 cm position
+difference. Original rollback retained, redundant comparison hardlinks removed.
+Evidence: `cw-baseline1`, CW `work/foot-baseline1` and the
+[actual baseline record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/straight-walk-contact.md#actual-original-package-comparison).
+The full stable-release goal remains active.
+
 **October 13, straight walking and bare-foot contact:** pre-orienting the
 stationary pawn removes the initial turn from bounded booted/bare passes.
 Each records eight straight moving samples over 1.9 seconds. Both return safely;

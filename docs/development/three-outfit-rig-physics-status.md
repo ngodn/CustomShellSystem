@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 13, actual original-package comparison:** original CW/shared packages
+now have booted/bare straight-walk and collision evidence. Mean reference bank
+is lower in the trial samples, while boot penetration and bare-foot clearance
+also exist in the original. Phases are not paired. The ankle trial is restored,
+process 3263279 health passes, saved settings/camera/facing restored, normal
+Continue position within 9.255 cm of earlier preflight. See CW
+[baseline comparison](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/straight-walk-contact.md#actual-original-package-comparison)
+and `cw-baseline1`. No new height correction or full foot acceptance.
+
 **October 13, straight walking:** booted and bare-foot passes now avoid the
 initial turn and retain eight straight samples across 1.9 seconds each. State,
 facing/camera and position restoration pass. Boot penetration and bare-foot
