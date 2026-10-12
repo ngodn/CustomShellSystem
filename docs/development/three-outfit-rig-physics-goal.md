@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW bounded belt candidate:** normal/facial walking and lifecycle
+replays pass attachment, output isolation and reset checks using the existing
+Eve fixed-step chain implementation. Maximum segment-length error is below
+0.000001 cm, and no other local bone changes. Saved graphs reload correctly.
+Surface review still shows belt/body clipping, so this candidate is not
+installed or accepted. Next add measured body contacts to this bounded rig;
+do not resume the rejected native-chain or historical cloth-solver approaches.
+Evidence: CW `work/belt-cloth2` and the
+[belt/skirt record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md).
+The game process exited before the final read-only probe; no new live-health
+claim is made. Saved state is unchanged, no trial installed this turn. Root and
+theark remain at 118G and 36G available. Full stable-release scope remains active.
+
 **October 13, CW belt isolated:** cooked weights and retained walking poses
 show 18 undriven belt-chain bones. They affect only belt slot 14. A private
 native AnimDynamics prototype changes only its 15 intended descendants but
