@@ -1,5 +1,12 @@
 # Three-outfit implementation status
 
+**October 13, full retained gait comparison:** normal/facial results match
+exactly across walk, jog and sprint, 241 frames each. The installed ankle trial
+reduces mean/maximum reference bank in each gait, with mixed phase results and
+a higher sprint median. Selected worst-regression boot/bare-foot renders show
+no obvious new collapse. Gameplay contact and terrain acceptance remain open.
+See CW [gait regression](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/ankle-gait-regression.md).
+
 **October 13, CW contact measurements:** four recorded straight-walk poses now
 have cooked boot reconstruction and collision readback. The trial reduces mean
 absolute reference banking from 2.978 to 1.422 degrees compared with undoing its

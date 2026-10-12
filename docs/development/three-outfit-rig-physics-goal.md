@@ -1,5 +1,13 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, full retained gait comparison:** the ankle trial lowers mean and
+maximum reference bank across all six normal/facial walk, jog and sprint editor
+captures. Some phases worsen; sprint median increases. Worst-regression boot
+and bare-foot renders show no obvious new collapse in the reviewed views.
+This preserves the trial for further testing without closing the full-cycle,
+terrain or gameplay acceptance gates. No runtime or asset changes in this study.
+Evidence: CW `work/foot-gaits1` and [gait regression](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/ankle-gait-regression.md).
+
 **October 13, CW contact measurements:** four recorded straight-walk poses now
 have cooked boot reconstruction and collision readback. The trial reduces mean
 absolute reference banking from 2.978 to 1.422 degrees compared with undoing its

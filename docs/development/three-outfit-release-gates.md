@@ -29,7 +29,7 @@ historical rehearsal and is not the stable release tag.
 | Genessa face and visibility after outfit changes | Owner-restoration/visibility fix installed; cross-character Iris Out and interruption accepted | Both Genessa variants, CSS/CINE, both forms and doubles matrix |
 | Genessa rear cloth | World correction accepted; preview clipping explicitly accepted for now | Other poses/variants and cost, without reopening accepted preview limitation |
 | CW hair | User accepts installed strand trial and tested face/eyes/interruption | CINE, doubles, full lifecycle and measured cost |
-| CW inward/sideways walking feet | Reproduced with boots shown/hidden; moving poses retained; no accepted repair | Continue native blend/foot-correction comparison and repair demonstrated cause |
+| CW inward/sideways walking feet | Four-bone reference-alignment trial installed; booted/bare short walks restore state; six editor gait cases improve mean bank but some phases worsen; sparse world-contact measurements retained | Full-cycle gameplay, terrain and visual acceptance; preserve native IK and original rollback |
 | CW belt physics and janky skirt | Queued after Eve, not completed | Author belt response, diagnose skirt motion, verify contact/recovery/cost |
 | CW dev/Development display qualifiers | Requested cleanup, final stable metadata not delivered | Audit names/descriptions/archive filenames; retain IDs and asset paths |
 | More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children | Live recovery/facial behavior above 128 and repeated-switch leak/lifetime checks |
@@ -81,14 +81,14 @@ outfit's actual post-process graph, including Bikini/Knit feet graphs, and both
 normal/facial meshes. See the
 [regression record](../research/2026-10-12-eve-existing-motion-regression.md).
 This is not full visual or cloth acceptance. Continue CW's demonstrated foot
-defect from the October 13 walking/control capture: ten steady samples use the
-shared Eve walk blendspace with both named foot-correction inputs at zero.
-The actual blend comparison is now complete in CW `work/foot-blend1`: 1,446
-poses, installed samples checked, unchanged forward baseline. Small directional
-blends do not explain all live differences. The active native full-body rig
-retains an initial reference different from CW's mesh and does not enable
-"Set Initial Transforms From Mesh". Next test that mapping with synchronized
-animation access and restoration. See CW `docs/walking-foot-report.md` and CSS
-`work/three-outfit-rig-physics/cw-foot-blend1`. Then continue the
+defect from the installed four-bone ankle trial. Native rig reference replacement
+did not establish an improvement; phase matching shows the active rig preserves
+foot orientation while adjusting position. Keep native grounding. The narrower
+ankle alignment improves mean reference bank in walk/jog/sprint but not every
+phase. Sparse boot contact has approximately 2.2 cm penetration in both the
+captured trial and its fixed-parent original-ankle counterfactual. Do not apply
+a global height offset from that evidence. See CW `docs/walking-foot-report.md`,
+`docs/ankle-gait-regression.md` and `docs/foot-contact-readback.md`. Complete the
+remaining full-cycle and terrain checks, then continue the
 other repairs and stable-release gates above. Do not
 repackage a beta bundle or treat Peony's acceptance as completion of the others.
