@@ -11,6 +11,16 @@ Its normal configuration still fails the stretch screen. Disabling backstops
 or self-collision clears that screen in two runs, but does not establish fit or
 justify removing collision from the shipped outfit. No Slipstream trial is installed.
 
+The subsequent matched contact replay rules out removing backstops: penetration
+worsens despite the strain pass. A private radius-only change from 3 to 16 cm
+preserves geometry, weights, morphs and mapping and visibly improves rear skirt
+coverage. It still fails strain in 52/145 frames in both captures, with remaining
+front-leg contact. Doubling iterations does not resolve the failure. Continue
+from these contact and constraint witnesses, retaining both collision systems;
+do not ship the radius trial as a completed repair. Evidence and small staging
+recipes are in `work/three-outfit-rig-physics/slipstream-backstop16` and the
+constraint results linked above. The installed, accepted Peony package is unchanged.
+
 At the user's request, the shared `ue-modding` skill has also been revised to
 cover the actual extraction, patched CUE4Parse, Blender, editor, cook and runtime
 workflows. Unsupported generalizations about editor/source availability, reload,
