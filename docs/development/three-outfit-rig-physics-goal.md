@@ -11,6 +11,12 @@ retaining the six existing Eve variants. Preserve Peony's accepted fit, four
 palette templates, removable pieces, flowing trim, facial playback, doubles
 and corrected motion. The broader repair backlog remains open.
 
+The [Peony public delivery](peony-public-release.md) is now packaged as Eve
+v1.5.0 plus CSS/shared beta.12 in `dist/eve-v1.5.0`, with verified archives,
+install instructions and Nexus changelogs. No upload or game installation was
+performed. Preserve the accepted Peony inputs and defer Slipstream until the
+user requests it again.
+
 **October 12 continuation:** Peony motion remains user accepted. The user
 confirms the blocky sunlight symptom is currently only in Vistani's report;
 keep that high-priority investigation queued without speculative renderer changes.
