@@ -40,8 +40,10 @@ inline bool facial_adapter_asset(std::string_view asset) {
     if(asset.starts_with(legacy)) return asset.size()>legacy.size();
     asset=authored_css_project_path(asset);
     if(asset.empty()) return false;
+    // Facial replacements may be grouped with their outfit's other meshes.
+    // The catalog pins the source revision; runtime checks the mesh and rig.
     asset.remove_prefix(asset.find('/')+1);
-    return asset.starts_with("Faces/") && asset.size()>6;
+    return !asset.empty();
 }
 
 inline bool playback_adapter_asset(std::string_view asset) {

@@ -26,10 +26,12 @@ Animation-library catalogs accept assets under
 `/Game/CSS/<author>/Shared/Locomotion/`, with performance adapter classes in
 its `Adapters/` directory for reusable adapters. Outfit-specific playback
 adapters belong under `/Game/CSS/<author>/<project>/Animations/Adapters/`.
-Character facial replacement meshes belong under
-`/Game/CSS/<author>/<project>/Faces/`. Exact skeleton alternatives and
-source-container revision checks still apply. A path passing validation is
-not proof that its asset loads or is compatible.
+Character facial replacement meshes are recommended under
+`/Game/CSS/<author>/<project>/Faces/`, but may also live with their outfit's
+other meshes anywhere within the author/project namespace. The catalog must
+declare the replacement explicitly. Exact skeleton alternatives, source mesh
+identity and source-container revision checks still apply. A folder name is
+not proof that its asset is a skeletal mesh or has the required morphs.
 
 The runtime now recognizes the verified old and new eins0fx base skeleton
 paths as the same animation layout. It retains the existing directed base-to-

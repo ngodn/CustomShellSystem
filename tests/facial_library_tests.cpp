@@ -36,7 +36,10 @@ int main(int argc,char** argv) {
         for(const std::string prefix:{"/Game/CSS/eins0fx/EveSB/Faces/",
                 "/Game/CSS/eins0fx/UnholyGenessa/Faces/",
                 "/Game/CSS/eins0fx/CommanderWhite/Faces/",
-                "/Game/CSS/another_author/Character/Faces/"}) {
+                "/Game/CSS/another_author/Character/Faces/",
+                "/Game/CSS/eins0fx/EveSB/PeonyV2/Meshes/",
+                "/Game/CSS/another_author/Character/OutfitA/Geometry/",
+                "/Game/CSS/another_author/Character/"}) {
             auto migrated=document;
             const auto mesh=prefix+"SK_Face.SK_Face";
             migrated["adapters"][0]["target_mesh"]=mesh;
@@ -46,11 +49,16 @@ int main(int argc,char** argv) {
                    "Author/project facial mesh did not resolve");
             expect(!resolve_facial_rig(migrated_rigs,"css.eve",std::string(64,'b'),1234,source).rig,
                    "Namespaced face bypassed revision validation");
+            expect(!resolve_facial_rig(migrated_rigs,"css.eve",hash,1235,source).rig &&
+                   !resolve_facial_rig(migrated_rigs,"css.eve",hash,1234,source+"Extra").rig,
+                   "Namespaced face bypassed source identity validation");
         }
         for(const char* bad:{"/Game/CSS//EveSB/Faces/SK_Face.SK_Face",
                 "/Game/CSS/author.name/EveSB/Faces/SK_Face.SK_Face",
                 "/Game/CSS/eins0fx//Faces/SK_Face.SK_Face",
-                "/Game/CSS/eins0fx/EveSB/FacesExtra/SK_Face.SK_Face"}) {
+                "/Game/Sparta/Characters/SK_Face.SK_Face",
+                "/Game/CSS/author/Character.SK_Face",
+                "/Game/CSS/author/Character/../SK_Face.SK_Face"}) {
             auto changed=document;
             changed["adapters"][0]["target_mesh"]=bad;
             rejects([&]{FacialRig::parse(changed);});
