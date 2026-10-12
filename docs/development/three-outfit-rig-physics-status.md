@@ -18,9 +18,15 @@ imports and payload roundtrip pass. The first cook's inherited stocking velocity
 output conflicted with depth fade; it is disabled only on the ghost companion,
 and the regular stocking material is unchanged. Rollback is
 `/run/media/eins0fx/theark/CSS/peony-before-v2`. The user has been asked to check
-the obvious garment fit in CSS and while walking. Appearance, customization,
-facial playback, doubles, garment motion and full regression remain unaccepted.
+the obvious garment fit in CSS and while walking, and answered "Fit looks right
+in both." Flowing trim, full customization, facial playback, doubles, the wider
+motion matrix and full regression remain pending.
 See [astral and installation evidence](../research/2026-10-12-peony-v2-astral.md).
+The [gameplay record](../research/2026-10-12-peony-v2-gameplay.md) separates this
+user acceptance from the remaining checks. A cooked secondary-binding audit
+also passes for both V2 meshes and their playback graph, including identical
+skin streams and preserved body/hair/hand writer order. It confirms zero separate
+cloth assets; it does not establish live secondary-motion behavior.
 
 **Peony V2 saved-setting upgrade, October 12:** the actual refit2/package3
 metadata passes 774 portable saved-setting cases and 256 old visibility
@@ -31,7 +37,8 @@ customization recipes are unchanged. Three deliberately damaged metadata
 fixtures are rejected. No runtime change or installation was needed. Evidence:
 `work/three-outfit-rig-physics/peony-v2-upgrade1` and
 [the upgrade report](../research/2026-10-12-peony-v2-package.md#installed-successor-and-saved-setting-upgrade).
-Live rendering and user fit acceptance remain pending.
+The subsequent user fit acceptance is recorded above; other live checks remain
+pending.
 
 **Peony V2 combined package, October 12:** `peony-v2-package2` assembles the
 435-package Eve outfit container and 270-package shared container. The original

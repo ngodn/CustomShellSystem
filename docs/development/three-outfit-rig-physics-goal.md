@@ -17,14 +17,16 @@ was `work/three-outfit-rig-physics/peony-v2-package2`. Its successor,
 `peony-v2-package3`, adds the six verified V2 ghost material parents and is now
 installed with the matching core. Installation hashes and rollback are recorded
 in `deployment.json`. Validate the new outfit's native fit, controls, flowing
-trim, facial playback, doubles and gameplay. User visual acceptance is pending;
-the full goal remains active.
+trim, facial playback, doubles and gameplay. The user now accepts the obvious
+fit in CSS and while walking in the world: "Fit looks right in both."
+The remaining native behavior and regression checks are open; the full goal
+remains active. See [gameplay evidence](../research/2026-10-12-peony-v2-gameplay.md).
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible
 settings survive, retired palettes fall back to Original, and obsolete controls
 are dropped. Evidence is in `work/three-outfit-rig-physics/peony-v2-upgrade1`.
-This does not replace the pending native appearance and gameplay checks.
+This does not replace the remaining native appearance and gameplay checks.
 
 ### Workspace recovery, 2026-10-12
 
@@ -401,7 +403,7 @@ customization system where supported. Keep Peony masks and material instances
 in the Eve mod, with any reusable material function in CSS_SharedAssets_P.
 Validate glow off/on, flow continuity across garment seams, removable parts,
 all supplied Peony palettes, saved profiles and supported astral doubles in preview and
-gameplay. This remains in progress and is not installed.
+gameplay. The V2 implementation is now installed; its live flow check is pending.
 October 12 reminder: retain this glowing, flowing trim requirement in the V2
 material rebuild. The minor-clipping deferral does not defer or remove it.
 The V2 implementation adds preserved rest-space flow UVs to all 18 parts and
