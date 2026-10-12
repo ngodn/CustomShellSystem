@@ -257,3 +257,27 @@ process 3113971, inactive movement/rig trials, multiplier one, reference flag
 false, all keys up and exact saved-state restoration. Reduced noise still owns
 one light with no error. This closes the comparison, not the foot defect or
 the separate reload-crash release gate.
+
+## Follow-up ankle candidate
+
+CW `work/foot-retarget2` now compares full-leg and four-bone reference retargeting
+against the unchanged baseline. Full-leg worsens the average surface-bank measure
+and is rejected. Ankle-only reduces the mean absolute bind-lateral angle from
+3.783 to 2.427 degrees, with intact neutral cooked surfaces in the reviewed
+boot/bare-foot renders. This measurement does not establish floor contact.
+
+The four-mode skeleton candidate passes private save/reload, Windows cook,
+independent comparison of all 84 decoded skeleton exports, full outfit payload
+roundtrip and combined catalog/import checks. It is installed through transaction
+`MortalShell2/Content/css-cw-ankle-trial-20261013`, keeping the same development
+core. Process 3189742 loaded exactly four changes, all Skeleton to
+AnimationRelative. The installed current source and reproducible tooling are in
+the CW project; its `docs/walking-foot-report.md` records the complete chain.
+
+Short booted and bare-foot walks complete with native IK active. Candidate
+phase-matched global-foot orientation differs from the editor candidate by less
+than 0.026 degrees. Both boot toggles, Iris Out, facial playback, all input keys
+and saved state restore. Final readback confirms rig scale one and mesh-reference
+flag false. Reduced noise remains active. Evidence and final health are in CW
+`work/foot-retarget2/live-ankle1`. This advances the foot repair to an installed
+trial; it does not close broader gait/slope acceptance or the reload-crash gate.

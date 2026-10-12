@@ -1,5 +1,22 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW reference-alignment candidate:** four matched editor timelines
+and cooked-surface reconstruction reject full-leg retargeting. The narrower
+foot/ball AnimationRelative candidate reduces mean absolute reference banking
+from 3.783 to 2.427 degrees across the walk capture; selected boot and bare-foot
+renders support a game trial. This is not floor-contact or gameplay acceptance.
+Private save, fresh-process reload, Windows cook and full package readback pass.
+Only four skeleton modes change; other outfit payloads are preserved. Combined
+checks cover 907 packages, 271 references and 1,822 animation-library assertions.
+The trial is installed, with rollback in game Content
+`css-cw-ankle-trial-20261013`. Live readback confirms all four modes, and short
+booted/bare-foot walking passes complete with keys, boots, Iris Out, facial
+playback and full saved state restored. Native IK and Reduced noise remain
+active. Evidence: CW `work/foot-retarget2/live-ankle1`, `work/ankle-cook1` and
+`work/ankle-pack1`. This is an improvement trial, not final acceptance of all
+gaits/slopes. Preserve the full stable-release scope and separate reload-crash
+gate. See CW `docs/walking-foot-report.md`.
+
 **October 13, walking comparison completed:** bounded autonomous walking now
 captures pose and controls in the same callback, with automatic key release.
 The mesh-reference trial does not show a walking improvement. A temporary native

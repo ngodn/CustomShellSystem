@@ -1,5 +1,16 @@
 # Three-outfit implementation status
 
+**October 13 CW ankle trial installed:** the full-leg alternative was rejected.
+The four foot/ball AnimationRelative settings pass private editor capture,
+fresh reload, Windows cook and exact cooked-property comparison. Other outfit
+payloads are unchanged. Combined package/catalog checks and 1,822 animation
+assertions pass. The new game process confirms all four modes; booted and
+bare-foot walking trials return safely and restore boots, Iris Out/facial
+playback and the full saved state. Native IK and Reduced noise remain active.
+Evidence is CW `work/foot-retarget2/live-ankle1`; rollback is game Content
+`css-cw-ankle-trial-20261013`. Longer gait/slope coverage and visual acceptance
+remain. The full release and unrelated crash gates are still open.
+
 **October 13 walking result:** autonomous short walking passes and restoration
 pass. The reference-pose trial does not establish improvement. Phase-matched
 component-space analysis corrects the initial rig-bypass interpretation: the
