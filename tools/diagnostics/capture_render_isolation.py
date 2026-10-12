@@ -16,6 +16,7 @@ CASES = {'reflections': 'r.Lumen.Reflections.Allow',
          'virtual-shadows': 'r.Shadow.Virtual.Enable',
          'shadow-cache': 'r.Shadow.Virtual.Cache',
          'adaptive-shadow-rays': 'r.Shadow.Virtual.SMRT.AdaptiveRayCount',
+         'backface-shadow-culling': 'r.Shadow.Virtual.CullBackfacingPixels',
          'directional-hard-shadows': 'r.Shadow.Virtual.SMRT.RayCountDirectional',
          'directional-rays': 'r.Shadow.Virtual.SMRT.RayCountDirectional',
          'directional-samples': 'r.Shadow.Virtual.SMRT.SamplesPerRayDirectional',
@@ -31,6 +32,8 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--value', type=int, choices=range(65), default=0)
     args = parser.parse_args()
+    if args.case == 'directional-samples' and args.value == 0:
+        parser.error('Samples per ray must stay above zero: UE-290828 can fully shadow scenes containing grooms')
     if args.value and args.case not in ('directional-rays', 'directional-samples'):
         parser.error('Nonzero trial values are limited to directional sampling cases')
     if args.output.exists() or len(processes()) != 1:

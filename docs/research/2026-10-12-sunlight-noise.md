@@ -248,3 +248,71 @@ The 20 original renderer values are confirmed unchanged in
 `settings-after-native-sampling-20261013.json`; the later temporal selector also
 restores numerically to 1 in its own receipt. No GPU cost measurement or universal
 fix has been established.
+
+## Online workaround review, October 13
+
+The closest firsthand developer report is
+[moving VSM artifacts on Epic's forum](https://forums.unrealengine.com/t/virtual-shadow-maps-for-high-quality-rendering-cinematics/1922741).
+Its author reports success from disabling adaptive ray counts, and separately
+from disabling backface culling for bright spots. Another user confirms the
+adaptive workaround. This is evidence for their scenes, not a verified fix for
+this game. Local follow-ups:
+
+| Receipt folder | Change | Inspected result |
+| --- | --- | --- |
+| `adaptive-off2` | `r.Shadow.Virtual.SMRT.AdaptiveRayCount`: 1 to 0 to 1 | Visible blocky noise remains |
+| `backface-culling-off1` | `r.Shadow.Virtual.CullBackfacingPixels`: 1 to 0 to 1 | Visible blocky noise remains |
+
+Both receipts record exact equality of all six sampled camera/FOV/pawn views,
+the same player/process/customization, successful trial readback and numerical
+restoration. Animation phase remains uncontrolled. Neither supplies a GPU
+benchmark. The console-priority limitation above still applies.
+
+There are also firsthand [Expedition 33 shadow-grain reports](https://steamcommunity.com/app/1903340/discussions/0/592895271730506185/).
+The thread includes different outcomes from post-process changes. It establishes
+similar reported symptoms, not a common renderer defect or transferable fix.
+
+[Epic's VSM documentation](https://dev.epicgames.com/documentation/unreal-engine/virtual-shadow-maps-in-unreal-engine)
+explains the ray-count/noise tradeoff and zero-ray hard-shadow mode. That agrees
+with the local directional control. It does not make a quality-reducing hard
+shadow switch an unconditional correction. More rays and samples separately
+have already failed to clear this reproduction.
+
+[UE-290828](https://issues.unrealengine.com/issue/UE-290828) is a distinct 5.5/5.6
+groom-related bug when samples per ray are zero, targeted for 5.7. Our positive
+sample count and visible symptom do not match it. The diagnostic now rejects
+zero directional samples before contacting the game. Ray count zero is a
+different control. No samples-zero trial was performed.
+
+### User-supplied article and Fab asset
+
+Read [Prographers' shadow-noise article](https://prographers.com/blog/fixing-shadow-noise-in-unreal-engine-5-a-guideline-with-practical-tips-for-lumen-and-ray-tracing)
+and checked its actionable suggestions against engine source and Epic docs:
+
+- Its SMRT examples change `RayCountLocal` and `SamplesPerRayLocal`. The observed
+  successful isolation here concerns directional sunlight; directional sampling
+  variants have already been tried separately.
+- Higher render resolution and temporal accumulation remain relevant diagnostic
+  leads. Their GPU cost and active upscaler behavior need measurement.
+- Its Nanite fallback and two-sided-geometry examples concern hardware
+  ray-traced shadows. [Epic documents that fallback-mesh limitation](https://dev.epicgames.com/documentation/en-us/unreal-engine/hardware-ray-tracing-in-unreal-engine).
+  It is not evidence that the current VSM symptom has that cause.
+- The article spells the command `r.RayTracing.Shadows.Enabled.TwoSidedGeometry`.
+  Local 5.6.1 `RayTracing/RayTracingShadows.cpp:51` registers
+  `r.RayTracing.Shadows.EnableTwoSidedGeometry`. Do not copy the article's command
+  literally or treat its mixed lighting suggestions as one preset.
+
+The [Fab listing](https://www.fab.com/listings/84fda27a-c79f-49c9-8458-82401fb37cfb)
+is Ultra Dynamic Sky, a developer sky/weather system with sun, moon and sky
+lighting. It does not demonstrate a fix for this game's captured artifact.
+Replacing the game's lighting system would introduce unrelated integration
+work. No purchase, installation or asset replacement was performed.
+
+One narrower source lead remains untested:
+`VirtualShadowMaps/VirtualShadowMapProjection.cpp:48` defines
+`r.Shadow.Virtual.SubsurfaceShadowMinSourceAngle` (default 5), which increases
+effective directional source radius for eligible subsurface materials according
+to opacity. Shader `VirtualShadowMapProjection.usf:866` applies this adjustment.
+Inspect the actual material branch and live value before testing. Reducing it
+would also change light diffusion, so even a positive result needs visual review
+and cannot automatically become a default-on fix.

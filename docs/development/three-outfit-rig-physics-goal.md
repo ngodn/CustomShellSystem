@@ -248,6 +248,18 @@ Directional virtual-shadow softening is implicated; global reflections/contact
 shadow/cache toggles did not clear the pattern. All original values were restored.
 The successful diagnostic produces harder shadows and is not a completed fix.
 
+Online workaround review: the matched-camera adaptive-ray repeat and the
+backface-culling trial both leave visible noise. Their numerical settings are
+restored; console priority still needs a restart as documented in the research
+record. The user's Prographers article and Ultra Dynamic Sky listing have been
+read and compared against Epic documentation and local 5.6.1 source. The article's
+local-light sampling commands do not target the directional sunlight control;
+the Fab asset is a sky/weather system, with no demonstrated fix for this case.
+Next candidates include material-specific subsurface shadow softening and
+resolution/temporal history, with quality and performance measured before a
+shipping toggle. A hard-shadow workaround would remain default off. No production
+renderer fix is installed or accepted.
+
 Investigate the report from Vistani (Nexus, 2026-10-12 01:54): reflections look
 like static outdoors in direct sunlight while moving, but look normal indoors
 or outside direct sunlight. [Reported image](https://i.imgur.com/XiAVEbK.png).
