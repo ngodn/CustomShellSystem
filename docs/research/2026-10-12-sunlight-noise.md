@@ -316,3 +316,26 @@ to opacity. Shader `VirtualShadowMapProjection.usf:866` applies this adjustment.
 Inspect the actual material branch and live value before testing. Reducing it
 would also change light diffusion, so even a positive result needs visual review
 and cannot automatically become a default-on fix.
+
+### Additional user-supplied forest-lighting article
+
+Read the [Dre Dyson article](https://dredyson.com/lessons-from-how-come-some-games-are-seen-as-extremely-realistic-like-silent-breath-for-aaa-game-development-and-performance-the-definitive-complete-step-by-step-guide-to-resolve-shadow-and-lighting/).
+Do not adopt its settings bundle. Several prescriptions conflict with the
+documented renderer:
+
+- Its instruction to set mesh Light Complexity to Surface confuses a
+  [diagnostic viewport mode](https://dev.epicgames.com/documentation/en-us/unreal-engine/viewport-modes-in-unreal-engine)
+  with a mesh lighting setting.
+- Its baked-tree-shadow recommendation does not carry over to active Lumen GI:
+  [Epic documents that precomputed static lighting is disabled](https://dev.epicgames.com/documentation/en-us/unreal-engine/lumen-global-illumination-and-reflections-in-unreal-engine).
+- Its blanket 512-pixel shadow-map explanation does not describe VSMs. Epic's
+  VSM documentation specifies a 16k virtual map with allocated 128-pixel pages;
+  the game's 512 physical-page budget is not a 512-pixel map resolution.
+- Its contrast change is color grading. Local 5.6.1 `Scene.h:1441` and
+  `PostProcessCombineLUTs.usf:112` place shadow contrast in tonal color
+  correction, not shadow sampling or temporal denoising. Changing it may alter
+  visibility of artifacts without correcting their cause.
+
+The general advice to measure frame times and isolate variables is useful.
+The article supplies no downloadable capture or reproducible project for its
+performance claims. No new game settings were changed from this article.
