@@ -44,6 +44,21 @@ both the regular graph and Iris Out adapter, with original customization and
 idle restored. One controlled stationary reload passes actual DLL replacement
 and appearance restoration. Visual jiggle acceptance and broader reload safety
 remain open; the previous paragraph describes the earlier offline checkpoint.
+The subsequent actual-animation comparison reproduces excessive Firm motion:
+Iris Out reaches about 20 degrees at the chest and 18 at the glutes. Restoring
+only the earlier angle/travel limits reduces this to about 4/8 degrees. The
+18-case comparison maps every rig bone, and the saved candidate matches the
+limit-only intervention across six cases after reload and compilation.
+`peony-v2-motion-package1` is now packaged and independently verified. Its cooked
+rig differs in exactly 14 numeric defaults, with unchanged bytecode, hierarchy
+and other defaults. All 1,109 other Eve payloads are unchanged. Shared asset
+containers are unchanged; ten Eve adapter fingerprints in shared metadata are
+refreshed. The 1,535 catalog checks, imports and payload round trips pass.
+This rig is shared by Eve's variants, so the change is not Peony-only. Runtime
+acceptance remains pending, including the existing variants' motion behavior.
+The current motion-restoration core stays installed. The asset trial is not yet
+installed because the game is running; rollback and the four-file installation
+plan are ready. See the active goal for the verified installation command.
 The user subsequently reopened the unchanged build and reports
 "so far now its fine" about lighting. Keep the accepted materials and resume
 the remaining Peony checks; retain the earlier observations for later polish if
