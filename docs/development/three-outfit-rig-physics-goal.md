@@ -88,6 +88,19 @@ constant local chest, glute, thigh-helper and belly poses across all 1,813 keys.
 Their pelvis poses vary, confirming that the evaluator did sample motion.
 `peony-v2-animation-tracks1` rules out changing local helper tracks in those
 three sources, not every gameplay animation or parent-bone movement.
+The subsequent actual-pose test changes the diagnosis: Iris Out drives Firm
+to about 20 degrees chest and 18 degrees glutes in the current rig, versus
+about 4/8 degrees in V42. Changing only the current rig's angle/travel limits
+reproduces the older response. `peony-v2-clip-response1` verifies 18 cases with
+all 379 rig bones mapped, one initialization reset and zero disabled output.
+The isolated Eve limit-restoration candidate in `peony-v2-body-limits1` now
+passes save, fresh reload/recompile and six native animation/preset cases.
+Every output frame matches the limit-only intervention within 0.000027 degrees;
+the rig graph and all defaults except `Limits`/`MaxTravel` are unchanged.
+Next, Windows-cook and read back the candidate, package it without changing
+the accepted geometry/materials, then verify in game. Nothing from this limit
+trial is installed yet. The earlier simple-translation result did not cover
+this input. Keep the production motion-restoration core already installed.
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible

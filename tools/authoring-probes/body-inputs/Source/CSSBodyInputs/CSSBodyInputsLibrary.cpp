@@ -10,8 +10,47 @@
 #include "Serialization/JsonSerializer.h"
 #include "UObject/UnrealType.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 IMPLEMENT_MODULE(FDefaultModuleImpl, CSSBodyInputs)
+
+bool UCSSBodyInputsLibrary::SetBodyMovementLimits(UBlueprint* Blueprint,
+    const TArray<float>& Angles, const TArray<float>& Travel)
+{
+    if (!IsRunningCommandlet() || !IsInGameThread() || !Blueprint ||
+        !Blueprint->GeneratedClass || !Blueprint->GetPathName().StartsWith(TEXT("/Game/CSS/")) ||
+        Angles.Num()!=7 || Travel.Num()!=7) return false;
+    for (float Value : Angles) if (!FMath::IsFinite(Value) || Value<=0 || Value>PI) return false;
+    for (float Value : Travel) if (!FMath::IsFinite(Value) || Value<=0 || Value>50) return false;
+    UObject* Defaults=Blueprint->GeneratedClass->GetDefaultObject();
+    const FName Names[]={TEXT("Limits"),TEXT("MaxTravel")};
+    FArrayProperty* Fields[2]{};
+    int32 Indices[2]{};
+    for (int32 I=0; I<2; ++I)
+    {
+        Indices[I]=FBlueprintEditorUtils::FindNewVariableIndex(Blueprint,Names[I]);
+        Fields[I]=FindFProperty<FArrayProperty>(Defaults->GetClass(),Names[I]);
+        if (Indices[I]==INDEX_NONE || !Fields[I] || !CastField<FFloatProperty>(Fields[I]->Inner)) return false;
+        FScriptArrayHelper Values(Fields[I],Fields[I]->ContainerPtrToValuePtr<void>(Defaults));
+        if (Values.Num()!=7) return false;
+    }
+    const TArray<float>* Inputs[]={&Angles,&Travel};
+    Blueprint->Modify();
+    Defaults->Modify();
+    for (int32 I=0; I<2; ++I)
+    {
+        FScriptArrayHelper Values(Fields[I],Fields[I]->ContainerPtrToValuePtr<void>(Defaults));
+        for (int32 Index=0; Index<7; ++Index)
+            Fields[I]->Inner->CopyCompleteValue(Values.GetRawPtr(Index),&(*Inputs[I])[Index]);
+        FString Text;
+        Fields[I]->ExportTextItem_Direct(Text,Fields[I]->ContainerPtrToValuePtr<void>(Defaults),
+            nullptr,Defaults,PPF_None);
+        // Rig recompilation reconstructs the CDO from these authored defaults.
+        Blueprint->NewVariables[Indices[I]].DefaultValue=Text;
+    }
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    return true;
+}
 
 FString UCSSBodyInputsLibrary::CompareRestoreSnapshot(USkeletalMesh* Mesh, UAnimBlueprint* Blueprint)
 {

@@ -37,7 +37,7 @@ def value_text(value):
     return str(value)
 
 
-def evaluate(bp, public, mode, preset, fps, frame_deltas=None):
+def evaluate(bp, public, mode, preset, fps, frame_deltas=None, pose_frames=None):
     owner = unreal.SceneComponent()
     rig = bp.create_control_rig()
     if not rig.rename(outer=owner):
@@ -62,14 +62,20 @@ def evaluate(bp, public, mode, preset, fps, frame_deltas=None):
     timing = []
     elapsed = 0.
     deltas = frame_deltas if frame_deltas is not None else [0.] + [1 / fps] * (4 * fps)
+    if pose_frames is not None and len(pose_frames) != len(deltas):
+        raise ValueError('Pose and frame-time counts differ')
     for frame, delta in enumerate(deltas):
         elapsed += delta
         t = elapsed if frame_deltas is not None else frame / fps
         hierarchy.reset_pose_to_initial(unreal.RigElementType.BONE)
-        pelvis = hierarchy.get_global_transform(key('pelvis'), True)
-        # A smooth 10 cm translation for two seconds, followed by two seconds at rest.
-        pelvis.translation += unreal.Vector(0, 0, 10 * math.sin(2 * math.pi * t) if t < 2 else 0)
-        hierarchy.set_global_transform(key('pelvis'), pelvis, False, True)
+        if pose_frames is None:
+            pelvis = hierarchy.get_global_transform(key('pelvis'), True)
+            # A smooth 10 cm translation for two seconds, followed by two seconds at rest.
+            pelvis.translation += unreal.Vector(0, 0, 10 * math.sin(2 * math.pi * t) if t < 2 else 0)
+            hierarchy.set_global_transform(key('pelvis'), pelvis, False, True)
+        else:
+            for bone, pose in pose_frames[frame].items():
+                hierarchy.set_global_transform(key(bone), pose, False, False)
         incoming = [transform(hierarchy.get_global_transform(key(n))) for n in NAMES]
         set_value(rig, 'Enabled', True)
         set_value(rig, 'UpdateSerial', frame)

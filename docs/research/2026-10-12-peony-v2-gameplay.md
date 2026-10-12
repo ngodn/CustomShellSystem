@@ -211,9 +211,10 @@ to 3.243 degrees across the three rates. The fixture settles after the motion.
 assets in the shared read-only content mount and denied editor preference writes;
 it reported zero errors. This was not a clean package cook.
 
-Conclusion: wider limits materially increase Natural's response in this fixture.
-Tightening them does not explain or reproduce the user's Firm failure. Do not
-install a limit-only change as a claimed repair. This direct rig fixture bypasses
+Conclusion at this stage: wider limits materially increase Natural's response
+in the simple translation fixture, which does not reproduce the reported Firm
+response. The later animation-pose comparison below does reproduce a large Firm
+response and isolates the wider limits. This direct rig fixture bypasses
 CSS preset delivery, the AnimBP event/update path, animation layering and actual
 gameplay motion. Those integration paths remain the investigation priority.
 Keep Peony's accepted fit, materials and controls intact.
@@ -393,3 +394,46 @@ This excludes changing local helper poses in these three retained sources as
 an extra layer of jiggle. Parent transforms still move the helpers in component
 space. It does not audit every native gait or montage, cooked compression, or
 the full gameplay blend. No installed animation or physics tuning changed.
+
+### Actual animation poses expose the wider movement envelope
+
+`peony-v2-clip-response1` feeds every source-key pose of the retained default
+idle and Iris Out into the current rig, the current rig with only V42's angle
+and travel limits restored, and V42. Firm, Natural and disabled settings give
+18 cases. All 379 rig bones are mapped from the raw component-space poses.
+Each frame restores the incoming animated pose before evaluating one body
+solver. Owner-component motion and the game's main AnimBP are outside this test.
+
+The initial 12-case run and the repeated matching cases are identical. Source
+hashes are unchanged, every case resets only at initialization, and disabled
+regions produce zero relative motion. The final commandlet exits 0.
+`verify_body_clip_response.py` verifies coverage, finite output, mapping,
+reset counts, disabled output and the isolated limit intervention.
+
+Iris Out peak chest/glute angles, taking the larger side:
+
+| Rig | Firm chest | Firm glutes | Natural chest | Natural glutes |
+| --- | ---: | ---: | ---: | ---: |
+| Current | 20.14 deg | 18.41 deg | 28.00 deg | 24.00 deg |
+| Current with old limits | 3.83 deg | 8.01 deg | 3.83 deg | 8.01 deg |
+| V42 | 3.83 deg | 7.94 deg | 3.83 deg | 8.01 deg |
+
+Default-idle Firm is much smaller and matches the older rig: approximately
+0.83 degrees chest and 2.15 degrees glutes. This explains why the prior smooth
+translation fixture understated the difference. The preset reaches the rig,
+but the wide envelope still permits large motion under more demanding input.
+Restoring the earlier envelope is now a supported candidate intervention,
+not an inference from preset names. The user's complete gameplay complaint
+still needs visual verification after a candidate is installed.
+
+The private `peony-v2-body-limits1` candidate changes only `Limits` and
+`MaxTravel` on Eve's namespaced body rig. Its first class-default-only edit
+failed fresh reload: RigVM restored both old arrays from Blueprint variable
+defaults. The authoring helper now updates those stored defaults too. Its C++20
+build passes, and the saved candidate passes fresh reload and recompilation.
+The candidate's six native animation/preset cases match the limit-only
+intervention. `verify_body_limit_trial.py` checks every frame against that
+baseline, the two-field-only change, unchanged graph and protected source.
+Windows cook, cooked readback and package verification remain before
+installation. Accepted geometry, materials, profiles and other outfit rigs
+remain untouched.
