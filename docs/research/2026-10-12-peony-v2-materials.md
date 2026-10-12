@@ -319,3 +319,48 @@ The CSS workspace relocation, disposable-cache removal list and disk readings
 are recorded in [the October 12 cleanup log](../development/cleanup-2026-10-12.md).
 Referenced backups, original archives, accepted body inputs, current V2 source
 and cook/readback evidence were retained.
+
+## Stocking defaults, posed correspondence and native material
+
+The recovered blend had nonzero default values on the new stocking shape keys.
+`stockings-ready.blend` resets those defaults to zero. The body, 18 garments and
+four stocking layers retain their original vertices, topology, UVs, weights and
+morph deltas. The preparation recipe now initializes these values explicitly.
+Earlier review renders already reset shape values before applying their chosen
+settings, so this finding does not establish a cause for their appearance.
+
+`fit-verified.json` passes 11 cases: neutral, six individual maximum body controls,
+all controls at half and maximum, and retained walking/sprinting poses at maximum.
+Maximum stocking-to-corresponding-body distance is 0.200177 mm, consistent with
+the intended 0.2 mm offset. This checks the stocking layer, not every possible
+garment collision or animation frame.
+
+Opacity-zero and opacity-one comparisons confirm that the layer renders. The
+initial 0.45 opacity was too faint in the diagnostic preview. The new material
+uses 0.7 opacity, source stocking tint and weave textures, tiling 10, metallic
+0.25, roughness 0.42 and normal strength 0.3. Legs default on; body, arms and hands
+remain separate optional regions. This translucent overlay preserves the accepted
+Eve skin beneath it. It is an adaptation, not an exact reconstruction of the
+source game's opaque layered skin shader.
+
+Seven native packages, comprising two textures, a parent and four palette
+instances, pass fresh editor reload. Windows cooking completes with zero errors
+and warnings, preserving source assets. `cooked-readback1/verified.json` verifies
+the IoStore payloads and 23 SM6 plus 17 SM5 shader entries, including required
+skin/cloth vertex factories. Nothing was installed.
+
+The parent uses per-pixel surface translucency before depth of field, keeps depth
+testing enabled and writes translucent velocity. Settings follow Epic's UE 5.6
+[Material API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/Material?application_version=5.6),
+[lighting mode API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/TranslucencyLightingMode?application_version=5.6)
+and [translucency pass API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/MaterialTranslucencyPass?application_version=5.6).
+Runtime sorting, performance and visual behavior still need native testing.
+
+The new neutral and maximum-shape walking views completed in
+`review-sheer-neutral` and `review-sheer-walk-max`. These use diagnostic skin and
+an approximate shader. Visible faceting and these previews do not establish
+native material quality. Character integration, cloth, CSS controls, saved
+profiles and gameplay checks remain open, alongside the glowing, flowing trim.
+`stocking-material1-receipt.json` freezes this work's recipes and evidence.
+The completed cook's temporary prefix and redundant intermediates were removed
+after recording the removal list in the October 12 cleanup log.

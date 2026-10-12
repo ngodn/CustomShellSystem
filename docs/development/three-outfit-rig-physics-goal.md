@@ -31,7 +31,13 @@ The interrupted Peony stocking study survived at
 `/mnt/eins0fxE/CSS-Development/peony-v2-stockings1`. `recovery-verified.json`
 confirms the body and 18 fitted garments are unchanged, all four stocking layers
 retain the intended body weights/morphs, and the three completed neutral render
-hashes match. Native stocking materials, posed fit and gameplay remain pending.
+hashes match. The follow-up `stockings-ready.blend` resets unintended nonzero
+stocking shape defaults without changing mesh data. `fit-verified.json` passes
+11 body-control/pose cases, retaining the intended 0.2 mm stocking offset.
+The seven native stocking material packages pass fresh editor readback, Windows
+cooking and IoStore/shader verification. Native character integration, visual
+review and gameplay remain pending; no new V2 trial is installed. Completed
+stocking-cook intermediates were removed under the same cleanup record.
 The required optional glowing, flowing trim remains in scope.
 
 ## Objective
