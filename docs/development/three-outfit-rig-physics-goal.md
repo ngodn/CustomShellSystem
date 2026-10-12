@@ -1,5 +1,10 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**Overnight authorization, October 13:** the user is leaving the game open
+and explicitly authorizes independent fixing, improvement and testing while
+away. Preserve their save/settings, use established reload limits, and continue
+the full stable-release goal without waiting for routine manual checks.
+
 **October 13, CW foot localization:** the actual shared walk blend now has
 six editor-component timelines (1,446 poses), with all installed sample paths,
 coordinates and rates checked. Forward-only baseline matches the prior lower
