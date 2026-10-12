@@ -1,7 +1,12 @@
-# Peony public release, October 12
+# Withdrawn Peony packaging rehearsal, October 12
 
-The user deferred Slipstream and requested a public Nexus delivery. Release
-files are in `dist/eve-v1.5.0`. Nothing was uploaded or installed during packaging.
+**Not approved for public delivery.** The user reaffirmed the coordinated stable
+release targets. The agent incorrectly narrowed that delivery to Peony and chose
+beta.12. Files in `dist/eve-v1.5.0` are retained rehearsal artifacts only. Nothing
+was uploaded or installed during packaging. See
+[the outstanding release gates](three-outfit-release-gates.md).
+
+The following versions describe the withdrawn artifacts, not the release targets:
 
 - Eve v1.5.0: seven variants, including accepted Peony V2 and the six existing outfits.
 - CSS v1.0.0-beta.12: the matching runtime, built from annotated local tag
@@ -11,7 +16,9 @@ files are in `dist/eve-v1.5.0`. Nothing was uploaded or installed during packagi
 Keep the three downloads separate. The outfit/shared ZIPs each contain exactly
 one matching container trio. The runtime uses the existing release allowlist.
 Readmes, BBCode changelogs, animation credits, SHA-256 sidecars and verification
-receipts accompany the files. These are upload-ready files, not a published page.
+receipts accompany the files. Packaging checks passed, but the required repairs
+and regression gates did not finish. These files must not be uploaded as the
+agreed stable release.
 
 The [public upgrade follow-up](../research/2026-10-12-peony-public-upgrade.md)
 also passes cooked-import and native-catalog checks with released Genessa and

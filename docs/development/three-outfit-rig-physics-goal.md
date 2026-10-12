@@ -2,27 +2,28 @@
 
 Prepared 2026-10-08. **Status: active, baseline and migration audit in progress.** See [implementation status](three-outfit-rig-physics-status.md) for current evidence, completed work and remaining checks.
 
-**Current priority, October 12:** the user has explicitly deferred Slipstream
-and requested delivery of the accepted new Peony outfit for Eve. Stop Slipstream
-experiments. Retain its sources, recipes and diagnostic evidence for later;
-its unresolved cloth issues do not block Peony delivery. Prepare the accepted
-`peony-v2-motion-package1` Eve assets with matching CSS/shared dependencies,
-retaining the six existing Eve variants. Preserve Peony's accepted fit, four
-palette templates, removable pieces, flowing trim, facial playback, doubles
-and corrected motion. The broader repair backlog remains open.
+**Release correction, October 12:** the user reaffirmed the agreed stable
+milestone: **CSS v1.0.0, Eve v1.5.0, Unholy Genessa v0.3.0 and Commander White
+v0.1.0**, plus the matching separate shared-assets package. Deferring Slipstream
+did not defer the other outfits, reported bugs or release gates. The earlier
+Peony-only beta.12 delivery claim was incorrect. Its local archives are withdrawn
+from public delivery and retained as packaging evidence only. Nothing was
+uploaded or installed from those archives. See the
+[release and bug audit](three-outfit-release-gates.md) for outstanding work.
 
-The [Peony public delivery](peony-public-release.md) is now packaged as Eve
-v1.5.0 plus CSS/shared beta.12 in `dist/eve-v1.5.0`, with verified archives,
-install instructions and Nexus changelogs. No upload or game installation was
-performed. Preserve the accepted Peony inputs and defer Slipstream until the
-user requests it again.
+Continue the full goal and finish the repairs and required regression checks
+before preparing the coordinated stable release. Preserve the accepted
+`peony-v2-motion-package1`, including fit, four palettes, removable pieces,
+flowing trim, facial playback, doubles and corrected motion. Slipstream remains
+explicitly deferred; retain its sources and evidence without further experiments.
 
 The [public upgrade audit](../research/2026-10-12-peony-public-upgrade.md) now
 checks the final Eve/shared files alone and alongside the released Genessa
 v0.2.0 and CW v0.0.6-dev. All four cooked-import and native-catalog cases pass.
 Old outfit revisions do not gain the newer trial facial/playback adapters;
-the delivery instructions state that limit. No old-outfit live compatibility
-or completion of the broader regression matrix is claimed.
+the rehearsal instructions state that limit. This is useful upgrade evidence,
+not a substitute for delivering Genessa v0.3.0 and CW v0.1.0 or completing their
+live regression matrix.
 
 **October 12 continuation:** Peony motion remains user accepted. The user
 confirms the blocky sunlight symptom is currently only in Vistani's report;

@@ -1,4 +1,10 @@
-# Eve v1.5.0: Peony
+# Withdrawn packaging rehearsal: do not upload
+
+This beta.12 bundle does not satisfy the agreed coordinated stable release.
+Required targets are CSS v1.0.0, Eve v1.5.0, Unholy Genessa v0.3.0 and
+Commander White v0.1.0, with matching shared assets. Repairs and regression
+gates remain open. The instructions below describe the retained rehearsal only.
+Nothing was uploaded or installed from this bundle.
 
 Install all three downloads for this release: Eve v1.5.0, CSS v1.0.0-beta.12,
 and CSS Shared Assets v1.0.0-beta.12. UE4SS stays a separate requirement;

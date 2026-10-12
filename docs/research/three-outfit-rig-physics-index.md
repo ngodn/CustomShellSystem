@@ -2,11 +2,12 @@
 
 Updated 2026-10-12. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
-**Current scope:** the user deferred Slipstream and requested public delivery
-of the accepted Peony V2. Eve v1.5.0, CSS beta.12 and matching shared assets are
-packaged locally. See [delivery evidence](../development/peony-public-release.md)
-for the exact artifacts and validation limits. Nothing was uploaded. Further
-Slipstream experiments are deferred until the user requests them again.
+**Current scope:** complete the coordinated stable release: CSS v1.0.0,
+Eve v1.5.0, Unholy Genessa v0.3.0 and Commander White v0.1.0, with matching
+shared assets. The user corrected the erroneous Peony-only beta.12 delivery.
+Those archives are withdrawn packaging evidence; nothing was uploaded.
+See [release gates](../development/three-outfit-release-gates.md). Preserve
+accepted Peony and keep Slipstream deferred until the user requests it again.
 
 The [public upgrade follow-up](2026-10-12-peony-public-upgrade.md) checks the new
 shared pack against the actual published Genessa and Commander White packages.

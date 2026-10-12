@@ -1,11 +1,12 @@
 # Three-outfit implementation status
 
-**Current delivery, October 12:** the user deferred Slipstream and requested a
-public Nexus release of the accepted Peony V2. Peony's corrected motion was
-accepted after the tighter body-limit installation. Package Eve v1.5.0 with
-CSS beta.12 and matching unified shared assets. Older pending or rejected
-Peony trial descriptions below are historical; they are not new release gates.
-Keep the wider regression limits explicit and the remaining outfit backlog open.
+**Current release status, October 12:** not ready. The user reaffirmed CSS
+v1.0.0, Eve v1.5.0, Unholy Genessa v0.3.0 and Commander White v0.1.0.
+The Peony-only beta.12 archives are a withdrawn packaging rehearsal, not the
+agreed delivery. Peony remains accepted and Slipstream remains deferred.
+The [release and bug audit](three-outfit-release-gates.md) distinguishes accepted
+fixes, incomplete repairs, untested cases and explicit deferrals. All historical
+trial states below must be read against their later acceptance or rejection.
 
 Updated 2026-10-12. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
