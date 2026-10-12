@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW belt isolated:** cooked weights and retained walking poses
+show 18 undriven belt-chain bones. They affect only belt slot 14. A private
+native AnimDynamics prototype changes only its 15 intended descendants but
+loses attachment and diverges in the 241-frame replay, so it is rejected and
+not installed. Sources/evidence retained, 526 MB of accounted-for intermediates
+removed. Next reuse the bounded existing Eve/Genessa chain implementation.
+Skirt config is recorded but unchanged and its jerk is not diagnosed. See
+[belt/skirt record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md).
+
 **October 13, actual CW baseline compared:** original packages were cold-loaded
 and tested in booted/bare straight walks, then the ankle trial restored.
 Sampled mean bank is lower with the trial, consistent with the matched editor

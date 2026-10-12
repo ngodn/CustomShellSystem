@@ -1,5 +1,12 @@
 # Three-outfit implementation status
 
+**October 13, CW belt:** 18 weighted chain bones are not driven by the active
+rigs; all affected vertices belong to the belt. The private AnimDynamics trial
+fails attachment/stability and is rejected without installation. Its 241-frame
+normal replay preserves other bones within 9.77e-15. Reuse the existing bounded
+chain approach next. Skirt settings are recorded, motion repair remains open.
+See CW [belt/skirt record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md).
+
 **October 13, actual original-package comparison:** original CW/shared packages
 now have booted/bare straight-walk and collision evidence. Mean reference bank
 is lower in the trial samples, while boot penetration and bare-foot clearance
