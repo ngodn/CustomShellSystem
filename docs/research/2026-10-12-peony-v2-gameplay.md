@@ -146,3 +146,15 @@ the solver response is excessive, one correctly configured owner will still
 produce the reported motion. The earlier cooked ownership audit cannot decide
 these runtime cases. Existing body-control and solver probes are references,
 not permission to reuse old results as Peony motion acceptance.
+
+`tools/diagnostics/capture_peony_motion_inputs.py` is prepared for the next live
+check through the already installed CSSX interface. It reads main/post-process
+instance identities, global and regional body settings and reset epoch three
+times, bracketing each read with selection/instance checks. Its allowlist has
+only player/property reads and animation-instance getters. Syntax and the
+no-game guard pass; the guard leaves both request and output paths unchanged.
+Live field capture remains pending. It needs no replacement core, preset write,
+camera input or animation control. A useful next capture is with Firm selected
+for both chest and glutes, Peony standing in the world. This will distinguish
+saved selections from the values reaching the active rig; it does not by itself
+measure jiggle amplitude or prove whether another solver also runs.
