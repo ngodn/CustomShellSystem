@@ -31,6 +31,15 @@ need importing and cooking. Final package assembly, native visuals, cloth and
 gameplay acceptance remain open. Evidence and the pending dependency plan are
 in `work/three-outfit-rig-physics/peony-v2-customize1`; nothing is installed.
 
+**Peony finish textures, October 12:** all seven additional source textures now
+pass fresh-editor reload, Windows cook and IoStore readback. The complete
+78-control recipe resolves all 88 texture choices, with zero unresolved texture
+imports. Evidence: `peony-v2-customize1/control-materials-complete.json` and
+`/mnt/eins0fxE/CSS-Development/peony-v2-options1/completion-receipt.json`.
+The input dependency plan retains its historical `pending_import` list. Removed
+1.35 GiB of temporary cook data after verification. Final outfit packaging and
+runtime acceptance remain open; nothing was installed.
+
 **Peony stocking integration, October 12:** the recovered stocking layers now
 form part of both private native V2 character variants in
 `/mnt/eins0fxE/CSS-Development/peony-v2-character2`. The existing body and garments

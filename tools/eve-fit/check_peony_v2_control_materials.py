@@ -10,11 +10,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ('recipe', 'bindings', 'decoded', 'textures', 'root', 'output'):
         parser.add_argument('--'+key, type=Path, required=True)
+    parser.add_argument('--require-complete', action='store_true')
+    parser.add_argument('--additional-decoded', type=Path, action='append', default=[])
     args = parser.parse_args()
     recipe, bindings, decoded, textures = [json.loads(p.read_text()) for p in
         (args.recipe, args.bindings, args.decoded, args.textures)]
+    for path in args.additional_decoded:
+        extra = json.loads(path.read_text())
+        if decoded.keys() & extra.keys():
+            raise ValueError('Additional cooked packages replace an existing asset')
+        decoded.update(extra)
     defaults = {r['slot']: r['material'].split('.')[0] for r in bindings['bindings']}
     pending = textures['pending_import']
+    remaining = {path for path in pending if path.rsplit('.', 1)[0] not in decoded}
+    if args.require_complete and remaining:
+        raise ValueError('Texture choices still require cooked assets: '+str(sorted(remaining)))
     for path, row in pending.items():
         source = args.root/row['source']
         if hashlib.sha256(source.read_bytes()).hexdigest() != row['sha256']:
@@ -45,6 +55,8 @@ def main():
             path = option['texture']
             if path.rsplit('.', 1)[0] not in decoded and path not in pending:
                 raise ValueError('Unaccounted texture dependency: '+path)
+            if path.rsplit('.', 1)[0] in decoded and not any(r['Type'] == 'Texture2D' for r in decoded[path.rsplit('.', 1)[0]]):
+                raise ValueError('Cooked texture choice has the wrong asset type: '+path)
             choices += 1
         for binding in control.get('bindings', []):
             slot, name = binding['slot'], binding['parameter']
@@ -69,10 +81,10 @@ def main():
                     raise ValueError(f'Control changes the authored look: {control["id"]}, {package}, {name}')
                 checks += 1
     result = dict(passed=True, targets=targets, original_and_palette_checks=checks,
-                  texture_choices=choices, pending_texture_imports=len(pending),
+                  texture_choices=choices, pending_texture_imports=len(remaining),
                   inputs={str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in
-                          (args.recipe, args.bindings, args.decoded, args.textures, Path(__file__))},
-                  limitation='Static cooked bindings and defaults only; seven pending source textures require cooking before installation.')
+                          (args.recipe, args.bindings, args.decoded, args.textures, Path(__file__), *args.additional_decoded)},
+                  limitation='Static cooked bindings and defaults only. Runtime texture selection and visual acceptance remain pending.')
     args.output.write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps({k: v for k, v in result.items() if k != 'inputs'}))
 

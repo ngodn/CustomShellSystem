@@ -506,3 +506,46 @@ The earlier `peony-v2-customize1/css_core.dll` is the retained palette-only buil
 not this updated candidate. No game files changed. Existing build directories
 were reused; no full project copy or cook was made. `df -h` remains 129G free on
 root, 90G on theark and 50G on the development drive.
+
+
+## Source finish textures cooked
+
+The seven missing finish textures now have native assets in
+`/mnt/eins0fxE/CSS-Development/peony-v2-options1`. The immutable selection points
+to the earlier dependency plan; its `pending_import` entries describe the input
+set, not the current completion state. `completion-receipt.json` records the
+current evidence and frozen recipes. The existing materials and character cooks
+were not rebuilt or copied.
+
+`author_peony_v2_options.py` imports the exact hashed source PNGs using the same
+sRGB/default compression settings as the V2 fabric textures. A fresh editor
+process verifies all seven saved Texture2D assets. Windows UE 5.6.1 cooking
+passes with zero errors and warnings. The private seven-texture IoStore trio
+passes verification, dependency/import resolution and payload roundtrip checks.
+`check_peony_v2_option_cook.py` confirms source dimensions, top mip retention,
+complete positive-sized mip chains and sRGB settings. These are asset checks,
+not a claim of visual equivalence after block compression.
+
+The existing cook/readback helper now accepts the isolated `peony-v2-options1`
+workspace and requires exactly seven texture packages with no material masters.
+Its frozen copy is under this workspace's `recipes`; the earlier character and
+stocking checks are unchanged. Linux editor logs include the existing read-only
+preset-preference warning at shutdown; both editor processes exit successfully.
+Windows cook diagnostics are clean.
+
+`check_peony_v2_control_materials.py --require-complete --additional-decoded ...`
+merges the character and option readbacks in memory, rejects package collisions,
+and requires every declared choice to resolve to a Texture2D. All 88 texture
+choices and 122 bindings pass; 610 Original/palette values match and the unresolved
+texture count is zero. Omitting the options readback produces the expected hard
+failure. See `peony-v2-customize1/control-materials-complete.json` and
+`peony-v2-options1/missing-texture-rejected.json`. Body and garment meshes,
+materials, fitting, glow settings and the 78-control recipe did not change.
+
+Five recorded temporary groups were removed after verification, reclaiming
+1.35 GiB allocated. Original editor assets, cooked CSS payloads, the container
+trio, useful DDC and all evidence remain. Their hashes still match. The private
+Docker daemon exited after confirming no containers remained. Free space before
+and after this turn stays 129G on root, 90G on theark and 50G on the development
+drive at `df -h` precision. The complete outfit still needs final package/catalog
+assembly and in-game visual and behavior checks; nothing was installed.
