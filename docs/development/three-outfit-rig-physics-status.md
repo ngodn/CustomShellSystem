@@ -1,5 +1,15 @@
 # Three-outfit implementation status
 
+**October 13, CW contact measurements:** four recorded straight-walk poses now
+have cooked boot reconstruction and collision readback. The trial reduces mean
+absolute reference banking from 2.978 to 1.422 degrees compared with undoing its
+ankle rotation at fixed captured parent/IK poses. That comparison is not a live
+baseline run. The worst sampled forefoot point is 2.244 cm below collision;
+the counterfactual is 2.136 cm below. Keep the trial and leave grounding
+unchanged. Full-cycle, bare-foot, slope and other gait acceptance remain open.
+Both readbacks preserve the game and saved settings. Evidence: CW
+`work/foot-contact1` and [contact readback](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/foot-contact-readback.md).
+
 **October 13, bounded gait follow-up:** CW's installed ankle trial now has live
 walk, jog and sprint activation evidence. A developer input defect prevented
 Left Shift from reaching the game; explicit scan-code injection fixes it.

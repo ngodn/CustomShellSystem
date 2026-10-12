@@ -353,3 +353,18 @@ scale one, mesh-reference flag false, all four selected animations available,
 Iris Out facial playback, both boots visible, and full saved-state equality.
 Reduced noise owns one light with no error. No large cook or package copy was
 created in this continuation; `df -h` remains 119G free on root and 37G on theark.
+
+
+## World-space boot contact follow-up
+
+CW `work/foot-contact1` reconstructs the four steady straight-walk snapshots
+using the synchronized world transform. Player-profile simple and complex
+traces agree at all heel/forefoot landmarks. A fixed-parent counterfactual
+undoes only the constant ankle rotations verified across 241 editor frames.
+The candidate lowers mean absolute bind-lateral bank from 2.978 to 1.422 degrees
+(seven of eight foot samples improve); lowest sampled forefoot clearance is
+-2.244 cm versus -2.136 cm in the counterfactual. This supports retaining the
+trial, not a blanket height adjustment or a whole-cycle contact verdict.
+The original grounding solver was not rerun for the counterfactual. No assets,
+settings, camera or position changed. See CW `docs/foot-contact-readback.md`
+for the source, trace and morph-exclusion limits.
