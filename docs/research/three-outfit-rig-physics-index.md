@@ -11,7 +11,14 @@ Other Eve variants and broader regression remain open. See the
 [active goal](../development/three-outfit-rig-physics-goal.md) for exact scope.
 The queued [sunlight noise investigation](2026-10-12-sunlight-noise.md) has the
 reporter's image and a read-only settings capture, with no diagnosed cause or
-rendering change yet.
+rendering change yet. The user confirms the matching symptom is only in Vistani's
+report so far; the local screenshot does not show an obvious matching pattern.
+
+Slipstream's [continuous-cloth constraint isolation](2026-10-12-slipstream-constraint-isolation.md)
+compares two batches with reversed order and identical animated poses. Removing
+backstops or self-collision passes this stretch screen in both; normal simulation
+still fails and varies between runs. No collision removal is accepted for shipping,
+and no new package is installed.
 
 The [combined V2 package](2026-10-12-peony-v2-package.md) now passes native
 catalog, dependency and payload readback checks. CSS's facial namespace check

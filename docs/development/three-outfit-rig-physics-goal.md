@@ -2,6 +2,21 @@
 
 Prepared 2026-10-08. **Status: active, baseline and migration audit in progress.** See [implementation status](three-outfit-rig-physics-status.md) for current evidence, completed work and remaining checks.
 
+**October 12 continuation:** Peony motion remains user accepted. The user
+confirms the blocky sunlight symptom is currently only in Vistani's report;
+keep that high-priority investigation queued without speculative renderer changes.
+Slipstream's private continuous-cloth isolation is recorded in
+[constraint results](../research/2026-10-12-slipstream-constraint-isolation.md).
+Its normal configuration still fails the stretch screen. Disabling backstops
+or self-collision clears that screen in two runs, but does not establish fit or
+justify removing collision from the shipped outfit. No Slipstream trial is installed.
+
+At the user's request, the shared `ue-modding` skill has also been revised to
+cover the actual extraction, patched CUE4Parse, Blender, editor, cook and runtime
+workflows. Unsupported generalizations about editor/source availability, reload,
+hook cost and physics were replaced with scoped checks. This documentation
+correction does not complete or replace the outfit goal.
+
 October 12 authorization: improve CSS core where needed to support the new
 outfits. Peony remains the current priority. The first addition is authored
 material settings in palette templates, including textures, while preserving

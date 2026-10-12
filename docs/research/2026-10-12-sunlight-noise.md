@@ -1,8 +1,10 @@
 # Moving sunlight noise: evidence and capture
 
-Status: queued behind Peony body-motion installation. No renderer setting or
-material has been changed for this report. A reproducible visual comparison is
-still needed before proposing a MISC workaround.
+Status: queued, not reproduced on this setup. Peony's body-motion trial is now
+installed and user accepted. On October 12, the user confirms the matching
+blocky sunlight symptom is "Only in Vistani's report so far". No renderer setting
+or material has been changed for this report. A reproducible visual comparison
+is still needed before proposing a MISC workaround.
 
 The user supplied Vistani's report of noise outdoors in direct sunlight during
 movement, following installation of more CSS outfits and Shared Assets. The
@@ -50,6 +52,16 @@ which upscaler is active, or whether the screenshot symptom is present. The
 capture does not verify camera stability. There is no visual pass/fail result.
 
 ## Boundaries for the next comparison
+
+After the motion relaunch, `settings-after-motion-relaunch.json` records the
+same 20 console values and unchanged process/player/customization across the
+read-only capture. `peony-world-baseline.jpg` was obtained through the existing
+CSSX Steam screenshot bridge without gameplay or camera input. Its receipt is
+`peony-world-baseline.json`. The rear three-quarter view beside outdoor stairs
+does not show an obvious matching blocky pattern on the small visible skin
+areas. It is a single image, not a matched moving/standing comparison, and was
+not synchronized to the console capture. Together with the user's clarification,
+this leaves the reporter's issue open rather than establishing a local fix.
 
 Epic's [UE 5.6 virtual-shadow documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/virtual-shadow-maps-in-unreal-engine?application_version=5.6)
 describes sampling noise in soft shadow edges and its dependence on directional
