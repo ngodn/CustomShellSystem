@@ -321,6 +321,27 @@ def validate(recipe:dict) -> set[str]:
         if p['id']=='original' or p['id'] in ids or not isinstance(p['name'],str) or not 1<=len(p['name'])<=96:raise ValueError('Invalid palette identity')
         ids.add(p['id'])
         if not isinstance(p['values'],dict):raise ValueError('Invalid palette values')
+        parameters=p.get('parameters',[]);bounded_array(parameters,512);destinations=set()
+        for row in parameters:
+            if not isinstance(row,dict):raise ValueError('Invalid palette parameter')
+            kind=row.get('kind')
+            if kind not in ('scalar','vector','texture'):raise ValueError('Invalid palette parameter kind')
+            if set(row)!={'slot','parameter','kind','texture' if kind=='texture' else 'value'}:
+                raise ValueError('Invalid palette parameter fields')
+            if type(row['slot']) is not int:raise ValueError('Invalid palette parameter slot')
+            number(row['slot'],0,127);parameter(row['parameter'])
+            target=(row['slot'],row['parameter'].lower())
+            if target in destinations:raise ValueError('Duplicate palette parameter')
+            destinations.add(target)
+            if kind=='texture':asset(row['texture'])
+            elif kind=='scalar':number(row['value'],-65536,65536)
+            else:
+                if not isinstance(row['value'],list) or len(row['value'])!=4:raise ValueError('Palette vector needs four components')
+                for x in row['value']:number(x,-65536,65536)
+            for c in controls:
+                for b in c.get('bindings',[]):
+                    if b.get('surface','base')=='base' and b.get('association','global')=='global' and (b['slot'],b['parameter'].lower())==target and c['id'] not in p['values']:
+                        raise ValueError('Palette parameter overlaps a control without a palette value')
         for id,v in p['values'].items():
             if id not in by_id:raise ValueError('Unknown palette part')
             c=by_id[id]

@@ -12,6 +12,41 @@ int main() {
     try {
         {
             auto recipe=Json::parse(R"({"schema":1,"controls":[
+                {"id":"glow","name":"Glow","kind":"intensity","max":8,"default":[0,0,0,1],"bindings":[{"slot":3,"parameter":"GlowStrength"}]}],
+                "palettes":[{"id":"floral","name":"Floral","values":{"glow":[2,0,0,1]},"parameters":[
+                    {"slot":3,"parameter":"BaseTexture","kind":"texture","texture":"/Game/CSS/Test/T_Floral.T_Floral"},
+                    {"slot":3,"parameter":"PatternTint","kind":"vector","value":[0.04,0.2,4,-2]},
+                    {"slot":3,"parameter":"GlowStrength","kind":"scalar","value":2}]}]})");
+            const auto model=ControlSet::parse(recipe);
+            expect(model.palettes[0].parameters.size()==3,"Authored palette parameters lost");
+            expect(model.palettes[0].parameters[1].value==ControlValue{.04f,.2f,4,-2},"Linear material vector was changed");
+            Customization current; current.values["glow"]={7,0,0,1}; current.expression="smile";
+            const auto chosen=choose_palette(model,current,"floral");
+            expect(chosen.values.empty() && control_values(model,chosen).at("glow")[0]==2,"Palette must replace its manual overrides");
+            expect(restore_customization(model,chosen.json())==chosen,"Material palette identity must survive profile restore");
+            auto manual=chosen; manual.values["glow"]={5,0,0,1};
+            expect(control_values(model,manual).at("glow")[0]==5,"Manual control must override palette baseline");
+            expect(choose_palette(model,manual,"original").expression=="smile","Original must preserve expression");
+            expect(control_values(model,choose_palette(model,manual,"original")).empty(),"Original must drop palette and manual values");
+            auto bad=recipe; bad["palettes"][0]["values"]=Json::object();
+            rejects([&]{ControlSet::parse(bad);});
+            bad=recipe; auto duplicate=bad["palettes"][0]["parameters"][0]; duplicate["parameter"]="basetexture";
+            bad["palettes"][0]["parameters"].push_back(duplicate); rejects([&]{ControlSet::parse(bad);});
+            for(const auto& patch:{Json{{"slot",.5}},Json{{"slot",128}},Json{{"slot",true}},Json{{"slot",4294967296LL}},
+                                  Json{{"texture","/Game/MissingObject"}},Json{{"association","layer"}},Json{{"value",1}}}) {
+                bad=recipe; bad["palettes"][0]["parameters"][0].update(patch); rejects([&]{ControlSet::parse(bad);});
+            }
+            for(const auto& v:{Json(true),Json(65537),Json("1"),Json(nullptr)}) {
+                bad=recipe; bad["palettes"][0]["parameters"][2]["value"]=v; rejects([&]{ControlSet::parse(bad);});
+            }
+            auto only=recipe; only["controls"]=Json::array(); only["palettes"][0]["values"]=Json::object();
+            expect(ControlSet::parse(only).palettes[0].parameters.size()==3,"A material-only palette must not need dummy controls");
+            bad=only; bad["palettes"][0]["parameters"]=Json::array();
+            for(int i=0;i<513;++i) bad["palettes"][0]["parameters"].push_back({{"slot",0},{"parameter","P"+std::to_string(i)},{"kind","scalar"},{"value",0}});
+            rejects([&]{ControlSet::parse(bad);});
+        }
+        {
+            auto recipe=Json::parse(R"({"schema":1,"controls":[
                 {"id":"fabric_visible","name":"Sheer fabric","kind":"toggle","default":[1,0,0,1],
                  "bindings":[{"slot":12,"surface":"overlay","parameter":"FabricVisible"}]},
                 {"id":"fabric_opacity","name":"Fabric opacity","kind":"opacity","default":[1,0,0,1],

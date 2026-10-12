@@ -809,6 +809,7 @@ class Appearance {
     AssetLoadRoots mask_roots_;
     std::map<std::string,ControlValue> last_values_;
     std::string control_outfit_;
+    std::string control_palette_;
     // Transition guard: one dye value CSS wrote, cheap to re-read. A launchpad/Harbinger gate
     // resets material parameters in place - same MID objects, so every pointer check misses it -
     // and if this value has diverged the customization was silently reset and must be re-applied.

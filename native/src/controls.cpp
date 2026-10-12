@@ -655,6 +655,44 @@ ControlSet ControlSet::parse(const Json& j) {
             auto* c=out.find(id); if(!c) throw std::runtime_error("Palette references an unknown control");
             auto color=value(v,c->kind==ControlKind::Dynamics || c->kind==ControlKind::Rig); valid_value(*c,color); palette.values[id]=color;
         }
+        const auto parameters=p.value("parameters",Json::array());
+        if(!parameters.is_array() || parameters.size()>512) throw std::runtime_error("Invalid palette parameter count");
+        std::set<std::pair<int,std::string>> destinations;
+        for(const auto& row:parameters) {
+            if(!row.is_object() || !row.at("slot").is_number_integer()) throw std::runtime_error("Invalid palette parameter slot");
+            if(row.at("slot").get<double>()<0 || row.at("slot").get<double>()>127) throw std::runtime_error("Palette material slot outside range");
+            PaletteParameter item; item.slot=row.at("slot"); slot(item.slot);
+            item.parameter=row.at("parameter"); parameter(item.parameter);
+            auto folded=item.parameter;
+            std::transform(folded.begin(),folded.end(),folded.begin(),[](unsigned char c){return std::tolower(c);});
+            if(!destinations.emplace(item.slot,folded).second) throw std::runtime_error("Duplicate palette parameter");
+            const auto kind=row.at("kind").get<std::string>();
+            if(kind!="scalar" && kind!="vector" && kind!="texture") throw std::runtime_error("Invalid palette parameter kind");
+            const std::set<std::string> keys={"slot","parameter","kind",kind=="texture"?"texture":"value"};
+            for(const auto& [key,unused]:row.items()) if(!keys.contains(key)) throw std::runtime_error("Unknown palette parameter field");
+            auto numeric=[](const Json& n) {
+                if(!n.is_number()) throw std::runtime_error("Palette parameter needs a number");
+                const auto v=n.get<double>();
+                if(!std::isfinite(v) || std::abs(v)>65536) throw std::runtime_error("Palette parameter outside supported range");
+                return float(v);
+            };
+            if(kind=="texture") {
+                item.kind=PaletteParameterKind::Texture; item.texture=row.at("texture");
+                if(!valid_asset(item.texture)) throw std::runtime_error("Invalid palette texture");
+            } else if(kind=="vector") {
+                item.kind=PaletteParameterKind::Vector;
+                const auto& v=row.at("value");
+                if(!v.is_array() || v.size()!=4) throw std::runtime_error("Palette vector needs four components");
+                for(size_t i=0;i<4;++i) item.value[i]=numeric(v[i]);
+            } else item.value[0]=numeric(row.at("value"));
+            for(const auto& control:out.controls) for(const auto& binding:control.bindings) {
+                auto name=binding.parameter;
+                std::transform(name.begin(),name.end(),name.begin(),[](unsigned char c){return std::tolower(c);});
+                if(binding.surface==MaterialSurface::Base && binding.association==2 && binding.slot==item.slot && name==folded && !palette.values.contains(control.id))
+                    throw std::runtime_error("Palette parameter overlaps a control without a palette value");
+            }
+            palette.parameters.push_back(std::move(item));
+        }
         out.palettes.push_back(std::move(palette));
     }
     return out;

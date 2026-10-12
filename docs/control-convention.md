@@ -508,6 +508,48 @@ mask that bleeds into the breast will tint a patch of skin every time it is used
 
 Declaring a palette with the id `original` is refused, for the reason above.
 
+### Authored material settings in a palette
+
+The updated 1.0 core also accepts optional `parameters` on a palette. These set
+global parameters on the base materials before editable control values apply.
+Use them for complete texture sets, pattern masks and shader settings that a
+color value alone cannot reproduce. They do not replace the material parent.
+
+```json
+{
+  "id": "floral",
+  "name": "Black and white floral",
+  "values": {},
+  "parameters": [
+    {"slot": 20, "parameter": "BaseTexture", "kind": "texture",
+     "texture": "/Game/CSS/Example/T_Floral.T_Floral"},
+    {"slot": 20, "parameter": "PatternTint", "kind": "vector",
+     "value": [0.64, 0.64, 0.64, 1]},
+    {"slot": 20, "parameter": "PatternTiling", "kind": "scalar", "value": 4}
+  ]
+}
+```
+
+Each palette may contain up to 512 settings, on slots 0 through 127. Parameter
+names are ASCII, at most 128 characters, and unique per slot without regard to
+case. Scalars and all four vector components must be finite and between -65536
+and 65536. Vectors are raw linear material values, not the sRGB colors used by
+editable color controls. Their fourth component can be shader data, not opacity.
+Texture values must be full `/Game/` object paths. Ship those texture packages
+and their dependencies; metadata references alone do not cook or include them.
+Layer, blend and overlay addressing are not supported in palette parameters.
+
+If a parameter overlaps an editable control binding, the palette must also
+declare that control in `values`. This gives the control an explicit displayed
+value and resets its previous manual override on palette selection. Control
+values take precedence over parameters. Unrelated body and visibility controls
+retain the existing selection behavior. Original removes both the material
+settings and the custom overrides, restoring the authored materials.
+
+Existing palettes without `parameters` still work. Packages using this field
+require the updated core; older cores do not apply these settings. Runtime
+validation of the Peony candidate is recorded separately in the active goal.
+
 ## Packages that predate this
 
 `group`, `role` and `hue_locked` are optional. CSS infers them from the control id when

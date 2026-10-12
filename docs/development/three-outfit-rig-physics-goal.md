@@ -2,6 +2,13 @@
 
 Prepared 2026-10-08. **Status: active, baseline and migration audit in progress.** See [implementation status](three-outfit-rig-physics-status.md) for current evidence, completed work and remaining checks.
 
+October 12 authorization: improve CSS core where needed to support the new
+outfits. Peony remains the current priority. The first addition is authored
+material settings in palette templates, including textures, while preserving
+manual customization, saved profiles and Original restoration. Keep optional
+glowing, flowing trim in the Peony integration and test the resulting behavior
+in both preview and gameplay before accepting it.
+
 ### Workspace recovery, 2026-10-12
 
 `CustomShellSystem/work` is now a symlink to

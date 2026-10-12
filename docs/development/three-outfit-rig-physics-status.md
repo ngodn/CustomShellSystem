@@ -8,6 +8,17 @@ zero geometric intersections are not required. Prioritize obvious fit and
 deformation defects, usable customization, materials and the remaining release
 work. This does not accept the rejected installed Peony garment.
 
+**CSS palette support, October 12:** the private core now accepts texture,
+linear-vector and scalar material settings in a palette, before manual control
+overrides. Palette changes rebuild owned materials to remove stale settings;
+Original restores authored materials. The C++23 Windows build, three portable
+test targets and 20 Python control tests pass. Four V2 palette fragments cover
+all 18 garment slots, with 900 settings matching the cooked material instances
+and all 34 referenced textures present. Evidence is in
+`work/three-outfit-rig-physics/peony-v2-customize1`. These fragments still need
+the complete visibility, body, pattern and glow controls, package integration
+and runtime acceptance. No new core or outfit has been installed.
+
 **Peony stocking integration, October 12:** the recovered stocking layers now
 form part of both private native V2 character variants in
 `/mnt/eins0fxE/CSS-Development/peony-v2-character2`. The existing body and garments

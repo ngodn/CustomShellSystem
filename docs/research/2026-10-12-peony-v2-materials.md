@@ -408,3 +408,46 @@ in this combined cook.
 `stocking-integration-receipt.json` preserves commands, recipes and evidence.
 Temporary Wine state, shader intermediates, duplicate staging inputs and unbound
 mesh copies are listed before removal in the October 12 cleanup record.
+
+
+## CSS material palette support
+
+The user authorized CSS core improvements for the new outfits. The palette model
+now accepts optional global base-material parameters: scalar, raw linear vector
+and texture. Existing palettes retain their control-value format. Each palette
+is limited to 512 unique slot/parameter destinations. Editable controls must have
+explicit palette values when their bindings overlap the authored parameters.
+The full format is in `docs/control-convention.md`.
+
+The runtime applies the material settings once after rebuilding owned MIDs, then
+applies the control overrides. A palette identity change invalidates the material
+cache even when its control values match the previous palette. Dropping an
+explicit control restores the selected palette baseline. Original restores the
+material parents. The cache now retains its transition fingerprint when no
+customization values changed. Material-only palettes can supply a scalar/vector
+fingerprint; the existing one-parameter check is not an exhaustive material audit.
+
+`tools/eve-fit/build_peony_v2_palettes.py` maps the verified source recipes to the
+18 garment slots in `peony-v2-character2/binding-plan.json`. All four source
+palettes have 225 settings. `check_peony_v2_palettes.py` independently compares
+them with decoded cooked material instances, including global parameter addresses
+and packaged texture types. All 900 settings match within float serialization
+tolerance, and all 34 referenced textures exist in the cooked readback. No body,
+stocking, geometry or material-parent changes were needed for this step.
+
+Evidence: `work/three-outfit-rig-physics/peony-v2-customize1`, containing the
+palette fragment, source hashes, cooked comparison, test logs and private core
+DLL. DLL SHA-256:
+`9bdba0323924018ef87dc2b176ccca803ce92a4678e01b8cb9bb755807194ec3`.
+The C++23 Windows build passed with one existing unused-variable warning in
+`extension_data.cpp`. Portable controls, profiles and data tests passed, as did
+20 Python control tests and four package tests. Package tests install only into
+temporary fixtures. Root and theark free space remained 129G and 90G respectively
+at `df -h` precision. Existing build directories were reused.
+
+No installation or runtime acceptance occurred. The fragment intentionally has
+no editable controls yet. Complete its visibility, body, pattern, stocking and
+optional glowing/flowing trim controls before packaging; fill overlapping palette
+control values, preserve black-and-white floral as the authored default, then
+check palette changes, manual overrides, reset, profile reload, preview/world
+rendering, transitions and supported doubles in the game.

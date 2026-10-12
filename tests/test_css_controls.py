@@ -9,6 +9,27 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from css_controls import validate,embed,verify_resources,lint_convention
 
 class ControlTests(unittest.TestCase):
+    def test_material_palette_parameters(self):
+        rows=[dict(slot=3,parameter='BaseTexture',kind='texture',texture='/Game/CSS/Test/T_Floral.T_Floral'),
+              dict(slot=3,parameter='PatternTint',kind='vector',value=[.04,.2,4,-2]),
+              dict(slot=3,parameter='GlowStrength',kind='scalar',value=2)]
+        recipe=dict(schema=1,controls=[],palettes=[dict(id='floral',name='Floral',values={},parameters=rows)])
+        self.assertEqual(validate(recipe),set())
+        for patch in ({'slot':.5},{'slot':True},{'slot':128},{'slot':4294967296},
+                      {'texture':'/Game/MissingObject'},{'association':'layer'},{'value':1}):
+            bad=copy.deepcopy(recipe);bad['palettes'][0]['parameters'][0].update(patch)
+            with self.subTest(patch=patch),self.assertRaises(ValueError):validate(bad)
+        for value in (True,65537,'1',None,float('nan'),float('inf')):
+            bad=copy.deepcopy(recipe);bad['palettes'][0]['parameters'][2]['value']=value
+            with self.subTest(value=value),self.assertRaises(ValueError):validate(bad)
+        bad=copy.deepcopy(recipe);bad['palettes'][0]['parameters'].append(dict(rows[0],parameter='basetexture'))
+        with self.assertRaises(ValueError):validate(bad)
+        bad=copy.deepcopy(recipe);bad['palettes'][0]['parameters']=[dict(slot=0,parameter=f'P{i}',kind='scalar',value=0) for i in range(513)]
+        with self.assertRaises(ValueError):validate(bad)
+        recipe['controls']=[dict(id='glow',name='Glow',kind='intensity',max=8,default=[0,0,0,1],bindings=[dict(slot=3,parameter='GlowStrength')])]
+        with self.assertRaises(ValueError):validate(recipe)
+        recipe['palettes'][0]['values']['glow']=[2,0,0,1];validate(recipe)
+
     def test_material_toggle_and_control_capacity(self):
         control=dict(id='fabric_visible',name='Sheer fabric',kind='toggle',default=[1,0,0,1],
                      bindings=[dict(slot=12,surface='overlay',parameter='FabricVisible')])

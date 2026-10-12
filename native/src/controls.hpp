@@ -167,9 +167,18 @@ struct DyeSurface {
     int resolution = 2048;
     std::map<std::string,std::string> layers;
 };
+enum class PaletteParameterKind { Scalar, Vector, Texture };
+struct PaletteParameter {
+    int slot = 0;
+    std::string parameter;
+    PaletteParameterKind kind = PaletteParameterKind::Scalar;
+    ControlValue value{};  // Material vectors are linear, including the fourth component.
+    std::string texture;
+};
 struct Palette {
     std::string id, name;
     std::map<std::string,ControlValue> values;
+    std::vector<PaletteParameter> parameters;
 };
 struct ControlSet {
     std::vector<Control> controls;
