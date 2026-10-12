@@ -325,6 +325,15 @@ Evidence is `work/three-outfit-rig-physics/cw-gait1`:
   origin. Complete saved state, Iris Out/facial playback and Reduced noise
   restore; no rig override remains.
 
+
+- `settled-sprint`: increasing the forward preparation walk from 100 to 600 ms
+  reduces the observed sprint angle to 3.01 degrees at 640 cm/s and 2.07 while
+  decelerating. It still fails the two-degree straight-sample condition. Do not
+  loosen that condition after seeing the result or count this as a completed
+  straight cycle. The actor returns within 9.23 cm of the survey origin and all
+  settings restore. Further repeated short passes are not justified without a
+  route/preparation plan that permits a settled capture.
+
 The pinned UE 5.6.1 WindowsApplication.cpp (key-down line 2858 and key-up line
 2936) resolves Shift handedness from the message scan code. Microsoft's
 [KEYBDINPUT contract](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput)
@@ -337,3 +346,10 @@ Reviewed walk/jog frames show rendered boot surfaces but do not establish
 improvement against a phase-matched baseline. Preserve native IK and the
 remaining release/crash gates. The follow-up should obtain a settled forward
 sample within a surveyed route, then compare actual boot surfaces and contact.
+
+Final read-only health in `cw-gait1/final/health.json` verifies the mapped core,
+inactive rig/movement overrides, both Shift keys and WASDC released, native rig
+scale one, mesh-reference flag false, all four selected animations available,
+Iris Out facial playback, both boots visible, and full saved-state equality.
+Reduced noise owns one light with no error. No large cook or package copy was
+created in this continuation; `df -h` remains 119G free on root and 37G on theark.

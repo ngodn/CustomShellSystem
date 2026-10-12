@@ -6,7 +6,7 @@ Left Shift from reaching the game; explicit scan-code injection fixes it.
 The short sprint captures still include turning, so straight-cycle/contact
 acceptance remains open. A native sprint camera turn triggered the return guard;
 the captured orientation and surveyed position were restored separately.
-Final forward-trial position is within 11.43 cm of the survey origin, with keys
+Final follow-up position is within 9.23 cm of the survey origin, with keys
 released and full saved settings restored. Evidence: `cw-gait1` under the
 three-outfit work directory and the [native rig record](../research/2026-10-13-cw-native-foot-rig.md).
 The development core now starts `ccf2940b2158a109`; asset trial and full stable
