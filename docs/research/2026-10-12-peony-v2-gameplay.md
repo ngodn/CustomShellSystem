@@ -217,3 +217,41 @@ install a limit-only change as a claimed repair. This direct rig fixture bypasse
 CSS preset delivery, the AnimBP event/update path, animation layering and actual
 gameplay motion. Those integration paths remain the investigation priority.
 Keep Peony's accepted fit, materials and controls intact.
+
+### Saved Peony animation-graph input handoff
+
+The independent editor module at `tools/authoring-probes/body-inputs` tests the
+next boundary, the saved Peony secondary AnimBP on actual normal/facial meshes.
+Evidence is `work/three-outfit-rig-physics/peony-v2-body-inputs1`. The private
+C++20 UE 5.6.1 module built successfully. Source content is mounted read-only;
+the commandlet exited 0 with zero errors and two editor-preference write
+warnings. It never accessed the game or saved assets.
+
+The fixture writes each preset once at a two-second phase boundary, following
+Firm, Natural, Off, Firm. Every frame compares the expected regional values
+with both the AnimBP public inputs and the live body's RigVM inputs. It rejects
+even a matching pair of overwritten values. It moves the component, so the
+solver runs; simulation is not inferred from a static property read.
+
+Both `SK_PeonyV2` and `SK_PeonyV2_Face` pass at 30, 60 and 120 fps, totaling
+3,366 frames. Each graph contains three rig nodes and one seven-region body
+node. `SeenUpdate` advances exactly once per frame. Solver substeps are 4, 2
+and 1 respectively, except for initialization/preset resets. ResetCount only
+changes at preset boundaries, with no repeated reset between them. Source
+hashes remain unchanged. `verified2.json` includes timestep verification;
+`negative-controls2.json` records rejection of duplicate updates, extra resets,
+missing cases, native failure and a stopped simulation.
+
+This rules out a broken public-input-to-body-rig binding in this saved source
+graph under these conditions. It does not test CSS core's reflected writes,
+performance adapter entry/exit, the game's native animation layers, gameplay
+physics or actual idle tracks. The user's defect remains open. Continue at those
+boundaries without changing the installed rig based on a passing editor fixture.
+
+One code path to investigate is `PerformancePlayer::bind_layer` restoration:
+it copies current CSS properties back to the source instance, then applies
+physics captured at performance entry. If customization changes while that
+performance is active or cleanup is deferred, the older snapshot could overwrite
+new settings. This is a code-review lead, not a demonstrated explanation of the
+user's Firm result. Normal UI actions interrupt automatic playback before
+applying controls, so event ordering must be reproduced before calling it causal.

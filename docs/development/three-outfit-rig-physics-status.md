@@ -27,6 +27,10 @@ Excessive jiggle despite Firm/Natural is the current defect. At their direction,
 compare previous Eve/Genessa work before requesting another game check. The
 27-case offline rig comparison is recorded in the gameplay report; it does not
 reproduce the Firm gameplay failure and no motion fix has been installed.
+The subsequent saved Peony AnimBP fixture passes 3,366 frames across both mesh
+variants at 30/60/120 fps, preserving one-time preset inputs with one update per
+frame and expected solver steps/resets. Runtime application, playback lifecycle
+and actual motion inputs remain unverified. See the gameplay record.
 The user subsequently reopened the unchanged build and reports
 "so far now its fine" about lighting. Keep the accepted materials and resume
 the remaining Peony checks; retain the earlier observations for later polish if

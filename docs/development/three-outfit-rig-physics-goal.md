@@ -45,6 +45,12 @@ match; the older validated V42 rig has tighter movement limits. These limits
 reduce Natural's chest response in the fixture but do not explain the reported
 Firm failure. Continue tracing preset/animation integration before changing
 the installed rig. See the gameplay record for measurements and limitations.
+The next offline check passes on the saved Peony normal/facial meshes through
+their actual secondary AnimBP: 3,366 frames at 30/60/120 fps preserve Firm,
+Natural and disabled regional inputs, with one graph update per frame and the
+expected 120 Hz solver steps. This narrows the remaining investigation to CSS
+application/lifecycle, playback adapters and actual motion inputs. It does not
+reproduce or accept the reported gameplay defect.
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible
