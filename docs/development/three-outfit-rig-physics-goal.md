@@ -30,6 +30,14 @@ recur. See [lighting investigation](../research/2026-10-12-peony-v2-lighting.md)
 The remaining native behavior and regression checks are open; the full goal
 remains active. See [gameplay evidence](../research/2026-10-12-peony-v2-gameplay.md).
 
+The user also accepts four palette templates, removable clothing and restoration
+of colors, visible pieces and glow after saving/changing/reloading a profile:
+"Everything restores correctly." Their subsequent motion report is now the
+priority: body motion still jiggles wildly after selecting Firm or Natural and
+appears possibly duplicated. Investigate preset propagation, actual active
+animation/physics owners and solver response. Do not treat material/profile
+acceptance as acceptance of body motion or assume duplication without evidence.
+
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible
 settings survive, retired palettes fall back to Original, and obsolete controls

@@ -18,12 +18,12 @@ or camera input was sent.
 | --- | --- |
 | Obvious fit/distortion in CSS and world walking | User accepted |
 | Flowing trim with glow/speed above zero; unaffected fabric/skin/stockings | User answered "Works in both" for CSS and world |
-| Four palettes, removable parts and stocking layers | Portable/data checks pass; native visual checks pending |
+| Four palettes and removable clothing | User answered "Everything restores correctly" after the requested palette/parts/profile check |
 | Body-shape endpoints and combinations | Cooked morph/weight checks pass; complete native sweep pending |
 | Iris Out face/eyes, movement or attack interruption, current-form doubles and their outfit/glow | User answered "All work"; the other form remains unverified |
 | Appearance under bright light, shadow and backlighting | User now says "so far now its fine" on the unchanged build; accepted for now, earlier observations retained |
-| Profiles and restoration | Portable V2 upgrade checks pass; live save/reload pending |
-| Continuous secondary motion, interruptions, resets and frame cost | Pending |
+| Profiles and restoration | Portable upgrade checks and user save/change/reload check pass for colors, visible pieces and glow |
+| Continuous secondary motion, interruptions, resets and frame cost | New excessive-jiggle report despite Firm/Natural; investigation required |
 
 The captured log also contains a Genessa form request followed about 15.7 seconds
 later by `Genessa form switch cancelled or timed out`. This is a separate
@@ -102,3 +102,47 @@ not a measurement of this ten-second window.
 No baseline outfit, fixed view, verified action sequence or noise-floor repeats
 were captured. Do not call this a performance pass, a Peony regression or an
 attribution of the hitches. The full motion/performance acceptance remains open.
+
+## Native material values and profile acceptance
+
+`tools/diagnostics/capture_peony_materials.py` reads the live player's garment
+and stocking material instances through CSSX without changing selections.
+`live-materials1.json` under the gameplay evidence directory captures 42 dynamic
+and parent instances, with the same process, player, Peony mesh, slot objects
+and customization before and after. This brackets a sequential capture, not
+an atomic snapshot. The active palette was `black_white_floral`.
+
+`tools/diagnostics/check_peony_materials.py` compares inherited runtime values
+against package3's manifest plus the captured selections. All 240 unique
+parameters across 23 slots pass, covering 122 control bindings. In-memory
+negative controls reject an incorrect scalar, vector, texture and changed
+selection. Raw evidence, checked values and negative results are retained in
+`live-materials1.json`, `live-materials-checked1.json` and
+`live-materials-negative-controls.json`. These checks do not prove visibility
+or shader output by themselves.
+
+The user separately answered "Everything restores correctly" to the four
+palette/removable clothing/profile-save/change/reload check. The acceptance
+record is `customization-acceptance.json`. Keep it distinct from the motion
+failure reported afterward.
+
+## Body motion report after customization testing
+
+The user reports excessive jiggle despite trying Firm and Natural and suspects
+duplicated motion. The last status captured before game exit has Bouncy chest
+values and Soft glute values, but the CSS log confirms earlier Firm and Natural
+applications followed by stronger presets. The final values therefore do not
+explain or dismiss their observation. Keep this as an unresolved defect.
+
+Evidence is `work/three-outfit-rig-physics/peony-v2-motion-live1/last-status.json`
+and `preset-log-tail.txt`. A subsequent read-only player request timed out; a
+process check then confirmed the game had exited. No live rig fields were
+captured by that request, and no preset, slider or animation setting was written.
+
+Next distinguish three predictions: if propagation fails, saved preset values
+and the active post-process region arrays will differ; if motion is duplicated,
+more than one active animation/physics path will drive the affected bones; if
+the solver response is excessive, one correctly configured owner will still
+produce the reported motion. The earlier cooked ownership audit cannot decide
+these runtime cases. Existing body-control and solver probes are references,
+not permission to reuse old results as Peony motion acceptance.
