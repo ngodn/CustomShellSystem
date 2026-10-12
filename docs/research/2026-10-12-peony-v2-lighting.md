@@ -210,3 +210,58 @@ questions. Repeating them is not the next step. Obtain a comparison that include
 the game's environment and exposure, with the same view and appearance, before
 selecting another shader change. The captured empty preview world cannot prove
 the cause of the user's skin and fabric appearance in the actual level.
+
+## Prepared runtime settings capture
+
+The user is reopening the accepted build to compare Peony with another outfit
+in the same location and camera direction. Their comparison is pending. No
+material candidate or replacement core has been installed for this step.
+
+The development bridge now has a read-only `get.member` query for individual
+fields inside reflected structs. This avoids decoding all of the camera's
+large post-process structure. Paths are limited to 12 fields and may descend
+through structs only, with field and structure bounds checked at each step.
+The C++23 Windows core builds successfully. It remains staged in
+`work/three-outfit-rig-physics/peony-v2-lighting1/runtime-probe1/css_core.dll`,
+SHA-256 `bb131280a2872047e731bf8fc2ef58b4468d25c5e580a06d866d8cc988b78db4`.
+Live reflection behavior is not yet verified.
+
+`tools/diagnostics/capture_lighting_settings.py` prepares a capture of camera
+settings, up to eight post-process volumes, and selected project defaults.
+It records missing fields and before/after camera, player and appearance
+state. An unavailable camera field makes stability unknown, not passed.
+These inputs do not establish volume containment, effective blending or the
+final GPU exposure. The capture is not synchronized to a screenshot.
+
+Python syntax and CLI checks pass. With the accepted game build running, the
+staged core hash is rejected before any probe request is sent; the request
+file remains unchanged and no capture is written. `runtime-probe1/receipt.json`
+records these checks and the source hashes. Do not run a settings capture
+until that diagnostic core is installed during a later agreed restart:
+
+```sh
+python3 tools/diagnostics/capture_lighting_settings.py \
+  --core-sha256 bb131280a2872047e731bf8fc2ef58b4468d25c5e580a06d866d8cc988b78db4 \
+  --output work/three-outfit-rig-physics/peony-v2-lighting1/runtime-probe1/live-settings.json
+```
+
+The accepted installed core remains
+`94bb1d08bc7d6dd4181e21d4605a3b87cfb7f6046c90f35194f0e090291c423b`.
+The comparison the user is doing now does not require the new diagnostic core.
+
+The subsequent attempt to use the old `player` probe while the game was running
+timed out after 20 seconds. Fresh status acknowledges that request ID and keeps
+reporting Peony, but the probe output remains from October 11. The installed
+DLL contains neither the `css_probe` command nor the `css-probe.json` output
+path, both guarded by `CSS_INVENTORY_DEV` in the source. This build therefore
+cannot serve that diagnostic request. Do not retry it expecting a camera
+capture. `runtime-probe1/installed-probe-unavailable.json` records the IDs,
+core hash and observations. No gameplay, camera or lighting setting was written.
+
+The prepared capture now also reads console variables as strings before reading
+their numeric values. UE 5.6.1 `KismetSystemLibrary.cpp` returns an empty string
+when lookup fails, whereas the numeric helpers return zero. Missing variables
+are recorded as unavailable instead of being interpreted as disabled settings.
+The reads remain sequential. Unsupported reflected fields also make camera
+stability unknown. The updated script passes syntax and wrong-core rejection
+checks with no new request or output file; live capture remains unverified.

@@ -276,6 +276,34 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
     }
 #endif
     auto* object=resolve(request.at("target"));if(!object) throw std::runtime_error("CSSX target is null");
+#ifdef CSS_INVENTORY_DEV
+    if(op=="get.member") {
+        const auto& path=request.at("path");
+        if(!path.is_array() || path.empty() || path.size()>12)
+            throw std::runtime_error("Member path must contain 1 to 12 fields");
+        UStruct* type=object->GetClassPrivate();
+        auto* data=reinterpret_cast<std::byte*>(object);
+        int size=type->GetPropertiesSize();
+        for(size_t index=0;index<path.size();++index) {
+            const auto name=path.at(index).get<std::string>();
+            if(name.empty() || name.size()>128 || name.find('\0')!=std::string::npos)
+                throw std::runtime_error("Invalid member path field");
+            auto* field=bridge_property(type,wide(name));
+            if(!field || field->GetArrayDim()!=1 || field->GetElementSize()<=0 ||
+               field->GetElementSize()>size || field->GetOffset_Internal()<0 ||
+               field->GetOffset_Internal()>size-field->GetElementSize())
+                throw std::runtime_error("Member path field is missing or exceeds bounds: "+name);
+            data+=field->GetOffset_Internal();
+            if(index+1==path.size()) return decode(field,data,0);
+            if(!field->IsA<FStructProperty>())
+                throw std::runtime_error("Member path can only descend into structs: "+name);
+            type=static_cast<FStructProperty*>(field)->GetStruct().Get();
+            size=field->GetElementSize();
+            if(!type || type->GetStructureSize()>size)
+                throw std::runtime_error("Member path struct exceeds bounds: "+name);
+        }
+    }
+#endif
     if(op=="animation.reset_dynamics") {
         if(!object->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"))))
             throw std::runtime_error("Dynamics reset target must be an animation instance");
