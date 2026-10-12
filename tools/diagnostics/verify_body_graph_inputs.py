@@ -5,12 +5,17 @@ import json
 from pathlib import Path
 
 
-def verify(data):
-    expected = {(name, fps) for name in ('SK_PeonyV2', 'SK_PeonyV2_Face') for fps in (30, 60, 120)}
+def verify(data, matrix=None):
+    expected = ({(row['mesh'], fps) for row in matrix for fps in (30, 60, 120)}
+                if matrix is not None else
+                {(name, fps) for name in ('SK_PeonyV2', 'SK_PeonyV2_Face') for fps in (30, 60, 120)})
+    blueprints = {row['mesh']: row['blueprint'] for row in matrix} if matrix is not None else {}
     observed = set()
     frames = 0
     for case in data['cases']:
-        identity = (case['mesh'].split('.')[-1], case['fps'])
+        identity = (case['mesh'] if matrix is not None else case['mesh'].split('.')[-1], case['fps'])
+        if matrix is not None and case['blueprint'] != blueprints.get(case['mesh']):
+            raise ValueError('Unexpected secondary blueprint')
         if identity in observed or identity not in expected or case['passed'] is not True:
             raise ValueError('Duplicate, failed or unexpected case')
         observed.add(identity)
@@ -37,7 +42,7 @@ def verify(data):
     if observed != expected or data['passed'] is not True:
         raise ValueError('Missing cases or failed native input transfer')
     return dict(passed=True, cases=len(observed), frames=frames,
-                scope='Saved Peony AnimBP forwards one-time region writes without extra updates/resets; no game or playback-adapter coverage.')
+                scope='Saved secondary AnimBPs forward one-time region writes without extra updates/resets; no game, cloth or playback-adapter coverage.')
 
 
 def main():
@@ -47,7 +52,9 @@ def main():
     args = parser.parse_args()
     path = args.stage / 'graph-inputs.json'
     raw = path.read_bytes()
-    result = verify(json.loads(raw))
+    matrix_path = args.stage / 'matrix.json'
+    matrix = json.loads(matrix_path.read_text()) if matrix_path.exists() else None
+    result = verify(json.loads(raw), matrix)
     for source, digest in json.loads((args.stage / 'inputs.json').read_text()).items():
         if hashlib.sha256(Path(source).read_bytes()).hexdigest() != digest:
             raise ValueError('Changed source: ' + source)

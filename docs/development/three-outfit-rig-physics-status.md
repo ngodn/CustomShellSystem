@@ -8,6 +8,13 @@ The [release and bug audit](three-outfit-release-gates.md) distinguishes accepte
 fixes, incomplete repairs, untested cases and explicit deferrals. All historical
 trial states below must be read against their later acceptance or rejection.
 
+**Existing Eve preset regression:** all six original outfits, normal/facial
+meshes and 30/60/120 fps pass 36 native saved-graph cases with the accepted
+tighter body rig. All 20,196 frames preserve inputs and expected update/reset
+timing. Sources remain unchanged. This does not complete visible motion, cloth,
+gameplay lifecycle or performance checks. See
+[the regression record](../research/2026-10-12-eve-existing-motion-regression.md).
+
 Updated 2026-10-12. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
 **October 12 acceptance threshold:** defer minor clipping that is hard to notice

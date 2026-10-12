@@ -75,9 +75,11 @@ does not invent new deferrals for the primary repairs or release gates.
 
 ## Immediate continuation
 
-Finish the older Eve motion regression against the accepted tighter rig. The
-saved-mesh fixture must use each outfit's actual post-process graph, including
-the Bikini/Knit feet graphs, and both normal/facial meshes. This is a bounded
-input/update check, not full visual or cloth acceptance. Then continue the
-outstanding CW repair and full stable-release gates above. Do not repackage a
-beta bundle or treat Peony's acceptance as completion of the other outfits.
+The older Eve saved-graph input/update check now passes all 36 cases with each
+outfit's actual post-process graph, including Bikini/Knit feet graphs, and both
+normal/facial meshes. See the
+[regression record](../research/2026-10-12-eve-existing-motion-regression.md).
+This is not full visual or cloth acceptance. Continue CW's demonstrated foot
+defect from its retained walking poses and the missing native foot-correction
+comparison, then the other repairs and stable-release gates above. Do not
+repackage a beta bundle or treat Peony's acceptance as completion of the others.

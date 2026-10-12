@@ -9,6 +9,10 @@ Those archives are withdrawn packaging evidence; nothing was uploaded.
 See [release gates](../development/three-outfit-release-gates.md). Preserve
 accepted Peony and keep Slipstream deferred until the user requests it again.
 
+The [older Eve motion-input check](2026-10-12-eve-existing-motion-regression.md)
+passes all 36 normal/facial mesh and frame-rate cases using the accepted tighter
+rig and each saved secondary graph. Broader visual/gameplay/cloth checks remain.
+
 The [public upgrade follow-up](2026-10-12-peony-public-upgrade.md) checks the new
 shared pack against the actual published Genessa and Commander White packages.
 All four cooked-import and native-catalog cases pass. The older revisions do

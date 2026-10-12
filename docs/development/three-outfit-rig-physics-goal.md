@@ -25,6 +25,14 @@ the rehearsal instructions state that limit. This is useful upgrade evidence,
 not a substitute for delivering Genessa v0.3.0 and CW v0.1.0 or completing their
 live regression matrix.
 
+The [older Eve preset regression](../research/2026-10-12-eve-existing-motion-regression.md)
+passes 36 saved-mesh/graph cases across the six original outfits, normal/facial
+meshes and 30/60/120 fps. All 20,196 frames preserve preset inputs, single
+animation updates and the expected solver/reset timing with the accepted tighter
+rig. This is an offline input/update check, not visual motion, cloth, gameplay
+or performance acceptance. The CW walking-foot comparison still needs moving
+poses with native foot-correction/blend values; a read-only capture was requested.
+
 **October 12 continuation:** Peony motion remains user accepted. The user
 confirms the blocky sunlight symptom is currently only in Vistani's report;
 keep that high-priority investigation queued without speculative renderer changes.
