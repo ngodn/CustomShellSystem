@@ -299,6 +299,37 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
     const auto op=request.at("op").get<std::string>();
 #ifdef CSS_INVENTORY_DEV
     if(op=="animation.control_rig_trial") return control_rig_trial(engine,appearance,request);
+    if(op=="animation.class_inventory") {
+        auto* animation_type=static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"));
+        auto* component_type=static_cast<UClass*>(find(L"/Script/Engine.SkeletalMeshComponent"));
+        Json rows=Json::array();
+        size_t visited=0;
+        bool truncated=false;
+        const auto started=std::chrono::steady_clock::now();
+        UObjectGlobals::ForEachUObject([&](UObject* object,int32,int32) {
+            ++visited;
+            if(!object || object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_BeginDestroyed|RF_FinishDestroyed)) ||
+               object->IsUnreachable() || !object->IsA(animation_type)) return RC::LoopAction::Continue;
+            auto* component=object->GetOuterPrivate();
+            if(!component || !component->IsA(component_type) || component->IsUnreachable() ||
+               component->HasAnyFlags(static_cast<EObjectFlags>(RF_BeginDestroyed|RF_FinishDestroyed))) return RC::LoopAction::Continue;
+            const bool main=read<UObject*>(component,L"AnimScriptInstance")==object;
+            const bool post=read<UObject*>(component,L"PostProcessAnimInstance")==object;
+            if(!main && !post) return RC::LoopAction::Continue;
+            if(rows.size()>=1024) {truncated=true;return RC::LoopAction::Break;}
+            auto* type=object->GetClassPrivate();
+            rows.push_back({{"instance",asset_evidence(object)},{"component",asset_evidence(component)},
+                {"class",asset_evidence(type)},{"instance_address",reinterpret_cast<uintptr_t>(object)},
+                {"component_address",reinterpret_cast<uintptr_t>(component)},
+                {"class_address",reinterpret_cast<uintptr_t>(type)},
+                {"class_root_set",type->IsRootSet()},
+                {"role",main?"main":"post_process"},
+                {"sparse_data_present",type->GetSparseClassData()!=nullptr}});
+            return RC::LoopAction::Continue;
+        });
+        return {{"instances",rows},{"truncated",truncated},{"visited",visited},
+            {"elapsed_ms",std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count()}};
+    }
     if(op=="object.state") {
         auto* object=resolve(request.at("target"));
         if(!object) throw std::runtime_error("Object state requires a live target");

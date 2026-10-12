@@ -88,3 +88,53 @@ and no load/destruction flags. All selected locomotion assets are available;
 CSS state matches the backup exactly. Receipts: recovery/continue.jsonl,
 animation-class-state.jsonl, world-verification.json and world-recovered.jpg.
 No save files were overwritten during recovery.
+
+## Fresh-process transition comparison
+
+`cw-class-lifetime1/check.py` completes three Original/Iris Out cycles with ten
+class-state snapshots spanning 62 seconds. Both current animation instances
+retain sparse class data and clear load/destruction flags. Previously used
+normal-rig classes can expire after switching to the facial mesh; those weak
+handles are recorded separately, not mistaken for the currently bound class.
+CSS settings match the baseline and Linux process 3103064 remains unchanged.
+
+`cw-class-rescan1/check.py` then performs one catalog rescan without a DLL
+reload. Thirteen snapshots over 88 seconds pass, including all selected shared
+animation availability. This narrows the failure: a rescan in a fresh core is
+not by itself a reliable reproduction. It does not prove that rescans or normal
+transitions are always safe. The accumulated prior reload state remains relevant.
+
+A direct inventory of minidump memory streams confirms that neither the failing
+instance nor its generated class or sparse-data field is included. See
+`cw-class-lifetime1/dump-ranges.json`. More inspection of that same dump cannot
+recover the absent class name. The development-only `animation.class_inventory`
+probe therefore records current main/post-process instances for skeletal
+components, their addresses, class identity/flags and sparse-data presence.
+It excludes retired instances, reports truncation at 1,024 rows and its scan
+cost, and runs only on explicit request. Native classes without sparse data are
+not automatically classified as broken.
+
+The development build and cold installation pass. Installed core SHA256:
+`93e582f77c7c7d517efc43ba560d1f4fa51727dc6ff33cbb07703df67d973c1a`.
+`cw-class-inventory1` retains the command recipes and receipts. The startup
+helper initially found pending shader compilation and stopped before issuing
+Continue. It then waited for that query to clear, without restarting again.
+The first inventory was taken during loading and saw the native Sester rig;
+it validates the instrument, not completed CW restoration.
+
+Two subsequent catalog rescans pass six snapshots. Final verification checks
+that every snapshot contains CW's facial class with sparse data, exactly four
+selected animation slots and all four available. Facial performance remains
+active, sunlight remains reduced with one owned light, and CSS saved state is
+unchanged. All game animation classes observed have sparse data; the native
+AnimSingleNodeInstance legitimately has none. The scan traverses about 322,000
+objects and costs 34 to 69 ms in these observations, so keep it at explicit
+checkpoints, never a per-frame monitor. Addresses are process-local evidence
+and must not be reused after restart.
+
+No crash repair is claimed. Next compare one controlled DLL reload against
+this fresh-process baseline, retaining a class inventory immediately before
+and after. Use the longer loader acknowledgement window and finish its actual
+activation before restoring idle or starting another request. If the fault
+returns, correlate the new dump's class/instance addresses with that process's
+inventory before changing asset loading or class ownership.

@@ -5,9 +5,13 @@ ended in an animation subsystem access violation. The exact PDB/minidump points
 to missing constant class data as a hypothesis, not a confirmed root cause.
 Normal Continue recovered the existing save in a fresh process; both live
 animation classes have sparse data, all four selected locomotion assets are
-available, and CSS state matches the backup exactly. Further reload stress is
-held while this defect is investigated. See the
-[crash record](../research/2026-10-13-cw-reload-crash.md).
+available, and CSS state matches the backup exactly. Three normal idle-transition cycles and one fresh-process catalog rescan
+also pass class-state checks. Further DLL reload stress is held while this
+defect is investigated. See the
+[crash record](../research/2026-10-13-cw-reload-crash.md). A later cold-installed
+class inventory adds component/class addresses for dump correlation. Two
+instrumented rescans also pass, including CW facial playback and all four
+selected animation choices. This is diagnostic coverage, not a crash fix.
 Cold loading also exposed a sunlight ownership bug: Reduced noise stayed selected
 but the game restored its four-degree preset, leaving the workaround inactive.
 The recovery candidate recognizes a settled game preset and preserves unrelated
