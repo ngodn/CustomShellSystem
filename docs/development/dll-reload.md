@@ -1,5 +1,32 @@
 # DLL reload support
 
+## October 12 controlled Peony reload
+
+The user authorized automated game checks and requested hot reload. The loader
+already watches `core.json`; no enable flag or loader replacement was needed.
+Its installed DLL matched the beta.11 `release.json` hash, but
+`loader-contract.json` still named an older DLL hash. Every contract source hash
+matches both the current tree and the release's source commit. The contract was
+corrected after retaining its old contents in
+`work/three-outfit-rig-physics/peony-v2-body-live2/rollback`.
+
+The motion-restoration core was installed while the game was closed. After
+launch and the authorized preset checks, Peony was stationary, out of the menu
+and without a gameplay montage. A uniquely named byte-identical core was then
+selected. `hot-reload1/result.json` records successful acknowledgment, old DLL
+unmapping, new DLL mapping, unchanged Linux process and exact restored
+customization. The current core hash is
+`21f761aa35fd18619172db3e4b3b88318a42681bdcdac848412f45c3299acc37`.
+
+This supports controlled core-only reload in the checked state. It does not
+resolve the historical animation-worker crash or verify reload during combat,
+traversal, active playback or every outfit. Mounted asset packages still require
+a restart. Retain the stop/cleanup refusal checks. The older account below also
+predates standalone CSSX: CSSX now owns its own loader and core replacement;
+CSS core reload does not unload the standalone CSSX runtime.
+
+## Earlier investigation
+
 Checked against the current sources during the CSSX FPS investigation on 2026-09-20.
 
 | Change | Existing mechanism | Restart requirement |

@@ -37,6 +37,13 @@ refreshes settings at playback restoration and preserves the original snapshot
 for failed initialization. The production Windows build and four existing
 portable test suites pass. This is not yet a reproduction of the user's gameplay
 sequence, and the candidate is not installed. Evidence is `peony-v2-body-restore1`.
+Subsequently installed after the user authorized live checks. The current core
+is `21f761aa35fd18619172db3e4b3b88318a42681bdcdac848412f45c3299acc37`.
+`peony-v2-body-live2` passes Firm/Natural/disabled chest/glute propagation on
+both the regular graph and Iris Out adapter, with original customization and
+idle restored. One controlled stationary reload passes actual DLL replacement
+and appearance restoration. Visual jiggle acceptance and broader reload safety
+remain open; the previous paragraph describes the earlier offline checkpoint.
 The user subsequently reopened the unchanged build and reports
 "so far now its fine" about lighting. Keep the accepted materials and resume
 the remaining Peony checks; retain the earlier observations for later polish if

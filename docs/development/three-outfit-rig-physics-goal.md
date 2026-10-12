@@ -58,6 +58,25 @@ for failed initialization. It builds and passes existing portable regression
 tests, but is not installed. Reproduce the actual playback/UI sequence before
 calling this the cause of the user's full motion defect. See `peony-v2-body-restore1`.
 
+The user subsequently authorized game checks and automated diagnostics, and
+requested loader hot reload. The restoration candidate is now installed:
+`21f761aa35fd18619172db3e4b3b88318a42681bdcdac848412f45c3299acc37`.
+`peony-v2-body-live2` records Firm, Natural and disabled chest/glute settings
+reaching both public inputs and the live body rig on the regular secondary
+graph and the Iris Out adapter (18 samples total). Original customization and
+idle were restored. No gameplay/camera input was sent. This verifies settings
+propagation, not visual acceptance of the reported jiggle. A stationary hot
+reload of the same candidate passed loader acknowledgment, actual old-module
+unmapping/new-module mapping and exact customization restoration in the same
+game process. The loader's stale contract was repaired against the verified
+installed beta.11 release and matching source hashes. No loader DLL was changed.
+Keep the earlier animation-worker crash as an unresolved historical limitation;
+this single controlled reload does not prove every combat/playback reload safe.
+Current live check: both chest and glute are temporarily Firm for the user's
+walking assessment. `peony-v2-body-live2/visual-firm.json` stores the original
+customization and verified temporary values. Restore the original snapshot
+after their answer; this temporary test is not a new saved default.
+
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible
 settings survive, retired palettes fall back to Original, and obsolete controls

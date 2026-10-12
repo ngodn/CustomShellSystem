@@ -287,3 +287,53 @@ performance-session, control, Astral-adapter and Astral-lifecycle tests pass
 The native fixture's `verified.json` records its result and the candidate build
 hash; its commands, source pins and logs are retained. Rebuildable compiler
 intermediates and editor DDC were removed under the cleanup record.
+
+### Authorized live motion and loader checks
+
+The user subsequently confirmed they are willing to do game checks, requested
+hot reload and authorized automated checking. Core
+`21f761aa35fd18619172db3e4b3b88318a42681bdcdac848412f45c3299acc37` was
+installed with the game closed. Only the core selector/new DLL and the stale
+loader-contract hash were changed. The loader binary matches the installed
+beta.11 release, and all five contract source hashes match that release's commit
+and the working tree. The earlier core selector and state are retained under
+`peony-v2-body-live2/rollback`; existing outfit/Shared packages are unchanged.
+
+After normal launch, the user left Peony in the world. The existing standalone
+CSSX diagnostic bridge reads the running rig without requiring a developer CSS
+core. `baseline.json` has three stable readings. The selected Bouncy chest and
+Soft glute settings match the live regional arrays. This baseline does not
+dismiss the user's earlier Firm/Natural report.
+
+`check_peony_live_presets.py` temporarily applies Firm, Natural and disabled
+chest/glute controls through the normal CSS customization service, with transient
+settings and an exact restoration snapshot. It checks the AnimBP public arrays
+and active RigVM arrays against each expected preset, three times per case.
+`presets.json` passes nine samples on `ABP_Secondary`.
+`playback-presets.json` passes nine more while the Iris Out `ABP_Eve` adapter is
+active. Each has one body rig, plus hair and hand rigs. The main game's graph
+uses `CTRL_Human_FullbodyIK`, not a second instance of the Eve body rig. These
+observations narrow ownership but do not rule out every source of motion.
+Both checks restored the full original customization; the playback check also
+restored the original idle override. No gameplay or camera input was sent.
+
+Natural's sample had extra resets (265, 277, 282 across the three readings).
+Firm's readings held at 257, disabled at 283. A later five-sample read held at
+361, with valid scale, no scale-change/teleport flag and matching reset epoch.
+These fields were read across successive frames, not atomically, so the reset
+cause is unproven. A separate ten-second CSSX frame sample measured 262 frames,
+26.13 Hz, maximum 76.27 ms and two hitches. The rig's source resets above roughly
+66.67 ms, making hitches a lead to test, not a demonstrated explanation.
+
+The user-requested hot-reload trial used a uniquely named byte-identical core
+with Peony stationary, inventory closed and no native gameplay montage.
+`hot-reload1/result.json` confirms actual old DLL unmapping/new DLL mapping,
+unchanged process and exact customization restoration. The three subsequent
+`post-reload.json` samples are stable and complete. The core remains selected as
+`css_core-peony-motion-21f761aa35fd1861-reload1.dll`. This validates this controlled
+reload only; the historical animation-worker crash and other reload states
+remain outside its evidence.
+
+For the user's visual check, `visual-firm.json` retains the original snapshot
+and verifies temporary Firm values on the live rig. Restore that snapshot after
+the user responds. Visual acceptance of excessive motion is still pending.
