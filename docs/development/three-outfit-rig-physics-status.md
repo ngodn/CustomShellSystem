@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 13 native rig trial:** a bounded reference-pose diagnostic now imports
+CW's mesh reference and fully restores the original native rig, including after
+automatic timeout. Standing-pose comparison does not establish a walking fix.
+The trial is inactive, Iris Out/facial playback and saved CSS state are restored,
+and Reduced noise remains active. Current development core SHA-256:
+`aec790e8409c73cd9c317881b34bcb318510a2a916e5b1197ba476fb22fb576d`.
+See [the rig record](../research/2026-10-13-cw-native-foot-rig.md).
+
 **Local developer core, October 13:** installed and verified through direct CSS
 player/mesh probes. Core SHA-256 starts `2028dcd15e7669a8`; actual old/new module
 mapping and unchanged process passed. Iris Out and byte-identical saved state

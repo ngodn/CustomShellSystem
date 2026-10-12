@@ -1,7 +1,8 @@
 # CW native foot-rig comparison
 
 The native full-body rig affects CW's final leg pose. Disabling it has not been
-accepted as a walking repair. No reference-pose correction has been applied.
+accepted as a walking repair. A bounded reference-pose trial now passes complete
+restoration, but does not yet establish a walking correction.
 
 ## Controlled bypass
 
@@ -33,7 +34,7 @@ The earlier reference comparison remains in `cw-foot-blend1`. Before trying
 `bSetRefPoseFromSkeleton`, account for the engine's additional private
 `bResetInitialTransformsBeforeConstruction` change. Restoring only the public
 flag is insufficient. A fresh native animation instance could restore that
-state, but this lifecycle has not been tested here.
+state. That lifecycle is now verified in the later recreation checks below.
 
 ## Reload regression found during the comparison
 
@@ -121,3 +122,53 @@ settings and rig initial transforms. These are proposed validation steps, not
 completed tests. Do not merely flip `bSetRefPoseFromSkeleton` back to false and
 claim restoration; ControlRig.h:665 declares the extra reset flag as a protected,
 non-reflected field, and ControlRig.cpp:3564/3601 changes it during pose import.
+
+## Native instance recreation and reference-pose trial
+
+The DEV-only `animation.recreate_player_instance` request now performs the two
+setter calls in one callback. It validates the current native player instance,
+Blueprint mode, ready class/sparse data, no active performance, no menu, no
+movement and no montage. It retains the original instance and class through
+`AssetLoadRoots` until the new instance owns the class. An active Iris Out
+request is rejected without replacing its instance.
+
+Evidence is in `cw-rig-recreate1`, `cw-rig-recreate2` and `cw-rig-recreate3`.
+The first attempt stopped before mutation because Speed was read as float;
+live reflection establishes an eight-byte double and the diagnostic now uses
+that type. The next attempt recreated the native instance and rig, with all 13
+initial transforms exactly unchanged. Its strict post-process identity check
+failed: `InitAnim(true)` also replaces the post-process instance. The replacement
+has the same CW class. The third capture compares its CSS motion inputs instead.
+Every input matches except JSON rounding in `CSSBodyOffsets`, with a maximum
+absolute difference of 3.863e-11. `restoration-assessment.json` retains that
+comparison at 1e-8 absolute tolerance. Original failed assertions are retained,
+not relabeled as passes. Iris Out and facial playback recover, all four selected
+animation choices remain available, and the saved CSS state matches exactly.
+
+`cw-rig-reference1` uses that verified recreation path for explicit and automatic
+trial cleanup. The existing synchronized scalar diagnostic now supports the
+single reflected `bSetRefPoseFromSkeleton` flag, for at most 30 seconds. It does
+not copy an AnimGraph node. Restoring the trial creates a new native instance
+and rig, rather than merely clearing the public flag and leaving altered private
+construction state behind. Both explicit reset and a separate one-second timeout
+restore every checked initial transform exactly and clear the flag. The final
+trial is inactive; no movement or camera input was sent.
+
+With the flag on, all 13 checked reference transforms match the audited CW mesh
+within 1.61e-6 cm and 1.71e-6 degrees. This includes the foot IK helpers that
+previously differed by about 15.94 cm. That proves the engine imported the intended
+mesh reference. It does not prove those offsets caused the user's walking defect.
+
+Four stationary poses per phase do not show a clear improvement. Across the 16
+unpaired baseline/trial pairs, left-foot local rotation differs 0.008 to 4.212
+degrees and right-foot rotation 0.012 to 3.536 degrees. Restored-phase ranges
+overlap those values, so idle phase is a confounder. The baseline and trial
+screenshots show no obvious corrective change. Keep the reference adjustment
+temporary and compare actual walking before considering a production policy.
+
+The trial runs in the same Linux process 3113971 / Wine process 384. The installed
+development core is `css_core-development-aec790e8409c73cd-rig-reference1.dll`,
+SHA-256 `aec790e8409c73cd9c317881b34bcb318510a2a916e5b1197ba476fb22fb576d`.
+Windows C++23 build and diff checks pass. The saved appearance, Iris Out choice
+and facial playback restore; sunlight Reduced noise remains selected. The
+reload-crash release gate remains open independently of this successful trial.

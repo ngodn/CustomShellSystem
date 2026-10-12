@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, native rig reference trial:** fresh native AnimInstance/ControlRig
+recreation now restores all 13 checked initial transforms exactly. The temporary
+mesh-reference flag imports CW's audited bind transforms within 1.61e-6 cm and
+1.71e-6 degrees. Explicit restoration and a separate automatic timeout both
+pass, with the selected Iris Out, facial playback and complete CSS state restored.
+The stationary pose differences overlap ordinary idle variation, so this is
+not an accepted walking repair. The override is inactive. Next compare actual
+walking with the verified restoration path. Six final health checks retain all
+four selected animations and active Reduced noise; no new crash occurred.
+See the [native rig record](../research/2026-10-13-cw-native-foot-rig.md) and
+`work/three-outfit-rig-physics/cw-rig-reference1`. Stable-release and crash gates
+remain open.
+
 **October 13, reload crash and recovery:** a subsequent rescan experiment
 ended in an animation subsystem access violation. The exact PDB/minidump points
 to missing constant class data as a hypothesis, not a confirmed root cause.

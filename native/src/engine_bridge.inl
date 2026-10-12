@@ -252,19 +252,61 @@ std::pair<FNumericProperty*,void*> control_rig_alpha(UObject* anim) {
     if(!scalar->IsFloatingPoint()) throw std::runtime_error("ControlRig alpha is not floating point");
     return {scalar,reinterpret_cast<std::byte*>(anim)+node->GetOffset_Internal()+scale_bias->GetOffset_Internal()+field->GetOffset_Internal()};
 }
+UObject* recreate_native_instance(UObject* mesh,UObject* old) {
+    (void)control_rig_alpha(old);
+    auto* type=old->GetClassPrivate();
+    if(read<UObject*>(mesh,L"AnimScriptInstance")!=old || read<UObject*>(mesh,L"AnimClass")!=type ||
+       read<uint8_t>(mesh,L"AnimationMode")!=0 || !type->GetSparseClassData() || type->IsUnreachable() ||
+       type->HasAnyFlags(static_cast<EObjectFlags>(RF_NeedLoad|RF_NeedPostLoad|RF_BeginDestroyed|RF_FinishDestroyed)))
+        throw std::runtime_error("Animation owner changed before recreation");
+    AssetLoadRoots roots;roots.keep(type);roots.keep(old);
+    if(roots.size()!=2) throw std::runtime_error("Could not retain the original animation instance and class");
+    Call clear(mesh,L"SetAnimInstanceClass",1),restore(mesh,L"SetAnimInstanceClass",1);
+    clear.set<UObject*>(L"NewClass",nullptr);restore.set(L"NewClass",type);
+    // Both calls run in this callback. The engine synchronizes and clears its animation state.
+    try {
+        clear.run();restore.run();
+    } catch(...) {
+        restore.run();
+        throw;
+    }
+    auto* current=read<UObject*>(mesh,L"AnimScriptInstance");
+    if(!current || current==old || current->GetClassPrivate()!=type || read<UObject*>(mesh,L"AnimClass")!=type)
+        throw std::runtime_error("Animation instance recreation failed verification");
+    return current;
+}
+std::pair<FBoolProperty*,void*> control_rig_reference(UObject* anim) {
+    (void)control_rig_alpha(anim);
+    auto* node=bridge_property(anim->GetClassPrivate(),L"AnimGraphNode_ControlRig");
+    auto* type=static_cast<FStructProperty*>(node)->GetStruct().Get();
+    auto* flag=bridge_property(type,L"bSetRefPoseFromSkeleton");
+    if(!flag || !flag->IsA<FBoolProperty>() || flag->GetArrayDim()!=1 || flag->GetOffset_Internal()<0 ||
+       flag->GetOffset_Internal()+flag->GetSize()>node->GetElementSize())
+        throw std::runtime_error("ControlRig reference-pose flag layout mismatch");
+    return {static_cast<FBoolProperty*>(flag),reinterpret_cast<std::byte*>(anim)+node->GetOffset_Internal()+flag->GetOffset_Internal()};
+}
+
 }
 void EngineBridge::restore_rig_trial() {
     if(!rig_trial_deadline_) return;
     if(auto* anim=rig_trial_anim_.Get()) {
-        auto [property,data]=control_rig_alpha(anim);
-        const auto current=property->GetFloatingPointPropertyValue(data);
-        if(current==rig_trial_written_) {
-            property->SetFloatingPointPropertyValue(data,rig_trial_original_);
-            if(property->GetFloatingPointPropertyValue(data)!=rig_trial_original_) throw std::runtime_error("Rig trial restore failed");
-            rig_trial_result_="restored";
-        } else rig_trial_result_="relinquished after another write";
+        if(rig_trial_reference_) {
+            auto* mesh=rig_trial_mesh_.Get();
+            if(mesh && read<UObject*>(mesh,L"AnimScriptInstance")==anim) {
+                recreate_native_instance(mesh,anim);
+                rig_trial_result_="restored by recreation";
+            } else rig_trial_result_="component changed";
+        } else {
+            auto [property,data]=control_rig_alpha(anim);
+            const auto current=property->GetFloatingPointPropertyValue(data);
+            if(current==rig_trial_written_) {
+                property->SetFloatingPointPropertyValue(data,rig_trial_original_);
+                if(property->GetFloatingPointPropertyValue(data)!=rig_trial_original_) throw std::runtime_error("Rig trial restore failed");
+                rig_trial_result_="restored";
+            } else rig_trial_result_="relinquished after another write";
+        }
     } else rig_trial_result_="owner expired";
-    rig_trial_anim_={};rig_trial_deadline_=0;
+    rig_trial_anim_={};rig_trial_mesh_={};rig_trial_deadline_=0;
 }
 void EngineBridge::finish_rig_trial(bool force) {
     if(rig_trial_deadline_ && (force || GetTickCount64()>=rig_trial_deadline_)) restore_rig_trial();
@@ -279,26 +321,72 @@ Json EngineBridge::control_rig_trial(void* engine,Appearance& appearance,const J
         auto* mesh=read<UObject*>(pawn,L"Mesh");Call instance(mesh,L"GetAnimInstance",1);instance.run();
         auto* anim=instance.get<UObject*>();
         if(!anim || anim!=resolve(query.at("target"))) throw std::runtime_error("Rig trial target is not the current player AnimInstance");
-        const auto alpha=query.at("alpha").get<float>();
+        const bool reference=query.value("reference_pose",false);
+        const auto alpha=query.value("alpha",1.f);
         const auto seconds=query.at("seconds").get<unsigned>();
         if(!std::isfinite(alpha) || alpha<0 || alpha>1 || seconds<1 || seconds>120) throw std::runtime_error("Rig trial exceeds bounds");
-        auto [property,data]=control_rig_alpha(anim);
-        const auto graph=request(engine,appearance,{{"op","get"},{"target",query.at("target")},{"property","AnimGraphNode_ControlRig"}});
-        if(graph.at("AlphaInputType")!=0 || graph.at("AlphaScaleBias").at("Bias")!=0)
-            throw std::runtime_error("Rig trial requires float alpha with zero bias");
-        const auto original=property->GetFloatingPointPropertyValue(data);
-        if(!std::isfinite(original) || original<0 || original>1) throw std::runtime_error("Unexpected original rig alpha");
-        rig_trial_anim_=anim;rig_trial_original_=static_cast<float>(original);rig_trial_written_=alpha;
-        rig_trial_deadline_=GetTickCount64()+seconds*1000;rig_trial_result_="active";
-        property->SetFloatingPointPropertyValue(data,alpha);
+        if(reference) {
+            if(seconds>30 || appearance.performance.active() || PerformancePlayer::waiting_for_menu(pawn))
+                throw std::runtime_error("Reference-pose trial requires an idle world player and at most 30 seconds");
+            Call montage(anim,L"IsAnyMontagePlaying",1);montage.run();
+            const auto speed=read<double>(anim,L"Speed");
+            if(!std::isfinite(speed) || std::abs(speed)>.01 || montage.get<bool>())
+                throw std::runtime_error("Reference-pose trial requires no movement or montage");
+            auto [flag,data]=control_rig_reference(anim);
+            if(flag->GetPropertyValue(data)) throw std::runtime_error("Reference-pose flag is already enabled");
+            // A fresh instance restores the private construction flags and initial transforms too.
+            rig_trial_reference_=true;rig_trial_mesh_=mesh;rig_trial_anim_=anim;
+            rig_trial_deadline_=GetTickCount64()+seconds*1000;rig_trial_result_="active";
+            rig_trial_original_=0;rig_trial_written_=1;
+            flag->SetPropertyValue(data,true);
+        } else {
+            auto [property,data]=control_rig_alpha(anim);
+            const auto graph=request(engine,appearance,{{"op","get"},{"target",query.at("target")},{"property","AnimGraphNode_ControlRig"}});
+            if(graph.at("AlphaInputType")!=0 || graph.at("AlphaScaleBias").at("Bias")!=0)
+                throw std::runtime_error("Rig trial requires float alpha with zero bias");
+            const auto original=property->GetFloatingPointPropertyValue(data);
+            if(!std::isfinite(original) || original<0 || original>1) throw std::runtime_error("Unexpected original rig alpha");
+            rig_trial_reference_=false;rig_trial_anim_=anim;rig_trial_original_=static_cast<float>(original);rig_trial_written_=alpha;
+            rig_trial_deadline_=GetTickCount64()+seconds*1000;rig_trial_result_="active";
+            property->SetFloatingPointPropertyValue(data,alpha);
+        }
     } else if(action!="status") throw std::runtime_error("Unknown rig trial action");
-    return {{"active",rig_trial_deadline_!=0},{"field","AlphaScaleBias.Scale"},{"result",rig_trial_result_},{"original",rig_trial_original_},{"written",rig_trial_written_},{"deadline_ms",rig_trial_deadline_}};
+    return {{"active",rig_trial_deadline_!=0},{"field",rig_trial_reference_?"bSetRefPoseFromSkeleton":"AlphaScaleBias.Scale"},{"result",rig_trial_result_},{"original",rig_trial_original_},{"written",rig_trial_written_},{"deadline_ms",rig_trial_deadline_}};
 }
 #endif
 Json EngineBridge::request(void* engine,Appearance& appearance,const Json& request) {
     const auto op=request.at("op").get<std::string>();
 #ifdef CSS_INVENTORY_DEV
     if(op=="animation.control_rig_trial") return control_rig_trial(engine,appearance,request);
+    if(op=="animation.recreate_player_instance") {
+        if(rig_trial_deadline_ || appearance.performance.active())
+            throw std::runtime_error("Stop the performance and rig trial before recreating the instance");
+        auto* pawn=appearance.player(engine);
+        if(!pawn || PerformancePlayer::waiting_for_menu(pawn))
+            throw std::runtime_error("Instance recreation requires an available world player");
+        auto* mesh=read<UObject*>(pawn,L"Mesh");
+        auto* old=mesh?read<UObject*>(mesh,L"AnimScriptInstance"):nullptr;
+        if(!old || old!=resolve(request.at("target")))
+            throw std::runtime_error("Instance recreation target is not the current player AnimInstance");
+        (void)control_rig_alpha(old); // Validates ABP_Player and drains parallel evaluation.
+        auto* type=old->GetClassPrivate();
+        if(read<UObject*>(mesh,L"AnimClass")!=type || read<uint8_t>(mesh,L"AnimationMode")!=0 ||
+           type->HasAnyFlags(static_cast<EObjectFlags>(RF_NeedLoad|RF_NeedPostLoad|RF_BeginDestroyed|RF_FinishDestroyed)) ||
+           type->IsUnreachable() || !type->GetSparseClassData())
+            throw std::runtime_error("Native animation class is not ready for recreation");
+        Call velocity(pawn,L"GetVelocity",1);velocity.run();
+        struct Velocity { double x,y,z; };
+        const auto v=velocity.get<Velocity>();
+        Call montage(old,L"IsAnyMontagePlaying",1);montage.run();
+        const auto speed=read<double>(old,L"Speed");
+        if(!std::isfinite(v.x) || !std::isfinite(v.y) || !std::isfinite(v.z) ||
+           v.x*v.x+v.y*v.y+v.z*v.z>.0001 || !std::isfinite(speed) || std::abs(speed)>.01f || montage.get<bool>())
+            throw std::runtime_error("Instance recreation requires no movement or montage");
+        const auto old_identity=asset_evidence(old);
+        auto* current=recreate_native_instance(mesh,old);
+        return {{"before",old_identity},{"after",asset_evidence(current)},
+                {"instance",handle(current)},{"class",handle(type)},{"component",handle(mesh)}};
+    }
     if(op=="animation.class_inventory") {
         auto* animation_type=static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"));
         auto* component_type=static_cast<UClass*>(find(L"/Script/Engine.SkeletalMeshComponent"));

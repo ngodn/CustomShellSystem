@@ -314,6 +314,8 @@ public:
 class EngineBridge {
 #ifdef CSS_INVENTORY_DEV
     WeakObject rig_trial_anim_;
+    WeakObject rig_trial_mesh_;
+    bool rig_trial_reference_=false;
     float rig_trial_original_=0, rig_trial_written_=0;
     uint64_t rig_trial_deadline_=0;
     std::string rig_trial_result_;
