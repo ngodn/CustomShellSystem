@@ -21,7 +21,7 @@ or camera input was sent.
 | Four palettes, removable parts and stocking layers | Portable/data checks pass; native visual checks pending |
 | Body-shape endpoints and combinations | Cooked morph/weight checks pass; complete native sweep pending |
 | Iris Out face/eyes, movement or attack interruption, current-form doubles and their outfit/glow | User answered "All work"; the other form remains unverified |
-| Appearance under bright light, shadow and backlighting | New user concern, investigation open |
+| Appearance under bright light, shadow and backlighting | User now says "so far now its fine" on the unchanged build; accepted for now, earlier observations retained |
 | Profiles and restoration | Portable V2 upgrade checks pass; live save/reload pending |
 | Continuous secondary motion, interruptions, resets and frame cost | Pending |
 
@@ -42,10 +42,13 @@ dark in the former; the latter loses visible detail in bright fabric and skin.
 Different view directions and illumination prevent these screenshots alone
 from isolating a material defect, exposure behavior or the environment's fill.
 
-This reopens lighting quality, not the accepted geometry. Keep Peony first and
-preserve the accepted fit, facial playback, flow mask and current-form doubles.
+The report reopened lighting quality, not the accepted geometry. After reopening
+the unchanged build, the user says "so far now its fine". Keep the current
+materials and resume the remaining Peony checks, preserving accepted fit, facial
+playback, flow mask and current-form doubles. This accepts the current appearance
+for now; it does not establish an all-outfit comparison or a repaired cause.
 See [lighting investigation](2026-10-12-peony-v2-lighting.md). No lighting repair
-or new installed candidate is implied by the acceptance above.
+or new installed candidate is implied.
 
 ## Cooked secondary-motion bindings
 
@@ -77,3 +80,25 @@ selection or performance. Any remaining loose-detail simulation needs actual
 motion evidence before changing the accepted fit. Existing solver contact and
 reset fields are retained in the report and the earlier
 [secondary-motion ownership record](2026-10-08-secondary-motion-ownership.md).
+
+## Passive engine timing sample
+
+After the provisional lighting acceptance, the existing CSSX development
+interface captured ten seconds of engine tick timing without input, camera,
+appearance or settings changes. Evidence is
+`work/three-outfit-rig-physics/peony-v2-gameplay1/passive-frame-sample1.json`,
+which embeds and hashes the original `fps_probe.py` capture. The same game
+process and applied Peony appearance are present before and after, with CSS's
+menu inactive. CSS animation and maintenance errors are empty at both endpoints.
+
+The sample contains 346 engine intervals: mean 28.94 ms, median 26.46 ms,
+p95 44.44 ms and p99 88.38 ms. There are 12 intervals above the tool's hitch
+threshold of twice the median. These are observed engine callback intervals,
+not GPU presentation timing or isolated Peony cost. CSSX's measured core phase
+averages 0.279 ms in this sample, but does not cover CSS, game logic, rendering
+or all possible waiting costs. CSS animation's cumulative counters are also
+not a measurement of this ten-second window.
+
+No baseline outfit, fixed view, verified action sequence or noise-floor repeats
+were captured. Do not call this a performance pass, a Peony regression or an
+attribution of the hitches. The full motion/performance acceptance remains open.

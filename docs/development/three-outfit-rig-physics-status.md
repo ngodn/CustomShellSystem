@@ -22,16 +22,18 @@ the obvious garment fit in CSS and while walking, and answered "Fit looks right
 in both." They subsequently accepted flowing trim in CSS/world and Iris Out
 face/eyes, interruption and current-form doubles with the outfit/glow. Full
 customization, the other Genessa form, the wider motion matrix and full regression
-remain pending. Their new shadow/bright-light appearance concern is now the
-current Peony correction; see the [lighting investigation](../research/2026-10-12-peony-v2-lighting.md).
+remain pending. The user subsequently reopened the unchanged build and reports
+"so far now its fine" about lighting. Keep the accepted materials and resume
+the remaining Peony checks; retain the earlier observations for later polish if
+they recur. See the [lighting investigation](../research/2026-10-12-peony-v2-lighting.md).
 The controlled lighting fixture now completes 24 calibrated PNG/HDR captures
 with unchanged source assets and a verified gray control. It narrows the search
 but does not reproduce the game's exposure or establish a fix. The installed
-trial is unchanged; the lighting report remains open.
+trial is unchanged; lighting is now accepted by the user for the time being.
 Two private material comparisons also completed: removing the normal map and
 adding a fabric-masked Cloth response. Neither restores the weak-light detail,
-so both are rejected as lighting repairs. The next comparison needs the game's
-environment/exposure rather than another repeat of the empty preview fixture.
+so both are rejected as lighting repairs. If the concern returns, a comparison
+needs the game's environment/exposure rather than the empty preview fixture.
 See [astral and installation evidence](../research/2026-10-12-peony-v2-astral.md).
 The [gameplay record](../research/2026-10-12-peony-v2-gameplay.md) separates this
 user acceptance from the remaining checks. A cooked secondary-binding audit

@@ -21,10 +21,12 @@ trim, facial playback, doubles and gameplay. The user now accepts the obvious
 fit in CSS and while walking in the world: "Fit looks right in both."
 The user also accepts flowing trim in CSS/world ("Works in both") and Iris Out
 face/eyes, interruption and current-form doubles/outfit/glow ("All work").
-Their subsequent lighting report is the current Peony correction: retain
-readable fabric detail in shadow/backlighting and bright light, investigate the
-material response and exposure before choosing a fix, and preserve accepted fit
-and motion. See [lighting investigation](../research/2026-10-12-peony-v2-lighting.md).
+Their subsequent lighting report was investigated without replacing the accepted
+materials. On reopening the same build, the user reports "so far now its fine".
+Keep the current lighting appearance for now and resume the remaining Peony
+checks. This is provisional user acceptance, not proof of a lighting repair or
+every environment. Retain the earlier observations for later polish if they
+recur. See [lighting investigation](../research/2026-10-12-peony-v2-lighting.md).
 The remaining native behavior and regression checks are open; the full goal
 remains active. See [gameplay evidence](../research/2026-10-12-peony-v2-gameplay.md).
 

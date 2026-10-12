@@ -1,6 +1,10 @@
 # Peony V2 lighting response
 
-Status: investigating the user's October 12 screenshots. No repair is installed.
+Status: accepted for now by the user on October 12. After reopening the unchanged
+build, they report "so far now its fine". Retain the current materials and resume
+the remaining Peony checks. This is not evidence of a repaired cause or a
+completed comparison across outfits. No lighting variant or diagnostic core was
+installed. Keep the earlier observations below for later polish if they recur.
 The accepted V2 fit, flowing trim, Iris Out facial playback/interruption and
 current-form doubles remain accepted within the limits in the
 [gameplay record](2026-10-12-peony-v2-gameplay.md).
@@ -265,3 +269,12 @@ are recorded as unavailable instead of being interpreted as disabled settings.
 The reads remain sequential. Unsupported reflected fields also make camera
 stability unknown. The updated script passes syntax and wrong-core rejection
 checks with no new request or output file; live capture remains unverified.
+
+Before the user accepted the current lighting, a check of the separately loaded
+CSSX 1.3.1 development core found another available transport. Its existing
+`engine` request successfully returned the live Genessa player and controller.
+CSS's missing development probe does not mean that all read-only game queries
+require a restart. The CSSX bridge still has the same 256-field struct decode
+limit, so this does not validate the prepared nested settings capture. No CSSX
+binary, extension or setting was changed. Further lighting capture is deferred
+following the user's acceptance above.
