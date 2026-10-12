@@ -1,5 +1,15 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, straight walking and bare-foot contact:** pre-orienting the
+stationary pawn removes the initial turn from bounded booted/bare passes.
+Each records eight straight moving samples over 1.9 seconds. Both return safely;
+final position is 0.072 cm from initial preflight, facing/camera and complete
+saved state restored. Native IK, facial playback and Reduced noise remain active.
+Contact remains open: boot landmarks reach -2.484 cm, bare landmarks stay at
+least +3.091 cm. Separate phases and neutral geometry limit that comparison.
+Do not apply a blanket grounding offset. Evidence: `cw-cycle1` and CW
+`work/foot-cycle1`, [straight walk record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/straight-walk-contact.md).
+
 **October 13, full retained gait comparison:** the ankle trial lowers mean and
 maximum reference bank across all six normal/facial walk, jog and sprint editor
 captures. Some phases worsen; sprint median increases. Worst-regression boot

@@ -1,5 +1,12 @@
 # Three-outfit implementation status
 
+**October 13, straight walking:** booted and bare-foot passes now avoid the
+initial turn and retain eight straight samples across 1.9 seconds each. State,
+facing/camera and position restoration pass. Boot penetration and bare-foot
+clearance remain unresolved, so no global grounding change is justified.
+See CW [straight walk record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/straight-walk-contact.md)
+and `work/three-outfit-rig-physics/cw-cycle1/final/health.json`.
+
 **October 13, full retained gait comparison:** normal/facial results match
 exactly across walk, jog and sprint, 241 frames each. The installed ankle trial
 reduces mean/maximum reference bank in each gait, with mixed phase results and
