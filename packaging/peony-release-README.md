@@ -18,6 +18,11 @@ Peony includes four palette templates, removable pieces, body-shape controls
 and optional glowing, flowing trim. Black and white floral is the default.
 The existing six Eve outfits remain included. Slipstream is deferred.
 
+Existing Unholy Genessa v0.2.0 and Commander White v0.0.6-dev packages pass
+offline catalog and cooked-import checks alongside this release. Updating the
+shared pack alone does not give those older packages the newer trial facial or
+playback adapters. Their live behavior with this release has not been retested.
+
 The author accepted Peony's fit in CSS and gameplay, palette/profile restoration,
 trim flow, facial playback, performance interruption, customized doubles in the
 tested Genessa form, and Firm/Natural motion while walking and playing Iris Out.

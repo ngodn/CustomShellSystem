@@ -13,6 +13,13 @@ one matching container trio. The runtime uses the existing release allowlist.
 Readmes, BBCode changelogs, animation credits, SHA-256 sidecars and verification
 receipts accompany the files. These are upload-ready files, not a published page.
 
+The [public upgrade follow-up](../research/2026-10-12-peony-public-upgrade.md)
+also passes cooked-import and native-catalog checks with released Genessa and
+Commander White, separately and together. The accompanying instructions now
+clarify that old outfit versions do not gain the newer trial facial/playback
+adapters simply by updating shared assets. No release ZIP was changed by that
+follow-up; its standalone README and evidence were updated.
+
 ## Evidence
 
 The accepted inputs are `work/three-outfit-rig-physics/peony-v2-motion-package1`.

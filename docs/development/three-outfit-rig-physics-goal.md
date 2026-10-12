@@ -17,6 +17,13 @@ install instructions and Nexus changelogs. No upload or game installation was
 performed. Preserve the accepted Peony inputs and defer Slipstream until the
 user requests it again.
 
+The [public upgrade audit](../research/2026-10-12-peony-public-upgrade.md) now
+checks the final Eve/shared files alone and alongside the released Genessa
+v0.2.0 and CW v0.0.6-dev. All four cooked-import and native-catalog cases pass.
+Old outfit revisions do not gain the newer trial facial/playback adapters;
+the delivery instructions state that limit. No old-outfit live compatibility
+or completion of the broader regression matrix is claimed.
+
 **October 12 continuation:** Peony motion remains user accepted. The user
 confirms the blocky sunlight symptom is currently only in Vistani's report;
 keep that high-priority investigation queued without speculative renderer changes.

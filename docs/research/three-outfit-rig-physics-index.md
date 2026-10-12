@@ -2,6 +2,18 @@
 
 Updated 2026-10-12. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+**Current scope:** the user deferred Slipstream and requested public delivery
+of the accepted Peony V2. Eve v1.5.0, CSS beta.12 and matching shared assets are
+packaged locally. See [delivery evidence](../development/peony-public-release.md)
+for the exact artifacts and validation limits. Nothing was uploaded. Further
+Slipstream experiments are deferred until the user requests them again.
+
+The [public upgrade follow-up](2026-10-12-peony-public-upgrade.md) checks the new
+shared pack against the actual published Genessa and Commander White packages.
+All four cooked-import and native-catalog cases pass. The older revisions do
+not gain the newer trial facial/playback adapters. Their live behavior remains
+outside this offline check.
+
 Latest status takes precedence over the historical trial entries below: Peony
 V2 fit, flowing trim, facial playback, current-form doubles and customization
 restoration have user acceptance. The tighter body-motion package is installed
@@ -13,6 +25,12 @@ The queued [sunlight noise investigation](2026-10-12-sunlight-noise.md) has the
 reporter's image and a read-only settings capture, with no diagnosed cause or
 rendering change yet. The user confirms the matching symptom is only in Vistani's
 report so far; the local screenshot does not show an obvious matching pattern.
+
+## Historical research checkpoints
+
+The following entries retain their findings and original next steps. Their
+pending Peony states and Slipstream instructions are superseded by the current
+scope and acceptance above; they do not reopen completed work.
 
 Slipstream's [continuous-cloth constraint isolation](2026-10-12-slipstream-constraint-isolation.md)
 compares two batches with reversed order and identical animated poses. Removing
