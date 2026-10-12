@@ -269,3 +269,93 @@ then compare native motion and body contact. Topology alone does not establish
 that it fixes the observed garment, and the older surface's known mapping errors
 must be checked rather than inherited. The accepted Peony installation remains
 untouched; the full outfit goal stays active.
+
+## Native split-fan binding and mapping repair
+
+`slipstream-splitfans-native1` binds the 667-particle candidate with only an
+8.5 MiB private mesh overlay. Its first run exits 139 before the commandlet:
+systemd's core for PID 2790982 shows `TraceAuxiliaryOnMessageCallback` logging
+from the trace writer thread into `FLLMTracker::GetState`, while the main thread
+is in engine pre-initialization. No OOM entry accompanies that crash. This is
+startup evidence, not a cloth topology failure. The trace-server parent PID
+2790984 printed to stdout was not the crashing process.
+
+The retry verifies that the private mesh still equals its source, preserves the
+failed receipt, and adds `-notracethreading`, supported by this engine's
+`TraceAuxiliary.cpp`. Rebuild, fresh inspection and two 145-frame sprint captures
+then exit zero. All protected source assets are unchanged. The saved mesh retains
+visible geometry, skin weights, basis vectors, skeleton, physics, secondary
+graph and section morphs. Its physical normals and travel/backstop maps match
+the candidate within 0.000001. The mapping indices are newly generated.
+
+The independent rest audit reproduces the continuous baseline's recorded error
+before checking this candidate. The new automatic mapping still has maximum
+position/normal-endpoint/tangent-endpoint errors of 1.56990/4.09405/3.87244 cm.
+The final audit uses reconstructed third position barycentrics and stored third
+normal/tangent barycentrics, matching the earlier shader investigation. The
+initial raw audit reconstructed all three and is superseded by
+`mapping-audit-stored-endpoints.json`.
+
+`slipstream-splitfans-mapping1` applies the earlier coupled endpoint solver to
+this exact proxy. All 703 identified rows are corrected, with no unresolved
+rows or preserved-position fallbacks. Whole-section maximum endpoint errors
+are 0.094635/0.071091/0.098123 cm. The independent checker preserves everything
+outside the three mapping arrays, verifies valid proxy triangles and unchanged
+blend/influence weights, and rejects a deliberately altered normal coefficient.
+This is a hypothetical corrected mapping, not yet saved or cooked into a mesh.
+
+Both native captures pass anchor/coordinate checks, maximum error 0.00002544 cm,
+and use identical animated poses. They still fail the strain screen in 1 and 3
+frames. The repeated offending edge 314-566 grows from 1.71894 cm to 3.87193 cm
+in the first run; the second also stretches the 0.10532 cm edge 320-530 to
+1.29974 cm. Do not describe this topology as strain-free.
+
+Corrected mapping replay in `slipstream-splitfans-contact1` shows substantial
+body penetration. Garment samples more than 5 mm inward number 1965/1961 at
+frame 0, 2496/2979 at frame 54 and 1888/4338 at frame 119. The contact recipe
+explicitly uses the established 1 mm rest-mapping tolerance (default remains
+0.03 cm for prior trials). This bound screens reconstruction precision; it does
+not relax the body-contact threshold or establish fit. Front/back/side diagnostic
+renders of run 1, frame 119 confirm skirt fabric passing through the hips.
+
+Moving basis replay also remains diagnostic: corrected rows show 0/1 short
+vector samples and 7072/7485 steps above 90 degrees, versus 0/0 and 6723/7712
+with the original mapping. The unstable cloth is not a basis-validation pass.
+Next compare radius 16 cm on this same split-fan surface, preserving collision,
+all other parameters and the visible garment. The accepted Peony build remains
+unchanged.
+
+### Radius-only comparison on the repaired surface
+
+`slipstream-splitfans-radius16` changes only the backstop radius to 16 cm.
+Fresh inspection confirms identical visible geometry and automatic mapping;
+the sole changed physical-cloth field is `backstop_radii`. The verified offline
+correction transfers unchanged, with its source hashes updated and checked
+against the new saved inspection. It remains hypothetical render mapping.
+
+Both native sprint captures exit zero and retain anchors within 0.00002544 cm,
+but fail strain in 81/145 frames each, maximum extension 3.47243 cm. Garment
+samples more than 5 mm inward number 1031/1035 at frame 0, 2513/1750 at 54 and
+5407/5004 at 119. Reject this as a repair. Identical input poses do not imply
+identical cloth output: maximum repeated particle differences are 13.40153 cm
+for radius 3 and 6.18655 cm for radius 16. Do not infer a stable improvement
+from one contact count or compare these authoring timings as game performance.
+
+A separate `contact-trace.json` captures native collision queries at frame 119.
+Its exact capture passes anchors and the body replay. Particle 153 is 6.48257 cm
+inward from the nearest oriented body surface while 1.06520 cm outside every
+solver collider. Particle 200 is 6.58052 cm inward while 0.300001 cm outside its
+nearest collider, matching collision thickness. Both nearest shapes are on
+`thigh_twist_02_r`. Their visible garment vertices 353 and 434 map directly to
+these particles with essentially zero normal offset, so those witnesses are
+physical coverage failures, not an effect of the hypothetical mapping correction.
+The trace exits zero and preserves both the private mesh and protected sources.
+
+These queries are final-state evidence, not a record of every solver projection
+or a closed-volume body test. They reproduce the earlier coverage finding on
+the repaired topology. Previous sphere/capsule, regional and rigid-level-set
+trials remain documented in the October 11 binding record and must not be
+repeated as new ideas. The next change needs a local coverage/deformation check
+against these exact witnesses and the earlier failed poses before another cook
+or install. Keep the current radius-16 mesh only for that diagnostic comparison;
+the rejected radius-3 mesh copy can be regenerated from the retained recipe.

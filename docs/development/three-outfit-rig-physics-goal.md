@@ -26,9 +26,21 @@ Ordered constraint checks at frames 38 and 119 show different local conflicts.
 The next private candidate, `slipstream-splitfans2`, repairs the original proxy's
 49 invalid vertex fans while preserving its cutouts and retained triangle
 geometry. Only three tiny unanchored simulation triangles are omitted; the
-visible outfit is unchanged. All 18 components have native pins. Native binding,
-mapping/morph preservation, motion and contact remain to be verified before
-acceptance. See the same constraint record for evidence and recipes.
+visible outfit is unchanged. All 18 components have native pins. See the same
+constraint record for evidence, recipes and the following native checks.
+
+The split-fan binding now saves/reloads successfully with unchanged visible
+geometry, weights and morphs. Its automatic mapping remains inaccurate; an
+offline coupled correction resolves all 703 identified rows within the existing
+1 mm rest tolerance, but is not yet a saved/cooked correction. Two captured
+sprints still fail strain and show substantial hip penetration in mapped
+renders. Radius 16 cm on the same repaired topology worsens the strain screen
+to 81/145 frames in both runs and does not resolve contact. These are rejected
+repair candidates, not installation candidates. Continue from the captured
+collision witnesses, including render vertices 353/434 that map directly onto
+particles 153/200, rather than repeating global density or travel sweeps.
+The startup crash preceding the first binding was in Unreal's trace worker;
+the verified retry disables threaded tracing only. See the constraint record.
 
 At the user's request, the shared `ue-modding` skill has also been revised to
 cover the actual extraction, patched CUE4Parse, Blender, editor, cook and runtime

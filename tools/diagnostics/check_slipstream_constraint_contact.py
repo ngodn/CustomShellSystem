@@ -54,7 +54,11 @@ def main():
     parser.add_argument('--mapping', type=Path, default=MAPPING)
     parser.add_argument('--cases', nargs='+', default=CASES)
     parser.add_argument('--verify-anchors', action='store_true')
+    parser.add_argument('--max-rest-mapping-error-cm', type=float, default=.03,
+                        help='Numerical rest reconstruction bound, at most the existing 1 mm mapping tolerance')
     args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+    if not 0 < args.max_rest_mapping_error_cm <= .1:
+        parser.error('Rest mapping error bound must be positive and at most 0.1 cm')
     INPUT, OUT, PROXY, MAPPING, CASES = args.input, args.output, args.proxy, args.mapping, args.cases
     OUT.mkdir(exist_ok=False)
     protected = {str(p): sha(p) for p in (PROXY, MESH, MAPPING, BLEND)}
@@ -125,7 +129,7 @@ def main():
             assert row['pose']['Snapshot'] == snapshot
             actual = np.asarray(row['positions_cm'])
             render = json.loads((OUT / f'{case}-{frame}-render.json').read_text())['sections'][0]
-            assert render['rest_mapping_max_cm'] < .03
+            assert render['rest_mapping_max_cm'] < args.max_rest_mapping_error_cm
             render_points = np.asarray(render['positions_cm'])
             triangles = np.asarray(render['indices']).reshape(-1, 3)
             samples = np.concatenate([render_points, render_points[triangles].mean(axis=1)])
@@ -150,6 +154,8 @@ def main():
     assert all(sha(Path(p)) == digest for p, digest in protected.items())
     (OUT / 'report.json').write_text(json.dumps(dict(scope=__doc__, protected=protected,
         recipe_sha256=sha(Path(__file__)), captures={c: sha(INPUT / (c + '.json')) for c in CASES},
+        max_rest_mapping_error_cm=args.max_rest_mapping_error_cm,
+        hypothetical_mapping='diagnostic_mapping_basis' in mapping or 'diagnostic_mapping' in mapping,
         limitation='Backstops are reconstructed from saved weights/normals, not captured native constraint state. '
                    'Body distances are nearest oriented surfaces; no volume containment claim.',
         frames=reports), indent=2) + '\n')
