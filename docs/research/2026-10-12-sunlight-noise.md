@@ -419,3 +419,52 @@ world. Do not silently ship it as a default-on fix. Further evaluation should
 compare motion at the same pose and resolution, and check other lighting presets
 and maps before considering an opt-in MISC workaround. No permanent renderer or
 lighting change was installed.
+
+## Resolution and closer animation-phase comparisons, October 13
+
+Local 5.6.1 source rules out two tempting substitutions without another live
+mutation: `ShadowSourceAngleFactor` is consumed by ray-traced shadow paths, not
+directional VSM projection; `SMRT.MaxRayAngleFromLight` limits local lights.
+Directional VSM samples the directional light's `SourceRadius` directly in
+`VirtualShadowMapProjectionDirectional.ush:157`. Neither setting provides a
+directional-VSM-only source-angle multiplier in this source revision.
+
+`native-resolution1` changes only `r.ScreenPercentage` from 58.328 to 100 and
+back. The comparison completes and restores the number, player and appearance,
+with six exactly matching view samples. The trial looks finer-grained, but its
+pose differs. The CVar readback is not a measured GPU render-target extent or
+proof of a particular DLSS internal mode. Do not label this an established DLAA
+comparison or GPU performance result.
+
+The diagnostic can now wait for a time in the already playing CSS performance,
+without starting, seeking, pausing or changing playback. It validates the
+performance token, ID, duration and rate. These remain approximate phase
+comparisons: status is sampled before the screenshot request, not at GPU frame
+capture, and foliage motion is uncontrolled.
+
+- `native-resolution-phase8` captures baseline at 8.025 seconds and trial at
+  8.052 seconds of Iris Out. Mottling remains visible at 100%, although the grain
+  is finer. The final screenshot misses the original narrow timing window, so
+  the run is marked incomplete. The value had already restored to 58.328.
+  `after-resolution-phase8.json` independently verifies all 20 baseline renderer
+  values, unchanged appearance and unchanged player/process. No setting was
+  left at the trial value. Console priority still requires the previously
+  documented restart.
+- `sun-angle05357-phase8` completes with baseline/trial/restored phases 8.028,
+  8.074 and 8.010 seconds. The smaller angle again replaces dense mottling with
+  distinct foliage-shadow regions; original-angle restoration brings mottling
+  back. The sampled camera translation differs by less than 1e-9 cm, with
+  identical rotation, FOV and pawn location. Player/process/customization match,
+  and the original angle is restored. This strengthens the source-angle result
+  without establishing video-level flicker removal, performance cost or
+  compatibility across maps.
+
+The phase wait now allows two cycles and a 100 ms arrival window. Restoration
+readbacks are recorded before waiting for the final screenshot, so a missed
+capture cannot conceal successful state restoration. Console diagnostics also
+refuse to restore into a different player/process or overwrite a different
+concurrent CVar value.
+
+No default-on rendering correction follows from these comparisons. Keep full
+resolution as a diagnostic observation, not a required user setting; keep the
+sharper-sun option classified as a potential default-off visual workaround.

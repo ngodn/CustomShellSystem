@@ -2,6 +2,7 @@
 import argparse
 from datetime import datetime, timezone
 import json
+import math
 from pathlib import Path
 import sys
 import time
@@ -10,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'extensions/core/tools'))
 from cssx import GAME, atomic, processes, request, sha
 import shot
+from shadow_capture_phase import wait_phase
 
 CASES = {'reflections': 'r.Lumen.Reflections.Allow',
          'contact-shadows': 'r.ContactShadows',
@@ -24,6 +26,7 @@ CASES = {'reflections': 'r.Lumen.Reflections.Allow',
          'directional-dither': 'r.Shadow.Virtual.SMRT.TexelDitherScaleDirectional',
          'directional-extrapolation': 'r.Shadow.Virtual.SMRT.ExtrapolateMaxSlopeDirectional',
          'third-party-upscaler': 'r.TemporalAA.Upscaler',
+         'native-resolution': 'r.ScreenPercentage',
          'local-hard-shadows': 'r.Shadow.Virtual.SMRT.RayCountLocal'}
 
 
@@ -31,11 +34,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--case', choices=CASES, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--value', type=int, choices=range(65), default=0)
+    parser.add_argument('--value', type=int, default=0)
+    parser.add_argument('--phase', type=float, help='Wait for this time in the existing performance loop')
     args = parser.parse_args()
+    if args.case == 'native-resolution':
+        if args.value != 100:
+            parser.error('The native-resolution control requires --value 100')
+    elif not 0 <= args.value <= 64:
+        parser.error('Renderer sampling values must be between 0 and 64')
     if args.case == 'directional-samples' and args.value == 0:
         parser.error('Samples per ray must stay above zero: UE-290828 can fully shadow scenes containing grooms')
-    if args.value and args.case not in ('directional-rays', 'directional-samples'):
+    if args.value and args.case not in ('directional-rays', 'directional-samples', 'native-resolution'):
         parser.error('Nonzero trial values are limited to directional sampling cases')
     if args.output.exists() or len(processes()) != 1:
         raise RuntimeError('Need one running game and a new output directory')
@@ -89,12 +98,19 @@ def main():
 
         def capture(label):
             result[label + '_view_before'] = view()
+            if args.phase is not None:
+                match = wait_phase(engine, args.phase, result.get('performance_identity'))
+                result['performance_identity'] = match['identity']
+                result[label + '_performance_phase'] = match
             path = shot.shot(label)
             result[label + '_view_after'] = view()
             result[label + '_image'] = {'path': str(path), 'sha256': sha(path)}
 
         original = read()
-        if not original.isdigit() or not 1 <= int(original) <= 64:
+        if args.case == 'native-resolution':
+            if not math.isfinite(float(original)) or not 25 <= float(original) < 100:
+                raise RuntimeError('Expected a reduced positive screen percentage, got ' + repr(original))
+        elif not original.isdigit() or not 1 <= int(original) <= 64:
             raise RuntimeError('Expected enabled integer setting, got ' + repr(original))
         result['original'] = original
         capture('baseline')
@@ -104,7 +120,7 @@ def main():
         changed = True
         write(result['trial_value'])
         result['trial_readback'] = read()
-        if result['trial_readback'] != result['trial_value']:
+        if float(result['trial_readback']) != float(result['trial_value']):
             raise RuntimeError('Renderer toggle did not apply')
         time.sleep(2)
         capture('trial')
@@ -115,17 +131,21 @@ def main():
     finally:
         try:
             if changed:
+                if processes() != result['pids'] or engine({'op': 'player'}) != player:
+                    raise RuntimeError('Process or player changed; did not write into a different session')
+                if float(read()) not in (float(original), float(result['trial_value'])):
+                    raise RuntimeError('Renderer value changed concurrently; did not overwrite it')
                 write(original)
                 result['restored_readback'] = read()
                 result['restored'] = result['restored_readback'] == original
                 if not result['restored']:
                     raise RuntimeError('Renderer setting failed to restore')
-                time.sleep(2)
-                capture('restored')
                 result['appearance_after'] = describe()
                 result['customize_unchanged'] = result['appearance_before']['customize'] == result['appearance_after']['customize']
                 result['same_player'] = player == engine({'op': 'player'})
                 result['same_process'] = result['pids'] == processes()
+                time.sleep(2)
+                capture('restored')
         except Exception as error:
             result['restoration_check_error'] = str(error)
             result['completed'] = False

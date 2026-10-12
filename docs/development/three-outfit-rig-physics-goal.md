@@ -276,6 +276,15 @@ opt-in workaround with scene-wide shadow-softness changes, not an accepted
 default-on correction. Evidence: `sunlight-noise1/sun-angle05357/result.json`.
 The angle is restored and no permanent lighting change is installed.
 
+The source-angle result repeats near the same Iris Out phase, with stable
+framing and verified restoration. A 100% screen-percentage control still shows
+mottling at a similar pose, despite finer grain; the original 58.328% is restored.
+The timing tool reads existing playback only. It does not pause, seek or start
+performances. These are screenshot comparisons, not a temporal-video or GPU
+cost acceptance. Details and the incomplete resolution restoration-screenshot
+receipt are retained in the sunlight record; do not repeat that failed capture
+as if the renderer setting had failed to restore.
+
 Investigate the report from Vistani (Nexus, 2026-10-12 01:54): reflections look
 like static outdoors in direct sunlight while moving, but look normal indoors
 or outside direct sunlight. [Reported image](https://i.imgur.com/XiAVEbK.png).
