@@ -364,3 +364,47 @@ profiles and gameplay checks remain open, alongside the glowing, flowing trim.
 `stocking-material1-receipt.json` freezes this work's recipes and evidence.
 The completed cook's temporary prefix and redundant intermediates were removed
 after recording the removal list in the October 12 cleanup log.
+
+## Stockings integrated into the native character
+
+`/mnt/eins0fxE/CSS-Development/peony-v2-character2` appends the four stocking
+regions to the verified first V2 character. The original body, hair and garment
+vertices, faces, corner attributes, skin weights and morph deltas remain unchanged.
+The export adds 10,397 points and 20,274 triangles. Five material slots cover
+legs, boot-covered legs, body, arms and hands. The 4,944 boot-covered stocking
+triangles match the existing body coverage exactly. Leg stockings should default
+on, other regions off; the boot-covered section requires both stockings enabled
+and boots hidden. These rules still need CSS control integration.
+
+`assembly-verified.json` independently checks appended weights and morphs against
+the accepted body, source UVs, winding, region coverage and byte-quantized alpha.
+Its rest offset remains 0.02 cm within float conversion tolerance. Original
+character streams are exact prefixes, so the stocking operation does not refit
+or deform the accepted body or the fitted garments.
+
+Native import and expression addition pass. Fresh reload verifies the 46 material
+bindings, 379 mesh bind bones, nine virtual bones, shared Skeleton, Eve Physics
+Asset and secondary animation graph. The facial variant retains the accepted
+115 expressions alongside 22 body/hand morphs. Source dependencies remain pinned.
+Only required editor dependencies were staged, not an entire previous project.
+
+Windows cooking completes with zero errors and warnings and unchanged sources.
+The 121-package IoStore candidate passes exact payload roundtrip, dependency
+resolution and all six material-parent shader checks. It continues to depend on
+the accepted cooked Eve/shared packs, excluding recompiled editor stand-ins.
+Both variants read back as 151,979 render vertices, 203,465 triangles, three UV
+channels and 46 material bindings. Their base streams match. Separate body and
+facial checks pass all 22/137 morphs, skin-weight quantization, source normals and
+vertex colors, including stocking coverage alpha.
+
+The existing 430 zero-primary-UV-area tangent fallbacks remain. Their count did
+not increase, but their visual impact is still unresolved. Neither the cook nor
+the data checks establish material appearance, sorting, cloth behavior, motion
+quality or gameplay acceptance. No new trial is installed. Native visual review,
+CSS wardrobe/palette/glow controls and profiles, cloth and the broader regression
+matrix remain. The glowing/flowing fabric, panel and strap parents are present
+in this combined cook.
+
+`stocking-integration-receipt.json` preserves commands, recipes and evidence.
+Temporary Wine state, shader intermediates, duplicate staging inputs and unbound
+mesh copies are listed before removal in the October 12 cleanup record.

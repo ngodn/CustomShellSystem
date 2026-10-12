@@ -8,6 +8,17 @@ zero geometric intersections are not required. Prioritize obvious fit and
 deformation defects, usable customization, materials and the remaining release
 work. This does not accept the rejected installed Peony garment.
 
+**Peony stocking integration, October 12:** the recovered stocking layers now
+form part of both private native V2 character variants in
+`/mnt/eins0fxE/CSS-Development/peony-v2-character2`. The existing body and garments
+are unchanged. Fresh binding reload and the 121-package Windows cook/readback
+pass, including stocking alpha, 46 material bindings and all 22/137 morphs.
+The boot-covered stocking section follows the same 4,944 body triangles.
+CSS visibility/palette/glow controls, native appearance, cloth and gameplay
+acceptance remain open. The existing 430 tangent fallbacks still require visual
+review. No V2 trial is installed. See the
+[material record](../research/2026-10-12-peony-v2-materials.md#stockings-integrated-into-the-native-character).
+
 **Peony material progress:** inherited source settings and all supplied CNS
 texture options are now resolved into four material recipes across all 18
 retained parts, with seven independent arm-color options. Black-and-white floral

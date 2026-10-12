@@ -35,9 +35,12 @@ hashes match. The follow-up `stockings-ready.blend` resets unintended nonzero
 stocking shape defaults without changing mesh data. `fit-verified.json` passes
 11 body-control/pose cases, retaining the intended 0.2 mm stocking offset.
 The seven native stocking material packages pass fresh editor readback, Windows
-cooking and IoStore/shader verification. Native character integration, visual
+cooking and IoStore/shader verification. `peony-v2-character2` now integrates the
+four stocking regions into both character variants, with a separate boot-covered
+section. Its 121-package Windows cook and readback preserve body/garment data,
+stocking alpha, rig bindings and all 22/137 morphs. CSS controls, native visual
 review and gameplay remain pending; no new V2 trial is installed. Completed
-stocking-cook intermediates were removed under the same cleanup record.
+cook intermediates are removed under the same cleanup record.
 The required optional glowing, flowing trim remains in scope.
 
 ## Objective
