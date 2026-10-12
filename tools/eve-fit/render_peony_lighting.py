@@ -29,7 +29,8 @@ try:
     component = actor.get_component_by_class(unreal.SkeletalMeshComponent)
     component.set_skeletal_mesh_asset(mesh)
     component.set_forced_lod(1)
-    component.set_disable_post_process_blueprint(True)
+    component.set_editor_property('disable_post_process_blueprint', True)
+    assert component.get_editor_property('disable_post_process_blueprint')
     slots = list(mesh.get_editor_property('materials'))
     wrappers, dynamics = [], []
     shown = set(range(20, 38))

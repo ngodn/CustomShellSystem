@@ -95,3 +95,12 @@ game skin quality. The matrix tests the current garment materials in reference
 pose, not the game's environment, skin shading, automatic exposure or DX12.
 Shader compilation and capture completion must be inspected before using it as
 visual evidence; staging alone is not a successful render.
+
+The first run completed global shader compilation but failed before rendering:
+UE Python exposes `disable_post_process_blueprint` as an editor property, not
+the C++ setter name. `native1/attempt1` retains the exact failed script, log,
+exit code 255 and empty capture directory. The corrected script sets the
+property and reads it back. Attempt 2 reuses the same content links and cache;
+it has reached Peony's material compilation. Its live handle and process IDs
+are recorded in `native1/job.json`. No successful images or lighting repair
+are claimed at this point.
