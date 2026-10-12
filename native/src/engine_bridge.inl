@@ -299,6 +299,17 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
     const auto op=request.at("op").get<std::string>();
 #ifdef CSS_INVENTORY_DEV
     if(op=="animation.control_rig_trial") return control_rig_trial(engine,appearance,request);
+    if(op=="object.state") {
+        auto* object=resolve(request.at("target"));
+        if(!object) throw std::runtime_error("Object state requires a live target");
+        Json result={{"identity",asset_evidence(object)},{"class",handle(object->GetClassPrivate())}};
+        if(object->IsA<UClass>()) {
+            auto* type=static_cast<UClass*>(object);
+            result["sparse_data_present"]=type->GetSparseClassData()!=nullptr;
+            result["sparse_data_struct"]=handle(type->GetSparseClassDataStruct().Get());
+        }
+        return result;
+    }
 #endif
     if(op=="valid") {
         const auto& target=request.at("target");if(target.is_null()) return false;

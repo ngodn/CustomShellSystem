@@ -6,7 +6,8 @@ using css::Json;
 static void expect(bool ok,const char* why) { if(!ok) throw std::runtime_error(why); }
 struct World {
     Json pawn={{"$object",1}}, light={{"$object",2},{"class","Class /Script/Engine.DirectionalLightComponent"}};
-    float angle=4;
+    float angle=4, preset_angle=4;
+    bool blending=false;
     bool alive=true,visible=true,menu=false,fail_restore=false,bad_signature=false;
     unsigned calls=0,writes=0;
     Json query(const Json& q) {
@@ -21,11 +22,15 @@ struct World {
             if(p=="LightSourceAngle") return angle;
             if(p=="IsMenu") return menu;
             if(p=="DirectionalLight") return alive?light:Json();
+            if(p=="SpartaLightingTimeline") return Json{{"$object",6}};
+            if(p=="ActiveLightPreset") return Json{{"$object",7}};
+            if(p=="SourceAngle") return preset_angle;
             if(p=="bVisible") return visible;
             if(p=="bHiddenInGame") return false;
             if(p=="CastShadows") return true;
         }
         if(op=="call") {
+            if(q.at("function")=="IsPlaying") return {{"ReturnValue",blending}};
             if(q.at("function")=="GetAllActorsOfClass") return {{"OutActors",Json::array({Json{{"$object",4}}})}};
             const float value=q.at("args").at("NewValue").get<float>();
             if(fail_restore && value==4) throw std::runtime_error("restoration unavailable");
@@ -52,6 +57,24 @@ int main() {
             expect(s.diagnostics().at("relinquished_lights")==1,"Later writer ownership not retained");
             s.restore(w.bridge()); expect(w.angle==2,"Unload overwrote a later writer");
             s.tick(true,6000,w.bridge()); s.restore(w.bridge()); expect(w.angle==2,"Reselect lost new original");
+        }
+        {
+            World w; css::SunlightShadows s; s.tick(true,0,w.bridge());
+            w.angle=4; s.tick(true,2000,w.bridge());
+            expect(w.angle==4,"Reapplied before game lighting settled");
+            s.tick(true,4000,w.bridge());
+            expect(w.angle<.536f && s.diagnostics().at("modified_lights")==1,"Load reset disabled saved workaround");
+            s.restore(w.bridge()); expect(w.angle==4,"Load recovery lost the game original");
+        }
+        {
+            World w; css::SunlightShadows s; s.tick(true,0,w.bridge());
+            w.blending=true; w.angle=3; s.tick(true,2000,w.bridge());
+            w.preset_angle=2; w.angle=2; s.tick(true,4000,w.bridge());
+            expect(w.writes==1,"Overrode an active weather blend");
+            w.blending=false; s.tick(true,6000,w.bridge());
+            expect(w.writes==1,"Did not wait for settled weather");
+            s.tick(true,8000,w.bridge()); expect(w.angle<.536f,"Did not recover after weather transition");
+            s.restore(w.bridge()); expect(w.angle==2,"Restored stale pre-weather angle");
         }
         {
             World w; css::SunlightShadows s; s.tick(true,0,w.bridge());

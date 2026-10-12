@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, reload crash and recovery:** a subsequent rescan experiment
+ended in an animation subsystem access violation. The exact PDB/minidump points
+to missing constant class data as a hypothesis, not a confirmed root cause.
+Normal Continue recovered the existing save in a fresh process; both live
+animation classes have sparse data, all four selected locomotion assets are
+available, and CSS state matches the backup exactly. Further reload stress is
+held while this defect is investigated. See the
+[crash record](../research/2026-10-13-cw-reload-crash.md).
+Cold loading also exposed a sunlight ownership bug: Reduced noise stayed selected
+but the game restored its four-degree preset, leaving the workaround inactive.
+The recovery candidate recognizes a settled game preset and preserves unrelated
+custom values. Portable tests, the Windows build, cold loading and live
+Default/Reduced restoration pass. A simulated game-preset reset recovers in
+about four seconds. Reduced stays enabled; CSS state is preserved exactly.
+See the [load-recovery record](../research/2026-10-13-sunlight-load-recovery.md).
+
 **October 13, overnight checks:** real MISC mouse clicks pass for Default,
 Reduced noise, then Default/Reduced restoration and persistence. Reduced noise
 is left selected. The truncated choice label is shortened to "Reduced noise";
