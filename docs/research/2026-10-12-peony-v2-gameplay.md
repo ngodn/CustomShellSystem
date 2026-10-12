@@ -434,6 +434,18 @@ build passes, and the saved candidate passes fresh reload and recompilation.
 The candidate's six native animation/preset cases match the limit-only
 intervention. `verify_body_limit_trial.py` checks every frame against that
 baseline, the two-field-only change, unchanged graph and protected source.
-Windows cook, cooked readback and package verification remain before
-installation. Accepted geometry, materials, profiles and other outfit rigs
-remain untouched.
+The Windows cook now exits 0 with zero warnings/errors. The private package
+`peony-v2-motion-package1` passes container verification, 1,535 catalog checks,
+package import resolution and round-trip export/bulk hashes. Its independent
+readback changes exactly 14 numeric CDO values: seven `Limits` and seven
+`MaxTravel` entries. The complete other decoded exports, including bytecode
+and hierarchy, are identical to the accepted rig. All other 1,109 Eve staged
+payload hashes are unchanged, and the Eve catalog is identical.
+
+The shared `.utoc` and `.ucas` remain byte-identical. Only the ten Eve adapter
+fingerprints in shared metadata change to recognize the rebuilt Eve container.
+Facial resource contents remain unchanged. The four-file installation plan
+and verified external hard-link rollback are ready. Installation awaits game
+closure, followed by native motion and playback acceptance. This is an asset
+change and cannot use the core DLL hot-reload path. No new core is included.
+Accepted geometry, materials, profiles and other outfit rigs remain untouched.

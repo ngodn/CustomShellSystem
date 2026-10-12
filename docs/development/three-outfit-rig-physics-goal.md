@@ -97,10 +97,20 @@ The isolated Eve limit-restoration candidate in `peony-v2-body-limits1` now
 passes save, fresh reload/recompile and six native animation/preset cases.
 Every output frame matches the limit-only intervention within 0.000027 degrees;
 the rig graph and all defaults except `Limits`/`MaxTravel` are unchanged.
-Next, Windows-cook and read back the candidate, package it without changing
-the accepted geometry/materials, then verify in game. Nothing from this limit
-trial is installed yet. The earlier simple-translation result did not cover
-this input. Keep the production motion-restoration core already installed.
+The Windows cook now exits 0 with zero warnings/errors. The rebuilt candidate
+is `peony-v2-motion-package1`: independent cooked readback finds exactly 14
+numeric changes (the two seven-element arrays), with identical bytecode,
+hierarchy and remaining defaults. The other 1,109 Eve payloads and Eve catalog
+are unchanged. Shared asset containers are unchanged; only 10 Eve adapter
+fingerprints in shared metadata are refreshed. All 1,535 catalog checks,
+package imports and payload round trips pass. Rollback and a four-file install
+plan are ready at `/run/media/eins0fx/theark/CSS/peony-before-body-limits1` and
+the candidate's `installation-plan.json`. The game is still running and the
+user has been asked to close it. Nothing from this limit trial is installed
+yet. After closure, use `tools/diagnostics/install_body_limit_trial.py --install`
+with the candidate, `peony-v2-package3` baseline and that backup path, then
+verify motion in game. Keep the production motion-restoration core already
+installed. The earlier simple-translation result did not cover this input.
 
 The subsequent saved-setting check passes 774 restoration cases and 256 old
 garment-toggle combinations against the installed V2 metadata. Compatible
