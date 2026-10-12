@@ -303,6 +303,16 @@ WeakObject& WeakObject::operator=(UObject* object) {
 // Loaded assets by path, validated the same read-only way as find(): an asset that was garbage
 // collected fails its guard and is found or loaded again.
 static std::unordered_map<std::string, refl::OwnerGuard> s_asset_cache;
+static std::string asset_evidence(UObject* object) {
+    if(!object) return "null";
+    const auto name=object->GetNamePrivate();
+    return narrow(object->GetPathName())+" [index="+std::to_string(object->GetInternalIndex())+
+        ", name="+std::to_string(name.GetComparisonIndex().ToUnstableInt())+":"+std::to_string(name.GetNumber())+
+        ", need_load="+std::to_string(object->HasAnyFlags(RF_NeedLoad))+
+        ", need_postload="+std::to_string(object->HasAnyFlags(RF_NeedPostLoad))+
+        ", destroying="+std::to_string(object->HasAnyFlags(RF_BeginDestroyed) || object->HasAnyFlags(RF_FinishDestroyed))+
+        ", unreachable="+std::to_string(object->IsUnreachable())+"]";
+}
 static UObject* load(const std::string& path,bool required=true) {
     if (auto it = s_asset_cache.find(path); it != s_asset_cache.end())
         if (auto* cached = it->second.get()) return cached;
@@ -1191,7 +1201,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
             if(!skeleton || narrow(skeleton->GetPathName())!=facial.skeleton)
                 throw std::runtime_error("Facial asset has a different skeleton");
             for(const auto& [name,weight]:facial.weights)
-                if(!mesh_has_morph(candidate,name)) throw std::runtime_error("Facial asset is missing a required shape");
+                if(!mesh_has_morph(candidate,name)) throw std::runtime_error("Facial asset is missing required shape '"+name+"': "+asset_evidence(candidate));
             target=candidate; loading_roots.take(face_roots);
         } catch(const std::exception& error) {facial_failures_.emplace(facial.mesh,error.what());}
     }

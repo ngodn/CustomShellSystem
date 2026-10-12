@@ -1289,7 +1289,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 "Later lighting changes from the game or another mod take priority; reselect to apply again.");
             choice_rows({
                 {"default","Default (game)",{{"action","sunlight_shadows"},{"mode","default"}}},
-                {"reduced","Reduced noise (sharper shadows)",{{"action","sunlight_shadows"},{"mode","reduced"}}},
+                {"reduced","Reduced noise",{{"action","sunlight_shadows"},{"mode","reduced"}}},
             },state.sunlight_shadows);
             direction_hint(true,"Choose sunlight shadows");
         } else if(row_==position_row+3) {

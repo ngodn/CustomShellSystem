@@ -313,6 +313,12 @@ public:
 // engine through JSON ops. It keeps a handle table so a caller can hold an object across calls.
 class EngineBridge {
 #ifdef CSS_INVENTORY_DEV
+    WeakObject rig_trial_anim_;
+    float rig_trial_original_=0, rig_trial_written_=0;
+    uint64_t rig_trial_deadline_=0;
+    std::string rig_trial_result_;
+    void restore_rig_trial();
+    Json control_rig_trial(void*,Appearance&,const Json&);
     AstralLifecycle astral_lifecycle_;
     Json observe_astral(void* engine,bool poses=false);
     Json observe_astral_source(Appearance& appearance);
@@ -330,6 +336,9 @@ class EngineBridge {
     void encode(RC::Unreal::FProperty*,void*,const Json&,unsigned);
 public:
     Json request(void* engine,Appearance&,const Json&);
+#ifdef CSS_INVENTORY_DEV
+    void finish_rig_trial(bool force=false);
+#endif
 };
 class InventoryUI {
 #ifdef CSS_INVENTORY_DEV

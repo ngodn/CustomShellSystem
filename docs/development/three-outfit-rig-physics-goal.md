@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, overnight checks:** real MISC mouse clicks pass for Default,
+Reduced noise, then Default/Reduced restoration and persistence. Reduced noise
+is left selected. The truncated choice label is shortened to "Reduced noise";
+the description still explains sharper shadows. Screenshots and click results:
+`work/three-outfit-rig-physics/sunlight-misc-ui1`. The CW full-body-rig multiplier
+control now passes explicit and timed restoration, but does not establish a
+walking fix. A separate repeated-reload asset-resolution failure was found and
+is being investigated before further rig changes. Two later controlled reloads
+restore all selected animations and facial playback, but do not establish a fix
+for that intermittent failure. The final 60-sample extended check also passes;
+the temporary rig override is inactive. See the
+[native rig and reload record](../research/2026-10-13-cw-native-foot-rig.md).
+
 **Overnight authorization, October 13:** the user is leaving the game open
 and explicitly authorizes independent fixing, improvement and testing while
 away. Preserve their save/settings, use established reload limits, and continue
@@ -32,8 +45,9 @@ Receipt: `work/three-outfit-rig-physics/sunlight-misc1/`.
 After the user reported no effect, the live setting read Default, which the
 validation had restored. Reduced noise was then enabled and left enabled for
 the user; the follow-up screenshot shows cleaner, sharper shadow regions.
-Do not mark the reported rendering bug fixed or user-accepted. UI click-through,
-cross-map behavior, continuous motion and performance remain release checks.
+Do not mark the reported rendering bug fixed or user-accepted. UI click-through
+now passes as recorded above. Cross-map behavior, continuous motion and
+performance remain release checks.
 
 Prepared 2026-10-08. **Status: active, baseline and migration audit in progress.** See [implementation status](three-outfit-rig-physics-status.md) for current evidence, completed work and remaining checks.
 

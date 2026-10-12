@@ -246,7 +246,9 @@ SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catal
             auto* source=read<UObject*>(asset,L"Skeleton");
             if(!source || !compatible_animation_skeletons(narrow(source->GetPathName()),narrow(skeleton->GetPathName())) ||
                (!candidate.declared_skeleton.empty() && candidate.declared_skeleton!=narrow(source->GetPathName())))
-                throw std::runtime_error("Shared animation skeleton does not match its target or declaration");
+                throw std::runtime_error("Shared animation skeleton mismatch: source="+
+                    asset_evidence(source)+", target="+narrow(skeleton->GetPathName())+
+                    ", declared="+candidate.declared_skeleton+", asset="+candidate.asset);
             std::string idle_carrier;
             if(slot==AnimationSlot::Idle) {
                 if(read<uint8_t>(asset,L"AdditiveAnimType")!=0)

@@ -223,8 +223,83 @@ void EngineBridge::encode(FProperty* p,void* data,const Json& value,unsigned dep
 #include "astral_adapters_probe.inl"
 #include "astral_visual_probe.inl"
 #endif
+// The diagnostic changes one reflected scalar, never copies an AnimGraph node.
+#ifdef CSS_INVENTORY_DEV
+namespace {
+std::pair<FNumericProperty*,void*> control_rig_alpha(UObject* anim) {
+    if(narrow(anim->GetClassPrivate()->GetPathName())!="/Game/Sparta/Characters/Humans/Player/Animations/ABP_Player.ABP_Player_C")
+        throw std::runtime_error("Rig trial requires the verified ABP_Player class");
+    Call barrier(anim,L"GetCurveValue",2);
+    barrier.set(L"CurveName",FName(L"None"));barrier.run();
+    (void)barrier.get<float>();
+    auto* node=bridge_property(anim->GetClassPrivate(),L"AnimGraphNode_ControlRig");
+    if(!node || !node->IsA<FStructProperty>() || node->GetArrayDim()!=1 || node->GetOffset_Internal()<0 ||
+       node->GetOffset_Internal()+node->GetSize()>anim->GetClassPrivate()->GetPropertiesSize())
+        throw std::runtime_error("ControlRig node layout mismatch");
+    auto* type=static_cast<FStructProperty*>(node)->GetStruct().Get();
+    if(!type || type->GetFName()!=FName(L"AnimNode_ControlRig")) throw std::runtime_error("Unexpected ControlRig node type");
+    auto* scale_bias=bridge_property(type,L"AlphaScaleBias");
+    if(!scale_bias || !scale_bias->IsA<FStructProperty>() || scale_bias->GetArrayDim()!=1 ||
+       scale_bias->GetOffset_Internal()<0 || scale_bias->GetOffset_Internal()+scale_bias->GetSize()>node->GetElementSize())
+        throw std::runtime_error("ControlRig scale/bias layout mismatch");
+    auto* scale_type=static_cast<FStructProperty*>(scale_bias)->GetStruct().Get();
+    if(!scale_type || scale_type->GetFName()!=FName(L"InputScaleBias")) throw std::runtime_error("Unexpected scale/bias type");
+    auto* field=bridge_property(scale_type,L"Scale");
+    if(!field || !field->IsA<FNumericProperty>() || field->GetElementSize()!=sizeof(float) ||
+       field->GetArrayDim()!=1 || field->GetOffset_Internal()<0 || field->GetOffset_Internal()+field->GetSize()>scale_bias->GetElementSize())
+        throw std::runtime_error("ControlRig alpha layout mismatch");
+    auto* scalar=static_cast<FNumericProperty*>(field);
+    if(!scalar->IsFloatingPoint()) throw std::runtime_error("ControlRig alpha is not floating point");
+    return {scalar,reinterpret_cast<std::byte*>(anim)+node->GetOffset_Internal()+scale_bias->GetOffset_Internal()+field->GetOffset_Internal()};
+}
+}
+void EngineBridge::restore_rig_trial() {
+    if(!rig_trial_deadline_) return;
+    if(auto* anim=rig_trial_anim_.Get()) {
+        auto [property,data]=control_rig_alpha(anim);
+        const auto current=property->GetFloatingPointPropertyValue(data);
+        if(current==rig_trial_written_) {
+            property->SetFloatingPointPropertyValue(data,rig_trial_original_);
+            if(property->GetFloatingPointPropertyValue(data)!=rig_trial_original_) throw std::runtime_error("Rig trial restore failed");
+            rig_trial_result_="restored";
+        } else rig_trial_result_="relinquished after another write";
+    } else rig_trial_result_="owner expired";
+    rig_trial_anim_={};rig_trial_deadline_=0;
+}
+void EngineBridge::finish_rig_trial(bool force) {
+    if(rig_trial_deadline_ && (force || GetTickCount64()>=rig_trial_deadline_)) restore_rig_trial();
+}
+Json EngineBridge::control_rig_trial(void* engine,Appearance& appearance,const Json& query) {
+    const auto action=query.at("action").get<std::string>();
+    if(action=="restore") restore_rig_trial();
+    else if(action=="begin") {
+        if(rig_trial_deadline_) throw std::runtime_error("Restore the active rig trial first");
+        auto* pawn=appearance.player(engine);
+        if(!pawn) throw std::runtime_error("No player for rig trial");
+        auto* mesh=read<UObject*>(pawn,L"Mesh");Call instance(mesh,L"GetAnimInstance",1);instance.run();
+        auto* anim=instance.get<UObject*>();
+        if(!anim || anim!=resolve(query.at("target"))) throw std::runtime_error("Rig trial target is not the current player AnimInstance");
+        const auto alpha=query.at("alpha").get<float>();
+        const auto seconds=query.at("seconds").get<unsigned>();
+        if(!std::isfinite(alpha) || alpha<0 || alpha>1 || seconds<1 || seconds>120) throw std::runtime_error("Rig trial exceeds bounds");
+        auto [property,data]=control_rig_alpha(anim);
+        const auto graph=request(engine,appearance,{{"op","get"},{"target",query.at("target")},{"property","AnimGraphNode_ControlRig"}});
+        if(graph.at("AlphaInputType")!=0 || graph.at("AlphaScaleBias").at("Bias")!=0)
+            throw std::runtime_error("Rig trial requires float alpha with zero bias");
+        const auto original=property->GetFloatingPointPropertyValue(data);
+        if(!std::isfinite(original) || original<0 || original>1) throw std::runtime_error("Unexpected original rig alpha");
+        rig_trial_anim_=anim;rig_trial_original_=static_cast<float>(original);rig_trial_written_=alpha;
+        rig_trial_deadline_=GetTickCount64()+seconds*1000;rig_trial_result_="active";
+        property->SetFloatingPointPropertyValue(data,alpha);
+    } else if(action!="status") throw std::runtime_error("Unknown rig trial action");
+    return {{"active",rig_trial_deadline_!=0},{"field","AlphaScaleBias.Scale"},{"result",rig_trial_result_},{"original",rig_trial_original_},{"written",rig_trial_written_},{"deadline_ms",rig_trial_deadline_}};
+}
+#endif
 Json EngineBridge::request(void* engine,Appearance& appearance,const Json& request) {
     const auto op=request.at("op").get<std::string>();
+#ifdef CSS_INVENTORY_DEV
+    if(op=="animation.control_rig_trial") return control_rig_trial(engine,appearance,request);
+#endif
     if(op=="valid") {
         const auto& target=request.at("target");if(target.is_null()) return false;
         if(!target.is_object() || !target.contains("$object")) throw std::runtime_error("Expected CSSX object handle");

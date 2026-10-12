@@ -993,6 +993,7 @@ struct Core {
     void tick(void* engine, float delta) {
         current_engine=engine;
 #ifdef CSS_INVENTORY_DEV
+        engine_bridge.finish_rig_trial();
         auto measured=[&](FrameProfile::Phase phase,auto&& call) { frame_profile.measure(phase,call); };
 #else
         auto measured=[](FrameProfile::Phase,auto&& call) { call(); };
@@ -1601,6 +1602,9 @@ bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
         core.pending_performance.clear();
+#ifdef CSS_INVENTORY_DEV
+        core.engine_bridge.finish_rig_trial(true);
+#endif
         core.sunlight.restore([&](const css::Json& q){return core.sunlight_query(q);});
         if(!core.astral.clear()) throw std::runtime_error("Genessa double visuals could not be released");
         core.inventory.detach();
