@@ -337,3 +337,36 @@ remain outside its evidence.
 For the user's visual check, `visual-firm.json` retains the original snapshot
 and verifies temporary Firm values on the live rig. Restore that snapshot after
 the user responds. Visual acceptance of excessive motion is still pending.
+
+### Uneven frame-time response
+
+`peony-v2-frame-variation1` runs 24 native RigVM cases: current and retained V42
+rigs, Firm/Natural/disabled regions, and four synthetic timing patterns. The
+input remains the earlier smooth 10 cm translation for two seconds followed
+by two seconds at rest. These timings are synthetic, not captured game frames.
+The commandlet used read-only source content, two worker cores, low process
+priority and NullRHI. It exited 0; input hashes are unchanged. The 192 startup
+warnings match the broader retained authoring project's prior fixture count.
+
+`verify_body_frame_variation.py` verifies all 24 identities, four-second
+coverage, reset timing, disabled output and the unchanged steady 30 fps
+baseline. Uneven frames below the reset threshold caused no extra resets.
+Every extra reset coincided with a synthetic frame longer than the 8/120-second
+solver allowance. Both current and V42 behave this way, so this is not a new
+Peony-only reset policy.
+
+| Rig/preset | Steady chest peak | Uneven chest peak | Repeated-hitch chest peak | Largest chest/glute magnitude drop at a repeated-hitch reset |
+| --- | ---: | ---: | ---: | ---: |
+| Current Firm | 3.12 deg | 3.24 deg | 3.25 deg | 3.25 deg |
+| V42 Firm | 2.99 deg | 2.95 deg | 2.44 deg | 2.44 deg |
+| Current Natural | 8.77 deg | 8.73 deg | 7.35 deg | 7.35 deg |
+| V42 Natural | 3.83 deg | 3.83 deg | 3.78 deg | 4.74 deg |
+
+The last column is the change in deformation magnitude between adjacent
+samples, not a measured angular velocity. Resets return simulated offsets to
+the incoming pose, which can create a visible snap. The live reset cause is
+still unproven because the earlier runtime fields were read on separate
+frames. A separate ten-second game sample after starting this offline fixture
+reported 44.70 Hz and no hitches; it is context, not a performance comparison.
+No rig limits, physics presets or installed assets changed as a result of this
+experiment. Wait for the user's Firm visual check before retuning accepted rigs.

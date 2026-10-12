@@ -37,7 +37,7 @@ def value_text(value):
     return str(value)
 
 
-def evaluate(bp, public, mode, preset, fps):
+def evaluate(bp, public, mode, preset, fps, frame_deltas=None):
     owner = unreal.SceneComponent()
     rig = bp.create_control_rig()
     if not rig.rename(outer=owner):
@@ -59,8 +59,12 @@ def evaluate(bp, public, mode, preset, fps):
                'RegionFrequencies', 'RegionDampingRatios', 'RegionMotionAmounts', 'RegionEnabled')}
     peak, final = [0.] * 7, [0.] * 7
     samples = []
-    for frame in range(4 * fps + 1):
-        t = frame / fps
+    timing = []
+    elapsed = 0.
+    deltas = frame_deltas if frame_deltas is not None else [0.] + [1 / fps] * (4 * fps)
+    for frame, delta in enumerate(deltas):
+        elapsed += delta
+        t = elapsed if frame_deltas is not None else frame / fps
         hierarchy.reset_pose_to_initial(unreal.RigElementType.BONE)
         pelvis = hierarchy.get_global_transform(key('pelvis'), True)
         # A smooth 10 cm translation for two seconds, followed by two seconds at rest.
@@ -70,7 +74,7 @@ def evaluate(bp, public, mode, preset, fps):
         set_value(rig, 'Enabled', True)
         set_value(rig, 'UpdateSerial', frame)
         set_value(rig, 'ResetEpoch', 0)
-        rig.set_delta_time(1 / fps if frame else 0)
+        rig.set_delta_time(delta)
         if not rig.execute('Forwards Solve'):
             raise RuntimeError('Native body rig execution failed')
         outgoing = [transform(hierarchy.get_global_transform(key(n))) for n in NAMES]
@@ -81,10 +85,16 @@ def evaluate(bp, public, mode, preset, fps):
             raise ValueError('Rig moved a helper pivot')
         peak = [max(a, b) for a, b in zip(peak, final)]
         samples.append(final)
+        if frame_deltas is not None:
+            timing.append(dict(seconds=elapsed, delta=delta,
+                               resets=int(rig.get_variable_as_string('ResetCount')),
+                               substeps=int(rig.get_variable_as_string('Substeps')),
+                               total_steps=int(rig.get_variable_as_string('TotalSteps'))))
     if preset == 'off' and max(peak) > .001:
         raise ValueError('Disabled region still moves relative to its input')
     return dict(mode=mode, preset=preset, fps=fps, tuning=tuning,
-                peak_degrees=peak, final_degrees=final, samples_degrees=samples)
+                peak_degrees=peak, final_degrees=final, samples_degrees=samples,
+                **({'timing': timing} if frame_deltas is not None else {}))
 
 
 def main():
