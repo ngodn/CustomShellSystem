@@ -73,6 +73,8 @@ def main():
     parser.add_argument('--dist', type=Path, required=True)
     parser.add_argument('--tools-root', type=Path, default=ROOT)
     parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--shared-metadata', type=Path,
+                        help='Verified versioned shared pak pinned by packaging/shared-assets.json')
     args = parser.parse_args()
     revision = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
     if not args.prepare_only:
@@ -81,6 +83,9 @@ def main():
         dirty = subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True)
         if tagged != revision or dirty:
             raise ValueError('Build the release from the clean beta.12 tag')
+        spec = read(ROOT / 'packaging/shared-assets.json')
+        if args.shared_metadata is None or sha(args.shared_metadata) != spec['files'][SHARED + '.pak']:
+            raise ValueError('Supply the shared metadata pak pinned by the release specification')
     source = args.accepted.resolve(strict=True)
     out = args.output.resolve()
     dist = args.dist.resolve()
@@ -124,6 +129,10 @@ def main():
             (folder / (name + suffix)).hardlink_to(source / 'pack' / name / (name + suffix))
         run(out / (name + '-pack.log'), repak, 'pack', metadata,
             folder / (name + '.pak'), '--version', 'V8B')
+        if name == SHARED and not args.prepare_only:
+            # repak's index ordering can change bytes with identical extracted metadata.
+            # Use the frozen dependency artifact, then compare every decoded file below.
+            shutil.copyfile(args.shared_metadata, folder / (name + '.pak'))
         readback = out / 'readback' / name
         readback.mkdir(parents=True)
         run(out / (name + '-readback.log'), repak, 'unpack',
