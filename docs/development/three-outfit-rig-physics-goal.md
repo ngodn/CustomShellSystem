@@ -1,5 +1,20 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW foot localization:** the actual shared walk blend now has
+six editor-component timelines (1,446 poses), with all installed sample paths,
+coordinates and rates checked. Forward-only baseline matches the prior lower
+body exactly. Small directional blends do not explain all live8 differences.
+Read-only graph inspection establishes that CTRL_Human_FullbodyIK remains
+active despite zero correction inputs. Its initial reference differs from CW's
+mesh, including about 15.94 cm at the foot IK helpers; its "Set Initial
+Transforms From Mesh" flag is false. Next test this reference mapping with
+animation synchronization and full restoration, not an arbitrary foot rotation.
+No CW repair trial is installed yet. Evidence: CSS
+`work/three-outfit-rig-physics/cw-foot-blend1` and CW `work/foot-blend1`;
+CW commit `2ca79c2`. The extra live9 capture contains jog starts/stops, not a
+steady walking test. Regenerable probe compiler/DDC files were removed after
+the completed capture; source, built helper, commands and results remain.
+
 **October 13, sunlight MISC trial installed:** the development core
 `eb558e626f2979a7c64e50992dd3254bd632fd2e7e661889d19e9a3023f3d3a6`
 adds MISC > Lighting > Sunlight shadows with Default (game) and Reduced noise

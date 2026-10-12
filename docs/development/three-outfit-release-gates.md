@@ -82,6 +82,12 @@ normal/facial meshes. See the
 This is not full visual or cloth acceptance. Continue CW's demonstrated foot
 defect from the October 13 walking/control capture: ten steady samples use the
 shared Eve walk blendspace with both named foot-correction inputs at zero.
-Compare those poses and the actual blendspace/retarget path, then continue the
+The actual blend comparison is now complete in CW `work/foot-blend1`: 1,446
+poses, installed samples checked, unchanged forward baseline. Small directional
+blends do not explain all live differences. The active native full-body rig
+retains an initial reference different from CW's mesh and does not enable
+"Set Initial Transforms From Mesh". Next test that mapping with synchronized
+animation access and restoration. See CW `docs/walking-foot-report.md` and CSS
+`work/three-outfit-rig-physics/cw-foot-blend1`. Then continue the
 other repairs and stable-release gates above. Do not
 repackage a beta bundle or treat Peony's acceptance as completion of the others.
