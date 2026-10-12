@@ -12,7 +12,7 @@ CONTENT = ROOT / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 sys.path.insert(0, str(CSS / 'tools'))
 from css_paths import package_path, output_path
 OUT = Path(os.environ['CSS_PATH_WORK']).resolve()
-assert OUT.is_relative_to(CSS / 'work')
+assert OUT.resolve().is_relative_to((CSS / 'work').resolve())
 report_path = OUT / 'texture-copy.json'
 assert not report_path.exists()
 mapping = json.loads((OUT / 'textures.json').read_text())

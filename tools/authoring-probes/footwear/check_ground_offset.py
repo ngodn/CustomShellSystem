@@ -21,7 +21,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output',type=Path,required=True)
 parser.add_argument('--window-id',required=True)
 args=parser.parse_args();out=args.output.resolve()
-assert out.is_relative_to(CSS/'work') and not out.exists() and len(processes())==1
+assert out.resolve().is_relative_to((CSS/'work').resolve()) and not out.exists() and len(processes())==1
 out.mkdir();capture.MEDIA=out
 assert not capture.command('inventory_inspect')['css']['menu_open']
 with (out/'requests.jsonl').open('x') as log:

@@ -19,11 +19,11 @@ from mathutils.geometry import barycentric_transform
 ROOT = Path(__file__).resolve().parents[4]
 MOD = ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 OUT = Path(os.environ['CSS_FOOTWEAR_OUTPUT']).resolve()
-assert OUT.parent == ROOT/'CustomShellSystem/work/grip-grounding-v1'
+assert (OUT.parent).resolve() == (ROOT/'CustomShellSystem/work/grip-grounding-v1').resolve()
 OUT.mkdir(exist_ok=False)
 SOURCE = MOD/'work/CSS_SeduXtress_ArmRestV44B2.blend'
 TARGET = Path(os.environ.get('CSS_FOOTWEAR_BLEND', str(MOD/'work/CSS_SeduXtress_HeelSupportsV45C.blend'))).resolve()
-assert TARGET.parent == MOD/'work' and TARGET.suffix == '.blend'
+assert (TARGET.parent).resolve() == (MOD/'work').resolve() and TARGET.suffix == '.blend'
 assert not TARGET.exists()
 source_sha = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
 sys.path.insert(0, str(MOD/'tools'))

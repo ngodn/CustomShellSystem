@@ -290,3 +290,32 @@ changed. The workspace Docker daemon was stopped after its cook completed.
 Remaining Peony work includes source fabric detail and stockings, garment cloth,
 native visual review, all supplied palette/component choices, CSS controls and
 saved profiles, followed by the required preview/gameplay checks.
+
+## Stocking study recovered after the disk-full interruption
+
+The 04:52 render completed before the session stopped. The retained study is
+`/mnt/eins0fxE/CSS-Development/peony-v2-stockings1`: `stockings.blend`, its receipt,
+and neutral front/back/side renders are present. A fresh Blender read-only check
+compares the source and recovered blend: the accepted body and all 18 bound
+garments retain identical geometry, topology, skin weights, morphs and UVs.
+Four additional stocking layers retain the corresponding body triangles,
+weights and morph deltas with the intended 0.2 mm rest-surface offset.
+`recovery-verified.json` records this check; all three rendered image hashes
+match their original report.
+
+`recovery-receipt.json` and six frozen scripts in `recipes` preserve the state
+that was not recorded in the interrupted conversation. The old render report
+omitted the stocking flag and helper hash, so the recovery receipt records the
+known launch options separately without rewriting that earlier evidence.
+`source-regions-aligned.json` is the useful source-region measurement; the
+earlier `source-regions.json` used raw Basis positions and is superseded.
+
+These neutral views still use diagnostic skin and an approximate stocking
+shader. The sheer stocking appearance is not yet established by these images.
+Native material integration, posed fit and gameplay remain pending; no V2
+trial is installed. The glowing, flowing trim remains required.
+
+The CSS workspace relocation, disposable-cache removal list and disk readings
+are recorded in [the October 12 cleanup log](../development/cleanup-2026-10-12.md).
+Referenced backups, original archives, accepted body inputs, current V2 source
+and cook/readback evidence were retained.

@@ -9,11 +9,11 @@ from pathlib import Path
 import unreal
 import os
 OUT = Path(os.environ['CSS_B2_BINDING_DIR']).resolve()
-if OUT.parent != Path(__file__).resolve().parents[3] / 'work/grip-grounding-v1':
+if OUT.parent.resolve() != (Path(__file__).resolve().parents[3] / 'work/grip-grounding-v1').resolve():
     raise ValueError('Audit directory must be a direct workspace grip-grounding child')
 OUT.mkdir(exist_ok=True)
 assert not (OUT/'evaluation.json').exists()
-ROOT=OUT.parents[3]
+ROOT=Path(__file__).resolve().parents[4]
 MOD=ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 FIXTURE=OUT.parent/'game-foundation-v42-bind-v2'
 references=json.loads((FIXTURE/'configured-references.json').read_text())

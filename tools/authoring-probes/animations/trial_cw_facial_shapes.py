@@ -9,7 +9,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
-if not WORK.is_relative_to(ROOT/'CustomShellSystem/work/cine-animation-port'):
+if not WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work/cine-animation-port').resolve()):
     raise ValueError('Use the private animation workspace')
 MODE = os.environ.get('CSS_FACE_TRIAL_MODE', 'create')
 if MODE not in ('create', 'verify'):

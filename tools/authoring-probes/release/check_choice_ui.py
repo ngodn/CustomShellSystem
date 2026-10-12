@@ -15,7 +15,7 @@ from check_inventory_camera import checked_call,checked_get
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output',type=Path,required=True)
 args=parser.parse_args();out=args.output.resolve()
-assert out.is_relative_to(CSS/'work') and not out.exists()
+assert out.resolve().is_relative_to((CSS/'work').resolve()) and not out.exists()
 out.mkdir();c.MEDIA=out
 read=lambda p:json.loads(p.read_text())
 save=lambda name,data:(out/name).write_text(json.dumps(data,indent=2)+'\n')

@@ -24,7 +24,7 @@ def main():
     parser.add_argument('--world', action='store_true', help='Record gameplay with Inventory closed')
     args=parser.parse_args()
     output=args.output.resolve()
-    if not output.is_relative_to(ROOT/'work') or output.exists():
+    if not output.resolve().is_relative_to((ROOT/'work').resolve()) or output.exists():
         parser.error('Use a new output file inside CustomShellSystem/work')
     identity=subprocess.check_output(['xprop','-id',hex(args.window_id),'WM_NAME','WM_CLASS'],text=True)
     if 'WM_NAME(STRING) = "MortalShell2  "' not in identity or 'steam_app_2584270' not in identity:

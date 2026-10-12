@@ -32,7 +32,7 @@ def main():
     if not 5 <= args.seconds <= 180:
         parser.error("Use 5 to 180 seconds")
     output = args.output.resolve()
-    if not output.is_relative_to(ROOT / "work"):
+    if not output.resolve().is_relative_to((ROOT / "work").resolve()):
         parser.error("Evidence must stay inside the CSS work directory")
     pids = processes()
     if len(pids) != 1:

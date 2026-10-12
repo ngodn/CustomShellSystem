@@ -18,7 +18,7 @@ CONTENT = ROOT / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 MODE = os.environ.get('CSS_CONTACT_MODE', 'create')
 LABELS = os.environ.get('CSS_CONTACT_LABELS', 'ComeCloserFlat').split(',')
 ALLOWED = {clip + mode for clip in ('BlackHole', 'EveCatwalk', 'ComeCloser') for mode in ('Heels', 'Flat')}
-if (not WORK.is_relative_to(ROOT / 'CustomShellSystem/work') or BASE.parent != WORK.parent or
+if (not WORK.resolve().is_relative_to((ROOT / 'CustomShellSystem/work').resolve()) or BASE.parent != WORK.parent or
         BASE == WORK or not re.fullmatch(r'S[1-9][0-9]{0,2}', REVISION) or MODE not in ('create', 'verify') or
         not LABELS or len(set(LABELS)) != len(LABELS) or not set(LABELS) <= ALLOWED):
     raise ValueError('Invalid trial directory, mode or labels')

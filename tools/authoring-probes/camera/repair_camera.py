@@ -8,7 +8,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_CAMERA_WORK']).resolve()
-assert WORK.is_relative_to(ROOT / 'CustomShellSystem/work')
+assert WORK.resolve().is_relative_to((ROOT / 'CustomShellSystem/work').resolve())
 MODE = os.environ.get('CSS_CAMERA_MODE', 'repair')
 assert MODE in ('repair', 'verify')
 PACKAGE = '/Game/CSS/Shared/SKEL_Base'

@@ -15,7 +15,7 @@ def digest(path):
 root = Path(__file__).resolve().parents[3]
 work = Path(os.environ['CSS_ANIM_WORK']).resolve(strict=True)
 mode = os.environ['CSS_ANIM_MODE']
-if not work.is_relative_to(root / 'work/cine-animation-port') or mode not in ('create', 'verify'):
+if not work.resolve().is_relative_to((root / 'work/cine-animation-port').resolve()) or mode not in ('create', 'verify'):
     raise ValueError('Use an isolated animation workspace and create/verify mode')
 content = root.parent / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 receipt_path = root / 'work/cine-animation-port/retarget-seductress-s8/verify-result.json'

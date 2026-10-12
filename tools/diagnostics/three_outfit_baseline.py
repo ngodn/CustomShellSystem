@@ -39,7 +39,7 @@ def main():
     game = args.game.resolve(strict=True)
     retoc = args.retoc.resolve(strict=True)
     output = args.output.resolve()
-    if not output.is_relative_to(ROOT / 'work') or output.exists():
+    if not output.resolve().is_relative_to((ROOT / 'work').resolve()) or output.exists():
         raise ValueError('Use a new output directory under the CSS work directory')
     output.mkdir(parents=True)
     css = game / 'Binaries/Win64/ue4ss/Mods/CustomShellSystem'

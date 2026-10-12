@@ -13,7 +13,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output',type=Path,required=True)
 parser.add_argument('--profile',choices=('v44','short1'),default='v44')
 args=parser.parse_args();out=args.output.resolve()
-assert out.is_relative_to(CSS/'work') and not out.exists() and len(processes())==1
+assert out.resolve().is_relative_to((CSS/'work').resolve()) and not out.exists() and len(processes())==1
 with out.with_suffix('.requests.jsonl').open('x') as f:
  p=Probe(f);player=p.send('player');assert player.get('pawn');pawn=player['pawn']
  mesh=checked_get(p,pawn,'Mesh');move=checked_get(p,pawn,'CharacterMovement');cap=checked_get(p,pawn,'CapsuleComponent')

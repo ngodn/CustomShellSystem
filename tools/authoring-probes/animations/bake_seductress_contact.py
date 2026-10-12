@@ -18,7 +18,7 @@ if not re.fullmatch(r'S[1-9][0-9]{0,2}', REVISION) or KNEE_MODE not in ('goal', 
 if MODE not in ('create', 'verify'):
     raise ValueError('Expected create or verify mode')
 REPORT = WORK / ('result.json' if MODE == 'create' else 'verify-result.json')
-if not WORK.is_relative_to(ROOT / 'CustomShellSystem/work') or REPORT.exists():
+if not WORK.resolve().is_relative_to((ROOT / 'CustomShellSystem/work').resolve()) or REPORT.exists():
     raise ValueError('Use a fresh isolated work directory')
 contract = json.loads((WORK / 'footwear-contract.json').read_text())
 protected = dict(contract['inputs'])

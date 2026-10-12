@@ -50,7 +50,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     output = args.output.resolve()
-    if not output.is_relative_to(ROOT / 'work') or output.exists() or len(processes()) != 1:
+    if not output.resolve().is_relative_to((ROOT / 'work').resolve()) or output.exists() or len(processes()) != 1:
         parser.error('Use a new workspace output with exactly one running game')
     state = json.loads((MOD / 'state/state.json').read_text())
     status = command('status')

@@ -10,7 +10,7 @@ import unreal
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
 CONTENT = ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
-if not WORK.is_relative_to(ROOT/'CustomShellSystem/work/cine-animation-port'):
+if not WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work/cine-animation-port').resolve()):
     raise ValueError('Use the animation work directory')
 INPUT = WORK/'facial-shapes.json'
 revision = os.environ.get('CSS_FACE_REVISION', '')

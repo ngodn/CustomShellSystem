@@ -2,6 +2,38 @@
 
 Prepared 2026-10-08. **Status: active, baseline and migration audit in progress.** See [implementation status](three-outfit-rig-physics-status.md) for current evidence, completed work and remaining checks.
 
+### Workspace recovery, 2026-10-12
+
+`CustomShellSystem/work` is now a symlink to
+`/run/media/eins0fx/theark/CSS/CustomShellSystem-work`. The user's Claude Code
+session completed and verified the relocation during the disk-full interruption;
+do not repeat the copy. `work/beacon-fix/reference` points to the repository's
+absolute `reference` path. A subsequent scan found no broken relative links
+among the 152 remaining relative symlinks.
+
+Post-move checks in `work/storage-check1` pass: a fresh C++23 Windows `css_core`
+build, a Windows UE 5.6.1 cook of three existing Genessa textures (zero warnings
+or errors), and an IoStore package/verification/export round trip with matching
+export and bulk payload hashes. These are workspace checks, not release or
+gameplay acceptance. Nothing was installed. Authoring guards now resolve both
+sides of workspace path comparisons; regression checks cover logical paths,
+physical paths, sibling directories and escaping symlinks without executing
+game-control tools. Older probe scripts that inferred the repository location
+from their output directory now derive it from their own source path instead.
+
+Follow [the cleanup record](cleanup-2026-10-12.md) for removals and measured disk
+space. Check free space before new exports and cooks. Reuse retained inputs and
+cache seeds; do not keep a complete project copy for every attempt. Remove
+accounted-for rejected/superseded heavy intermediates in the same turn, retaining
+recipes, useful evidence, accepted outputs and explicitly referenced backups.
+
+The interrupted Peony stocking study survived at
+`/mnt/eins0fxE/CSS-Development/peony-v2-stockings1`. `recovery-verified.json`
+confirms the body and 18 fitted garments are unchanged, all four stocking layers
+retain the intended body weights/morphs, and the three completed neutral render
+hashes match. Native stocking materials, posed fit and gameplay remain pending.
+The required optional glowing, flowing trim remains in scope.
+
 ## Objective
 
 Audit and repair demonstrated mesh deformation, garment fit, skeletal mapping, attachment, contact and secondary-motion defects in Eve's six outfits, Unholy Genessa's two variants and Commander White. Preserve their accepted appearance, customization and gameplay behavior. Use the four reviewed videos as authoring references and UE 5.6.1/game evidence to choose implementations that actually work in the shipped game. Complete the work with reproducible assets, measured performance and explicit regression results.

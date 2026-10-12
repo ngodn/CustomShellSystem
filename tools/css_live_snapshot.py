@@ -75,7 +75,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     output = args.output.resolve()
-    if not output.is_relative_to(ROOT / 'work'):
+    if not output.resolve().is_relative_to((ROOT / 'work').resolve()):
         parser.error('Output must be inside CustomShellSystem/work')
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.with_suffix('.requests.jsonl').open('x') as log:

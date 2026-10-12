@@ -28,7 +28,7 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     args = parser.parse_args()
     source, output = args.instances.resolve(strict=True), args.output.resolve()
-    if output.exists() or not output.is_relative_to(ROOT / 'work/three-outfit-rig-physics'):
+    if output.exists() or not output.resolve().is_relative_to((ROOT / 'work/three-outfit-rig-physics').resolve()):
         raise ValueError('Use a new private migration directory')
     proof = read(source / 'verification.json')
     if not proof['passed']:

@@ -22,7 +22,7 @@ def main():
     if not re.fullmatch(r'[a-z0-9-]{1,48}', args.label):
         raise ValueError('Use a short log label')
     work = args.work.resolve(strict=True)
-    if not work.is_relative_to(ROOT / 'work/cine-animation-port'):
+    if not work.resolve().is_relative_to((ROOT / 'work/cine-animation-port').resolve()):
         raise ValueError('Expected an animation work directory')
     command = json.loads((work / 'cook-command.json').read_text())
     command = [item for item in command if item != '-Cook' and not item.startswith(

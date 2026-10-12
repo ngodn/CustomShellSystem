@@ -9,7 +9,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
-assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
+assert WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve())
 MODE = os.environ.get('CSS_MOVEMENT_MODE', 'create')
 assert MODE in ('create', 'readback') and not (WORK/(MODE+'-result.json')).exists()
 phase_work = ROOT/'CustomShellSystem/work/anim12'

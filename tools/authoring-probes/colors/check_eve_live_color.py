@@ -17,7 +17,7 @@ args=parser.parse_args()
 assert len(args.rgb)==6
 rgb=np.array([int(args.rgb[i:i+2],16) for i in (0,2,4)])
 out=args.output.resolve()
-assert out.is_relative_to(CSS/'work') and not out.exists()
+assert out.resolve().is_relative_to((CSS/'work').resolve()) and not out.exists()
 out.mkdir(parents=True)
 c.MEDIA=out
 state_path=c.MOD/'state/state.json'

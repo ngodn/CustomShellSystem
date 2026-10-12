@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
 CONTENT = ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 MODE = os.environ.get('CSS_LIBRARY_MODE', 'create')
-if MODE not in ('create', 'verify') or not WORK.is_relative_to(ROOT/'CustomShellSystem/work/cine-animation-port'):
+if MODE not in ('create', 'verify') or not WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work/cine-animation-port').resolve()):
     raise ValueError('Use an isolated animation work directory and create/verify mode')
 plan = json.loads((WORK/'plan.json').read_text())
 

@@ -2,8 +2,8 @@ import os
 import unreal,json,hashlib
 from pathlib import Path
 OUT=Path(os.environ['CSS_FOUNDATION_AUDIT_DIR']).resolve()
-root=OUT.parents[3]
-assert OUT.parent == Path(__file__).resolve().parents[4]/'CustomShellSystem/work/grip-grounding-v1'
+root=Path(__file__).resolve().parents[4]
+assert (OUT.parent).resolve() == (Path(__file__).resolve().parents[4]/'CustomShellSystem/work/grip-grounding-v1').resolve()
 control=unreal.load_asset('/Game/CSSAuthoring/DiagnosticReferences/SK_MoreBeaute258_V1')
 missing=unreal.load_asset('/Game/CSSAuthoring/DiagnosticReferences/SKEL_GameHuman1199_V1')
 complete=unreal.load_asset('/Game/CSSAuthoring/DiagnosticReferences/SKEL_GameHumanMore1275_V1')

@@ -10,7 +10,7 @@ import unreal
 ROOT = Path(__file__).resolve().parents[4]
 REPO = ROOT / 'CustomShellSystem'
 WORK = Path(os.environ['CSS_NATIVE_RETARGET_WORK']).resolve()
-assert WORK.is_relative_to(REPO / 'work/cine-animation-port')
+assert WORK.resolve().is_relative_to((REPO / 'work/cine-animation-port').resolve())
 assert not (WORK / 'result.json').exists()
 CONTENT = ROOT / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 PACKAGE = '/Game/CSS/AnimLab'

@@ -29,7 +29,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     output = args.output.resolve()
-    if output.exists() or not output.is_relative_to(ROOT/'work'):
+    if output.exists() or not output.resolve().is_relative_to((ROOT/'work').resolve()):
         raise ValueError('Use a new private output directory')
     plan = read(args.plan)
     expected = {r['new_package'] for r in plan['assets'] if r['target_container'] == 'CSS_SharedAssets_P'}

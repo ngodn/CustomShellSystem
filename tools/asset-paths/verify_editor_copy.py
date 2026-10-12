@@ -10,7 +10,7 @@ import unreal
 ROOT = Path(__file__).resolve().parents[3]
 CSS = ROOT / 'CustomShellSystem'
 OUT = Path(os.environ['CSS_CLOSURE_WORK']).resolve()
-assert OUT.is_relative_to(CSS / 'work') and not (OUT / 'verified.json').exists()
+assert OUT.resolve().is_relative_to((CSS / 'work').resolve()) and not (OUT / 'verified.json').exists()
 load = lambda p: json.loads(p.read_text())
 sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 write = lambda n,v: (OUT/n).write_text(json.dumps(v, indent=2)+'\n')

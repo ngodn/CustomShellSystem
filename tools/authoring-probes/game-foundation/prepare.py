@@ -40,7 +40,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     output = parser.parse_args().output.resolve()
-    assert output.is_relative_to(ROOT / 'CustomShellSystem/work') and not output.exists()
+    assert output.resolve().is_relative_to((ROOT / 'CustomShellSystem/work').resolve()) and not output.exists()
     paths = [WORK / 'game-human-reference-editor-v1/GameHuman1199.mesh.json',
              WORK / 'game-human-reference-editor-v1/MoreBeaute258.mesh.json',
              MOD / 'authoring/reference/SKEL_CSS_Base.refskel.json']

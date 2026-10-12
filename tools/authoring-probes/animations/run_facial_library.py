@@ -23,14 +23,14 @@ def main():
                           not re.fullmatch(r"[A-Za-z0-9]{1,24}", args.revision)):
         raise ValueError("A candidate revision is only valid for import/inspect")
     work = args.work.resolve()
-    if not work.is_relative_to(ROOT / "work/cine-animation-port"):
+    if not work.resolve().is_relative_to((ROOT / "work/cine-animation-port").resolve()):
         raise ValueError("Use the private animation workspace")
     source_work = (args.source_work or work.parent / "facial-export-v1").resolve(strict=True)
-    if (not source_work.is_relative_to(ROOT / "work/cine-animation-port") or
+    if (not source_work.resolve().is_relative_to((ROOT / "work/cine-animation-port").resolve()) or
             (args.source_work and args.mode not in ("create", "verify"))):
         raise ValueError("Use a private verified facial export for create/verify")
     staging_work = (args.staging_work or work.parent / "shared-faces-v1").resolve(strict=True)
-    if (not staging_work.is_relative_to(ROOT / "work/cine-animation-port") or
+    if (not staging_work.resolve().is_relative_to((ROOT / "work/cine-animation-port").resolve()) or
             (args.staging_work and args.mode != "map")):
         raise ValueError("Use a private verified staging workspace for map")
     template = ROOT / "work/cine-animation-port/shared-v1"

@@ -132,7 +132,7 @@ def main():
     args = parser.parse_args()
     out = args.output.resolve()
     log_path = out.with_suffix('.requests.jsonl')
-    if not out.is_relative_to(ROOT / 'work') or out.exists() or log_path.exists():
+    if not out.resolve().is_relative_to((ROOT / 'work').resolve()) or out.exists() or log_path.exists():
         parser.error('Use a fresh output inside CustomShellSystem/work')
     pids = processes()
     if len(pids) != 1:

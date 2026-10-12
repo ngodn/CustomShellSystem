@@ -6,7 +6,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output',type=Path,required=True)
 args=parser.parse_args()
 OUT=args.output.resolve()
-assert OUT.parent==ROOT/'work/grip-grounding-v1' and not OUT.exists()
+assert (OUT.parent).resolve() == (ROOT/'work/grip-grounding-v1').resolve() and not OUT.exists()
 OUT.mkdir()
 sys.path.insert(0,str(ROOT/'tools'))
 from css import GAME,atomic,wait_json

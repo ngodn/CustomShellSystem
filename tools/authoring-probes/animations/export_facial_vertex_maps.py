@@ -8,10 +8,10 @@ import unreal
 ROOT = Path(__file__).resolve().parents[3]
 WORK = Path(os.environ["CSS_ANIM_WORK"]).resolve(strict=True)
 CONTENT = ROOT.parent / "CSS-eins0fx-collections/tools/CSSAuthoring/Content"
-if not WORK.is_relative_to(ROOT / "work/cine-animation-port"):
+if not WORK.resolve().is_relative_to((ROOT / "work/cine-animation-port").resolve()):
     raise ValueError("Use the private animation workspace")
 STAGING = Path(os.environ.get("CSS_FACE_MAP_WORK", str(WORK.parent / "shared-faces-v1"))).resolve(strict=True)
-if not STAGING.is_relative_to(ROOT / "work/cine-animation-port"):
+if not STAGING.resolve().is_relative_to((ROOT / "work/cine-animation-port").resolve()):
     raise ValueError("Use a verified staging workspace")
 staging = json.loads((STAGING / "facial-stage-verify.json").read_text())
 if not staging.get("complete") or len(staging["results"]) != 6:

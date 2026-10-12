@@ -12,7 +12,7 @@ CONTENT = ROOT / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 WORK = Path(os.environ['CSS_NATIVE_LOCOMOTION_BLEND_WORK']).resolve()
 SEQUENCES = Path(os.environ['CSS_NATIVE_LOCOMOTION_SEQUENCES']).resolve()
 for path in (WORK, SEQUENCES):
-    assert path.is_relative_to(REPO / 'work/cine-animation-port')
+    assert path.resolve().is_relative_to((REPO / 'work/cine-animation-port').resolve())
 assert not (WORK / 'result.json').exists()
 data = json.loads((SEQUENCES / 'result.json').read_text())
 assert json.loads((SEQUENCES / 'exit.json').read_text())['exit_code'] == 0

@@ -8,7 +8,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
-assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
+assert WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve())
 assert not (WORK/'playback-result.json').exists()
 protected = json.loads((WORK/'protected.json').read_text())
 assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest() == h for p, h in protected.items())

@@ -24,7 +24,7 @@ parser.add_argument('--frames', help='Comma-separated capture indices for still 
 parser.add_argument('--follow-pelvis', action='store_true', help='Follow horizontal scene travel without changing the pose')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 root = Path(__file__).resolve().parents[4]
-if not args.output.resolve().is_relative_to(root / 'CustomShellSystem/work') or args.output.exists():
+if not args.output.resolve().is_relative_to((root / 'CustomShellSystem/work').resolve()) or args.output.exists():
     raise ValueError('Use a fresh workspace output directory')
 if args.stride < 1:
     raise ValueError('Positive stride required')

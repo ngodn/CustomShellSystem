@@ -17,7 +17,7 @@ from check_inventory_camera import checked_get, checked_call
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output',type=Path,required=True)
 args=parser.parse_args();out=args.output.resolve()
-assert out.is_relative_to(ROOT/'work') and not out.exists() and len(processes())==1
+assert out.resolve().is_relative_to((ROOT/'work').resolve()) and not out.exists() and len(processes())==1
 out.mkdir();capture.MEDIA=out
 entry=capture.command('inventory_inspect');assert entry['css']['active']
 atomic(out/'entry.json',entry)

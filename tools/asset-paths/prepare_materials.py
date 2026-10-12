@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--windows-root', required=True)
     args = parser.parse_args()
     out = args.output.resolve()
-    if not out.is_relative_to(CSS / 'work') or out.exists():
+    if not out.resolve().is_relative_to((CSS / 'work').resolve()) or out.exists():
         raise ValueError('Use a fresh short directory under CustomShellSystem/work')
     output_path(out)
     plan = json.loads(args.plan.read_text())

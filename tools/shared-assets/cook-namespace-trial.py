@@ -13,6 +13,13 @@ def sha(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def private_storage(path):
+    resolved = path.resolve()
+    work = (Path(__file__).resolve().parents[2] / 'work').resolve()
+    return (resolved.is_relative_to(Path('/home')) or
+            (resolved != work and resolved.is_relative_to(work)))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--editor', type=Path, required=True)
@@ -26,8 +33,8 @@ def main():
     args = parser.parse_args()
     editor, output = args.editor.resolve(strict=True), args.output.resolve()
     engine, wrapper = args.engine.resolve(strict=True), args.docker_wrapper.resolve(strict=True)
-    if output.exists() or not output.is_relative_to(Path('/home')):
-        raise ValueError('Use a new private output directory under /home')
+    if output.exists() or not private_storage(output):
+        raise ValueError('Use a new private output directory under /home or CSS work')
     if not (engine/'Engine/Binaries/Win64/UnrealEditor-Cmd.exe').is_file():
         raise ValueError('Expected the existing Windows Unreal toolchain')
     version = json.loads((engine/'Engine/Build/Build.version').read_text())
@@ -80,7 +87,7 @@ def main():
         protected[renderer_source['path']] = renderer_source['sha256']
     if args.ddc_seed:
         seed = args.ddc_seed.resolve(strict=True)
-        if not seed.is_relative_to(Path('/home')) or not seed.is_dir():
+        if not private_storage(seed) or not seed.is_dir():
             raise ValueError('Expected an existing local private cache directory')
         shutil.copytree(seed, out/'ddc')
     for row in assets:

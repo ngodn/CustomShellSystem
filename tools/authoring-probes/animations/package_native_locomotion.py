@@ -23,7 +23,7 @@ def main():
     args = parser.parse_args()
     blends, readback, work = [p.resolve(strict=True) for p in (args.blends, args.readback, args.cook)]
     for path in (blends, readback, work):
-        assert path.is_relative_to(ROOT / 'work/cine-animation-port')
+        assert path.resolve().is_relative_to((ROOT / 'work/cine-animation-port').resolve())
         assert json.loads((path / 'exit.json').read_text())['exit_code'] == 0
     creation = json.loads((blends / 'result.json').read_text())
     verified = json.loads((readback / 'result.json').read_text())

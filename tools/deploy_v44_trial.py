@@ -25,7 +25,7 @@ load = lambda p: json.loads(p.read_text())
 mod = ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 prepared = load(mod/'work/v44-trial-v1/report.json')
 candidate = Path(prepared['candidate'])
-assert prepared['passed'] and candidate == mod/'work/v44-trial-v1/candidate'
+assert prepared['passed'] and (candidate).resolve() == (mod/'work/v44-trial-v1/candidate').resolve()
 assert load(WORK/'v44-final-package-readback-v1/report.json')['passed']
 assert all(load(WORK/'v44-core-build-v1'/(name+'.exit.json'))['exit_code']==0
            for name in ('host-build','test','windows-build'))

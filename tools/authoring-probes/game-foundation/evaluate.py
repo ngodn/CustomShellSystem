@@ -3,8 +3,8 @@ import os
 import json,math,hashlib
 from pathlib import Path
 import unreal
-OUT=Path(os.environ['CSS_FOUNDATION_AUDIT_DIR']).resolve();ROOT=OUT.parents[3]
-assert OUT.parent == Path(__file__).resolve().parents[4]/'CustomShellSystem/work/grip-grounding-v1';BASE=OUT.parent/'game-human-reference-editor-v1'
+OUT=Path(os.environ['CSS_FOUNDATION_AUDIT_DIR']).resolve();ROOT=Path(__file__).resolve().parents[4]
+assert (OUT.parent).resolve() == (Path(__file__).resolve().parents[4]/'CustomShellSystem/work/grip-grounding-v1').resolve();BASE=OUT.parent/'game-human-reference-editor-v1'
 MOD=ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 source_export=next(e for e in json.loads((OUT.parent/'live-source-skeleton-v1/decoded/SKEL_Human_Skeleton.json').read_text()) if e['Type']=='Skeleton')
 source_bones=json.loads((BASE/'GameHuman1199.mesh.json').read_text())['bones']

@@ -34,7 +34,7 @@ def main():
     parser.add_argument('--carrier-cook', type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
-    if output.exists() or not output.is_relative_to(ROOT/'work'):
+    if output.exists() or not output.resolve().is_relative_to((ROOT/'work').resolve()):
         raise ValueError('Use a new private output')
     inputs, payloads, sources, packages = {}, {}, {}, set()
 

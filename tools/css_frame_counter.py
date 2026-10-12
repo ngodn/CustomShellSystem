@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     output = args.output.resolve()
-    if output.exists() or not output.is_relative_to(ROOT/'work'):
+    if output.exists() or not output.resolve().is_relative_to((ROOT/'work').resolve()):
         parser.error('Choose a new output file under CustomShellSystem/work')
     if not math.isfinite(args.seconds) or not 3 <= args.seconds <= 30:
         parser.error('Duration must be 3 to 30 seconds')

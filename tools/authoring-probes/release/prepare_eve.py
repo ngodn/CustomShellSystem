@@ -25,7 +25,7 @@ def main():
     args = parser.parse_args()
     source = args.source.resolve()
     out = args.output.resolve()
-    assert out.is_relative_to(CSS / 'work') and not out.exists()
+    assert out.resolve().is_relative_to((CSS / 'work').resolve()) and not out.exists()
     component(STEM)
     output_path(out)
     original = verify(source)

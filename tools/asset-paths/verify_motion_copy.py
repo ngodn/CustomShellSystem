@@ -8,7 +8,7 @@ import unreal
 
 CSS = Path(__file__).resolve().parents[2]
 OUT = Path(os.environ['CSS_CLOSURE_WORK']).resolve()
-assert OUT.is_relative_to(CSS / 'work') and not (OUT / 'motion.json').exists()
+assert OUT.resolve().is_relative_to((CSS / 'work').resolve()) and not (OUT / 'motion.json').exists()
 load = lambda p: json.loads(p.read_text())
 prior = load(OUT / 'verified.json')
 assert prior['passed']

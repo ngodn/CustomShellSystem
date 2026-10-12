@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('output', type=Path)
 args = parser.parse_args()
 work = args.output.resolve()
-assert work.is_relative_to(ROOT/'CustomShellSystem/work')
+assert work.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve())
 assert not (work/'phase.json').exists() and not (work/'spec.json').exists()
 work.mkdir(exist_ok=True)
 source = ROOT/'CustomShellSystem/work/anim10/batch'

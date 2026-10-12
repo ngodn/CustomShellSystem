@@ -10,9 +10,9 @@ from mathutils import Matrix
 
 import os
 OUT = Path(os.environ['CSS_ARM_REST_AUDIT_DIR']).resolve()
-if OUT.parent != Path(__file__).resolve().parents[3] / 'work/grip-grounding-v1':
+if OUT.parent.resolve() != (Path(__file__).resolve().parents[3] / 'work/grip-grounding-v1').resolve():
     raise ValueError('Audit directory must be a direct workspace grip-grounding child')
-ROOT=OUT.parents[3]
+ROOT=Path(__file__).resolve().parents[4]
 MOD=ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 sys.path.insert(0,str(MOD/'tools'))
 from export_seduxtress_eve import read_bones,TO_UE

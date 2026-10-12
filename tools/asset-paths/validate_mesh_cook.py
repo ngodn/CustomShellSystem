@@ -9,7 +9,7 @@ import numpy as np
 from mathutils.kdtree import KDTree
 CSS = Path(__file__).resolve().parents[2]
 OUT = Path(os.environ['CSS_CLOSURE_WORK']).resolve()
-assert OUT.is_relative_to(CSS/'work') and not (OUT/'mesh-validation.json').exists()
+assert OUT.resolve().is_relative_to((CSS/'work').resolve()) and not (OUT/'mesh-validation.json').exists()
 WORK = CSS/'work/grip-grounding-v1'
 load = lambda p: json.loads(p.read_text())
 digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()

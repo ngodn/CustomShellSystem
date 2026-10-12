@@ -9,7 +9,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
-assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
+assert WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve())
 assert not (WORK/'import-result.json').exists()
 content = ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 protected = {str(p): hashlib.sha256(p.read_bytes()).hexdigest()

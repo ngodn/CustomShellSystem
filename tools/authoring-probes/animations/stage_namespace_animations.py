@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     stage = args.output.resolve()
-    if stage.exists() or not stage.is_relative_to(ROOT/'work/three-outfit-rig-physics'):
+    if stage.exists() or not stage.resolve().is_relative_to((ROOT/'work/three-outfit-rig-physics').resolve()):
         raise ValueError('Use a new private rig workspace')
     source = args.source_content.resolve(strict=True)
     dependency_roots = [source, *(p.resolve(strict=True) for p in args.dependency_content)]

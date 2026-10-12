@@ -14,7 +14,7 @@ def digest(path, algorithm='sha256'):
 
 root = Path(__file__).resolve().parents[3]
 work = Path(os.environ['CSS_ANIM_WORK']).resolve(strict=True)
-if not work.is_relative_to(root / 'work/cine-animation-port'):
+if not work.resolve().is_relative_to((root / 'work/cine-animation-port').resolve()):
     raise ValueError('Use the isolated animation workspace')
 report = work / 'external-rig-assets.json'
 manifest = work / 'external.txt'

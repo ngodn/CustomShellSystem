@@ -7,7 +7,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(os.environ['CSS_CLOSURE_WORK']).resolve()
-assert OUT.is_relative_to(ROOT / 'CustomShellSystem/work')
+assert OUT.resolve().is_relative_to((ROOT / 'CustomShellSystem/work').resolve())
 assert not (OUT / 'closure.json').exists()
 registry = unreal.AssetRegistryHelpers.get_asset_registry()
 registry.search_all_assets(True)

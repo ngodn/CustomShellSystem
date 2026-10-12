@@ -8,7 +8,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ.get('CSS_ANIM_WORK', str(ROOT/'CustomShellSystem/work/anim2'))).resolve()
-assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
+assert WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve())
 CONTENT = ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 PACKAGE = '/Game/CSS/AnimLab'
 config = json.loads((WORK/'batch-config.json').read_text()) if (WORK/'batch-config.json').exists() else {}

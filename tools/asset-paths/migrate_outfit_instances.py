@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     output = args.output.resolve()
-    if output.exists() or not output.is_relative_to(ROOT / 'work/three-outfit-rig-physics'):
+    if output.exists() or not output.resolve().is_relative_to((ROOT / 'work/three-outfit-rig-physics').resolve()):
         raise ValueError('Use a new private migration directory')
     baseline = json.loads(args.baseline.read_text())
     plan = json.loads(args.plan.read_text())

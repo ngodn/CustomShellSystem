@@ -17,7 +17,7 @@ parser.add_argument('--expected',type=Path,required=True,help='Independent cooke
 parser.add_argument('--output',type=Path,required=True)
 args=parser.parse_args()
 out=args.output.resolve()
-assert out.is_relative_to(CSS/'work') and not out.exists()
+assert out.resolve().is_relative_to((CSS/'work').resolve()) and not out.exists()
 out.mkdir();c.MEDIA=out
 state_path=c.MOD/'state/state.json'
 read=lambda p:json.loads(p.read_text())

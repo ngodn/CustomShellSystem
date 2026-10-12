@@ -8,7 +8,7 @@ import unreal
 
 ROOT=Path(__file__).resolve().parents[4]
 WORK=Path(os.environ['CSS_ANIM_WORK']).resolve()
-if not WORK.is_relative_to(ROOT/'CustomShellSystem/work/cine-animation-port'):
+if not WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work/cine-animation-port').resolve()):
     raise ValueError('Use the animation work directory')
 CONTENT=ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 sources=['/Game/CSS/SeduXtress/SK_BlackPearl2',

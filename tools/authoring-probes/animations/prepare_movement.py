@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[4]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('output', type=Path)
 args = parser.parse_args()
-assert args.output.resolve().is_relative_to(ROOT/'CustomShellSystem/work') and not args.output.exists()
+assert args.output.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve()) and not args.output.exists()
 source = ROOT/'CustomShellSystem/work/anim10/batch'
 bind = json.loads((source/'target-bind.json').read_text())
 names = [b['name'] for b in bind]

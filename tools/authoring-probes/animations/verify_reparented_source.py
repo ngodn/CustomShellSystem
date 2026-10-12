@@ -10,7 +10,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
-assert WORK.is_relative_to(ROOT / 'CustomShellSystem/work')
+assert WORK.resolve().is_relative_to((ROOT / 'CustomShellSystem/work').resolve())
 CONTENT = ROOT / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 revision = json.loads((WORK / 'batch-config.json').read_text())['revision']
 original_revision = os.environ['CSS_SOURCE_REVISION']

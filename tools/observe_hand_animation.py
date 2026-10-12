@@ -15,7 +15,7 @@ parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--samples', type=int, default=15)
 args = parser.parse_args()
 out = args.output.resolve()
-assert out.is_relative_to(CSS / 'work') and not out.exists()
+assert out.resolve().is_relative_to((CSS / 'work').resolve()) and not out.exists()
 assert 1 <= args.samples <= 30
 assert len(processes()) == 1
 out.mkdir()

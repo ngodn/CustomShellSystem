@@ -15,14 +15,14 @@ ROOT=Path(__file__).resolve().parents[4]
 WORK=ROOT/'CustomShellSystem/work/grip-grounding-v1'
 MOD=ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 OUT=Path(os.environ['CSS_FOOTWEAR_ANALYSIS']).resolve()
-assert OUT.is_relative_to(ROOT/'CustomShellSystem/work') and not OUT.exists()
+assert OUT.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve()) and not OUT.exists()
 OUT.mkdir()
 sys.path.insert(0,str(MOD/'tools'))
 from export_seduxtress_eve import read_bones, TO_UE
 source=json.loads((WORK/'arm-rest-correctives-export-v1/candidate.mesh.json').read_text())
 audit=json.loads((WORK/'arm-rest-correctives-export-v1/candidate.mesh.audit.json').read_text())
 live_path=Path(os.environ.get('CSS_FOOTWEAR_LIVE',str(WORK/'footwear-followup-v1/live-floor-v2.json'))).resolve()
-assert live_path.is_relative_to(ROOT/'CustomShellSystem/work')
+assert live_path.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve())
 live=json.loads(live_path.read_text())
 assert live['mesh_transform_before']==live['mesh_transform_after']
 assert live['movement_values']['Velocity']==dict(X=0,Y=0,Z=0)

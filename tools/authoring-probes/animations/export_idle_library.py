@@ -8,7 +8,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
-assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
+assert WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve())
 assert not (WORK/'export-result.json').exists()
 receipt = json.loads((WORK/'import-result.json').read_text())
 assert [r['clip'] for r in receipt['results']] == list(range(700, 714))

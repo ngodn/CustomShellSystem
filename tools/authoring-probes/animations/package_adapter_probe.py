@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--mappings', type=Path, required=True)
     args = parser.parse_args()
     work = args.work.resolve(strict=True)
-    if not work.is_relative_to(ROOT / 'work/cine-animation-port'):
+    if not work.resolve().is_relative_to((ROOT / 'work/cine-animation-port').resolve()):
         raise ValueError('Use the private animation workspace')
     if json.loads((work / 'cook-exit.json').read_text())['exit_code'] != 0:
         raise ValueError('Adapter cook failed')

@@ -9,7 +9,7 @@ import unreal
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_NATIVE_MONTAGE_WORK']).resolve()
 CONTENT = ROOT / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
-assert WORK.is_relative_to(ROOT / 'CustomShellSystem/work/cine-animation-port')
+assert WORK.resolve().is_relative_to((ROOT / 'CustomShellSystem/work/cine-animation-port').resolve())
 assert not (WORK / 'result.json').exists()
 mesh_path = '/Game/CSSAuthoring/DiagnosticReferences/SK_GameHuman1199_V1'
 clip_path = '/Game/CSS/Locomotion/NativeHuman/Studies/NH2/AN_BlackHole'

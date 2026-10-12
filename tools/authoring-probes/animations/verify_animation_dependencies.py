@@ -29,7 +29,7 @@ def main():
     args=parser.parse_args()
     pack=args.pack.resolve(strict=True)
     output=args.output.resolve()
-    if not output.is_relative_to(ROOT/'work/cine-animation-port'):
+    if not output.resolve().is_relative_to((ROOT/'work/cine-animation-port').resolve()):
         raise ValueError('Use the private animation workspace')
     verified=json.loads((pack/'verification.json').read_text())
     manifests=list((pack/'metadata-readback'/PACKAGE_ROOT).glob('*/manifest.json'))

@@ -60,7 +60,7 @@ def main():
     parser.add_argument('--review', type=Path, help='Review a saved raw report without contacting the game')
     args = parser.parse_args()
     output = args.output.resolve()
-    if not output.is_relative_to(ROOT/'work') or output.exists():
+    if not output.resolve().is_relative_to((ROOT/'work').resolve()) or output.exists():
         parser.error('Choose a new output file under CustomShellSystem/work')
     if not math.isfinite(args.seconds) or not 3 <= args.seconds <= 30:
         parser.error('Duration must be 3 to 30 seconds')

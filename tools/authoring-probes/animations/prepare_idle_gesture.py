@@ -79,7 +79,7 @@ if __name__ == '__main__':
     parser.add_argument('--factor', type=float, required=True)
     args = parser.parse_args()
     output = args.output.resolve()
-    if not output.is_relative_to(ROOT/'CustomShellSystem/work'):
+    if not output.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve()):
         raise ValueError('Output must stay in CSS work')
     result, report = prepare(json.loads(args.input.read_text()), args.factor)
     with output.open('x') as file:

@@ -10,10 +10,10 @@ ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ["CSS_ANIM_WORK"]).resolve()
 CONTENT = ROOT / "CSS-eins0fx-collections/tools/CSSAuthoring/Content"
 MODE = os.environ.get("CSS_FACE_STAGE_MODE", "create")
-if MODE not in ("create", "verify") or not WORK.is_relative_to(ROOT / "CustomShellSystem/work/cine-animation-port"):
+if MODE not in ("create", "verify") or not WORK.resolve().is_relative_to((ROOT / "CustomShellSystem/work/cine-animation-port").resolve()):
     raise ValueError("Expected the private animation workspace")
 INPUT_WORK = Path(os.environ.get("CSS_FACE_INPUT_WORK", str(WORK.parent / "facial-export-v1"))).resolve(strict=True)
-if not INPUT_WORK.is_relative_to(ROOT / "CustomShellSystem/work/cine-animation-port"):
+if not INPUT_WORK.resolve().is_relative_to((ROOT / "CustomShellSystem/work/cine-animation-port").resolve()):
     raise ValueError("Use a verified export in the private animation workspace")
 INPUT = INPUT_WORK / "facial-shapes.json"
 AUDIT = json.loads((INPUT_WORK / "ue-verification.json").read_text())

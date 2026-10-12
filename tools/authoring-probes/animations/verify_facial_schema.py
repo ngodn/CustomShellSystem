@@ -9,7 +9,7 @@ import unreal
 
 ROOT=Path(__file__).resolve().parents[4]
 WORK=Path(os.environ['CSS_ANIM_WORK']).resolve()
-if not WORK.is_relative_to(ROOT/'CustomShellSystem/work/cine-animation-port'):
+if not WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work/cine-animation-port').resolve()):
     raise ValueError('Use the private animation workspace')
 content=ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 cases=[('/Game/CSS/CommanderWhite/Dev/SK_CommanderC4','/Game/CSS/AnimLab/SK_Face_CWJ1',

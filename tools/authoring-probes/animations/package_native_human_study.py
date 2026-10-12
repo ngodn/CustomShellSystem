@@ -20,7 +20,7 @@ def main():
     parser.add_argument('work', type=Path)
     args = parser.parse_args()
     work = args.work.resolve(strict=True)
-    assert work.is_relative_to(ROOT / 'work/cine-animation-port')
+    assert work.resolve().is_relative_to((ROOT / 'work/cine-animation-port').resolve())
     receipt = json.loads((work / 'stage-result.json').read_text())
     assert receipt['passed']
     for step in ('stage', 'cook'):

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import os
 OUT = Path(os.environ['CSS_ARM_TWIST_AUDIT_DIR']).resolve()
-if OUT.parent != Path(__file__).resolve().parents[3] / 'work/grip-grounding-v1':
+if OUT.parent.resolve() != (Path(__file__).resolve().parents[3] / 'work/grip-grounding-v1').resolve():
     raise ValueError('Audit directory must be a direct workspace grip-grounding child')
 FIXTURE = OUT.parent / 'game-foundation-v42-bind-v2'
 

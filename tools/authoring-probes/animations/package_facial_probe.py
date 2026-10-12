@@ -24,7 +24,7 @@ def main():
     parser.add_argument("--output-directory", type=Path)
     args = parser.parse_args()
     work = args.work.resolve(strict=True)
-    if not work.is_relative_to(ROOT / "work/cine-animation-port"):
+    if not work.resolve().is_relative_to((ROOT / "work/cine-animation-port").resolve()):
         raise ValueError("Use the private animation workspace")
     report = json.loads((work / "facial-stage-verify.json").read_text())
     expected_count = 6 if args.outfit == "eve" else 1

@@ -10,7 +10,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve()
-assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
+assert WORK.resolve().is_relative_to((ROOT/'CustomShellSystem/work').resolve())
 config = json.loads((WORK/'batch-config.json').read_text())
 revision = config['revision']
 assert re.fullmatch(r'[A-Za-z0-9]{1,8}', revision)

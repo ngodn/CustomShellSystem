@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
-    if not output.is_relative_to(ROOT / 'work') or output.exists():
+    if not output.resolve().is_relative_to((ROOT / 'work').resolve()) or output.exists():
         parser.error('Use a new output directory inside CustomShellSystem/work')
     output.mkdir(parents=True)
     state = json.loads((MOD / 'state/state.json').read_text())

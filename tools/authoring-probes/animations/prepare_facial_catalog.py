@@ -43,10 +43,10 @@ def main():
     if not is_eve and (args.performance or args.blender_performance):
         raise ValueError("Commander White performance mappings require separate source verification")
     work = args.work.resolve(strict=True)
-    if not work.is_relative_to(ROOT / "work/cine-animation-port"):
+    if not work.resolve().is_relative_to((ROOT / "work/cine-animation-port").resolve()):
         raise ValueError("Use the private animation workspace")
     output = args.output.resolve() if args.output else work
-    if not output.is_relative_to(ROOT / "work/cine-animation-port"):
+    if not output.resolve().is_relative_to((ROOT / "work/cine-animation-port").resolve()):
         raise ValueError("Keep catalog metadata in the private animation workspace")
     paths = [work / "probe/receipt.json", work / "facial-stage-verify.json", args.readback.resolve(strict=True),
              (args.shapes or work.parent / "facial-export-v1/facial-shapes.json").resolve(strict=True)]

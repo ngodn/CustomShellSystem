@@ -19,7 +19,7 @@ parser.add_argument('--pose',type=Path,default=w/'heel-support-pose-v2/pose.json
 parser.add_argument('--live',type=Path,default=w/'footwear-followup-v1/live-floor-v2.json')
 parser.add_argument('--output',type=Path,default=w/'footwear-followup-v1/floor-traces-v3.json')
 args=parser.parse_args()
-assert all(path.resolve().is_relative_to(CSS/'work') for path in (args.pose,args.live,args.output))
+assert all(path.resolve().is_relative_to((CSS/'work').resolve()) for path in (args.pose,args.live,args.output))
 pose=json.loads(args.pose.read_text())
 live=json.loads(args.live.read_text())
 assert pose['player']==live['player'] and pose['mesh_transform']==live['mesh_transform_before']

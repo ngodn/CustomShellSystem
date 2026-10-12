@@ -7,7 +7,7 @@ import unreal
 
 CSS = Path(__file__).resolve().parents[2]
 OUT = Path(os.environ['CSS_CLOSURE_WORK']).resolve()
-assert OUT == CSS / 'work/paths/rig2' and not (OUT / 'bound.json').exists()
+assert (OUT).resolve() == (CSS / 'work/paths/rig2').resolve() and not (OUT / 'bound.json').exists()
 load = lambda p: json.loads(p.read_text())
 assert load(OUT / 'import-exit.json')['exit_code'] == 0
 protected = load(CSS / 'work/paths/rig1/verified.json')['protected_hashes']

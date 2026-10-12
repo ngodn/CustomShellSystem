@@ -23,7 +23,7 @@ def main():
     args = parser.parse_args()
     work, authoring = args.cook.resolve(strict=True), args.authoring.resolve(strict=True)
     for path in (work, authoring):
-        if not path.is_relative_to(ROOT/'work/three-outfit-rig-physics'):
+        if not path.resolve().is_relative_to((ROOT/'work/three-outfit-rig-physics').resolve()):
             raise ValueError('Expected a private rig workspace')
     receipt = json.loads((work/'exit.json').read_text())
     if receipt['returncode'] != 0 or not receipt['protected_unchanged']:

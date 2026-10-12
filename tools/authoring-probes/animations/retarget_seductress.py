@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[4]
 CONTENT = ROOT / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 WORK = Path(os.environ['CSS_ANIM_WORK']).resolve(strict=True)
 MODE = os.environ.get('CSS_RETARGET_MODE', 'create')
-if MODE not in ('create', 'verify') or not WORK.is_relative_to(ROOT / 'CustomShellSystem/work'):
+if MODE not in ('create', 'verify') or not WORK.resolve().is_relative_to((ROOT / 'CustomShellSystem/work').resolve()):
     raise ValueError('Expected isolated create or verify mode')
 REPORT = WORK / (MODE + '-result.json')
 if REPORT.exists():

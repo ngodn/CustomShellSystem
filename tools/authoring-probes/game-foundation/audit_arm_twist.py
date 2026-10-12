@@ -1,8 +1,8 @@
 import os
 import bpy,json,hashlib,ast
 from pathlib import Path
-OUT=Path(os.environ['CSS_FOUNDATION_AUDIT_DIR']).resolve();ROOT=OUT.parents[3]
-assert OUT.parent == Path(__file__).resolve().parents[4]/'CustomShellSystem/work/grip-grounding-v1'
+OUT=Path(os.environ['CSS_FOUNDATION_AUDIT_DIR']).resolve();ROOT=Path(__file__).resolve().parents[4]
+assert (OUT.parent).resolve() == (Path(__file__).resolve().parents[4]/'CustomShellSystem/work/grip-grounding-v1').resolve()
 MOD=ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 source=MOD/'reference/body-type-variant-EVE/eve_beta10.blend';target=MOD/'work/CSS_SeduXtress_HandBindV43.blend'
 paths=[source,target];before={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}

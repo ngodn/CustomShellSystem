@@ -16,7 +16,7 @@ REVISION = os.environ.get('CSS_CONTACT_REVISION', 'L5U')
 LABELS = os.environ.get('CSS_CONTACT_LABELS', 'DumbDumb,IrisOut').split(',')
 BASE = WORK.parent / 'retarget-l5s'
 if (not re.fullmatch(r'L[1-9][0-9]?[A-Z]', REVISION) or
-        WORK != ROOT / ('CustomShellSystem/work/cine-animation-port/retarget-' + REVISION.lower()) or
+        (WORK).resolve() != (ROOT / ('CustomShellSystem/work/cine-animation-port/retarget-' + REVISION.lower())).resolve() or
         MODE not in ('create', 'verify') or not LABELS or len(LABELS) != len(set(LABELS)) or
         not set(LABELS) <= {'DumbDumb', 'IrisOut'}):
     raise ValueError('Use an isolated numbered trial, audited clips and create/verify mode')
