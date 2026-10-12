@@ -79,3 +79,38 @@ appearance, fit, garment motion, customization, profiles, facial playback,
 doubles and gameplay. Static package success does not accept those behaviors.
 Generated duplicate staging/readback data is removed under the October 12
 cleanup record; original sources, candidate trios, recipes and evidence remain.
+
+## Installed successor and saved-setting upgrade
+
+The subsequent `peony-v2-package3` includes the V2 astral companions and is
+installed with core `94bb1d08bc7d6dd4181e21d4605a3b87cfb7f6046c90f35194f0e090291c423b`.
+See [astral and installation evidence](2026-10-12-peony-v2-astral.md).
+The earlier remaining-work section records the state of package2.
+
+`work/three-outfit-rig-physics/peony-v2-upgrade1` checks the actual refit2 and
+installed package3 metadata through CSS's C++23 customization and state code.
+The standalone recipe is `tools/eve-fit/check_peony_v2_upgrade.cpp`. No runtime
+change was needed. No player state, profile or installed file was written.
+
+All 774 saved-setting cases pass, covering Original and the five retired
+palettes, retained control-channel endpoints, state/profile serialization and
+both automatic-selection and remembered-customization restoration. The 33
+compatible explicit settings survive, including body shape and flowing glow.
+The five obsolete garment color/roughness controls are dropped. Retired palettes
+fall back to Original; this does not attempt to recreate their colors or discard
+compatible manual overrides. Placement, expression and group tints survive.
+Restoring the resulting look a second time leaves it unchanged.
+
+All 256 combinations of the eight old garment toggles use the independently
+recorded V2 section order, including boot skin coverage and stockings. The six
+pre-existing Eve variants have identical customization recipes before and after
+the package upgrade. Deliberately restoring old boot section numbers, removing
+the glute-shape control or reusing a retired palette ID makes the checker fail.
+`receipt.json` records input/source/library hashes and compiler/command details;
+`negative-controls.json` records each rejection. These tests do not exercise
+native rendering, input handling or live material/visibility propagation.
+
+The passive runtime check still reports no applied appearance, 22 loaded
+packages, zero rejected packages and no catalog errors. The user's fit check
+remains pending. Free space before and after this verification is 128G on root
+and 85G on theark at `df -h` precision; only small test/evidence files were added.

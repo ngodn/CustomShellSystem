@@ -20,6 +20,12 @@ in `deployment.json`. Validate the new outfit's native fit, controls, flowing
 trim, facial playback, doubles and gameplay. User visual acceptance is pending;
 the full goal remains active.
 
+The subsequent saved-setting check passes 774 restoration cases and 256 old
+garment-toggle combinations against the installed V2 metadata. Compatible
+settings survive, retired palettes fall back to Original, and obsolete controls
+are dropped. Evidence is in `work/three-outfit-rig-physics/peony-v2-upgrade1`.
+This does not replace the pending native appearance and gameplay checks.
+
 ### Workspace recovery, 2026-10-12
 
 `CustomShellSystem/work` is now a symlink to
@@ -56,9 +62,10 @@ The seven native stocking material packages pass fresh editor readback, Windows
 cooking and IoStore/shader verification. `peony-v2-character2` now integrates the
 four stocking regions into both character variants, with a separate boot-covered
 section. Its 121-package Windows cook and readback preserve body/garment data,
-stocking alpha, rig bindings and all 22/137 morphs. CSS controls, native visual
-review and gameplay remain pending; no new V2 trial is installed. Completed
-cook intermediates are removed under the same cleanup record.
+stocking alpha, rig bindings and all 22/137 morphs. These recovery checks preceded
+the installed `peony-v2-package3` trial described above. Its CSS controls are
+implemented and pass portable checks; native visual review and gameplay remain
+pending. Completed cook intermediates are removed under the same cleanup record.
 The required optional glowing, flowing trim remains in scope.
 
 ## Objective
