@@ -9,6 +9,14 @@ manual customization, saved profiles and Original restoration. Keep optional
 glowing, flowing trim in the Peony integration and test the resulting behavior
 in both preview and gameplay before accepting it.
 
+The combined V2 package now passes native catalog and asset-reference checks.
+CSS also accepts explicitly declared facial meshes anywhere within the
+author/project namespace, so outfit-local meshes do not require a `Faces`
+folder. Source-revision and runtime mesh/rig checks remain. The private candidate
+is `work/three-outfit-rig-physics/peony-v2-package2`; it is not installed.
+Finish the six V2 material parents' doubles/astral support before installation,
+then validate the new outfit, controls, flowing trim and gameplay in game.
+
 ### Workspace recovery, 2026-10-12
 
 `CustomShellSystem/work` is now a symlink to

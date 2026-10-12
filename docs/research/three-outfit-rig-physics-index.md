@@ -2,6 +2,11 @@
 
 Updated 2026-10-12. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+The [combined V2 package](2026-10-12-peony-v2-package.md) now passes native
+catalog, dependency and payload readback checks. CSS's facial namespace check
+supports outfit-local replacement meshes. `peony-v2-package2` is private and
+uninstalled; complete V2 doubles/astral material support before installation.
+
 **Current priority:** the user retired the Better Cleavage source and selected
 the [Peony/Hydrangea V2 CNS and recolor sources](2026-10-11-peony-v2-source.md).
 All supplied color schemes are required, with black-and-white floral Hydrangea

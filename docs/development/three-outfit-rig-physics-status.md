@@ -8,6 +8,20 @@ zero geometric intersections are not required. Prioritize obvious fit and
 deformation defects, usable customization, materials and the remaining release
 work. This does not accept the rejected installed Peony garment.
 
+**Peony V2 combined package, October 12:** `peony-v2-package2` assembles the
+435-package Eve outfit container and 270-package shared container. The original
+six Eve variants and their cooked payloads remain unchanged. Peony uses its V2
+body/facial meshes, 78 controls, four palettes and all 88 texture choices.
+The rebuilt native catalog test passes 1,535 checks; dependency audit passes
+720 packages and 271 object references, and export/bulk readback matches.
+The first assembly exposed CSS's `Faces`-folder restriction. The core now permits
+explicit facial replacements anywhere inside a valid author/project namespace,
+retaining source identity/revision and runtime skeletal-mesh, skeleton and morph
+checks. Both facial/animation test targets and the Windows core build pass.
+No new trial is installed. Six V2 material parents still need doubles/astral
+companions; native appearance, cloth, customization and gameplay acceptance
+remain open. See [package evidence](../research/2026-10-12-peony-v2-package.md).
+
 **CSS palette support, October 12:** the private core now accepts texture,
 linear-vector and scalar material settings in a palette, before manual control
 overrides. Palette changes rebuild owned materials to remove stale settings;
