@@ -2,6 +2,14 @@
 
 Updated 2026-10-13. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [moving front attachment](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#moving-front-attachment)
+is integrated in private Belt13. Both normal/facial walking/reset checks and six
+paired gait checks pass. Four sprint views improve the exposed buckle, but
+blended waist witnesses still overlap by up to 10.86 mm with enlarged body
+controls. The initial root footprint omits those vertices. Next account for
+their blended weights and recheck contact, shape and cost. No installation or
+full-fit acceptance; all stable-release gates remain active.
+
 CW's [gradual waist weights](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#gradual-waist-weights)
 repair the sharp skin-weight boundary implicated in root-translation stretch.
 Private normal/facial meshes pass exact correspondence, preservation and fresh

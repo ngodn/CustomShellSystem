@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW moving front attachment:** Belt13 now integrates the repaired
+waist meshes with bounded front-root contact before chain solving. Normal and
+facial walking/reset checks and all six paired gait checks pass; previous
+Belt12 checks reproduce exactly. Four sprint renders show the buckle outside
+the raised thigh. Full-surface checks still find 5.07 mm neutral and 10.86 mm
+enlarged-body overlap in Sprint 24. Those sprint witnesses have only 52-72%
+front-root weight and are excluded by the initial greater-than-75% contact
+footprint. Next account for the blended waist weights and retest the same
+witnesses, then broader motion, shape, lifecycle and cost. Observed added
+editor cost is 3.15-4.73 ms, not game-FPS acceptance. No belt cook or install.
+Evidence: CW `work/belt-contact13` and `docs/belt-and-skirt-motion.md`.
+All coordinated stable-release requirements remain active.
+
 **October 13, CW waist-weight repair:** private normal/facial mesh stages and
 fresh-process reloads pass. A gradual transition replaces the abrupt
 pelvis/spine-to-front-bone weight boundary on 4,454 source points; geometry,
