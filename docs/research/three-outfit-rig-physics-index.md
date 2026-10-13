@@ -2,6 +2,15 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [active-contact and exterior-boundary checks](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#active-contacts-and-exterior-boundary-october-14)
+clear the fourth-step distal belt in one diagnostic, but retain a visible waist
+gap and reject step five. A connected-body reference removes invalid artificial
+hip seams and validates eight sampled exterior meshes. The fifth-step solve
+still fails; the transition audit shows body intrusion after a genuinely clear
+preceding pose. Next test bounded intermediate-pose continuation and actual
+piecewise belt motion. All 142 protected assets are unchanged, with no new
+rig/cook/install and no reduction of the stable-release requirements.
+
 CW's [body-part and angular tests](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#body-part-constraints-and-bounded-angular-search-october-14)
 retain leg-specific contact fields and exact lengths. A bounded single pose
 reduces actual front-belt penetration from 14.595 to 5.338 mm, but contact

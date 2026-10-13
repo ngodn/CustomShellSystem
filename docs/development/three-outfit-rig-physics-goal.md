@@ -1,5 +1,22 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW contact continuity checkpoint:** `work/belt-active21` clears
+the fourth-step distal belt with a diagnostic removal of only the fifth cone.
+The waist still has a visible gap, and the fresh replay fails at step five.
+The next exterior-reference experiment exposed invalid artificial hip caps;
+using the connected body repairs the diagnostic surface at all eight sampled
+poses, but still does not solve step five. The preceding chain is independently
+clear, then the moving body enters it by 2.743 cm over one 1/120-second step.
+Next test bounded continuation through intermediate body poses with the
+corrected exterior boundary and the actual piecewise belt path. Retain
+original contact/length/motion requirements and distinguish the fifth-cone
+diagnostic from original-limit behavior. No new rig, cook or install. All 142
+protected assets remain unchanged; accepted Peony, waist/body shapes, rear
+chains, CW skirt/feet, reported bugs and the full stable release remain active.
+The CW motion document records the rejected trials and exact source snapshots.
+Space at cleanup: root 113G free, theark 6.3G free. This small diagnostic is on
+root; other sessions' outputs are unknown, not touched.
+
 **October 14, CW separate-body and bounded-motion tests:** the offline contact
 model now distinguishes each leg from internal surfaces of the other leg.
 This changes twelve initial search directions at the fifth-step failure, but
