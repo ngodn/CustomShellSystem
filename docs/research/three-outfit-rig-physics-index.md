@@ -1,6 +1,14 @@
 # Three-outfit rig and physics research index
 
-Updated 2026-10-13. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
+Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
+
+CW's [swept-contact follow-up](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#swept-contact-and-joint-feasibility-october-14)
+finds a demonstrated entry-plane/length/cone conflict at the first failed step.
+A joint static solve clears the tested centerlines but still jumps; direct
+swept-path solves also fail. Actual posed-body witnesses separate real calf
+contact from excess proxy volume. Inspect the implicated supports before another
+solver candidate. All 142 protected assets remain unchanged, with no new rig,
+cook or install. Full stable-release gates remain active.
 
 CW's [internal contact trace](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#internal-contact-trace-and-rejected-corrections)
 reproduces the existing poses at 60 Hz and locates the calf failure at the

@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW swept-contact findings:** endpoint and sampled-segment sweeps
+remain rejected. Solving static lengths, cones and contacts together clears
+240 Jog steps but still jumps by up to 16.1 cm per step. A separate linear
+relaxation proves that the first failed entry-plane set conflicts with the
+length/cone bounds; more iterations cannot satisfy that set. Direct swept paths
+also fail the tested solve. Posed-body comparisons identify both real calf
+intersections and excess collision-proxy volume. Next inspect the implicated
+right-calf supports against those witnesses, preserving the separate waist,
+body-shape, skirt and foot requirements. Evidence is in CW
+`work/belt-swept16` and `docs/belt-and-skirt-motion.md`. All 142 pinned inputs
+remain unchanged. No new rig, cook or install; accepted Peony and the full
+coordinated stable-release scope remain active.
+
 **October 13, CW contact continuity:** developer-only internal traces at
 60/120 Hz reproduce the prior Belt14 poses and preserve all 142 pinned inputs.
 The calf penetration occurs at the solver step rate. Additional iterations,
