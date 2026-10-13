@@ -1,5 +1,20 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW sequential waist-contact checkpoint:** `work/belt-root26`
+completes 241 captured sprint frames at each of neutral and maximum body size.
+The refined 49-point support meets the 0.5 mm contact margin within the existing
+5 cm root bound. All ten selected full-waist audits and four distal audits
+clear the actual posed body. This is an offline translation correction, not
+an integrated runtime solver or gameplay acceptance. Whole-belt strain checks
+expose a preexisting 45.95 mm edge extension at Sprint frame 35. The adjacent
+F05/F06 skinning rotations differ by 114.69 degrees while their joint remains
+connected to within 4e-7 cm. The sharp weight transition amplifies that bend;
+no repair is yet validated. Six final front/side views still show the pendant
+distortion. Next constrain and validate lower-belt deformation together with
+contact before native integration. No cook or install; accepted Peony and the
+full stable-release scope remain active. See CW's motion document and
+`work/belt-root26/REPRODUCE.md` for evidence and limitations.
+
 **October 14, CW authored-waist checkpoint:** `work/belt-waist25` authors the
 separate waist helper in private Normal/Facial meshes, skeleton and Belt15 rig.
 Original geometry, morphs, cloth, raw/virtual binds and animation mapping are

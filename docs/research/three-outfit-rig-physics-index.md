@@ -2,6 +2,15 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [sequential waist correction and pendant strain](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#sequential-waist-correction-and-pendant-strain-october-14)
+passes both 241-frame offline support replays, ten full-waist audits and four
+distal audits within the original root bound. It does not resimulate the chain.
+Whole-belt strain finds 4.595 cm preexisting extension at Sprint 35: F05/F06
+remain connected but their skinning rotations differ by 114.69 degrees across
+a sharp weight transition. Six reviewed renders retain kinks. Next validate
+lower-belt deformation together with contact before native integration.
+All 150 protected/private authoring assets match; no cook or installation.
+
 CW's [authored waist helper and fresh-load gaits](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#authored-waist-helper-and-fresh-load-gaits-october-14)
 preserve original mesh data and animation mappings in private Normal/Facial
 assets. Cold reload, lifecycle and six gait comparisons pass. Actual render
