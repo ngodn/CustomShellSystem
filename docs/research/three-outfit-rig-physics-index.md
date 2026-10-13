@@ -1,5 +1,9 @@
 # Three-outfit rig and physics research index
 
+- October 14: CW `work/belt-bridge28/REPRODUCE.md`, native RigVM lower-body
+  bridge. Jog clears; Sprint's infeasible-path fallback demonstrably clips.
+  Fresh-load, reset, outside-belt and rear-pose checks are recorded. No install.
+
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
 CW's [lower-body collision bridge](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#lower-body-collision-bridge-october-14)

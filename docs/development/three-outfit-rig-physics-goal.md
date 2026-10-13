@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, first native CW collision bridge:** private Belt16 now executes
+in Unreal using built-in RigVM units. Jog120 (481 frames) and Jog60 (241)
+clear the measured lower-body envelope, and two whole-garment pose checks
+have no inside vertices. Six native-pose views were reviewed; cosmetic bends
+remain deferred. Sprint exposes a functional failure: the conservative hull
+can cover the root or leave no valid link path, and the current fallback
+penetrates the distal mesh by 34.79 mm at frame 0 and 19.93 mm at frame 24.
+Do not install this candidate. Preserve the jog improvement while repairing
+that fallback/contact route, then wire the six live body coefficients and
+validate the usable result. Fresh reload/reset checks pass, non-belt bones
+and the previous rear-belt poses are unchanged. Editor cost is measured but
+game performance remains open. All 150 prior assets are preserved plus two
+private outputs. No cook or install. CW's `work/belt-bridge28/REPRODUCE.md`
+records recipes, limits and failures. The stable public release and all
+remaining CW skirt/feet, Peony/regression and bug-report gates stay active.
+
 **October 14, CW collision bridge:** `work/belt-collision27` completes 240
 moving Jog steps outside a conservative lower-body hull, avoiding the closing
 leg gap. The old step-204 distal overlap of 14.47 mm becomes 21.04 mm clearance.
