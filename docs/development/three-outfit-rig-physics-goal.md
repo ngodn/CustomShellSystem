@@ -1,5 +1,19 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW waist-weight repair:** private normal/facial mesh stages and
+fresh-process reloads pass. A gradual transition replaces the abrupt
+pelvis/spine-to-front-bone weight boundary on 4,454 source points; geometry,
+morphs, other slots, cloth and 135 protected source files remain unchanged.
+Offline root translation now avoids the earlier severe waist-edge stretch.
+Four neutral poses and eight reviewed views do not establish full acceptance:
+with all six body controls at one, Sprint 24 still has 7.92 mm front overlap.
+No belt mesh or rig is cooked or installed. Next integrate moving-root contact
+into the chain solve using the saved meshes, then test the recorded failures
+and broader shape/motion/lifecycle coverage. Evidence: CW
+`work/belt-attachment2`, including `stage-report.json`, `fresh-reload.json` and
+`transition16-maxbody.json`, and `docs/belt-and-skirt-motion.md`. The complete
+stable release and all outstanding bug reports remain active.
+
 **October 13, CW segment contact and attachment:** Belt12 fixes an identified
 endpoint-only collision miss near the calf. Its sampled Jog 60 front overlap is
 now 0.71 mm at maximum body shape. Six paired normal/facial gait captures pass

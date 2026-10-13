@@ -2,6 +2,14 @@
 
 Updated 2026-10-13. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [gradual waist weights](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#gradual-waist-weights)
+repair the sharp skin-weight boundary implicated in root-translation stretch.
+Private normal/facial meshes pass exact correspondence, preservation and fresh
+reload checks. The four-pose counterfactual improves neutral contact and waist
+strain, but maximum-body Sprint 24 retains 7.92 mm front overlap. Eight neutral
+views reviewed; no belt installation or full-fit acceptance. Next integrate
+the moving root in the actual chain simulation and repeat the recorded tests.
+
 CW's [segment-contact study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#segment-contact-and-front-attachment)
 identifies and improves an endpoint-only collision miss in the jog capture.
 Belt12 passes six paired normal/facial gait constraint checks, but sprint's
