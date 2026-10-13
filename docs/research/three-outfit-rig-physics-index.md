@@ -1,5 +1,9 @@
 # Three-outfit rig and physics research index
 
+- October 14: CW `work/belt-hybrid29/REPRODUCE.md`, physical fallback plus
+  stable contact-mode hold. Jog/Sprint neutral contact evidence, Normal/Facial
+  fractional timing and reset checks. Live body-size and game checks pending.
+
 - October 14: CW `work/belt-bridge28/REPRODUCE.md`, native RigVM lower-body
   bridge. Jog clears; Sprint's infeasible-path fallback demonstrably clips.
   Fresh-load, reset, outside-belt and rear-pose checks are recorded. No install.

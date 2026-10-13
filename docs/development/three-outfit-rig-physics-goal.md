@@ -1,5 +1,22 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, stable combined CW contacts:** private Belt18 preserves the
+clear Jog bridge and uses the earlier physical contact solve when the bridge
+has no feasible path. A 0.125-second hold removes repeated mode switching
+in Sprint. Jog120 matches Belt16 and Sprint60 matches Belt15 exactly. All
+sampled front-chain points clear the actual body over full Sprint60/90
+captures; selected full-garment checks remove the previous large distal
+penetrations. Small waistband overlap and sharp bends are deferred under
+the user's practical threshold. Six native Sprint views were reviewed.
+Fresh-load Normal/Facial Jog90 comparisons preserve all non-belt bones;
+length/cone and clock/reset checks pass, including fractional display steps.
+Next connect the six live CSS body coefficients to the AnimBP/rig and adapt
+both the bridge and ten fallback contact shapes. Then check representative
+sizes and motion transitions, package the practical trial and verify game
+motion/cost. No cook or install. CW `work/belt-hybrid29/REPRODUCE.md` retains
+recipes and limitations; the full stable release and other bug gates remain
+active. Do not reopen minor cosmetic refinement as an independent blocker.
+
 **October 14, first native CW collision bridge:** private Belt16 now executes
 in Unreal using built-in RigVM units. Jog120 (481 frames) and Jog60 (241)
 clear the measured lower-body envelope, and two whole-garment pose checks
