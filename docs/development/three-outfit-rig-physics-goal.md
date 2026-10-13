@@ -1,5 +1,19 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW belt contact candidate 6:** measured hip/leg envelopes and
+mesh-length rear endpoints remove the observed intersections in the four
+reviewed walking poses. Normal/facial 241-frame motion and reset checks pass,
+including terminal rotation limits; both saved graphs reload with identical
+hashes/properties and the 135 original inputs remain unchanged. The full
+241-frame walking surface comparison in CW `work/belt-contact6` reduces the
+front intersection from 5.139 cm to 1.634 mm; both rear chains remain clear.
+The worst-pose renders show no obvious detached or disappearing belt. Retain
+the minor front clipping under the user's stated tolerance. This is an editor
+candidate, not a cooked or installed fix. Morph coverage, broader motion,
+performance, gameplay and the separate skirt defect remain open. Preserve the
+installed ankle trial and the full stable-release scope. See the
+[belt contact record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#measured-contacts-and-terminal-ornaments).
+
 **October 13, CW bounded belt candidate:** normal/facial walking and lifecycle
 replays pass attachment, output isolation and reset checks using the existing
 Eve fixed-step chain implementation. Maximum segment-length error is below
