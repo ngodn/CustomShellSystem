@@ -32,6 +32,7 @@ int main(int argc,char** argv) {
         double max_vector=0,max_moment=0;
         for(const auto& fixture:fixtures.at("cases")) {
             const auto actual=model.evaluate(fixture.at("morphs").get<std::array<float,6>>());
+            expect(actual.shape==fixture.at("morphs").get<std::array<float,6>>(),"Collision shape inputs lost morph coefficients");
             const auto& expected=fixture.at("expected");
             for(size_t i=0;i<7;++i) {
                 auto compare=[&](const BodyVector& vector,const Json& target) {
@@ -50,6 +51,14 @@ int main(int argc,char** argv) {
                 expect(residual<1e-4,"Native body inertia differs from reference converter");
             }
         }
+        auto constant=model;
+        for(auto& helper:constant.helpers) {
+            helper.offset_deltas={};helper.moment_linear={};helper.moment_quadratic={};
+            helper.contact_centers.fill(helper.contact_centers[0]);
+            helper.contact_scales.fill(helper.contact_scales[0]);
+        }
+        expect(constant.evaluate({})!=constant.evaluate({0,0,0,0,0,1}),
+               "Shape-only collision change would be skipped when body helpers stay unchanged");
         for(float invalid:{-1.f,1.01f,std::numeric_limits<float>::quiet_NaN(),std::numeric_limits<float>::infinity()}) {
             std::array<float,6> values{};values[2]=invalid;rejects([&]{model.evaluate(values);});
         }

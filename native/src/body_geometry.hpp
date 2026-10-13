@@ -6,6 +6,7 @@
 namespace css {
 using BodyVector = std::array<double,3>;
 struct BodyGeometry {
+    std::array<float,6> shape{};
     std::array<BodyVector,7> offsets{}, contact_centers{};
     std::array<float,7> moments{};
     // Per region, three parent-local columns of the contact ellipsoid basis.

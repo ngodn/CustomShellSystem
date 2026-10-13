@@ -92,6 +92,7 @@ BodyGeometry BodyGeometryModel::evaluate(const std::array<float,6>& morphs) cons
         for(unsigned m=0;m<6;++m) weights[mask]*=(mask&(1u<<m))?double(morphs[m]):1-double(morphs[m]);
     }
     BodyGeometry result;
+    result.shape=morphs;
     for(size_t i=0;i<7;++i) {
         const auto& source=helpers[i];
         auto& offset=result.offsets[i];offset=source.offset;

@@ -42,8 +42,14 @@ struct BodyGeometryInputs {
     UObject* instance;
     std::array<FArrayProperty*,6> arrays;
     FProperty* epoch;
+    std::array<FFloatProperty*,6> shape{};
     BodyGeometry capture() const {
         BodyGeometry value;
+        if(shape[0]) for(size_t i=0;i<shape.size();++i) {
+            std::memcpy(&value.shape[i],reinterpret_cast<const std::byte*>(instance)+shape[i]->GetOffset_Internal(),sizeof(float));
+            if(!std::isfinite(value.shape[i]) || value.shape[i]<0 || value.shape[i]>1)
+                throw std::runtime_error("Body shape input outside [0,1]");
+        }
         for(size_t field=0;field<arrays.size();++field) {
             auto* property=arrays[field];
             FScriptArrayHelper values(property,reinterpret_cast<std::byte*>(instance)+property->GetOffset_Internal());
@@ -63,8 +69,13 @@ struct BodyGeometryInputs {
         }
         return value;
     }
-    void apply(const BodyGeometry& value) const {
+    void apply(BodyGeometry value) const {
+        // Older AnimBPs have geometry arrays but no shape inputs to retain or restore.
+        if(!shape[0]) value.shape={};
         if(capture()==value) return;
+        for(float coefficient:value.shape)
+            if(!std::isfinite(coefficient) || coefficient<0 || coefficient>1)
+                throw std::runtime_error("Body shape input outside [0,1]");
         for(size_t i=0;i<7;++i) {
             if(!std::isfinite(value.moments[i]) || value.moments[i]<=0) throw std::runtime_error("Invalid body inertia");
             auto finite=[](const BodyVector& v){return std::all_of(v.begin(),v.end(),[](double x){return std::isfinite(x);});};
@@ -72,6 +83,8 @@ struct BodyGeometryInputs {
                !std::all_of(value.contact_axes[i].begin(),value.contact_axes[i].end(),finite))
                 throw std::runtime_error("Non-finite body geometry");
         }
+        if(shape[0]) for(size_t i=0;i<shape.size();++i)
+            shape[i]->CopyCompleteValue(reinterpret_cast<std::byte*>(instance)+shape[i]->GetOffset_Internal(),&value.shape[i]);
         for(size_t field=0;field<arrays.size();++field) {
             auto* property=arrays[field];
             FScriptArrayHelper values(property,reinterpret_cast<std::byte*>(instance)+property->GetOffset_Internal());
@@ -110,5 +123,16 @@ BodyGeometryInputs body_geometry_inputs(UObject* instance) {
     }
     auto* epoch=control_rig_reset_epoch(instance,L"CSSBodyResetEpoch");
     if(!epoch) throw std::runtime_error("Body geometry requires independent reset");
-    return {instance,arrays,epoch};
+    std::array<FFloatProperty*,6> shape{};
+    for(size_t i=0;i<shape.size();++i) {
+        const auto name=L"CSSBodyShape"+std::to_wstring(i);
+        auto* property=body_geometry_property(instance,name.c_str());
+        if(!property) continue;
+        if(!property->IsA<FFloatProperty>() || property->GetElementSize()!=sizeof(float))
+            throw std::runtime_error("Body shape inputs require floats");
+        shape[i]=static_cast<FFloatProperty*>(property);
+    }
+    const auto count=std::count_if(shape.begin(),shape.end(),[](auto* p){return p!=nullptr;});
+    if(count!=0 && count!=6) throw std::runtime_error("Body shape inputs require all six coefficients");
+    return {instance,arrays,epoch,shape};
 }

@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW body-input wiring:** CSS now carries the six model-ordered
+body coefficients through geometry capture/apply/restore, exposing optional
+`CSSBodyShape0` through `CSSBodyShape5` floats. Missing all six preserves
+older AnimBPs; partial or mistyped inputs are rejected. Windows core builds
+and 128 geometry fixtures pass. Private CW Normal/Facial AnimBPs route the
+inputs into Belt18 and use the existing body reset epoch. Four 361-frame
+Jog90 captures confirm evaluated input values, exact neutral-pose preservation
+and no changes outside belt bones. This is editor propagation evidence;
+mesh morphs and fallback envelopes were neutral in those captures. No install.
+The ten fallback-envelope center/basis morph deltas now match a direct fit
+in 128 corner/interior cases. Next connect those data to the rig, account
+for waistband support shape, verify actual morphed moving surfaces and live
+CSS restoration, then prepare the practical game trial. Sources, receipts
+and limits: CW `work/belt-shape30/REPRODUCE.md`. Full stable release stays
+active, including all other unresolved bug and gameplay gates.
+
 **October 14, stable combined CW contacts:** private Belt18 preserves the
 clear Jog bridge and uses the earlier physical contact solve when the bridge
 has no feasible path. A 0.125-second hold removes repeated mode switching
