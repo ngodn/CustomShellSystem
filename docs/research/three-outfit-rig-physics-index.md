@@ -2,6 +2,16 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [actual belt and waist-transfer study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#actual-belt-surface-and-waist-weight-transfer-october-14)
+finds a waist-weight regression separately from distal contact failure. The
+revised boundary transfer preserves torso-only weights and prevents tiny thigh
+influences being amplified. It reduces maximum attachment-edge extension to
+1.161 mm over 481 captured Jog poses and clears two measured waist poses.
+Six final views support further testing. The distal route, sprint/body-size
+validation and full release requirements remain open. A weight plan is prepared,
+but no authored mesh, rig, cook or installed package changes. All 142 protected
+assets are unchanged; rejected alternatives and exact source versions remain.
+
 CW's [substep and competing-surface tests](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#substep-continuation-and-competing-surfaces-october-14)
 reject both quarter-step budgets. The nearest-surface derivative discontinuity
 is isolated, and separate triangle constraints certify a local contact conflict

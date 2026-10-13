@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW actual-surface and waist checkpoint:** `work/belt-surface23`
+identifies the earlier weight transition as the cause of two waist witnesses
+moving inside the body. Preserving static weights alone restores a severe edge
+stretch, so that attempt is rejected. A transition from the static boundary,
+with original non-front mass preserved, reduces worst attachment-edge extension
+to 1.161 mm over all 481 captured Jog poses, versus 46.820 mm for the cap alone.
+All 8,295 measured waist vertices clear the two diagnostic body poses; six final
+views were reviewed and the complete weight plan is ready for further tests.
+Actual distal clipping remains, including 4.132 mm at replay step 2 and 2.725 mm
+at the quarter of step 5. No moving trajectory or game acceptance follows.
+Next check sprint/enlarged-body waist witnesses and repair the distal route
+before the closing leg gap. All 142 protected assets are unchanged, no new
+rig/cook/install, accepted Peony and the entire stable release remain active.
+The CW motion document records the rejected weight alternatives, fixed tiny-
+influence amplification, full-strain audit, recipes and source snapshots.
+
 **October 14, CW substep/contact-branch checkpoint:** `work/belt-continuation22`
 tests four smaller intervals with eight validated exterior meshes. Both equal
 movement allocation and a flexible 5 cm per-node path budget fail the first
