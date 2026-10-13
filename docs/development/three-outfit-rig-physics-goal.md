@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW belt CPU work reduced:** Belt9 adds conservative collider
+early-outs, caches transformed contact data per substep and stops insignificant
+contact iterations. Both normal/facial rigs pass all 14 paired cases across
+30/60/120 Hz walking and 60 Hz jog/sprint in a fresh editor process. Its reviewed
+walking surface differs from Belt6 by at most 0.16 mm. Repeated 60 Hz walking
+median added CPU cost is lower overall; system-load variation remains in the
+raw reports. No in-game FPS acceptance or install is claimed. Evidence: CW
+`work/belt-motion1`, `belt-motion2`, `belt-convergence1` and `belt-contact9`.
+Continue with dynamic body-shape/contact coverage, wider posed surface checks
+and the cook/game gates. Full release scope, skirt repair and other reported
+bugs remain active.
+
 **October 13, CW belt contact candidate 6:** measured hip/leg envelopes and
 mesh-length rear endpoints remove the observed intersections in the four
 reviewed walking poses. Normal/facial 241-frame motion and reset checks pass,
