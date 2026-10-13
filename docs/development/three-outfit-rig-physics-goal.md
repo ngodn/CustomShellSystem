@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW substep/contact-branch checkpoint:** `work/belt-continuation22`
+tests four smaller intervals with eight validated exterior meshes. Both equal
+movement allocation and a flexible 5 cm per-node path budget fail the first
+interval. A seeded retry exposes a nondifferentiable nearest-surface switch.
+Separate triangle constraints verify a local pinch at one point on link 5;
+the certificate uses only four contact faces, not angle or movement bounds.
+The best feature-restoration pose misses the centerline margin by 1.313 mm,
+but actual garment fit at that intermediate pose is not measured. Next inspect
+the actual belt and its approach to the closing gap before the fourth endpoint,
+then test an exterior route before it becomes pinched. Do not lower a proxy
+margin merely to pass; small clipping can be deferred only when garment views
+show it is inconspicuous. No new rig/cook/install, all 142 protected assets
+unchanged, and every accepted result and full stable-release requirement stays
+active. Source/evidence and cleanup receipts are retained in CW. Root 112G and
+theark 848M were available after cleanup; other sessions' files were untouched.
+
 **October 14, CW contact continuity checkpoint:** `work/belt-active21` clears
 the fourth-step distal belt with a diagnostic removal of only the fifth cone.
 The waist still has a visible gap, and the fresh replay fails at step five.

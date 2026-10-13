@@ -2,6 +2,14 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [substep and competing-surface tests](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#substep-continuation-and-competing-surfaces-october-14)
+reject both quarter-step budgets. The nearest-surface derivative discontinuity
+is isolated, and separate triangle constraints certify a local contact conflict
+at one fifth-link sample. Increasing motion or cone limits is not supported by
+that certificate. Next inspect actual intermediate garment fit and the earlier
+approach to the closing gap. Eight exterior meshes and targeted regressions
+pass, while the belt trial remains rejected. No rig/cook/install or scope change.
+
 CW's [active-contact and exterior-boundary checks](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#active-contacts-and-exterior-boundary-october-14)
 clear the fourth-step distal belt in one diagnostic, but retain a visible waist
 gap and reject step five. A connected-body reference removes invalid artificial
