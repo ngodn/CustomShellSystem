@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW distal contact:** the full Belt13 screen finishes 1,452 posed
+surface cases and identifies visible jog/sprint calf intersections. Belt14's
+60-degree front limit clears the tested sprint contact, but jogging still has
+14.5 mm overlap and the known waist overlaps persist. Normal/facial motion and
+reset checks, six paired gait checks and fresh graph reload pass, with all 137
+protected inputs unchanged. It is not accepted, cooked or installed. Direction
+sampling finds a clearer jog direction inside the existing cone; next diagnose
+contact selection/propagation and continuity rather than raising the limit
+again. The blended-waist experiments and rejected envelope fits are recorded in
+CW `docs/belt-and-skirt-motion.md`, `work/belt-blended14` and
+`work/belt-contact14`. Preserve the installed ankle trial, accepted Peony and
+the entire coordinated stable-release scope. No required defect is waived.
+
 **October 13, CW moving front attachment:** Belt13 now integrates the repaired
 waist meshes with bounded front-root contact before chain solving. Normal and
 facial walking/reset checks and all six paired gait checks pass; previous

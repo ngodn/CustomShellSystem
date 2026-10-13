@@ -2,6 +2,16 @@
 
 Updated 2026-10-13. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [distal-contact follow-up](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#blended-waist-and-distal-contact)
+completes 1,452 Belt13 surface cases. Belt14's 60-degree front cone clears the
+tested sprint calf intersection but leaves 14.5 mm jog overlap; waist contact
+also remains incomplete. Motion/reset checks and fresh reload pass. A sampled
+clearer jog direction exists inside the current cone, directing the next work
+to contact selection and continuity. No belt candidate is installed or accepted.
+The exact-body blended-waist projection helps neutral poses, while the coarse
+envelopes and their affine refits fail. Those experiments are retained separately
+from runtime implementation. Full stable-release gates remain active.
+
 CW's [moving front attachment](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#moving-front-attachment)
 is integrated in private Belt13. Both normal/facial walking/reset checks and six
 paired gait checks pass. Four sprint views improve the exposed buckle, but
