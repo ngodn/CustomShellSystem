@@ -1,5 +1,24 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW segment contact and attachment:** Belt12 fixes an identified
+endpoint-only collision miss near the calf. Its sampled Jog 60 front overlap is
+now 0.71 mm at maximum body shape. Six paired normal/facial gait captures pass
+constraints, but sprint still has roughly 3 cm front intersections and about
+1 cm enlarged-shape rear intersections. Four diagnostic renders were reviewed;
+the upper front attachment still crosses the raised thigh. Nearest-skin donor
+following does not fix that attachment. A topology audit confirms its root also
+affects the waist band, requiring attachment-aware repair. No new belt asset is
+cooked or installed. Preserve the ankle trial, accepted Peony and full stable
+release scope. Evidence: CW `work/belt-contact11`, `belt-contact12`,
+`belt-attachment1` and `docs/belt-and-skirt-motion.md`.
+
+An offline bounded root-translation test clears the two measured sprint front
+witnesses but stretches an actual waist-band edge from 1.312 to 5.734 cm.
+That shortcut is rejected, with front/side renders and edge measurements saved
+in CW `work/belt-attachment1/root-translation-*`. Repair the attachment's
+deformation before integrating root contact movement. No runtime or install
+change follows from that counterfactual.
+
 **October 13, CW body-shape and gait surface check:** cooked morph positions
 and triangle indices match the retained skin audit exactly. All 64 body-control
 corners plus a midpoint preserve the minor walking overlap at frame 84, at most

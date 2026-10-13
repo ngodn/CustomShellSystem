@@ -2,12 +2,14 @@
 
 Updated 2026-10-13. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
-CW's [belt shape/gait screen](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#body-shapes-and-wider-surface-checks)
-checks 64 body-control corners plus a midpoint at rest/walk, then complete
-walk/jog/sprint captures at minimum/maximum controls. Jog/sprint contact still
-fails. Belt10 adds the omitted front-root pivot; six paired gait captures
-preserve every bone position and other component-space transforms. The pivot
-is verified, not a complete collision fix. No belt candidate is installed.
+CW's [segment-contact study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#segment-contact-and-front-attachment)
+identifies and improves an endpoint-only collision miss in the jog capture.
+Belt12 passes six paired normal/facial gait constraint checks, but sprint's
+front attachment and enlarged-body rear contact still fail. Four diagnostic
+renders confirm the front attachment crossing. Moving that root also deforms
+the waist band, so attachment repair remains necessary. No belt candidate is
+installed. Earlier full-frame and body-corner screens remain scoped to their
+recorded candidates, not automatic acceptance of Belt12.
 
 **Current scope:** complete the coordinated stable release: CSS v1.0.0,
 Eve v1.5.0, Unholy Genessa v0.3.0 and Commander White v0.1.0, with matching
