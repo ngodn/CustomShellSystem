@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, user acceptance clarification:** prioritize a usable outfit with
+working physics, proper body collision and no obvious clipping in movement.
+Perfect bends, smooth weighting and minor cosmetic distortion are not release
+blockers. Earlier acceptance of tiny, unobtrusive clipping still applies.
+Stop expanding cosmetic strain studies unless the distortion breaks the
+outfit visibly or prevents collision from working. The current CW priority is
+the demonstrated belt/leg penetration in Jog, followed by a practical in-game
+trial. Do not misreport offline support checks as a fixed gameplay collision.
+
 **October 14, CW sequential waist-contact checkpoint:** `work/belt-root26`
 completes 241 captured sprint frames at each of neutral and maximum body size.
 The refined 49-point support meets the 0.5 mm contact margin within the existing
