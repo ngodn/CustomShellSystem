@@ -2,6 +2,16 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [authored waist helper and fresh-load gaits](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#authored-waist-helper-and-fresh-load-gaits-october-14)
+preserve original mesh data and animation mappings in private Normal/Facial
+assets. Cold reload, lifecycle and six gait comparisons pass. Actual render
+weights match the binding plan and eight sampled surfaces reproduce its
+intended motion. Editor morphs are unchanged; their difference from cooked
+values is proven quantization. Four reviewed views retain sharp pendant bends,
+and actual sampled sprint waist penetration reaches 3.775 mm. Dynamic contact,
+gameplay and performance remain open. No cook or installation. Accepted Peony,
+all bug reports and the complete stable-release scope remain active.
+
 CW's [separate waist rotation and sprint study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#separate-waist-rotation-and-sprint-fit-october-14)
 rejects the preceding static-boundary transfer for sprint contact. A separate
 waist rotation reduces penetration and maximum strain over 1,446 gait/body-shape

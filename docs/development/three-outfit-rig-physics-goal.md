@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW authored-waist checkpoint:** `work/belt-waist25` authors the
+separate waist helper in private Normal/Facial meshes, skeleton and Belt15 rig.
+Original geometry, morphs, cloth, raw/virtual binds and animation mapping are
+preserved. Fresh reload, walking/reset checks and all six Walk/Jog/Sprint
+constraint comparisons pass. All 397 original bones match the preceding paired
+captures exactly. Actual editor render buffers verify the intended weighting;
+eight pose/shape surface comparisons and four reviewed sprint images confirm
+the helper implementation. Editor/cooked morph differences reproduce the
+recorded compression precision exactly, not a new morph defect. Actual sprint
+waist penetration still reaches 3.775 mm, and sharp pendant bends remain.
+Next integrate dynamic root contact and repair the hanging belt's path before
+the legs close. Do not treat editor constraint checks as contact, performance
+or game acceptance. No new cook or installation. Accepted Peony, CW skirt/feet,
+reported bugs and the complete stable public release remain active. CW's
+motion document and `work/belt-waist25/REPRODUCE.md` retain the evidence.
+
 **October 14, CW separate-waist checkpoint:** `work/belt-waist24` rejects the
 previous static-boundary transfer for 18.06 to 18.52 mm sprint thigh penetration.
 Keeping a separate animated waistband rotation improves fit without rotating
