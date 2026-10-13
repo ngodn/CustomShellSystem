@@ -9,7 +9,7 @@ internal static class MorphAudit
     public static void Export(USkeletalMesh mesh, string asset, string output)
     {
         var lods = mesh.LODModels ?? throw new InvalidDataException("Missing render LODs");
-        if (lods.Length != 1 || lods[0].NumVertices is < 1 or > 1000000)
+        if (lods.Length != 1 || lods[0].NumVertices is < 1 or > 4000000)
             throw new InvalidDataException("Morph audit requires one bounded render LOD");
         var lod = lods[0];
         var vertices = lod.VertexBufferGPUSkin.VertsFloat;

@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW body-shape and gait surface check:** cooked morph positions
+and triangle indices match the retained skin audit exactly. All 64 body-control
+corners plus a midpoint preserve the minor walking overlap at frame 84, at most
+1.765 mm. Full 60 Hz walk/jog/sprint surface reconstruction at minimum/maximum
+controls exposes larger jog/sprint intersections, so Belt9 is not ready to
+install. Sprint's front witness reaches 4.359 cm; enlarged-shape rear witnesses
+also fail. Open-boundary false signs are separated using ray witnesses and
+visual review. The front root's locked rotation contributes to the upper-belt
+failure; Belt10 now implements that pivot. Normal/facial walking/lifecycle and
+six paired gait captures pass constraints and preserve all bone positions.
+The remaining sprint anchor is itself inside the raised thigh, so pivot alone
+does not close contact. Continue with attachment/contact repair and enlarged-shape
+rear coverage before cooking. Evidence:
+CW `work/belt-morph1` and `docs/belt-and-skirt-motion.md`. No new installed asset,
+no completion claim, and the full stable-release scope remains active.
+
 **October 13, CW belt CPU work reduced:** Belt9 adds conservative collider
 early-outs, caches transformed contact data per substep and stops insignificant
 contact iterations. Both normal/facial rigs pass all 14 paired cases across

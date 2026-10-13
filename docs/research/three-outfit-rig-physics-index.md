@@ -1,6 +1,13 @@
 # Three-outfit rig and physics research index
 
-Updated 2026-10-12. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
+Updated 2026-10-13. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
+
+CW's [belt shape/gait screen](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#body-shapes-and-wider-surface-checks)
+checks 64 body-control corners plus a midpoint at rest/walk, then complete
+walk/jog/sprint captures at minimum/maximum controls. Jog/sprint contact still
+fails. Belt10 adds the omitted front-root pivot; six paired gait captures
+preserve every bone position and other component-space transforms. The pivot
+is verified, not a complete collision fix. No belt candidate is installed.
 
 **Current scope:** complete the coordinated stable release: CSS v1.0.0,
 Eve v1.5.0, Unholy Genessa v0.3.0 and Commander White v0.1.0, with matching
@@ -26,10 +33,13 @@ with verified hashes and rollback. The user accepts Peony's Firm/Natural motion
 while walking and playing Iris Out; live rig readback confirms the new limits.
 Other Eve variants and broader regression remain open. See the
 [active goal](../development/three-outfit-rig-physics-goal.md) for exact scope.
-The queued [sunlight noise investigation](2026-10-12-sunlight-noise.md) has the
-reporter's image and a read-only settings capture, with no diagnosed cause or
-rendering change yet. The user confirms the matching symptom is only in Vistani's
-report so far; the local screenshot does not show an obvious matching pattern.
+The [sunlight noise investigation](2026-10-12-sunlight-noise.md) now includes the
+user's reproduced symptom and an installed optional MISC lighting control:
+Default (game) or Reduced noise. UI switching, persistence and
+[cold-load recovery](2026-10-13-sunlight-load-recovery.md) pass their recorded
+checks. Reduced noise was left enabled at the last live check. Cross-map,
+continuous-motion and performance acceptance remain open; this is not a claim
+that the reported game rendering defect is fully fixed.
 
 ## Historical research checkpoints
 
