@@ -1,5 +1,19 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW morphed contacts:** private Belt19 connects all six body
+coefficients to ten contact envelopes and 24 waistband support points.
+Twelve fresh-load Normal/Facial captures cover neutral, mixed and maximum
+body sizes in Jog/Sprint, with 4,332 frames checking actual mesh morphs and
+rig inputs. Length/cone bounds pass and contact modes do not oscillate.
+Neutral poses remain identical to Belt18. Maximum-size Jog surface samples
+clear the body, but maximum-size Sprint frame 51 still has 11.96 mm distal
+penetration. Fix that functional contact before the practical trial; minor
+bends remain deferred. Image approval is provisional, not gameplay approval.
+No cook or installation. All 162 authoring assets are hash-verified. Corrected
+captures replace twelve rejected captures whose legacy diagnostic pulse
+overrode mesh morph weights. Recipes and limits: CW
+`work/belt-shape31/REPRODUCE.md`. Full stable release remains active.
+
 **October 14, CW body-input wiring:** CSS now carries the six model-ordered
 body coefficients through geometry capture/apply/restore, exposing optional
 `CSSBodyShape0` through `CSSBodyShape5` floats. Missing all six preserves
