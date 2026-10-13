@@ -2,6 +2,16 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [actual-body reference](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#actual-body-contact-reference-october-14)
+confirms a collision missed between chain samples. Rigid knee proxies also
+deviate from skinned supports by up to 5 cm, but banded refits do not repair
+motion. Denser actual-body samples, temporal samples and angle removal each
+remain rejected; angle removal helps one step and fails at the next. Inspect
+that local solve's active contacts and search trajectory before another rig
+candidate. Four new views reviewed, independent Blender distances and helper
+regressions pass, 142 inputs unchanged. No new rig, cook or install, and no
+change to the full coordinated stable-release scope.
+
 CW's [swept-contact follow-up](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#swept-contact-and-joint-feasibility-october-14)
 finds a demonstrated entry-plane/length/cone conflict at the first failed step.
 A joint static solve clears the tested centerlines but still jumps; direct

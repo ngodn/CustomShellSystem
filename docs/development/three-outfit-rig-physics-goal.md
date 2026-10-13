@@ -1,5 +1,19 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW calf and actual-body contact:** rigid proximal calf proxies
+miss blended knee deformation by up to 5 cm. Banded proxies, smaller steps and
+velocity changes remain rejected. A new actual-body reference independently
+confirms penetration between the four-sample reference's contact points. Denser contact
+and sampled paths still fail; removing angular bounds helps one step, then
+produces extreme movement at the next failed solve. This is not an installed
+repair or proof that the garment cannot fit. Inspect that local solve's active
+contacts/search trajectory before another rig candidate. Evidence is in CW
+`work/belt-calf17`, `work/belt-body18` and `docs/belt-and-skirt-motion.md`.
+Four new full-belt views were reviewed, analytical checks/default regressions
+pass, and all 142 protected inputs are unchanged. No new rig/cook/install.
+Accepted Peony and the entire stable-release scope remain active, including
+waist/body shapes, rear chains, skirt, feet and outstanding bug reports.
+
 **October 14, CW swept-contact findings:** endpoint and sampled-segment sweeps
 remain rejected. Solving static lengths, cones and contacts together clears
 240 Jog steps but still jumps by up to 16.1 cm per step. A separate linear
