@@ -2,6 +2,14 @@
 
 Updated 2026-10-13. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [internal contact trace](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#internal-contact-trace-and-rejected-corrections)
+reproduces the existing poses at 60 Hz and locates the calf failure at the
+120 Hz solver rate. Coupled projection helps one frozen pose but fails motion;
+a rest-direction restart clears sampled centerlines but still jumps. Both
+remain offline experiments. Typed traces preserve full numeric arrays and
+142 pinned inputs. Next investigate swept contact and approach-side continuity.
+No new rig, cooked package or installation; all release gates remain active.
+
 CW's [distal-contact follow-up](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#blended-waist-and-distal-contact)
 completes 1,452 Belt13 surface cases. Belt14's 60-degree front cone clears the
 tested sprint calf intersection but leaves 14.5 mm jog overlap; waist contact

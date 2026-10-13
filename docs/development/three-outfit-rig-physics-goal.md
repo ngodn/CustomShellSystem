@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 13, CW contact continuity:** developer-only internal traces at
+60/120 Hz reproduce the prior Belt14 poses and preserve all 142 pinned inputs.
+The calf penetration occurs at the solver step rate. Additional iterations,
+larger limits and coupled contact trials do not repair the trajectory. A
+rest-direction restart clears the tested centerlines but still jumps, so it is
+not accepted or installed. Next test swept contact and retention of the
+approach side, including moving colliders and later chain constraints. Evidence
+and rejected approaches are in CW `work/belt-direction15` and
+`docs/belt-and-skirt-motion.md`. Keep all waist/body-shape, skirt, foot, bug-report
+and coordinated stable-release requirements active. No game assets changed.
+
 **October 13, CW distal contact:** the full Belt13 screen finishes 1,452 posed
 surface cases and identifies visible jog/sprint calf intersections. Belt14's
 60-degree front limit clears the tested sprint contact, but jogging still has
