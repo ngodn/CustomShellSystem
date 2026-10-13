@@ -2,6 +2,15 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [body-part and angular tests](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#body-part-constraints-and-bounded-angular-search-october-14)
+retain leg-specific contact fields and exact lengths. A bounded single pose
+reduces actual front-belt penetration from 14.595 to 5.338 mm, but contact
+still fails; the combined model also fails its motion bound. Two full-belt
+views and 21,104 front vertices per variant were reviewed/measured. Next check
+separate region inequalities near the preceding valid pose before another
+long solve. All 142 assets unchanged; no new rig, cook or install. Full
+coordinated stable-release requirements remain active.
+
 CW's [contact-sign correction](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#contact-sign-correction-from-prior-eve-work-october-14)
 fixes an offline nearest-normal classification error using the earlier Eve
 solid-angle rule. Analytic overlap and 28 saved-path checks pass; corrected

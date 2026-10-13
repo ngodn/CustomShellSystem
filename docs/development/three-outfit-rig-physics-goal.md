@@ -1,5 +1,20 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW separate-body and bounded-motion tests:** the offline contact
+model now distinguishes each leg from internal surfaces of the other leg.
+This changes twelve initial search directions at the fifth-step failure, but
+does not repair the fourth-step failure. An angular reference keeps all link
+lengths exact. One bounded output reduces measured actual front-belt
+penetration from 14.595 to 5.338 mm, with two reviewed renders, but still fails
+contact. Combining both methods also fails the requested motion bound. No
+failed state is propagated or accepted, and no new rig/cook/install follows.
+Next inspect separate region inequalities near the preceding valid pose,
+keeping original clearance/angle limits and explicit motion rejection.
+CW `work/belt-partition20` and `docs/belt-and-skirt-motion.md` retain the
+evidence. All 142 protected assets are unchanged. Accepted Peony, CW skirt,
+feet, waist/body shapes, outstanding bug reports and the entire coordinated
+stable-release scope remain active.
+
 **October 14, CW offline contact-sign repair:** the actual-body reference's
 nearest-normal rule falsely labels points inside one leg as outside when the
 other leg's surface is nearer. Reusing the earlier Eve solid-angle method
