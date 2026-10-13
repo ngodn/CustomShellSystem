@@ -2,6 +2,13 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [contact-sign correction](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#contact-sign-correction-from-prior-eve-work-october-14)
+fixes an offline nearest-normal classification error using the earlier Eve
+solid-angle rule. Analytic overlap and 28 saved-path checks pass; corrected
+solver runs still fail. Preserve separate leg contacts and distinguish internal
+faces from the exterior boundary before another rig. No new rig/cook/install,
+and all coordinated stable-release requirements remain active.
+
 CW's [actual-body reference](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#actual-body-contact-reference-october-14)
 confirms a collision missed between chain samples. Rigid knee proxies also
 deviate from skinned supports by up to 5 cm, but banded refits do not repair

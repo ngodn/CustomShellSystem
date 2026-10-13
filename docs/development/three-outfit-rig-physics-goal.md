@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW offline contact-sign repair:** the actual-body reference's
+nearest-normal rule falsely labels points inside one leg as outside when the
+other leg's surface is nearer. Reusing the earlier Eve solid-angle method
+repairs that demonstrated classification error. An overlap regression and
+28 saved search-path checks pass. The corrected solver still fails the motion
+and contact requirements; no belt candidate is accepted or installed. Keep
+separate leg contact information and exclude internal inter-leg surfaces as
+escape boundaries in the next contact experiment. CW `work/belt-search19` and
+`docs/belt-and-skirt-motion.md` record the correction and failed replays. This
+is a diagnostic-tool fix, not a game-engine fix. Accepted Peony and every full
+coordinated stable-release requirement remain active.
+
 **October 14, CW calf and actual-body contact:** rigid proximal calf proxies
 miss blended knee deformation by up to 5 cm. Banded proxies, smaller steps and
 velocity changes remain rejected. A new actual-body reference independently
