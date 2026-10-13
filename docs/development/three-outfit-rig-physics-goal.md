@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW collision bridge:** `work/belt-collision27` completes 240
+moving Jog steps outside a conservative lower-body hull, avoiding the closing
+leg gap. The old step-204 distal overlap of 14.47 mm becomes 21.04 mm clearance.
+The saved waist helper clears the remaining waist overlap in all five checked
+reference pose/shape cases. A lighter 98-direction separating-plane method
+also clears the sampled trajectory and three checked neutral mesh poses.
+Nine steps exceed a diagnostic travel guard; this is recorded for continuous
+motion review, not treated as an automatic visual failure under the user's
+practical acceptance direction. A 451-point runtime support candidate matches
+full-surface plane extrema in 1,446 retained gait/shape cases, but coverage of
+unseen motions and mixed body values remains to be checked. Next wire the
+collision data and live body values into the private rig, preserve the waist
+helper and reset behavior, then prepare a usable game trial. All 150
+protected/private assets are unchanged. No cook or installation; the complete
+stable release, CW rear/skirt/feet and other bug reports remain active.
+
 **October 14, user acceptance clarification:** prioritize a usable outfit with
 working physics, proper body collision and no obvious clipping in movement.
 Perfect bends, smooth weighting and minor cosmetic distortion are not release
@@ -8,6 +24,14 @@ Stop expanding cosmetic strain studies unless the distortion breaks the
 outfit visibly or prevents collision from working. The current CW priority is
 the demonstrated belt/leg penetration in Jog, followed by a practical in-game
 trial. Do not misreport offline support checks as a fixed gameplay collision.
+
+The user provisionally considers the subsequent `belt-collision27` preview
+images acceptable ("that should be fine i think"), while explicitly noting
+they are judging images. Preserve this as the visual target and defer minor
+bends. It is not in-game motion or collision acceptance. The conservative
+lower-body hull trial clears 240 captured jog steps and keeps the distal belt
+outside the body in three whole-vertex spot checks. Porting that result into
+an affordable native rig, retaining the authored waist helper, is still open.
 
 **October 14, CW sequential waist-contact checkpoint:** `work/belt-root26`
 completes 241 captured sprint frames at each of neutral and maximum body size.

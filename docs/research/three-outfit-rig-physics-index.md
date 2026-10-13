@@ -2,6 +2,14 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [lower-body collision bridge](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#lower-body-collision-bridge-october-14)
+clears 240 captured Jog steps and the known calf witness. The saved waist
+helper clears all checked reference and lighter-solver mesh cases. A compact
+451-point support candidate reproduces full-surface plane extrema in 1,446
+retained cases. User acceptance is provisional from reference images; minor
+bends are deferred. Native integration, mixed-shape/unseen-motion coverage,
+continuous motion and game testing remain. No cooked or installed change.
+
 CW's [sequential waist correction and pendant strain](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#sequential-waist-correction-and-pendant-strain-october-14)
 passes both 241-frame offline support replays, ten full-waist audits and four
 distal audits within the original root bound. It does not resimulate the chain.
