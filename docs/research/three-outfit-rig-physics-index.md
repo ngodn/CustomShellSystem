@@ -2,6 +2,16 @@
 
 Updated 2026-10-14. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the baseline and migration audit, and the [active goal](../development/three-outfit-rig-physics-goal.md) for the latest trials.
 
+CW's [separate waist rotation and sprint study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#separate-waist-rotation-and-sprint-fit-october-14)
+rejects the preceding static-boundary transfer for sprint contact. A separate
+waist rotation reduces penetration and maximum strain over 1,446 gait/body-shape
+cases. Frozen root corrections clear the four sampled sprint waist/distal
+surfaces within 5 cm, with only 0.021 mm clearance at the weakest waist point.
+Twenty-four views were reviewed. An unapplied waist-helper plan reproduces
+eight full-belt skinning comparisons. Private editor integration, dynamic
+contact and the earlier Jog failure remain. No cooked or installed change;
+142 protected assets and the full release scope remain intact.
+
 CW's [actual belt and waist-transfer study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#actual-belt-surface-and-waist-weight-transfer-october-14)
 finds a waist-weight regression separately from distal contact failure. The
 revised boundary transfer preserves torso-only weights and prevents tiny thigh

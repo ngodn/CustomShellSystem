@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW separate-waist checkpoint:** `work/belt-waist24` rejects the
+previous static-boundary transfer for 18.06 to 18.52 mm sprint thigh penetration.
+Keeping a separate animated waistband rotation improves fit without rotating
+the pendant, and slightly lowers maximum attachment strain over 1,446 captured
+gait/body-shape cases. A frozen correction of the six front-bone translations
+clears all measured waist and distal vertices in four sprint/body-size cases
+within the existing 5 cm root limit. The weakest clearance is only 0.021 mm;
+this is not a dynamic contact fix. Twenty-four views were reviewed. An
+unapplied `CSS_Belt_Waist` binding plan reproduces eight full-belt skinning
+comparisons, with geometry and helper-remapped weight amounts preserved.
+Next author and validate the private waist helper, then integrate dynamic
+contact and repair the pendant route before the closing leg gap. The earlier
+Jog failure remains. All 142 protected assets are unchanged, no new cook or
+installation, accepted Peony and the entire stable-release goal remain active.
+CW's motion document and `work/belt-waist24/REPRODUCE.md` retain the evidence.
+
 **October 14, CW actual-surface and waist checkpoint:** `work/belt-surface23`
 identifies the earlier weight transition as the cause of two waist witnesses
 moving inside the body. Preserving static weights alone restores a severe edge
