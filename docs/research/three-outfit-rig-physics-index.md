@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Trebuchaxe hovering preview](2026-10-15-trebuchaxe-visibility.md): native hidden preview exposed by CSS's broad mesh-show operation. Repair installed; 13 live visibility phases and charged firing pass without the floating axe. Other sidearms, Tarstones and fresh-launch regression remain open.
+
 - [Genessa native revival restriction](../development/genessa-form-save-switch.md): active Alteration blocks Faithful on the upgraded save. Immediate explanatory message installed and verified without changing form, resources, saved settings or view. Optional confirmed override queued; autosave behavior and broader cross-save checks remain open.
 
 - [Doubles across outfits](2026-10-15-outfit-doubles.md): all six older Eve outfits pass Faithful mesh binding/cleanup. CW passes both Stray clones in Default and Use CSS. Peony and both UG variants now also pass both Stray clones in Use CSS, with full settings/CINE/player/view restoration across the three-case sequence. All six older Eve variants now also pass both Stray clones, completing mesh-copy/cleanup coverage for all ten appearances. Peony secondary ghost parameters, morphs and hidden sections also pass with explicit actor ownership. Earlier failed captures remain recorded; visual cloth/contact, other material combinations and Faithful UG/CW stay open.

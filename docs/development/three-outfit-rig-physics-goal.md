@@ -1,5 +1,15 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Trebuchaxe hovering preview repaired:** CSS revealed the native
+hidden `SM_Projectile_Preview` whenever it showed every owned weapon mesh.
+The installed core `5f04a31900c8e323` preserves nested visibility while hiding
+the attachment and owner. Thirteen live phases pass, including three draw/stow
+cycles, all three visibility modes and induced owner drift, with full restoration.
+Charged firing also passes on the original idle with a recorded 30-point Resolve
+drop and no floating axe. Earlier failed captures are retained; other sidearms,
+Tarstone combinations and fresh-launch regressions remain open.
+[Evidence and limits](../research/2026-10-15-trebuchaxe-visibility.md).
+
 **October 15, Peony secondary customization verified:** the explicit secondary
 Stray actor preserves all six ghost families, 58 source parameters, two morphs
 and seven hidden sections. Both clones clean up, and saved settings, CINE,
@@ -2066,9 +2076,12 @@ Inspect form-control state across save/world/player replacement, including stale
 
 ## Low-priority follow-up: Trebuchaxe sidearm visibility
 
-**Status:** original report now supported by the user's October 15 in-game screenshot. Controlled reproduction, diagnosis and repair remain pending. Investigate and fix after the primary rig, facial and animation work; this reminder does not change the current priority.
+**Status:** reproduced and diagnosed October 15. The installed nested-visibility
+repair passes 13 live visibility phases and charged firing with a 30-point
+Resolve drop. Other sidearms, Tarstone combinations, uncharged firing, damage
+and fresh launch remain open. [Evidence](../research/2026-10-15-trebuchaxe-visibility.md).
 
-DirektorSvemira reported on 2026-10-08 at 00:05 (report timezone unspecified) that CSS sidearm visibility set to **Only when in use** produces a hovering axe above the Trebuchaxe. The offset persists when the weapon turns sideways for a charged shot. The reporter says gameplay is unaffected and no other installed mod alters the weapon or its hiding behavior. CSS causation and any Tarstone interaction remain unverified.
+DirektorSvemira reported on 2026-10-08 at 00:05 (report timezone unspecified) that CSS sidearm visibility set to **Only when in use** produces a hovering axe above the Trebuchaxe. The offset persists when the weapon turns sideways for a charged shot. The reporter says gameplay is unaffected and no other installed mod alters the weapon or its hiding behavior. Controlled A/B/A now establishes the CSS visibility cause; Tarstone interaction remains unverified.
 
 The user's [October 15 screenshot](/home/eins0fx/Pictures/screenshot-2026-10-15_04-53-53.png)
 shows Peony aiming the Trebuchaxe with a visibly separated axe suspended above

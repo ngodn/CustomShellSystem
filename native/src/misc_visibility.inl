@@ -62,43 +62,11 @@ static bool hidden_flag(UObject* object,const wchar_t* name) {
     } catch(...) {}
     return false;
 }
-// Every mesh component an actor owns. A single weapon or shell tool can carry several meshes
-// (blade + guard, or a base plus a nested piece), and only some are direct children of the body
-// mesh, so hiding just the enumerated child leaves the rest rendering. Bounded and defensive.
-static std::vector<WeakObject> actor_mesh_components(UObject* actor) {
-    std::vector<WeakObject> out;
-    if(!actor) return out;
-    UObject* mesh_class=find_optional(L"/Script/Engine.MeshComponent");   // base of skeletal + static mesh, cached
-    if(!mesh_class) return out;
-    try {
-        Call call(actor,L"K2_GetComponentsByClass",2);
-        call.set(L"ComponentClass",mesh_class);
-        call.run();
-        auto* property=call.param(L"ReturnValue");
-        if(!property || !property->IsA<FArrayProperty>()) return out;
-        auto* array=static_cast<FArrayProperty*>(property);
-        if(!array->GetInner()->IsA<FObjectProperty>() || array->GetInner()->GetElementSize()!=sizeof(UObject*)) return out;
-        FScriptArrayHelper values(array,call.data(property));
-        const int n=values.Num();
-        if(n<0 || n>256) return out;
-        for(int i=0;i<n;++i) { UObject* c{}; std::memcpy(&c,values.GetRawPtr(i),sizeof(c)); if(c) out.emplace_back(c); }
-    } catch(...) {}
-    return out;
-}
-// Hide an item: set bHiddenInGame on EVERY mesh the owner carries (that is what actually stops
-// the render, even when the actor flag does not reach a nested mesh) and hide the owner actor
-// (keeps its collision down so nothing draws underneath). Show reverses both. Falls back to the
-// single enumerated component if the actor exposes no component list.
-static bool actor_mesh_root(UObject* comp) {
-    auto* cls=comp?comp->GetClassPrivate():nullptr;
-    return cls && narrow(cls->GetName()).find("Mesh")!=std::string::npos;
-}
+// The actor hides all its owned render components, including weapon effects.
+// Keep nested component flags under game control: showing every owned mesh also
+// reveals Trebuchaxe's intentionally hidden SM_Projectile_Preview.
 static void set_item_hidden(UObject* comp, UObject* owner, bool hide) {
-    bool any=false;
-    if(owner) for(auto& c:actor_mesh_components(owner)) { if(auto* m=c.Get()) { try { set_component_hidden(m,hide); any=true; } catch(...) {} } }
-    // The root too, even when the meshes were reached: a bare scene root (helmet or quest heart) is what
-    // the per-frame check reads back, and it would otherwise look visible and be re-hidden every frame.
-    if(!any || !actor_mesh_root(comp)) { try { set_component_hidden(comp,hide); } catch(...) {} }
+    try { set_component_hidden(comp,hide); } catch(...) {}
     try { if(owner) hide_game_object(owner,hide); } catch(...) {}
 }
 

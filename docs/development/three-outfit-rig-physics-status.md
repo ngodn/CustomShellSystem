@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 15, Trebuchaxe visibility repair installed:** `5f04a31900c8e323` preserves
+the native hidden preview instead of showing every nested weapon mesh. Thirteen
+live draw/stow/mode/drift phases pass with full settings, resources, view and
+focus restoration. Charged firing on the original idle also passes with a
+recorded 30-point Resolve drop and no floating axe. Earlier failed captures are
+retained; other sidearms, Tarstones and fresh-launch checks remain open.
+[Evidence](../research/2026-10-15-trebuchaxe-visibility.md).
+
 **October 15, Peony secondary customization verified:** the explicit secondary
 Stray actor preserves all six ghost families, 58 source parameters, two morphs
 and seven hidden sections. Both clones clean up, and saved settings, CINE,
