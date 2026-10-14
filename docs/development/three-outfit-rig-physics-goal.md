@@ -11,6 +11,11 @@ and verified recovery remain recorded. No core or assets changed. Combos, dodge,
 interaction, damage and Faithful attack coverage remain open.
 [Evidence](../research/2026-10-15-outfit-attack-interruption.md).
 
+The subsequent [dodge preflight](../research/2026-10-15-dodge-preflight.md)
+finds eight missed ground traces and three penetrating starts around the current
+position; no dodge input was sent. Live frame-cap testing also remains open
+until both value and console priority can be preserved. No cap change occurred.
+
 **October 15, Trebuchaxe hovering preview repaired:** CSS revealed the native
 hidden `SM_Projectile_Preview` whenever it showed every owned weapon mesh.
 The installed core `5f04a31900c8e323` preserves nested visibility while hiding

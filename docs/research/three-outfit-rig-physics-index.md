@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Dodge and frame-cap preflight](2026-10-15-dodge-preflight.md): nearby visibility traces do not establish safe dash terrain. No dodge or cap change was sent; current tools also cannot verify console-priority restoration. Records bridge array limitations and preserves the live state.
+
 - [Twenty outfit attack interruptions](2026-10-15-outfit-attack-interruption.md): actual secondary attacks interrupt Iris Out and Come Closer on all ten variants in Stray form. Raw active-ability records, three negative controls and full state/view restoration pass. Initial Axatana form-change fixture failure and recovery are retained; combos, dodge, interaction and damage remain separate.
 
 - [Trebuchaxe hovering preview](2026-10-15-trebuchaxe-visibility.md): native hidden preview exposed by CSS's broad mesh-show operation. Repair installed; 13 live visibility phases and charged firing pass without the floating axe. Other sidearms, Tarstones and fresh-launch regression remain open.

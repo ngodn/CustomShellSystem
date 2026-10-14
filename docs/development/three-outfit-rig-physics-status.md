@@ -9,6 +9,11 @@ The initial primary-attack fixture and native weapon-form recovery remain
 recorded. Combo, dodge, interaction and other-form checks stay open.
 [Evidence](../research/2026-10-15-outfit-attack-interruption.md).
 
+The [dodge preflight](../research/2026-10-15-dodge-preflight.md) found gaps in
+nearby visibility traces, so it sent no movement input. Frame-cap changes were
+also withheld because the current tools cannot verify priority restoration.
+Both checks remain open; the accepted live state is preserved.
+
 **October 15, Trebuchaxe visibility repair installed:** `5f04a31900c8e323` preserves
 the native hidden preview instead of showing every nested weapon mesh. Thirteen
 live draw/stow/mode/drift phases pass with full settings, resources, view and
