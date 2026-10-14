@@ -63,3 +63,31 @@ Use a new output filename. The check is read-only except for its report and
 requires the recorded candidate still to be installed. It does not inspect a
 running game, prove current live bindings, or establish visual shading,
 collision, lifecycle or performance acceptance. Those full-goal gates remain.
+
+## First live capture after launch
+
+The user opened the game. The read-only probe resolved the current player in
+`L_Core_World_01`, PID `1944353`, with Peony selected. Evidence is retained in
+`work/three-outfit-rig-physics/eve-surface-live-20261014`:
+
+- `owner-initial.json`: Peony V2 mesh, shared skeleton and allowed secondary
+  class resolved; owner matched and the capture was stable.
+- `rig-initial.json`: the active post-process instance contains hair, body and
+  hand rigs. Exactly one body rig was found. Public regional settings match its
+  inputs. Angular/travel limits match the accepted tighter values above.
+  The appearance and process remained stable.
+- `renderer-initial.json`: console reads, customization, player and process
+  remained unchanged. Virtual shadows report enabled, directional SMRT ray
+  count 4 and samples per ray 2; ray-traced shadows report disabled. These are
+  console inputs, not proof of the actual GPU passes or artifact cause.
+- `session-initial.json`: process mappings identify the accepted
+  `css_core-cw-walk-acab6363906f0e88.dll`, matching the selector. CSS reports
+  sunlight shadows at `default`, with zero modified lights and no error.
+  Core identity and all three captures are hashed here.
+
+The rig capture calls only `describe`, `sample`, then `describe` from the
+existing preset diagnostic. Its preset-writing `main` is never invoked.
+No appearance, camera, movement or settings changes were sent. No screenshot
+was captured. This establishes Peony's active bindings after launch, not the
+repaired older outfits' appearance, sunlight-noise acceptance or full gameplay
+regression. Black Pearl/Planet selection and visual checking remain pending.

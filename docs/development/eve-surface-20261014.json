@@ -1921,5 +1921,30 @@
       }
     ],
     "scope": "Six motion packages preserved in the installed shading candidate. Retained body source, cook, decoded limits and prior preset fixture match. Supporting editor sources are retained; compiled ABP_Secondary remains preserved, not recompiled. No new live test or complete supporting-graph rebuild is claimed."
+  },
+  "initial_live_peony": {
+    "captured": true,
+    "owner_matches": true,
+    "stable_capture": true,
+    "settings_written": false,
+    "repaired_outfit_visual_check": false,
+    "receipts": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-live-20261014/owner-initial.json",
+        "sha256": "7b1df15faabed509cf8378e721981792fc26282bbb902e6fe740525bb145e65b"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-live-20261014/renderer-initial.json",
+        "sha256": "1fbd2be25e979aecc169e3dfff09ec0ab39319c36027359ccf44426bbf7c014d"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-live-20261014/rig-initial.json",
+        "sha256": "5432bf95a91c60e4d1b959ffb8fd8a1166611d6a50949a8daaed281d31687778"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-live-20261014/session-initial.json",
+        "sha256": "8d244f56c3389721f3e7de38c794076a8e3eb97fd3561546855ef5912298e976"
+      }
+    ]
   }
 }

@@ -1,5 +1,13 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, first live capture after launch:** the game is running with
+Peony selected. Her mesh, post-process owner and one body rig resolve correctly;
+public motion inputs and accepted tighter limits match. The accepted CW core is
+mapped in the process. Sunlight shadows are at Game Default, with zero modified
+lights. [Live capture](../research/2026-10-14-eve-motion-preservation.md#first-live-capture-after-launch).
+No character, camera or settings changes were sent. Black Pearl/Planet visual
+checking is pending; this does not close the older-outfit shading or full release gates.
+
 **October 14, accepted Eve motion preserved in the shading candidate:** all
 six body/hair/hand/secondary/feet packages retain their accepted twelve payloads.
 The tighter body source, reload, Windows cook and decoded limits match; retained
