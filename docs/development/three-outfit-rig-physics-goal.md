@@ -1345,6 +1345,14 @@ confirm an inconspicuous close-up intersection.
 
 **Status:** queued from the user's October 11 report, not reproduced or diagnosed. Keep Peony as the current priority. The user reports that after using a different save game, if the last **MISC > Genessa Form** choice was **Stray**, switching to **Faithful** may no longer work. The exact sequence and cause are unconfirmed.
 
+October 14 offline investigation confirms that CSS does not persist a forced
+form preference, and pending requests cancel on player replacement. The native
+revival helper sends an event without reporting success. This does not establish
+the cause of the user's failure. A bounded passive capture is prepared for the
+two-save sequence; only its no-game guard has been exercised. See
+[the source findings and capture procedure](genessa-form-save-switch.md).
+No gameplay or save changes, and no speculative fix installed.
+
 Reproduce by selecting Stray on one save, returning to the menu and loading another save, then requesting Faithful. Compare switching saves within a session with a full restart, and compare previous Auto/Default and Faithful choices. Check whether the destination save's gameplay shell is actually Genessa and whether the character is in a state where the native transition is permitted. Observe the actual form, requested form, UI selection, transition completion and ability state separately.
 
 Inspect form-control state across save/world/player replacement, including stale actor references, pending requests, cached shell/form identity and whether a saved preference is mistaken for the newly loaded character's actual state. These are investigation targets, not established causes. Preserve each save's progression and native form rules; do not force an unsupported shell into a Genessa transition or edit save data to work around the symptom.
