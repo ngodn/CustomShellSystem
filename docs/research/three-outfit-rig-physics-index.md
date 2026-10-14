@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Repaired Eve live variant captures](2026-10-14-eve-live-variant-capture.md): Black Pearl/Planet facial owners, body inputs and exact saved-state restoration pass in CINE. Shaded stills do not close the sunlight or continuous-motion gates.
+
 - [Current coordinated upgrade audit](2026-10-14-coordinated-upgrade-audit.md): four current/mixed legacy package combinations pass imports, provider-content and facial catalog checks. Save/CINE/live checks remain.
 
 - [Eve motion preserved in the installed shading candidate](2026-10-14-eve-motion-preservation.md): six packages, retained tighter source/cook, four supporting cook chains and exact compiled graph replay verified. Peony live bindings pass; older-outfit visual checks remain.

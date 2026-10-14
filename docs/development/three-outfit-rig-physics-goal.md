@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, repaired Black Pearl and Planet live bindings pass:** both facial
+meshes resolve the shared animation adapter and accepted tighter body rig in
+CINE. Temporary clothing/variant changes restored Peony and the entire saved
+CSS state exactly. Shaded screenshots show the clothing, but do not settle the
+moving sunlight artifact or full motion/lifecycle checks.
+[Evidence](../research/2026-10-14-eve-live-variant-capture.md).
+
 **October 14, current coordinated upgrade combinations pass offline:** the
 new Eve/shared pair passes import and production catalog checks with current
 Genessa/CW, either legacy outfit, and both legacy outfits. All four cases have
