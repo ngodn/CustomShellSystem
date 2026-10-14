@@ -20,7 +20,7 @@ int main(int argc,char** argv) {
         defaults.darkform_mirror_cleaned=true;
         css::save_profile_snapshot(defaults,"all-default");
         auto loaded=css::State::parse(defaults.json());
-        loaded.misc_rules["sidearms"]={"in_use"};
+        loaded.misc_rules["sidearm"]={"in_use"};
         loaded.misc_rules["seal"]={"hidden"};
         check(css::restore_profile_settings(loaded,loaded.presets.at("all-default")),
               "Loading an explicit Default visibility profile did not report a change");

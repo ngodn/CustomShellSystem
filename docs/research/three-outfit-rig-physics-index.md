@@ -1,6 +1,6 @@
 # Three-outfit rig and physics research index
 
-- [Default visibility profile restoration](2026-10-14-profile-default-restore.md): fixes empty-map restoration while preserving missing legacy fields. Offline regression, archived states, package catalogs and Windows build pass. Candidate not installed; live migration remains open.
+- [Default visibility profile restoration](2026-10-14-profile-default-restore.md): empty-map correction passes offline regression and actual world/preview profile loads after guarded installation. Exact settings and post-menu world restoration pass; wider migration remains open.
 
 - [Peony stationary timing reference](2026-10-14-peony-stationary-cost.md): three captures and 3,133 records pass archive checks with unchanged boundary contexts/settings. Tail variation, missing trace channels and unmatched comparison keep the performance gate open.
 

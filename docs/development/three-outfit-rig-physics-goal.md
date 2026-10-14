@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, profile visibility fix installed and verified live:** guarded
+stationary core reload passes. Actual Default-profile loads restore sidearm/seal
+visibility in the world and wardrobe preview, including repeated loads. Original
+settings, appearance, CINE model, player/view and post-menu world visibility
+restore; menu closed and controls unblocked. Two inactive world actor flag
+differences inside the menu are retained in the evidence, with exact world flags
+verified after close. [Evidence](../research/2026-10-14-profile-default-restore.md).
+No outfit asset changes. Broader migration, lifecycle and release gates remain.
+
 **October 14, Default visibility profile defect corrected offline:** restoring
 an explicitly empty MISC snapshot now clears later visibility overrides, while
 legacy profiles without MISC retain current settings. The failing reproduction
