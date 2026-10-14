@@ -4,9 +4,9 @@
 
 - [Native idle library live bindings](2026-10-15-native-idle-library.md): all 60 choices resolve on original Genessa; 240 carrier samples match and 1,080 bone-position reads are finite. Peony, saved settings, CINE and player/view restore. Visual/contact, CINE and gameplay checks remain distinct.
 
-- [Sidearm gameplay input preparation](2026-10-15-sidearm-aim.md): keyboard input was rejected while the game was unfocused; an engine-command attempt also produced no aim. State and inputs remain restored. A focus preflight now rejects before runtime commands. Actual aim/fire/stow remains pending.
+- [Naylshotte draw/fire/stow](2026-10-15-sidearm-aim.md): actual aim, a 28-point Resolve drop and hidden stow pass with the permanent Burn infusion preserved. Saved settings, CINE and player/view restore, with only floating-point actor-yaw roundoff. Failed input attempts and measurement corrections are retained. Damage, Barrage and effect replacement remain open.
 
-- [Naylshotte Burn visibility controls](2026-10-15-sidearm-effect-visibility.md): mesh-only hiding reproduces lingering orange Burn; hiding the owner removes it while preserving infusion. Twelve phases and 36 rendering observations pass with exact restoration. Natural aim/fire/stow and effect replacement remain open.
+- [Naylshotte Burn visibility controls](2026-10-15-sidearm-effect-visibility.md): mesh-only hiding reproduces lingering orange Burn; hiding the owner removes it while preserving infusion. Twelve phases and 36 rendering observations pass with exact restoration. Actual draw/fire/stow passes in the follow-up; effect replacement remains open.
 
 - [Hidden item actor drift](2026-10-15-item-visibility-drift.md): three actor-only visibility failures reproduced and repaired; Default control, form/profile sequence and exact world-flag restoration pass. Six timing captures retain an unresolved sequential timing increase; visible Tarstone residue is not claimed fixed.
 

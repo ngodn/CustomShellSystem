@@ -16,13 +16,23 @@ import css_capture
 MOD = GAME / 'Binaries/Win64/ue4ss/Mods/CustomShellSystem'
 
 
+def geometry_restored(before, after):
+    return (all(before[key] == after[key] for key in ('position', 'view_target', 'control_rotation')) and
+            all(abs((after['rotation'][axis] - before['rotation'][axis] + 180) % 360 - 180) <= 1e-8
+                for axis in ('Pitch', 'Yaw', 'Roll')))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
+    parser.add_argument('--fire-once', action='store_true',
+                        help='Send one focused left click while aiming and record its normal Resolve cost')
     parser.add_argument('--input-mode', choices=('console', 'keyboard'), default='keyboard',
                         help='Keyboard requires the focused game; console is an unverified diagnostic alternative')
     args = parser.parse_args()
+    if args.fire_once and args.input_mode != 'keyboard':
+        parser.error('--fire-once requires the focused keyboard input route')
     out = args.output.resolve()
     pids = processes()
     if out.exists() or len(pids) != 1:
@@ -59,6 +69,7 @@ def main():
     effect = get(effects, 'SpawnedPermanent')
     body = get(player['pawn'], 'Mesh')
     health = get(player['pawn'], 'HealthComponent')
+    health_set = get(health, 'HealthSet')
     input_component = call(player['pawn'], 'GetSpartaInputComponent')
     if not effect:
         raise RuntimeError('Need the permanent effect for this check')
@@ -67,6 +78,7 @@ def main():
     for target, function in ((mesh, 'GetAttachSocketName'), (effect, 'WasRecentlyRendered'),
                              (body, 'GetAnimInstance'), (health, 'IsDeadOrDying'),
                              (system, 'ExecuteConsoleCommand'),
+                             (player['controller'], 'GetLastActivatedAbility'),
                              (player['pawn'], 'K2_SetActorLocationAndRotation')):
         signatures[function] = engine({'op': 'describe', 'target': target, 'function': function})
     if set(signatures['WasRecentlyRendered']) != {'Tolerance', 'ReturnValue'}:
@@ -84,8 +96,33 @@ def main():
 
     baseline = geometry()
     cine = request(GAME, {'op': 'model', 'extension': 'eins0fx.cine'})
-    if not cine['ok'] or not next(c for s in cine['result']['sections'] for c in s['controls'] if c['id'] == 'take').get('enabled', True):
-        raise RuntimeError('CINE must be between takes')
+    if not cine['ok']:
+        raise RuntimeError('Cannot inspect CINE state')
+    buttons = {c['id']: c.get('enabled', True) for s in cine['result']['sections'] for c in s['controls']}
+    if not buttons['take'] and buttons['exit']:
+        raise RuntimeError('CINE must be stopped or between takes')
+
+    def resources():
+        return dict(health=get(health_set, 'Health'), resolve=get(health_set, 'Resolve'))
+
+    initial_resources = resources()
+    if args.fire_once and initial_resources['resolve']['CurrentValue'] < 40:
+        raise RuntimeError('Insufficient Resolve for the single-shot fixture')
+
+    def focused_x11_game():
+        if not focused_game():
+            return False
+        window = json.loads(subprocess.check_output(['hyprctl', 'activewindow', '-j']))
+        pointer = json.loads(subprocess.check_output(['hyprctl', 'cursorpos', '-j']))
+        if not (window['at'][0] <= pointer['x'] < window['at'][0] + window['size'][0] and
+                window['at'][1] <= pointer['y'] < window['at'][1] + window['size'][1]):
+            return False
+        pid = subprocess.check_output(['xdotool', 'getactivewindow', 'getwindowpid'],
+                                      stderr=subprocess.PIPE, timeout=3)
+        return int(pid.strip()) == pids[0]
+
+    if args.fire_once and not focused_x11_game():
+        raise RuntimeError('X11 focus does not match the current game')
 
     def infusion():
         return dict(tags=get(weapon, 'WeaponEffectTags'), effect=get(effects, 'SpawnedPermanent'),
@@ -139,6 +176,7 @@ def main():
     report = dict(passed=False, core=core, process_before=pids, core_sha256=args.core_sha256,
                   initial=initial, geometry_before=baseline, infusion_before=initial_infusion,
                   input_mode=args.input_mode, input='Ctrl aim down/up', firing_input=False,
+                  resources_before=initial_resources, fire_requested=args.fire_once,
                   movement_input=False, camera_input=False)
     atomic(out / 'result.json', report)
 
@@ -174,6 +212,42 @@ def main():
         if not report['aim_key_observed'] or 'stowed' in aimed['socket'].lower() or aimed['actor_hidden'] or aimed['mesh_hidden']:
             raise RuntimeError('Aim did not draw and reveal the sidearm')
         report['aim_check_passed'] = True
+        if args.fire_once:
+            guard(aiming=True)
+            if resources() != initial_resources or not focused_x11_game():
+                raise RuntimeError('Resources or focus changed before the shot')
+            report['ability_before_shot'] = call(player['controller'], 'GetLastActivatedAbility')
+            report['firing_input'] = True
+            atomic(out / 'result.json', report)
+            try:
+                subprocess.run(['xdotool', 'mousedown', '1'], capture_output=True, check=True, timeout=3)
+                time.sleep(.12)
+                report['fire_key_observed'] = keys()['LeftMouseButton']
+            finally:
+                subprocess.run(['xdotool', 'mouseup', '1'], capture_output=True, check=True, timeout=3)
+            report['focus_after_click'] = focused_game()
+            if not report['fire_key_observed']:
+                raise RuntimeError('Game did not observe the mouse button; firing is unverified')
+            deadline = time.monotonic() + 3
+            report['shot_observations'] = []
+            while True:
+                observation = dict(resources=resources(), ability=call(player['controller'], 'GetLastActivatedAbility'),
+                                   sidearm=snapshot())
+                report['shot_observations'].append(observation)
+                if observation['resources']['resolve']['CurrentValue'] < initial_resources['resolve']['CurrentValue']:
+                    break
+                if time.monotonic() > deadline:
+                    raise RuntimeError('No Resolve expenditure observed after the single click')
+                time.sleep(.1)
+            time.sleep(.6)
+            report['resources_after_shot'] = resources()
+            report['resolve_drop_observed'] = initial_resources['resolve']['CurrentValue'] - min(
+                row['resources']['resolve']['CurrentValue'] for row in report['shot_observations'])
+            if report['resolve_drop_observed'] <= 0 or report['resources_after_shot']['health'] != initial_resources['health']:
+                raise RuntimeError('Unexpected resources after firing')
+            guard(aiming=True)
+            report['fire_screenshot'] = str(css_capture.shot('after-shot'))
+            report['fire_check_passed'] = True
     except Exception as error:
         report['error'] = repr(error)
     finally:
@@ -201,14 +275,18 @@ def main():
                     raise RuntimeError('Transform restoration failed')
                 time.sleep(.5)
             report['geometry_after'] = geometry()
-            report['state_restored'] = json.loads((MOD / 'state/state.json').read_text()) == before
+            report['geometry_restored'] = geometry_restored(baseline, report['geometry_after'])
+            after = json.loads((MOD / 'state/state.json').read_text())
+            atomic(out / 'state-after.json', after)
+            report['state_restored'] = after == before
+            report['resources_after'] = resources()
             report['infusion_preserved'] = infusion() == initial_infusion
             report['cine_restored'] = request(GAME, {'op': 'model', 'extension': 'eins0fx.cine'})['result'] == cine['result']
             report['keys_released'] = not any(keys().values())
             report['process_after'] = processes()
-            report['passed'] = bool(report.get('aim_check_passed') and 'stowed' in stowed['socket'].lower() and
+            report['passed'] = bool(report.get('aim_check_passed') and (not args.fire_once or report.get('fire_check_passed')) and 'stowed' in stowed['socket'].lower() and
                 stowed['actor_hidden'] and stowed['mesh_hidden'] and not stowed['effect_rendered'] and
-                report['geometry_after'] == baseline and report['state_restored'] and report['infusion_preserved'] and
+                report['geometry_restored'] and report['state_restored'] and report['infusion_preserved'] and
                 report['cine_restored'] and report['keys_released'] and processes() == pids)
         except Exception as error:
             report['restore_error'] = repr(error)

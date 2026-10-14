@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Naylshotte actual draw/fire/stow verified:** Ctrl aiming exposes
+Naylshotte and its permanent Burn effect; a primary shot produces a 28-point
+Resolve drop; stowing hides both weapon and attached effect. Infusion, saved
+settings and CINE restore. Player position/view restore exactly and actor yaw
+within floating-point roundoff. Original failed fixtures and separate final
+verification are retained. [Evidence and limits](../research/2026-10-15-sidearm-aim.md).
+Damage, Barrage, effect replacement and the original owner-drift trigger remain
+open. No production binary or asset changed.
+
 **October 15, native CINE end and explicit exit pass:** original Genessa plays
 the full Iris Out take through the correct native montage and also releases it
 on an early CINE exit. Peony, saved CSS/CINE settings and exact player/view
@@ -12,20 +21,14 @@ state, CINE and exact player/view transforms restore. [Evidence and limits](../r
 The three gait choices, native CINE, visual/contact and gameplay-interruption
 checks remain distinct. No assets or installed binaries changed.
 
-**October 15, sidearm gameplay test awaits focus:** the keyboard helper rejected
-input because the game was not foregrounded. An engine-command attempt also
-produced no aim. Neither is a gameplay pass; exact saved state, infusion, CINE,
-player/view and released keys are verified. A diagnostic focus preflight now
-stops before runtime commands. [Evidence and continuation](../research/2026-10-15-sidearm-aim.md).
-The user has been asked to foreground the game; no binary or asset was changed.
-
 **October 15, Naylshotte Burn visibility mechanism verified:** controlled
 mesh-only hiding leaves the orange Burn effect visible; the installed owner
 visibility repair removes it while preserving the active infusion. Front/rear
 six-phase runs pass 36 rendering observations, and settings, CINE, appearance,
 weapon flags and exact player/view transforms restore.
 [Evidence and scope](../research/2026-10-15-sidearm-effect-visibility.md).
-The original gameplay trigger, aim/fire/stow and effect replacement remain open.
+The original gameplay trigger and effect replacement remain open; actual
+aim/fire/stow now passes in the follow-up above.
 
 **October 15, hidden item actor drift repaired and installed:** the old core
 fails controlled actor-only visibility changes on Naylshotte, Infinite Seal and
@@ -1974,7 +1977,7 @@ When this item is reached, reproduce with that loadout and visibility setting; c
 
 ## Low-priority follow-up: Naylshotte Tarstone effects while hidden
 
-**Status:** queued from the user's October 11 report, not reproduced or diagnosed. Investigate alongside the Trebuchaxe visibility issue after the current Peony work. A shared cause has not been established.
+**Status:** partial verification on October 15. Mesh-only hiding reproduces lingering Burn; the installed owner-visibility repair removes it without deactivating infusion. Actual draw/fire/stow passes on the user's new save. Effect replacement, Barrage, damage and the original natural owner-drift trigger remain open. See [evidence](../research/2026-10-15-sidearm-aim.md). A shared cause with Trebuchaxe has not been established.
 
 With Naylshotte visibility set to **Only when in use**, the user reports a lingering Tarstone effect while the sidearm should be hidden. The supplied world screenshot shows an orange, weapon-shaped effect behind the character's shoulder. The loadout screenshots identify **Barrage Stone, Level 3** in the top slot and **Emberseed Stone, Level 3** in the second slot. The third slot's name is unconfirmed; do not infer it from its icon. Emberseed's displayed permanent-infusion upgrade is relevant reproduction context, not proof of the cause.
 

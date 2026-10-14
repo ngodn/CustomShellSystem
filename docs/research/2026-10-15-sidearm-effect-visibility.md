@@ -4,8 +4,8 @@ The installed actor-visibility repair now has a controlled visual reproduction
 of the lingering Burn symptom. With both Naylshotte meshes hidden and its owner
 actor visible, the attached orange Burn effect remains visible. Returning to
 **Only when in use** hides the owner and removes that effect from the image,
-while preserving the permanent infusion. The original gameplay trigger and
-aim/fire/stow sequence are still untested.
+while preserving the permanent infusion. The [later gameplay check](2026-10-15-sidearm-aim.md) also verifies actual
+draw/fire/stow. The original owner-drift trigger remains unproven.
 
 ## Inputs and method
 
@@ -73,7 +73,7 @@ and that the installed repair addresses the reproduced actor/mesh mismatch.
 It strengthens the connection to the reported Tarstone symptom. It does not
 prove that every occurrence of that report has this cause.
 
-Next test actual aim/fire/stow and effect replacement, including Barrage and
+Actual aim/fire/stow now passes in the follow-up above. Next test effect replacement, including Barrage and
 Emberseed behavior, while preserving infusion. The current test does not validate
 projectiles, damage, ammo use, ability activation or a newly spawned effect.
 No additional production change, package install or public release was made.
