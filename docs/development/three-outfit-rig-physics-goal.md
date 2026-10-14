@@ -8,6 +8,11 @@ Actual cadence is about 30 Hz and 53 to 55 Hz, so sustained 60/higher-rate and
 matched performance acceptance remain open. No production core or assets changed.
 [Evidence](../research/2026-10-15-native-frame-caps.md).
 
+The subsequent [combo fixture](../research/2026-10-15-combo-preflight.md) does
+not yet observe stage B2. Both failed attempts restore the complete owned
+state; the experimental test branch is removed and its recipes retained.
+Combo acceptance remains open. No production change was made.
+
 **October 15, twenty Stray dodge interruptions pass:** Iris Out and Come Closer
 release facial playback after actual native dash activation on all ten release
 variants. Each case restores position/facing, camera, health, settings, CINE and

@@ -26,6 +26,11 @@ updates and no extra reset. Original settings, graphics, view and focus restore.
 Observed cadence is about 30 Hz and 53 to 55 Hz. Sustained 60/higher-rate,
 other-outfit and matched performance checks remain open.
 
+The [combo follow-up](../research/2026-10-15-combo-preflight.md) retains two
+failed diagnostics with complete restoration. Neither records B2, so combo
+acceptance remains open. The unproven test branch was removed; no production
+code or assets changed.
+
 **October 15, Trebuchaxe visibility repair installed:** `5f04a31900c8e323` preserves
 the native hidden preview instead of showing every nested weapon mesh. Thirteen
 live draw/stow/mode/drift phases pass with full settings, resources, view and

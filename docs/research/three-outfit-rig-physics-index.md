@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Combo diagnostic limits](2026-10-15-combo-preflight.md): two failed Peony attempts restore all owned state but do not establish stage-two progression. Retains native selector/counter evidence and executed recipes; the unproven test branch is removed.
+
 - [Native frame-cap verification](2026-10-15-native-frame-caps.md): nine Peony captures and 4,151 raw records pass, with cap priority and all owned state restored. Actual cadence is about 30 and 53 to 55 Hz; sustained 60/higher-rate and matched performance acceptance remain open.
 
 - [Twenty outfit dodge interruptions](2026-10-15-outfit-dodge-interruption.md): stationary Stray dodges interrupt both facial clips across all ten release variants, with actual native activation and full restoration. The failed downhill fixture and recovery remain recorded; the passing matrix uses a checked uphill corridor.
