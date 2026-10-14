@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, mesh/material source chain verified:** all twelve repaired final
+editor meshes match their successful cook inputs and combined shipping payloads.
+The 273 older material/texture packages remain exact. Missing original material
+extraction inputs were recovered from the hash-matching rollback trio; the
+current writer reproduces all 745 migrated files exactly. Only 514,512 bytes of
+unique headers remain, with duplicate payloads linked to accepted sources.
+[Source-chain evidence](../research/2026-10-14-eve-source-package-chain.md).
+No game files changed. Continue offline; full release and live gates remain.
+
 **October 14, customization and install preflight pass:** all twelve repaired
 Eve meshes preserve accepted material-slot identities and visible garment
 coverage. All shape controls resolve; palettes/defaults are unchanged. The

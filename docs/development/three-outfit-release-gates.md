@@ -23,7 +23,7 @@ historical rehearsal and is not the stable release tag.
 | Peony palettes, removable pieces, flowing trim, profiles | User accepts four palettes, flow in CSS/world and restored profiles | Both-form and broader lifecycle coverage |
 | Peony excessive jiggle despite Firm/Natural | Restoration correction and tighter limits installed; user accepts walking/Iris Out motion, live limit readback passes | Other six Eve variants and lifecycle/performance regression |
 | Peony harsh lighting | User subsequently reports the unchanged build looks fine | No lighting fix established; monitor recurrence separately from sunlight report |
-| Older Eve tangent basis | All six original meshes retain UV/color/imported-normal correspondence but show widespread tangent alignment errors. Private ordered Black Pearl import/reload succeeds with fewer render vertices | Independent candidate basis and cooked preservation; six normal/facial assemblies with cloth/materials intact; shading and performance regression. Not yet installed or a proven sunlight-noise fix |
+| Older Eve tangent basis | All six regular/facial pairs now pass source, cook, cloth, customization and combined package preservation checks at permanent paths; source and native-material inputs are verified | Candidate not installed. Runtime shading/cloth/facial and performance regression remain; not a proven sunlight-noise fix |
 | Customize shows only Ground Height after form switch | Mirrored-selection fix installed; user accepts recovery | Preserve through remaining lifecycle checks |
 | First Stray summon produces no doubles | User confirms first-switch summon works after selection fix; live clone capture exists | Original cause was not isolated; do not claim a proven independent spawn fix |
 | Native Black Hole/Iris Out marked Unavailable | Native alternatives installed; user accepts both playing and interrupting | Full library contact, continuous playback and CINE validation |
@@ -78,18 +78,23 @@ does not invent new deferrals for the primary repairs or release gates.
 
 ## Immediate continuation
 
-The new [surface audit](../research/2026-10-14-eve-surface-tangents.md) identifies
-a concrete repair for the six older Eve imports. Continue the private Black Pearl
-corner-order candidate through basis/cooked validation before changing installed
-meshes. Keep this separate from the accepted Peony/CW motion and MISC workaround.
+The [combined surface candidate](../research/2026-10-14-eve-surface-tangents.md#combined-eve-package)
+now passes all twelve mesh-preservation checks, 1,545 catalog checks and the
+1,008-package/272-reference audit. Customization targets and the guarded
+installation plan pass. The [source/package chain](../research/2026-10-14-eve-source-package-chain.md)
+accounts for the repaired editor meshes and 273 older material/texture packages.
+No candidate assets are installed. Continue offline as requested; preserve the
+accepted Peony/CW motion and separate MISC workaround. Runtime checks and the
+full stable-release gates above remain open.
 
 All 46 parts across the six original Eve outfits now have passing editable-source
 comparisons linked to their accepted imports and installed geometry checks.
 Black Pearl's complete export also reproduces byte-for-byte. Recovered Alice,
 Planet and Skin Suit parts are explicitly marked as import-derived sources.
 See [source coverage](../research/2026-10-14-eve-six-source-coverage.md).
-Complete material/rig assembly, remaining cooked surface fields and live
-regression remain open; this source checkpoint does not require another install.
+The repaired mesh/material assembly and cooked surface checks now pass offline.
+Full rig/source provenance and live regression remain open; source verification
+does not require another install.
 
 The older Eve saved-graph input/update check now passes all 36 cases with each
 outfit's actual post-process graph, including Bikini/Knit feet graphs, and both

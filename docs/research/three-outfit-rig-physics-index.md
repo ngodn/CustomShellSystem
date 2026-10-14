@@ -1,5 +1,11 @@
 # Three-outfit rig and physics research index
 
+- October 14: [Eve source/package chain](2026-10-14-eve-source-package-chain.md)
+  connects twelve repaired editor meshes to their cooked payloads, restores
+  745 original material inputs and reproduces their migrations with the current
+  writer. Native cooked materials remain distinct from editor binding proxies.
+  Duplicate outputs removed; no game installation or runtime acceptance.
+
 - October 14: [customization and installation preflight](2026-10-14-eve-surface-tangents.md#customization-preservation-and-installation-plan)
   verifies twelve repaired meshes against accepted garment and shape targets,
   rejects 48 deliberate corruptions and passes 24 installer tests. The plan

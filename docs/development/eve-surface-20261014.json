@@ -1762,5 +1762,110 @@
       }
     ],
     "scope": "Accepted material slots, triangle coverage and control targets. Prepared installation only; no game or visual acceptance."
+  },
+  "source_package_chain": {
+    "passed_offline": true,
+    "installed": false,
+    "mesh_cook_chains": 12,
+    "material_packages": 273,
+    "recovered_original_files": 745,
+    "unique_original_header_bytes": 514512,
+    "current_writer_replayed_payloads": 745,
+    "retained_input_paths": 1408,
+    "receipts": [
+      {
+        "path": "build/eve-surface-package1/source-chain.json",
+        "sha256": "aa050681b7a703c230d3dcc556154efc7ba1bd7f3390f52322d1cd3680f93e30"
+      },
+      {
+        "path": "build/eve-surface-package1/source-chain-command.json",
+        "sha256": "2415e50bea8b763d655975a494c590a15c59d69185236f53cbd605fc2972ab62"
+      },
+      {
+        "path": "build/eve-surface-package1/source-chain-exit.json",
+        "sha256": "df4d721d233a2334088d2d2e0110346ae9e509ff46bf0b379fbcfa85c715af4d"
+      },
+      {
+        "path": "build/eve-surface-package1/source-chain.log",
+        "sha256": "f1bdbd7ea5a17ee730c80c3fec66bbf405cf5d1fc32f587d600fb655833b246c"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/plan.json",
+        "sha256": "8f73169409377c3b79e285abcdfee04034a31ed5d36b1a8995a435e9a42a217f"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/command.json",
+        "sha256": "71c0a6bc496f84bb8de9d8a7ad353835739b1ae5f265d9c4a8d3b6fbc1a14f7c"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/verified.json",
+        "sha256": "31e0e29c4752496c57b3b6f60c249e7b2e2c0550010143fcc674aa0cb86ed63c"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/cleanup-plan.json",
+        "sha256": "bffdf784d05b520b93538872726a9af7679ecb2138ec2505102325f9a03cc96c"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/plan.json",
+        "sha256": "24f030f023800444cef910e73fb68823a52b3d6d92a573c98743eb89e54f111d"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/verified.json",
+        "sha256": "c0d33998dd91f7b7084567f8ae23fa34ecdccbe7d84e830927d722f524c89899"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/cleanup-plan.json",
+        "sha256": "8f806566df960d0b848d13047a83a4302453241c2e6add4fa5ad99b978dfb298"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/eve-material-namespace1-request.json",
+        "sha256": "296e0769325901b0a08e574f28e2eece21eef7e59d4b576e47b61e332d607608"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/eve-material-namespace1-report.json",
+        "sha256": "237cb71f26f7712a8d18aede23c31707f12ab3b39ff8660c008c0f011ba9f5ff"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/eve-material-namespace1-exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/eve-texture-namespace2-request.json",
+        "sha256": "0e37a9703265ed510ba47ec332f2796f6262e01bc187b9f9bf28fc6cfc343c91"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/eve-texture-namespace2-report.json",
+        "sha256": "0a59ee942691a44818e0531b6ad79474a9526b52824c7851cd3d721f01c7cb7c"
+      },
+      {
+        "path": "build/eve-material-source-recovery1/replay/eve-texture-namespace2-exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "tools/diagnostics/audit_eve_surface_source_chain.py",
+        "sha256": "8d44e758ef73c7b8313cc137ae105647f0958102f15da010f237899c693764d6"
+      },
+      {
+        "path": "tools/diagnostics/recover_eve_material_sources.py",
+        "sha256": "d6296a46886c7ca12a7c6ce203cd95d32d16f214a98a258ee1fb5095dbd9ee77"
+      },
+      {
+        "path": "tools/diagnostics/replay_eve_material_sources.py",
+        "sha256": "5becb12719a9ac6458d30370f83b0dae184b4d24a41c8653dbdf74e3d9477b07"
+      },
+      {
+        "path": "docs/development/cleanup-2026-10-14-eve-material-source-recovery.md",
+        "sha256": "71e769bb3ee39a869b5d2f133b5094c9bfcf15d780402bc46e420f6a908a6162"
+      },
+      {
+        "path": "docs/development/cleanup-2026-10-14-eve-material-replay.md",
+        "sha256": "0d7a4e362e48b66217704eef5e97a4a285aced41719402079cce9128c4478b6c"
+      }
+    ],
+    "scope": "Twelve final editor meshes linked to successful cook and combined payloads; 272 original material/texture packages replayed from retained exports plus one authored hair parent with retained cook inputs. No fresh cook, live rendering, shader execution or full-release source-completeness claim."
   }
 }
