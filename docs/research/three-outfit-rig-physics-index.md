@@ -1,5 +1,10 @@
 # Three-outfit rig and physics research index
 
+- October 14: [Skin Suit/Bikini paired cook](2026-10-14-eve-surface-tangents.md#skin-suit-and-bikini-paired-cook)
+  preserves installed bindings and accepted source fields. A zero-length tangent
+  per mesh keeps overall quality checks failed; native isolated-triangle probes
+  reproduce it. No installation or change to accepted Peony/CW behavior.
+
 - October 14: [permanent Black Pearl paths](2026-10-14-eve-surface-tangents.md#permanent-black-pearl-paths)
   preserve the verified pair through editor save/reload, Windows cook and
   independent container readback. Explicit registry rescanning resolves the

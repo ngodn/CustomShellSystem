@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Skin Suit and Bikini paired cooks checked offline:** both repaired
+normal/facial assemblies preserve source geometry, weights, UVs, colors, morphs
+and existing installed bindings through reload/cook/readback. The overall
+quality check remains failed on one zero-length tangent per mesh. Isolated
+source triangles reproduce it in UE's own MikkTSpace library, separately from
+import/cooking; neither existing-corner tracing nor normal normalization clears
+it. See [paired evidence](../research/2026-10-14-eve-surface-tangents.md#skin-suit-and-bikini-paired-cook).
+No installation or launch request. Preserve the failed quality receipts; do not
+call these pairs accepted or the lighting report fixed. Final paths, three
+cloth-bearing outfit repairs and full release gates remain. Duplicate cook
+cleanup leaves root/theark at 94G/11G free; current sources and payloads remain.
+
 **October 14, Black Pearl permanent paths verified offline:** the repaired
 normal/facial pair is saved and cooked at the existing Eve paths. Fresh reload,
 IoStore roundtrip and independent decoded comparison preserve the verified

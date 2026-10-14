@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 14, Skin Suit/Bikini offline progress:** paired cook/readback preserves
+geometry, skin, surface fields, 22/137 morphs and current bindings. Both fail the
+strict tangent-length gate at one foot-area vertex; isolated native MikkTSpace
+probes reproduce the source-triangle issue. This is not gameplay acceptance.
+See [evidence and failed checks](../research/2026-10-14-eve-surface-tangents.md#skin-suit-and-bikini-paired-cook).
+Nothing installed. Continue offline; permanent paths, cloth-bearing repairs and
+the full release checks remain.
+
 **October 14, permanent Black Pearl paths checked:** final source meshes and
 Windows payloads now use the existing normal/facial names. Their independent
 decoded data matches the verified repaired pair exactly, including packed basis

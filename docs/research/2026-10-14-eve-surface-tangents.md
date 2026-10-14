@@ -163,6 +163,10 @@ receipts include `bindings-{create,reload}.json`, `binding-cook/exit.json` and
 
 ## Next required work
 
+Skin Suit and Bikini have since reached paired cooked preservation, but fail
+the strict tangent-length check described below. Resolve or explicitly assess
+that small residual defect before promoting either pair to final paths.
+
 1. Assemble the verified permanent-path Black Pearl payloads into Eve's final
    container with the remaining repairs. Carry the correction through the other
    five original normal/facial assemblies, preserving materials, cloth,
@@ -171,6 +175,64 @@ receipts include `bindings-{create,reload}.json`, `binding-cook/exit.json` and
    frame is repaired or change accepted UVs merely to clear this diagnostic.
 3. Validate shading, motion and actual performance before replacing accepted
    installed assets. Retain rollback and the accepted Peony/CW behavior.
+
+## Skin Suit and Bikini paired cook
+
+Both ordered candidates now pass fresh editor import/reload, Windows cook,
+IoStore roundtrip and independent source geometry, skin, UV, color, imported
+normal and morph comparisons. Their bound normal/facial pairs repeat these
+checks and preserve the current installed material/rig references, non-morph
+properties, respective bounds and raw bind pose. The normal and facial render
+digests agree; all 22 original morphs survive and the facial mesh has 137.
+
+| Outfit | Render vertices | Triangles | Material slots | Sections |
+| --- | --- | --- | --- | --- |
+| Skin Suit | 122,596 | 153,507 | 24 | 23 |
+| Bikini | 142,353 | 200,619 | 32 | 32 |
+
+Both pairs have zero unexpected nonorthogonal frames and 284 known collapsed-UV
+unit-X fallbacks per mesh. However, each also has one zero-length tangent. The
+overall `binding-pack/assembly-verified.json` deliberately records `passed:false`
+and exits 1, while `bindings_and_base_render_preserved:true` records the checks
+that did pass. The tangent gate has not been weakened.
+
+The remaining zero is not the old installed zero at the same source corner:
+the exact installed-corner comparison fails for both. Bikini's vertex is in
+`heel-1`, at approximately (-23.8883, -2.98826, 0.990429) cm. Skin Suit's is in
+`SkinToenailLining`, at (22.88835, -2.96447, 6.280544) cm. These are separate
+foot-area defects, not the same vertex. Their trace reports remain failed.
+
+`probe_eve_mikk_zero.py` links a small C17 probe against the unmodified MikkTSpace
+archive bundled with the installed UE 5.6.1 editor. It reproduces zero tangents
+from the exact source triangles without UE import or cooking. Skin Suit has one
+matching triangle, Bikini two opposite windings. Both degenerate-processing
+settings reproduce the zeros. Normalizing the supplied normals in float32 or
+float64 also leaves them zero. These results isolate a tangent-generator edge
+case for these triangles; they do not prove its full numerical cause, a fix,
+visible severity or the cause of the sunlight noise report. The upstream
+[MikkTSpace interface](https://github.com/mmikk/MikkTSpace/blob/master/mikktspace.h)
+describes unit tangent output, but the local probes establish this exception.
+
+Artifacts live under `skinsuit-ordered` and `bikini-ordered`. Key receipts are
+`verified.json`, `pack/verified.json`, `bindings-{create,reload}.json`,
+`binding-cook/exit.json`, `binding-pack/readbacks-verified.json`, the failed
+`binding-pack/assembly-verified.json`, and `mikk-zero-probe/result.json`.
+The diagnostic commands use the existing Python 3.14/UE 5.6.1 pipeline; the
+standalone C probe was compiled as C17 with GCC 16.2.1.
+
+The first Bikini binding invocation failed because the staging loop overwrote
+the variant name with an asset filename. The corrected script uses a separate
+variable. Both original plans and Bikini's failed command/log/exit remain under
+`binding-plan-name-recovery`; the corrected pair passes separate create/reload
+processes. Its wrongly named mesh has been inventoried and removed. Skin Suit's
+plan was corrected before running its binding command. Earlier Black Pearl
+recipes and their hashes were left intact.
+
+Only the two new meshes enter each private test container. Existing dependencies
+remain byte-identical, and editor staging uses absolute links instead of extra
+copies. Nothing is installed. Permanent paths, full Eve assembly, the three
+cloth-bearing outfits and existing live/performance/release gates remain.
+Cleanup follows [the prewritten list](../development/cleanup-2026-10-14-eve-surface-pairs.md).
 
 ## Permanent Black Pearl paths
 
