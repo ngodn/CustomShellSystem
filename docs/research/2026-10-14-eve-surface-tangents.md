@@ -322,6 +322,77 @@ build options, and runtime Skin Cache tangent recomputation as another path.
 [Build options](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/FSkeletalMeshBuildSettings?application_version=5.6),
 [rendering paths](https://dev.epicgames.com/documentation/en-us/unreal-engine/skeletal-mesh-rendering-paths-in-unreal-engine?application_version=5.6).
 
+## Explicit tangent storage trial
+
+The next private trial is under `eve-surface-20261014/tangent-bake`. The native
+UE 5.6.1 commandlet matches source triangles to the already verified ordered
+render data by material, source point IDs, winding, positions, normals and all
+UV channels. It copies valid render tangents into the source mesh description,
+repairs the single zero corner, and disables tangent recomputation on the
+duplicate. Geometry, UVs, weights, morphs and accepted sources are not edited.
+The cooked checks must allow only that build flag and the formerly zero basis
+to change. This does not change the game's runtime Skin Cache settings.
+
+Attempt 1 saved and freshly reloaded all four meshes with valid tangent lengths,
+but is rejected. Its fallback used the mesh description's existing tangent and
+sign. For Bikini, the fallback's dot product with the independently calculated
+triangle UV tangent is only 0.37895. Skin Suit's direction agrees, but its sign
+does not agree with the valid render triangle neighbors. Length checks alone
+would have missed both problems. See `rejected-v1-gradient-comparison.json`,
+the attempt 1 create/reload receipts, and the archived module/source under
+`previous-builds/1`.
+
+Attempt 2 derives the replacement from triangle positions and UV0 in double
+precision, projects it onto the source normal, and requires consistent
+handedness from the valid corners of the same render triangle. It rejects
+collapsed UVs, an invalid direction or ambiguous neighbor signs. The remaining
+valid tangent values are copied unchanged. The independent cooked comparator
+requires exact preservation of every previously valid packed basis, the same
+repaired corner locations, a direction matching the UV gradient within packed
+precision, and matching neighbor signs. Comparing the unchanged broken mesh
+against itself correctly fails (`reject-unchanged-zero.json`).
+
+Attempt 2's four editor saves/reloads and Windows cook completed. The first
+packaged Skin Suit comparison passes geometry, weights, morphs, UVs, colors,
+normals and the strict tangent comparison. There are zero new tangent errors;
+every previously valid packed basis remains byte-identical. The replacement
+direction differs from the independent packed-input gradient by 0.002594.
+However, the assembly check fails: rebuilding reset the normal mesh's imported
+sphere radius from 105.62397 to 92.85891. The decoded Bikini normal similarly
+changed from 110.09827 to 97.380066. Box centers/extents and both facial mesh
+bounds remain unchanged. `bounds-failure/result.json` retains the failure;
+`pack/meshes.json` records all four decoded assets. No acceptance is inferred
+for unchecked meshes from the first passing tangent check.
+
+The commandlet now restores the source's imported bounds after rebuilding.
+Only the two regular meshes need another save/reload (attempt 3); facial
+sources remain at attempt 2. The matching cook/readback commands use
+`--bounds-repaired` and separate `cook3`/`pack3` output folders.
+
+The corrected four-mesh cook, IoStore roundtrip and independent readback now
+pass (`pack3/verified.json`). Each mesh has zero zero-length tangents, and every
+previously valid packed tangent/handedness value remains identical. The repaired
+direction errors are 0.002594 for Skin Suit and 0.005334 for Bikini against the
+independent gradient calculated using packed normals. Both are below the 0.02
+comparison bound. Geometry, weights, all UVs, colors, normals, material slots,
+rig references, reference transforms, respective imported bounds and all morphs
+are preserved. The sole intended non-morph property change is
+`bRecomputeTangents: true -> false`, to retain the verified explicit tangents.
+
+| Pair | Render vertices per mesh | Triangles per mesh | Regular/facial morphs |
+| --- | ---: | ---: | ---: |
+| Skin Suit | 122,596 | 153,507 | 22 / 137 |
+| Bikini | 142,353 | 200,619 | 22 / 137 |
+
+All four retain 284 known unit-X fallbacks on collapsed UV0 triangles, with
+zero unexpected nonorthogonal vertices and unit lengths within the packed
+precision bound. Those fallbacks remain a shading limitation. This is an
+offline preservation result, not rendered acceptance or proof of the cause of
+Vistani's report. Permanent paths, full Eve packaging, the three cloth-bearing
+repairs and gameplay/performance/release checks remain. No installation or
+launch request. The prewritten removal list is
+[tangent bake cleanup](../development/cleanup-2026-10-14-eve-tangent-bake.md).
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six

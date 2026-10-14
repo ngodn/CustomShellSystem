@@ -499,5 +499,233 @@
       "path": "tools/diagnostics/mikk_triangle_probe.c",
       "sha256": "4e56b360fa092d68c20c883a26af7d7e6724e9c7f358b9a1adb15c848e75bd36"
     }
-  ]
+  ],
+  "explicit_tangent_bake": {
+    "private_cooked_validation_passed": true,
+    "installed": false,
+    "permanent_paths_verified": false,
+    "remaining_known_collapsed_uv_fallbacks_per_mesh": 284,
+    "unexpected_nonorthogonal_vertices_per_mesh": 0,
+    "previous_valid_packed_basis_unchanged": true,
+    "original_bounds_and_assemblies_preserved": true,
+    "editor_proofs": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/skinsuit-normal-3-verified.json",
+        "sha256": "f2779bfe452daec3a03b5ca870b4eb77d414e6cd233c18e6d6c7c49e24649862"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/skinsuit-facial-2-verified.json",
+        "sha256": "7052fcdbd607eaff914d311fb787ead69c235d3ec969b52da6b8062eb59471ef"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/bikini-normal-3-verified.json",
+        "sha256": "76d9af9476e8ec9efff53598ea6ccb797d73018c560117e558c2c9ee22168e5e"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/bikini-facial-2-verified.json",
+        "sha256": "6cd2b4507ad083c3b3e3127118b601394bb9ac6de27804998cd82789b268e2ff"
+      }
+    ],
+    "editor_sources": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/editor/Content/CSSAuthoring/EveSurface20261014/SK_SkinSuitNormalTangentBaked3.uasset",
+        "sha256": "ee9d50a6da13e09b40979e24cbe8ae1b0d1570c75ee7584210dfd7a23b6cb391"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/editor/Content/CSSAuthoring/EveSurface20261014/SK_SkinSuitFaceTangentBaked2.uasset",
+        "sha256": "9e114fae8cc29da83dd1ace63e961e84ea64c9ed8756dadbc4a81f573faa3cfe"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/editor/Content/CSSAuthoring/EveSurface20261014/SK_BikiniNormalTangentBaked3.uasset",
+        "sha256": "2144f35c4ddd4ee8b4097c8a829a3140c6a01f03b5333a978cbd63a2285a4e53"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/editor/Content/CSSAuthoring/EveSurface20261014/SK_BikiniFaceTangentBaked2.uasset",
+        "sha256": "5c59e9a0cd4e78c314c26c546037798bd6ad28a9f77fb11207e03e9fcd4126c9"
+      }
+    ],
+    "receipts": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/build-exit.json",
+        "sha256": "0f9308d43e4d858e95472525c0f1d3c3a5bd2acbd9b94e5861ee23b9bd44a262"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/module.json",
+        "sha256": "ea53059673a07c0730345a85ba0469e43df1412721cc9b2c4cf5ab969bab8e38"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/cook3/exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/pack3/verified.json",
+        "sha256": "a99d5448632b5387ac91ab969c0dce5872bb4a4d42edd662197dafbecc5fd31f"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/pack3/roundtrip.json",
+        "sha256": "0724df17de77b991090804d118852131ae35dfbdf3e8c13dfe9b451e06bf8212"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/reject-unchanged-zero.json",
+        "sha256": "1c2f0b952a9f18217faec7cd543126152c02b810ea1055ac8eeefcda9cd724ec"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/rejected-v1-gradient-comparison.json",
+        "sha256": "292d67fcb9b2e68b6865e5439a7b0ac6182851af232520d38e83ea2edaf190f1"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/bounds-failure/result.json",
+        "sha256": "a6e1a6f5f33b19b76662243aaa6b021cba8963f90b052bdc898c647a31fef6ee"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/pack/meshes.json",
+        "sha256": "739e0a8f3577b4e2349d133678183dc2abc8826a2541783dbe32cd5c9561f026"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/pack/skinsuit-normal/basis.json",
+        "sha256": "2f5023a89a74806660536f6293479470966dfbd3b2a75a056d8ec65e6720ed27"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/rejected-cleanup-completed.json",
+        "sha256": "930c10911c940df13ccfd4b419da3faf3b0bf8be53518d5640afc0b73963820d"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/cook-prefix-cleanup-completed.json",
+        "sha256": "e34be24686f7d0778eb5a3254a38f1040c0c56536ee4018ad255032d6f3c55d7"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/cleanup-completed.json",
+        "sha256": "953e2725605b8de33577492936f9c6ce3c4d83666c4a901fdd5387b80b754d8d"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/cache-cleanup-completed.json",
+        "sha256": "17b64e6eb04e744429c4ce5b3102a18752e52ecb88e469b0c4b3b4bcbd618796"
+      }
+    ],
+    "recipes": [
+      {
+        "path": "tools/authoring/tangent-bake/CSSAuthoring.Build.cs",
+        "sha256": "14e08112b42fb7a0b3bae95cda347c3093624bb0852d785876ca207a685c98db"
+      },
+      {
+        "path": "tools/authoring/tangent-bake/CSSTangentBakeCommandlet.cpp",
+        "sha256": "7c4c2a1d2f7d9f1cfff13091d3131d40ae494e50b3c66eb7ace18df199d70e73"
+      },
+      {
+        "path": "tools/authoring/tangent-bake/CSSTangentBakeCommandlet.h",
+        "sha256": "81a4b7b577ab079e99054290b45dd49aa8ccb6ac62547d32cd351c52c821473d"
+      },
+      {
+        "path": "tools/diagnostics/build_eve_tangent_bake.py",
+        "sha256": "9b4b465cbc3a7a86a7d20b1eb232ab39db14c189ec14bd708fa69db078ebb843"
+      },
+      {
+        "path": "tools/diagnostics/check_eve_tangent_bake.py",
+        "sha256": "78b3e9a135115567c912695b019fc38834123ab5bdbfb4b0c555a1d24d35f3ff"
+      },
+      {
+        "path": "tools/diagnostics/cleanup_eve_tangent_bake.py",
+        "sha256": "8b66038a85fd1681c48e636a3e3f7d81dd4cfe8248a74476047528fd9b7f8f84"
+      },
+      {
+        "path": "tools/diagnostics/compare_eve_tangent_bake.py",
+        "sha256": "4fc46844dd0332fa4d84e910a0950f0f2feee3c2fac7eec34f0acda15459afaa"
+      },
+      {
+        "path": "tools/diagnostics/cook_eve_tangent_bake.py",
+        "sha256": "e42de3ba00a9bbb4bd16663e9b307c278c518e4f198db8c6f19586e4006b5654"
+      },
+      {
+        "path": "tools/diagnostics/run_eve_tangent_bake.py",
+        "sha256": "1fcce0af3a4b893520e805d66cd3e061d4db64fa236986f40c90b509ecf1b36b"
+      }
+    ],
+    "archived_failed_recipe_files": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/Binaries/Linux/UnrealEditor.modules",
+        "sha256": "f3ca283c6539b5fe139fffbe760ce2815060fc9d72bcfc29fbd7d69623ff6ae1"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/Binaries/Linux/libUnrealEditor-CSSAuthoring.so",
+        "sha256": "852911469daebbd0d5ed9799deb97c4f2d33870ef6cab883194ddc30eb659355"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/Source/CSSAuthoring/CSSAuthoring.Build.cs",
+        "sha256": "14e08112b42fb7a0b3bae95cda347c3093624bb0852d785876ca207a685c98db"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/Source/CSSAuthoring/CSSTangentBakeCommandlet.cpp",
+        "sha256": "d13e962f951f676e17fa0266d55f9738b4fe9a349a297abe9787ed1890004608"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/Source/CSSAuthoring/CSSTangentBakeCommandlet.h",
+        "sha256": "81a4b7b577ab079e99054290b45dd49aa8ccb6ac62547d32cd351c52c821473d"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/Source/CSSAuthoringEditor.Target.cs",
+        "sha256": "9b00d96dfc320602b93e2a671f90ff92d5c9e6b0dee371e84c0c7b605264c542"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/build-exit.json",
+        "sha256": "bf8895f986a38f287b9bb943f77d59460b8993c7997ee11174247d0768a12a83"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/build-inputs.json",
+        "sha256": "1c7bd855c5c143f9d8a7b2d644f9740027d4b2082909c33fc3a9ddc9c3918713"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/1/module.json",
+        "sha256": "45545dec82afd203a7ffd1dba868bbbf1c83bbe28991a0ab4d513617af59148b"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/Binaries/Linux/UnrealEditor.modules",
+        "sha256": "f3ca283c6539b5fe139fffbe760ce2815060fc9d72bcfc29fbd7d69623ff6ae1"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/Binaries/Linux/libUnrealEditor-CSSAuthoring.so",
+        "sha256": "0e37c808500eed895324877fabc64add72bd34935954442b717e9a5884dcaa14"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/Source/CSSAuthoring/CSSAuthoring.Build.cs",
+        "sha256": "14e08112b42fb7a0b3bae95cda347c3093624bb0852d785876ca207a685c98db"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/Source/CSSAuthoring/CSSTangentBakeCommandlet.cpp",
+        "sha256": "48f7cc542fe3b661ca4c47bdb399e0cc1b08d0822de787d52438d79f3283a678"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/Source/CSSAuthoring/CSSTangentBakeCommandlet.h",
+        "sha256": "81a4b7b577ab079e99054290b45dd49aa8ccb6ac62547d32cd351c52c821473d"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/Source/CSSAuthoringEditor.Target.cs",
+        "sha256": "9b00d96dfc320602b93e2a671f90ff92d5c9e6b0dee371e84c0c7b605264c542"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/build-exit.json",
+        "sha256": "637f581276e221e5c9bd0bed303a0c88779f62605c09bc3df991bb84ab42ac8b"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/build-inputs.json",
+        "sha256": "c25c260b112bfb654df5ace7c017da7a644b58ddb9a09ee69ad84269b17cc17b"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/previous-builds/2/module.json",
+        "sha256": "a474bda46a59f57b4dee1cfa56cf4a0542574a1bfa3ecdee2dbdbd8d38263935"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/bounds-failure/check_eve_tangent_bake.py",
+        "sha256": "03cf8c7fa131c8527e8b5c60bd0f61b70a0e28634a8a690abf7f6dbe4d1ef565"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/bounds-failure/cook_eve_tangent_bake.py",
+        "sha256": "bae8294fb5f656c349ad96a305a1982427db862c6186283dd6eea323ba256426"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/bounds-failure/result.json",
+        "sha256": "a6e1a6f5f33b19b76662243aaa6b021cba8963f90b052bdc898c647a31fef6ee"
+      }
+    ],
+    "scope": "Skin Suit/Bikini regular and facial private meshes only. Final paths, three cloth-bearing repairs, combined packaging and full live/performance/release gates remain."
+  }
 }

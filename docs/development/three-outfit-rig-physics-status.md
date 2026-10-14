@@ -1,5 +1,15 @@
 # Three-outfit implementation status
 
+**October 14, Skin Suit/Bikini tangent bake passes offline:** the four regular/
+facial meshes retain all previously valid packed basis values and repair the
+single zero corner on each. Reload, Windows cook, container roundtrip, full
+source/morph comparisons and existing assembly/bounds preservation pass.
+Known collapsed-UV fallbacks remain. The first fallback and reset bounds were
+rejected and corrected, not waived. See
+[evidence](../research/2026-10-14-eve-surface-tangents.md#explicit-tangent-storage-trial).
+No installation. Next: permanent paths for these pairs, three cloth-bearing
+repairs and combined packaging; existing live/performance/release gates remain.
+
 **October 14, Skin Suit/Bikini offline progress:** paired cook/readback preserves
 geometry, skin, surface fields, 22/137 morphs and current bindings. Both fail the
 strict tangent-length gate at one foot-area vertex; isolated native MikkTSpace

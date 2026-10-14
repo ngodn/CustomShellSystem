@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Skin Suit/Bikini zero tangents repaired offline:** all four private
+regular/facial meshes now pass fresh reload, Windows cook, IoStore roundtrip
+and independent preservation checks. Every previously valid packed tangent is
+unchanged; geometry, weights, morphs, materials, rig references and original
+bounds are preserved. A rejected fallback direction and a rebuild-induced
+bounds change were caught and corrected, with failed evidence retained.
+See [explicit tangent storage](../research/2026-10-14-eve-surface-tangents.md#explicit-tangent-storage-trial).
+The 284 existing collapsed-UV fallbacks per mesh remain a shading limitation.
+Nothing installed; continue offline. Permanent paths for these pairs, the three
+cloth-bearing repairs, combined packaging and the full runtime/performance/
+release gates remain. Cleanup leaves root/theark at 94G/9.4G free.
+
 **October 14, Skin Suit and Bikini paired cooks checked offline:** both repaired
 normal/facial assemblies preserve source geometry, weights, UVs, colors, morphs
 and existing installed bindings through reload/cook/readback. The overall

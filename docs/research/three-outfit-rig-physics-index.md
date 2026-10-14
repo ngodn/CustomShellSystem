@@ -1,5 +1,12 @@
 # Three-outfit rig and physics research index
 
+- October 14: [explicit Skin Suit/Bikini tangent storage](2026-10-14-eve-surface-tangents.md#explicit-tangent-storage-trial)
+  repairs the zero corners while preserving every previously valid packed
+  tangent. All four regular/facial meshes pass reload/cook/package/readback and
+  source, morph, binding and original-bound checks. Known collapsed-UV fallbacks
+  remain. Private candidates only; permanent paths, cloth repairs and full
+  release checks remain. Nothing installed.
+
 - October 14: [Skin Suit/Bikini paired cook](2026-10-14-eve-surface-tangents.md#skin-suit-and-bikini-paired-cook)
   preserves installed bindings and accepted source fields. A zero-length tangent
   per mesh keeps overall quality checks failed; native isolated-triangle probes
