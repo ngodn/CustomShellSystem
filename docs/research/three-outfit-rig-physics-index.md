@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Outfit frame-cap capture](2026-10-15-outfit-frame-caps.md): running ten-variant extension of the native-cap fixture, with actual secondary-rig owners, counters and bounded state. Read-only preflight and five corruption controls pass; the live matrix is not yet complete.
+
 - [Twenty outfit combo interruptions](2026-10-15-outfit-combo-interruption.md): native two-hit Axatana axe chains interrupt both facial clips on all ten release variants in Stray, with 863 raw active-ability observations, five negative controls and complete restoration.
 
 - [Combo diagnostic timing](2026-10-15-combo-preflight.md): retains two failed Peony attempts and their complete restoration. Live input-block timing explains the failures; the corrected fixture waits for the block to clear and verifies actual B1-to-B2 progression.

@@ -1,5 +1,11 @@
 # Three-outfit implementation status
 
+**October 15, outfit frame-cap matrix running:** all ten release variants are
+queued for the established 30/60/original-cap recordings with live secondary-rig
+boundary reads. Peony's read-only rig preflight and five corrupted-record
+controls pass. The live matrix has not completed or earned final acceptance.
+[Method and evidence](../research/2026-10-15-outfit-frame-caps.md).
+
 **October 15, twenty Stray combo interruptions pass:** all ten release variants
 complete an actual B1-to-B2 Axatana axe chain while interrupting Iris Out and
 Come Closer. Raw native history and 863 active-ability observations verify both

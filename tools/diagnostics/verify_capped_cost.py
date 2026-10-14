@@ -41,10 +41,34 @@ def verify_capture(capture):
     assert math.isclose(summary['engine_tick_rate_hz'], 1000 / statistics.fmean(columns['interval_ms']))
 
 
-def verify_case(case, flags):
+def verify_secondary_rigs(before, after):
+    assert finite(before) and finite(after)
+    assert before['post'] == after['post'] and before['component'] == after['component']
+    assert len(before['rigs']) == len(after['rigs'])
+    measured = 0
+    for old, new in zip(before['rigs'], after['rigs']):
+        assert old['node'] == new['node'] and old['object'] == new['object']
+        a, b = old['values'], new['values']
+        assert a.keys() == b.keys()
+        for key in ('Enabled', 'ResetCount', 'Limits', 'MaxTravel'):
+            if key in a:
+                assert a[key] == b[key], key
+        if 'TotalSteps' in a and a.get('Enabled', True):
+            assert b['TotalSteps'] > a['TotalSteps'], old['object']['class']
+            measured += 1
+        if 'SeenUpdate' in a and a.get('Enabled', True):
+            assert b['SeenUpdate'] > a['SeenUpdate']
+    assert measured > 0
+
+
+def verify_case(case, flags, observer='eve_body'):
     assert case['passed'] and case['returncode'] == 0
     assert case['before'] == case['after'] == flags
     before, after = case['rig_before'], case['rig_after']
+    if observer == 'secondary_rigs':
+        verify_secondary_rigs(before, after)
+        return
+    assert observer == 'eve_body'
     assert finite(before) and finite(after)
     assert before['public'] == after['public']
     for key in before['public']:
@@ -59,7 +83,9 @@ def verify_case(case, flags):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)
-    root = parser.parse_args().directory.resolve()
+    parser.add_argument('--check-only', action='store_true')
+    args = parser.parse_args()
+    root = args.directory.resolve()
     report = read(root / 'result.json')
     assert report['passed'] and report['captures_complete']
     assert not report.get('error') and not report.get('restore_error')
@@ -80,7 +106,7 @@ def main():
     assert [r['args']['NewLimitFPS'] for r in calls if r['function'] == 'SetFrameRateLimit_Always'] == [30., 60., 999., 999.]
     summaries = []
     for case in report['cases']:
-        verify_case(case, report['flags_before'])
+        verify_case(case, report['flags_before'], report.get('rig_observer', 'eve_body'))
         folder = root / ('cap-' + str(int(case['cap'])))
         run = read(folder / 'result.json')
         assert case['capture'] == run and run['passed'] and len(run['samples']) == 3
@@ -100,19 +126,28 @@ def main():
         case = copy.deepcopy(report['cases'][0])
         if label == 'changed priority':
             case['after']['flags'] ^= 0x01000000
+        elif report.get('rig_observer') == 'secondary_rigs':
+            old = next(r for r in case['rig_before']['rigs']
+                       if 'TotalSteps' in r['values'] and r['values'].get('Enabled', True))
+            new = next(r for r in case['rig_after']['rigs'] if r['node'] == old['node'])
+            if label == 'stalled rig':
+                new['values']['TotalSteps'] = old['values']['TotalSteps']
+            else:
+                new['values']['TotalSteps'] = float('nan')
         elif label == 'stalled rig':
             case['rig_after']['rig']['TotalSteps'] = case['rig_before']['rig']['TotalSteps']
         else:
             case['rig_after']['rig']['StepSeconds'] = float('nan')
         try:
-            verify_case(case, report['flags_before'])
+            verify_case(case, report['flags_before'], report.get('rig_observer', 'eve_body'))
         except AssertionError:
             rejected.append(label)
     assert len(rejected) == 3
     result = dict(passed=True, captures=len(summaries), frames=sum(s['frames'] for s in summaries),
                   rejected_controls=rejected, summaries=summaries,
-                  scope='Archive verification of capped stationary Peony, not a baseline comparison or GPU measurement.')
-    (root / 'verified.json').write_text(json.dumps(result, indent=2) + '\n')
+                  scope='Archive verification of capped stationary outfit, not a baseline comparison or GPU measurement.')
+    if not args.check_only:
+        (root / 'verified.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps({k: v for k, v in result.items() if k != 'summaries'}))
 
 

@@ -1,4 +1,4 @@
-"""Capture Peony at native game frame caps, preserving console priority and settings."""
+"""Capture one outfit at native frame caps, preserving console priority and settings."""
 import argparse
 import json
 import math
@@ -12,21 +12,27 @@ from capture_eve_surface_variant import ROOT, describe, identity, processes, sha
 from check_peony_live_presets import engine, sample, request, GAME
 from check_sidearm_aim_visibility import MOD, geometry_restored
 from read_frame_cap_flags import FrameCapFlags
+from sample_secondary_rigs import sample_secondary_rigs
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--outfit', default='eins0fx.seduxtress')
+    parser.add_argument('--variant', default='peony')
+    parser.add_argument('--all-rigs', action='store_true')
     args = parser.parse_args()
     out = args.output.resolve()
     pids = processes()
     if out.exists() or len(pids) != 1:
         raise RuntimeError('Need one running game and a new output directory')
     original = describe()
-    if original['busy'] or original['outfit'] != 'eins0fx.seduxtress' or original['variant'] != 'peony':
-        raise RuntimeError('Expected settled Peony')
+    if original['busy'] or (original['outfit'], original['variant']) != (args.outfit, args.variant):
+        raise RuntimeError('Expected settled requested outfit')
+    sample_rigs = sample_secondary_rigs if args.all_rigs else sample
     out.mkdir(parents=True)
-    for name in ('capture_capped_cost.py', 'capture_stationary_cost.py', 'read_frame_cap_flags.py'):
+    for name in ('capture_capped_cost.py', 'capture_stationary_cost.py', 'read_frame_cap_flags.py',
+                 'sample_secondary_rigs.py'):
         shutil.copyfile(ROOT / 'tools/diagnostics' / name, out / name)
     flags = FrameCapFlags(pids[0])
     before = json.loads((MOD / 'state/state.json').read_text())
@@ -104,7 +110,8 @@ def main():
     report = dict(passed=False, player=player, original=original, original_cap=original_cap,
                   flags_before=flags.initial, geometry_before=baseline, cvars_before=original_cvars,
                   settings_file=str(settings_path), settings_sha256=settings_sha, cases=[],
-                  gameplay_input=False, raw_memory_writes=False)
+                  gameplay_input=False, raw_memory_writes=False,
+                  rig_observer='secondary_rigs' if args.all_rigs else 'eve_body')
     atomic(out / 'state-before.json', before)
     atomic(out / 'result.json', report)
     try:
@@ -118,7 +125,7 @@ def main():
             call(settings, 'SetFrameRateLimit_Always', NewLimitFPS=cap)
             time.sleep(1)
             guard()
-            row['rig_before'] = sample()
+            row['rig_before'] = sample_rigs()
             folder = out / ('cap-' + str(int(cap)))
             command = [sys.executable, str(ROOT / 'tools/diagnostics/capture_stationary_cost.py'),
                        '--output', str(folder), '--seconds', '10', '--repeats', '3']
@@ -130,15 +137,18 @@ def main():
             run.check_returncode()
             guard()
             row['capture'] = json.loads((folder / 'result.json').read_text())
-            row['rig_after'] = sample()
+            row['rig_after'] = sample_rigs()
             row['after'] = flags.read()
             if not row['capture']['passed'] or not finite(row['rig_after']):
                 raise RuntimeError('Capture failed or body rig contains nonfinite values')
-            if row['rig_after']['rig']['TotalSteps'] <= row['rig_before']['rig']['TotalSteps']:
+            if args.all_rigs:
+                from verify_capped_cost import verify_secondary_rigs
+                verify_secondary_rigs(row['rig_before'], row['rig_after'])
+            elif row['rig_after']['rig']['TotalSteps'] <= row['rig_before']['rig']['TotalSteps']:
                 raise RuntimeError('Body rig stopped updating')
             row['passed'] = True
             atomic(out / 'result.json', report)
-            print(int(cap), 'cap: three captures and live body updates pass', flush=True)
+            print(int(cap), 'cap: three captures and live rig updates pass', flush=True)
         report['captures_complete'] = True
     except Exception as error:
         report['error'] = repr(error)

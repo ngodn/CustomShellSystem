@@ -1,5 +1,11 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, broader cap capture in progress:** the existing native-cap fixture
+now runs across all ten release variants, with additional live hair/body/other
+rig counter reads. The read-only preflight and five corruption controls pass.
+The live matrix is still running, so full capture/restoration acceptance is not
+yet claimed. [Method and evidence](../research/2026-10-15-outfit-frame-caps.md).
+
 **October 15, twenty Stray combo interruptions pass:** actual two-hit Axatana
 axe chains interrupt Iris Out and Come Closer across all ten release variants.
 Raw native records verify both stages in every case, with 863 active-ability
