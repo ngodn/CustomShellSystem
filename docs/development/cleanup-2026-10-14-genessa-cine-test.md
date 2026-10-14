@@ -16,3 +16,7 @@ evidence remain in the three `genessa-cine-takes-20261014*` folders. No heavy
 intermediates were generated or removed. Afterward `df -h` reports root 91G and
 theark 66G available; rounded shared-drive totals do not measure this test's
 individual disk use.
+
+The later `genessa-cine-interrupt-20261014*` control uses the same temporary
+preset and hash-checked removal. Both attempts restored saved states and removed
+the installed fixture. Their small evidence folders remain.

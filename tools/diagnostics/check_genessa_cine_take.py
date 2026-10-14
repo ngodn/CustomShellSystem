@@ -16,7 +16,11 @@ PRESET_ID = 'css-diagnostic-genessa-face-20261014'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--interrupt-at', type=float,
+                        help='Change Genessa variant at this clip time and require a real interruption')
     args = parser.parse_args()
+    if args.interrupt_at is not None and not 1 <= args.interrupt_at <= 10:
+        parser.error('--interrupt-at must be between 1 and 10 seconds')
     out = args.output.resolve()
     installed = CSSX/'extensions/eins0fx.cine/presets'/f'{PRESET_ID}.cine.json'
 
@@ -79,7 +83,8 @@ def main():
                   photos=[dict(name='Face', azimuth=15, distance=100, height=0, aim=-5, fov=30)])
     atomic(out/'preset.json', preset)
     report = dict(passed=False, original=original, process_before=pids, geometry_before=before_geometry,
-                  cases=[], movement_input=False, camera='Temporary CINE photo take', started_ns=time.time_ns())
+                  cases=[], movement_input=False, camera='Temporary CINE photo take', started_ns=time.time_ns(),
+                  interrupt_at=args.interrupt_at)
     target, expected = identity(original), original['customize']
     take_started = False
     installed_hash = None
@@ -102,19 +107,33 @@ def main():
             customize({'action': 'wear', 'outfit': target[1], 'variant': variant, 'persist': False})
             active = settled(target)
             expected = active['customize']
-            case = dict(variant=variant, samples=[], images=[], finished=False)
+            case = dict(variant=variant, samples=[], images=[], finished=False, interrupted=False)
             report['cases'].append(case)
             event('take')
             take_started = True
             started = time.monotonic()
-            shot_at = [3., 10., 14.]
+            shot_at = [3., 10., 14.] if args.interrupt_at is None else []
             own_token = None
+            switch_sent = False
             while time.monotonic()-started < 45:
                 guard()
                 m, p = model(), perf()
                 case['samples'].append(dict(elapsed=time.monotonic()-started, status=m['status'], error=m['error'], performance=p))
                 atomic(out/'result.json', report)
                 if m['error']:
+                    if switch_sent and m['error'].startswith('Performance interrupted: Appearance is changing'):
+                        # CINE reads this reason from its stopped token before restoring the saved idle.
+                        # The next RPC may already see that automatic idle's newer token.
+                        if p['token'] == own_token:
+                            assert not p['active'] and p['reason'] == 'Appearance is changing'
+                        else:
+                            assert p['token'] > own_token, 'Performance ownership moved backwards'
+                        before_switch = case['before_switch']
+                        assert before_switch['seconds'] < before_switch['duration']
+                        case['interruption_message'] = m['error']
+                        case['idle_resumed'] = p['token'] != own_token and p['active']
+                        case['interrupted'] = True
+                        break
                     raise RuntimeError(m['error'])
                 if p['active'] and p['id'] == 'css.eve.dance.irisout':
                     if own_token is None:
@@ -123,21 +142,38 @@ def main():
                         at = shot_at.pop(0)
                         css_capture.MEDIA = out
                         case['images'].append(str(css_capture.shot(f'{variant}-{at:g}')))
+                    if (p['token'] == own_token and args.interrupt_at is not None
+                            and not switch_sent and p['seconds'] >= args.interrupt_at):
+                        case['before_switch'] = p
+                        switched = 'genessa' if variant == 'eve' else 'eve'
+                        target = original['shell'], 'eins0fx.unholygenessa', switched
+                        customize({'action': 'wear', 'outfit': target[1], 'variant': switched, 'persist': False})
+                        active = settled(target)
+                        expected = active['customize']
+                        case['after_switch'] = active
+                        switch_sent = True
                 if m['status'].startswith('Take finished.') and time.monotonic()-started > 4:
                     case['finished'] = True
                     take_started = False
                     break
                 time.sleep(.35)
-            assert case['finished'], 'CINE take did not finish normally'
-            owned_samples = [s['performance'] for s in case['samples'] if s['performance']['token'] == own_token]
-            assert own_token is not None and max(s['seconds'] for s in owned_samples) > 16
-            assert any(not s['active'] for s in owned_samples), 'Natural clip end was not observed'
+            if args.interrupt_at is None:
+                assert case['finished'], 'CINE take did not finish normally'
+                owned_samples = [s['performance'] for s in case['samples'] if s['performance']['token'] == own_token]
+                assert own_token is not None and max(s['seconds'] for s in owned_samples) > 16
+                assert any(not s['active'] for s in owned_samples), 'Natural clip end was not observed'
+            else:
+                assert case['interrupted'], 'Appearance change did not report an interruption'
+                event('exit')
+                event('enter')
+                take_started = False
             case['token'] = own_token
             case['geometry_after'] = geometry()
             assert case['geometry_after'] == before_geometry, 'Player/view ownership changed'
             case['passed'] = True
             atomic(out/'result.json', report)
-            print(variant, 'CINE take and natural performance end pass', flush=True)
+            print(variant, 'CINE appearance interruption pass' if args.interrupt_at is not None
+                  else 'CINE take and natural performance end pass', flush=True)
     except Exception as error:
         report['error'] = repr(error)
         raise

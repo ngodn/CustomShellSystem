@@ -74,6 +74,29 @@ both-form doubles, lifecycle or performance gates.
 
 ## Earlier attempts and cleanup
 
+### Real interruption control
+
+The follow-up `--interrupt-at 2` fixture changes to the other Genessa variant
+during an owned Iris Out take. Both directions report
+`Performance interrupted: Appearance is changing` before the clip endpoint,
+then restore the player/view and full CSS/CINE saved state exactly. The source
+of CINE's message is `PerformanceTake::poll`: it reads the reason from its own
+inactive token. The completion fix therefore preserves real interruption
+reporting rather than merely suppressing all errors.
+
+Evidence: `work/three-outfit-rig-physics/genessa-cine-interrupt-20261014-2`.
+Both cases pass, with owned tokens 8 and 10. The Eve-to-Genessa case also observes
+the saved automatic idle restart with a newer token after CINE gives up ownership.
+The reverse case observes the original inactive token. Neither is a stuck take.
+
+The first interruption fixture incorrectly required the next RPC to still see
+the cancelled token. Its evidence in `genessa-cine-interrupt-20261014` instead
+shows CINE's correct interruption followed by a new automatic idle. Its camera
+and saved-state restoration passed. The corrected fixture accepts that ownership
+handoff only after the specific interruption message, while still requiring an
+active owned clip before the intentional appearance change. No core change was
+needed. This control tests appearance changes, not movement/attack interruption.
+
 `genessa-cine-takes-20261014-2` retains the reproducible pre-fix failure: token 25
 stopped at the exact endpoint with `Appearance mesh is changing`. Its recovery
 restored Peony and both saved states exactly and removed the temporary preset.
