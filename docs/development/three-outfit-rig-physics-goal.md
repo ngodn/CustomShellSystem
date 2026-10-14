@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Alice private pair verified offline:** ordered source, import,
+fresh reload, tangent repair, cloth transfer and paired Windows cook/readback
+pass. Normal/facial bindings, 22/137 morphs, original simulation/configs and all
+1,224 garment triangles are preserved. Both meshes share matching render/cloth
+mapping digests. The 284 known collapsed-UV fallbacks remain.
+See [Alice evidence](../research/2026-10-14-eve-surface-tangents.md#alice-cloth-repair).
+New cook scratch is on root through scoped links, keeping the relocated work
+path intact. Cleanup immediately reports root/theark 92G/4.9G free.
+No installation or launch request. Alice's permanent paths,
+combined Eve integration and all full-goal live/performance/release gates remain.
+
 **October 14, Knitwear permanent paths verified offline:**
 both regular/facial meshes now use their existing release paths. Fresh reload,
 Windows cook and independent IoStore readback preserve the verified private

@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, Alice private pair verified offline:** source-preserving import,
+tangent bake, cloth transfer, fresh reload and paired Windows cook/readback pass
+with 161,517 vertices, 220,611 triangles and 22/137 morphs. Original cloth/configs
+and all 1,224 garment triangles remain; regular/facial render/mapping digests match.
+See [Alice evidence](../research/2026-10-14-eve-surface-tangents.md#alice-cloth-repair).
+New disposable cook files use root scratch with the work paths linked back.
+Cleanup immediately reports root/theark 92G/4.9G. No installation; Alice final
+paths, combined Eve packaging and full runtime/release gates remain.
+
 **October 14, Knitwear permanent paths pass offline:**
 regular/facial sources preserve all 28 sections, cloth data and 22/137 morphs
 through reload, cook and independent readback. The finished pair matches the

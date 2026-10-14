@@ -660,6 +660,92 @@ Use the current shared metadata that includes accepted CW walking support;
 reusing the older Peony baseline would risk discarding later changes. Final
 packaging remains pending Knitwear/Alice and full-goal release gates.
 
+## Alice cloth repair
+
+The accepted input is `work/eve26/alice-import4/alice.mesh.json`. Ordered-corner
+preparation, import, fresh reload, Windows cook and independent IoStore readback
+pass under `alice-ordered`. The candidate preserves source geometry, skinning,
+UVs, colors, normals and all 22 morphs, with 161,517 render vertices, 220,611
+triangles and 379 bones. Its first cooked readback has one zero-length tangent
+and 284 known collapsed-UV unit-X fallbacks, with zero unexpected nonorthogonal
+frames. The failed unit-length result remains in `pack/tangent-fallbacks.json`;
+the standalone pass does not clear that quality gate.
+
+The regular/facial binding intermediates preserve 379 bones, nine virtual bones
+and 22/137 morphs. Their fresh reload passes the accepted material/rig bindings
+and 115-expression preservation checks. Native tangent baking repairs exactly
+one zero corner per mesh, leaving valid tangents intact; both versions reload
+with zero zero-length/non-unit tangents and recomputation disabled. Receipts:
+`tangent-bake/alice-{normal,facial}-1-verified.json`.
+
+Native cloth transfer then passes creation and fresh reload for both versions.
+The existing 624 simulation vertices, 1,224 simulation triangles, cloth settings,
+transitions and tethers are preserved except for the new asset GUID. The new
+mapping covers 937 render vertices. A deliberate physical-vertex mutation is
+rejected by the comparator. Private assets are `SK_AliceNormalCloth1` and
+`SK_AliceFaceCloth1` under `/Game/CSSAuthoring/EveSurface20261014/`; their receipts
+are `cloth-transfer/alice-{normal,facial}-verified.json`.
+
+### Split-drive Alice cook
+
+Theark had 6.1G free at the start. New cook scratch uses
+`build/cook-scratch/alice-ordered/out` on the root filesystem, reached through
+`alice-ordered/cook/out`. The existing work relocation is unchanged.
+`tools/diagnostics/cook_eve_alice_candidate.py` preserves the earlier pinned
+recipes, checks 3 GiB free for work plus 8 GiB for scratch, verifies the engine
+build and stages the same accepted module/config inputs. Python is 3.14.7;
+`mise current` declares no Python override.
+
+[Docker's bind-mount documentation](https://docs.docker.com/engine/storage/bind-mounts/)
+specifies an existing host source and container destination. The new command
+binds the resolved root scratch directory to `/out` explicitly. Live Docker
+inspection showed that exact read/write mount during the cook. The later
+attempt to save a second inspection found the container already removed after
+successful completion; it was not restarted. `command.json`, `storage.json`,
+logs and `exit.json` retain the cook evidence.
+
+The initial storage guard stopped before staging because Btrfs reports distinct
+device numbers for `/` and `/home` subvolumes. `findmnt` confirms both belong to
+UUID `eb461adf-5d9b-4722-9b4a-11b5ade2d24f`. The guard now checks that filesystem
+UUID and the ordinary, resolved scratch path. It does not lower the free-space
+requirements or allocate on theark accidentally.
+
+Following the [prewritten list](../development/cleanup-2026-10-14-eve-alice-cloth.md),
+the finished cook's prefix, duplicate inputs and regenerable cooked tree were
+removed after retained hashes passed. Removed logical file bytes total
+1,469,207,752. Immediate `df -h` reads root/theark 93G/5.5G both before and after;
+this is not a claim of equivalent physical space reclaimed. Sources, reordered
+candidate, editor assets, DDC, package payloads and pass/fail readbacks remain.
+Receipts are `alice-ordered/candidate-cleanup-{plan,completed}.json`.
+
+The paired cook uses `tools/diagnostics/cook_eve_alice_cloth.py` with normal and
+facial attempt 1. Both `cloth-transfer/alice-cook/out` and `project` link to
+`build/cook-scratch/alice-cloth/{out,project}` on root. A live Docker inspection
+records both exact read/write mounts in `alice-cook/mount-verified.json`.
+The Windows cook exits zero with no changed protected inputs. Root/theark read
+91G/5.2G afterward, before paired readback and cleanup. This proves the scoped
+split-drive cook, not installed gameplay behavior.
+
+The private pair's independent cooked readback now passes source geometry,
+weights, UVs, colors, normals and 22/137 morph preservation. All valid packed
+tangents and handedness are unchanged; the one repaired corner per mesh matches
+the double-precision gradient within 0.005334023. Unit lengths pass. The 284
+known collapsed-UV fallbacks remain, with zero unexpected nonorthogonal frames.
+
+Decoded cloth/config fields match the installed pair except for the new GUID.
+Mesh properties match except for disabling tangent recomputation. Materials,
+bounds, bind transforms and empty Nanite data are preserved. Both meshes retain
+all 1,224 cloth render triangles and have identical render/mapping digests.
+Receipts: `alice-pack/readbacks-verified.json` and `bindings-verified.json`.
+Permanent paths, combined packaging and live checks remain open.
+
+After the [prelisted pair cleanup](../development/cleanup-2026-10-14-eve-alice-pair.md),
+2,477,776,543 logical bytes of prefix/duplicate inputs/cooked outputs were
+removed with retained hashes unchanged. Immediate root/theark free space changed
+from 91G/4.9G to 92G/4.9G. The useful cache, editor assets, private packages and
+readbacks remain; root scratch links still resolve. Receipts:
+`cloth-transfer/alice-cleanup-{plan,completed}.json`.
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six

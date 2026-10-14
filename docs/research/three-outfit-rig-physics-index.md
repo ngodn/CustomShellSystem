@@ -1,5 +1,19 @@
 # Three-outfit rig and physics research index
 
+- October 14: [Alice repair](2026-10-14-eve-surface-tangents.md#alice-cloth-repair)
+  passes ordered import and standalone cook/readback with source fields retained.
+  Tangent repairs and accepted cloth/configs survive reload and paired cook/
+  readback. The pair preserves 22/137 morphs and all 1,224 garment triangles,
+  with matching render/mapping digests. New cook scratch uses root while retaining
+  the relocated work paths. Final paths remain pending; no game installation.
+
+- October 14: [Planet Diving](2026-10-14-eve-surface-tangents.md#permanent-planet-diving-paths)
+  and [Knitwear](2026-10-14-eve-surface-tangents.md#permanent-knitwear-paths)
+  preserve their repaired regular/facial pairs at permanent paths through
+  reload, cook and independent readback, including the original cloth/configs
+  and 22/137 morphs. Known collapsed-UV fallbacks remain. Combined integration
+  and full runtime/release checks are open; nothing installed.
+
 - October 14: [permanent Skin Suit/Bikini paths](2026-10-14-eve-surface-tangents.md#permanent-skin-suit-and-bikini-paths)
   preserve all four verified private repairs through reload, Windows cook,
   package roundtrip and independent decoded comparison. The readback excludes
