@@ -1,5 +1,12 @@
 # Three-outfit implementation status
 
+**October 15, sidearm gameplay test awaits focus:** the keyboard helper rejected
+input because the game was not foregrounded. An engine-command attempt also
+produced no aim. Neither is a gameplay pass; exact saved state, infusion, CINE,
+player/view and released keys are verified. A diagnostic focus preflight now
+stops before runtime commands. [Evidence and continuation](../research/2026-10-15-sidearm-aim.md).
+The user has been asked to foreground the game; no binary or asset was changed.
+
 **October 15, Naylshotte Burn visibility mechanism verified:** controlled
 mesh-only hiding leaves the orange Burn effect visible; the installed owner
 visibility repair removes it while preserving the active infusion. Front/rear

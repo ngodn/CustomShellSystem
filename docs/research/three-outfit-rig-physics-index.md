@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Sidearm gameplay input preparation](2026-10-15-sidearm-aim.md): keyboard input was rejected while the game was unfocused; an engine-command attempt also produced no aim. State and inputs remain restored. A focus preflight now rejects before runtime commands. Actual aim/fire/stow remains pending.
+
 - [Naylshotte Burn visibility controls](2026-10-15-sidearm-effect-visibility.md): mesh-only hiding reproduces lingering orange Burn; hiding the owner removes it while preserving infusion. Twelve phases and 36 rendering observations pass with exact restoration. Natural aim/fire/stow and effect replacement remain open.
 
 - [Hidden item actor drift](2026-10-15-item-visibility-drift.md): three actor-only visibility failures reproduced and repaired; Default control, form/profile sequence and exact world-flag restoration pass. Six timing captures retain an unresolved sequential timing increase; visible Tarstone residue is not claimed fixed.
