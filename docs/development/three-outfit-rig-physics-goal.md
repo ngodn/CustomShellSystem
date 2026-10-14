@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, six original Eve imports checked against current installation:**
+Black Pearl, Planet Diving, Skin Suit, Bikini, Knitwear and Midsummer Alice all
+pass LOD0 position/UV0/material-slot, topology, bind, bounded weight and positional
+morph correspondence. Each retains 379 bind bones and 22 positional morphs.
+This closes those import-to-cooked fields for the pinned current normal meshes;
+Blender source chains, facial/surface fields and gameplay remain separate. No
+assets were changed or installed. See
+[comparison record](../research/2026-10-14-eve-import-cooked-provenance.md).
+
 **October 14, installed inventory refreshed:** readback pins all ten appearances
 (the original nine plus Peony), twenty normal/facial meshes and 1,021 unique
 exported packages across the four installed containers. Facial-adapter source

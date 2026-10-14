@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, current Eve import correspondence:** all six original normal
+outfits pass the retained-import versus installed-mesh comparison for positions,
+UV0/material slots, triangle multiplicity/winding, bind transforms, bounded
+weights and 22 positional morphs. Black Pearl and Skin Suit were refreshed
+against the current package; the other four gain this coverage. Blender sources,
+facial meshes, remaining surface fields, cloth behavior and gameplay retain
+their separate gates. See the
+[six-outfit comparison](../research/2026-10-14-eve-import-cooked-provenance.md).
+
 **October 14, walking-only trial installed:** CW now has a private eight-clip
 walking blend. Saved `eve` and `css.eve.walk` selections resolve to that blend
 through explicit manifest aliases in core `acab6363906f0e88`. Existing CW mesh,

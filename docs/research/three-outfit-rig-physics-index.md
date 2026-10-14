@@ -1,5 +1,11 @@
 # Three-outfit rig and physics research index
 
+- October 14: all six original Eve normal meshes pass retained-import versus
+  current installed geometry, weight and positional-morph comparisons. This
+  expands the earlier Black Pearl/Skin Suit coverage and refreshes both against
+  the new package. Blender source chains, facial/surface data and gameplay remain
+  distinct. See [comparison scope and evidence](2026-10-14-eve-import-cooked-provenance.md).
+
 - October 14: CW's private walking correction is installed, awaiting boots-on/off
   visual judgement. Eight corrected clips retain all 395 retarget-reference
   transforms through procedural saving and Windows cooking. A copied-struct
