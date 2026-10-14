@@ -39,7 +39,8 @@ int main() {
         expect(second!=first && session.active(),"Stale take stopped a newer one");
         session.advance(1.);
         expect(session.clock().phase()==PerformancePhase::Holding,"Photo pose did not hold");
-        session.interrupt();
+        expect(session.interrupt(),"Holding pose interruption was not reported");
+        expect(!session.interrupt(),"Repeated cleanup reported another interruption");
         rejects([&]{session.seek(second,0.);});
         rejects([&]{session.begin("css.bad",AnimationPlayback::Once,0.);});
         expect(session.token()==second && !session.active(),"Failed start consumed a session");
@@ -55,6 +56,17 @@ int main() {
         session.begin("css.scene",AnimationPlayback::Once,1.);
         session.advance(2.);
         expect(!session.active(),"Automatic idle looping changed CINE's authored one-shot mode");
+        const auto completed_token=session.token();
+        expect(!session.interrupt(),"Face mesh restoration relabeled a naturally completed performance");
+        expect(session.token()==completed_token && session.clip()=="css.scene" && session.clock().position()==1.,
+               "Post-completion cleanup lost the completed performance identity or endpoint");
+        session.begin("css.paused",AnimationPlayback::Once,2.);
+        session.pause(session.token(),true);
+        expect(session.interrupt(),"Paused playback did not report a real interruption");
+        session.begin("css.stopped",AnimationPlayback::Once,2.);
+        session.advance(.5);
+        session.stop(session.token());session.advance(.2);
+        expect(!session.interrupt(),"Cleanup relabeled an explicitly stopped performance");
 
         FacialPerformance face{"css.idle",2.,{{"eye_close",{{0.,0.f},{2.,1.f}}}}};
         for(const int fps:{30,60,144}) {

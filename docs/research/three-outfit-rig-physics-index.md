@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [CINE natural completion repair](2026-10-14-cine-natural-end.md): reproduced and fixed false interruption during face restoration. Full Iris Out takes pass on both Genessa variants; camera and saved states restore exactly. Limited close-ups retain unresolved shadow patches.
+
 - [Genessa live facial tracks](2026-10-14-genessa-live-face-tracks.md): both variants pass Iris Out/Come Closer numeric weights, clock alignment and explicit-stop restoration. Directed CINE takes and visual/gameplay checks remain.
 
 - [CW permanent paths live](2026-10-14-cw-release-live-bindings.md): 36 samples, eight final clips and active facial/Belt20 ownership pass; exact saved-state restoration. No new walking, terrain or performance acceptance.

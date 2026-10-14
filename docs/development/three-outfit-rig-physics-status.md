@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 14, CINE natural-end defect repaired and verified live:** normal
+face-mesh cleanup no longer relabels a completed clip as interrupted. Full Iris
+Out photo takes finish on both Genessa variants, with exact player/view and
+saved CSS/CINE restoration. The new development core is installed; rollback
+is retained. [Evidence](../research/2026-10-14-cine-natural-end.md).
+Six close-ups show facial poses and visible eyes, but harsh shadow patches
+remain. Gameplay, both-form doubles, broader lifecycle and release gates stay open.
+
 **October 14, both Genessa variants pass live facial-track checks:** Iris Out
 and Come Closer match all 115 controls at three sampled poses each (1,380
 weight comparisons), with synchronized body/face clocks and exact restoration

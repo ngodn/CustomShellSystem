@@ -61,6 +61,10 @@ This was a diagnostic precondition error, not a game playback failure.
 
 ## Remaining scope
 
+Follow-up: [actual CINE takes](2026-10-14-cine-natural-end.md) reproduced a
+natural-end reporting bug, now repaired and verified on both variants. That
+separate check includes six close-ups and exact camera/settings restoration.
+
 This checks the shared service while CINE is between takes, not an actual CINE
 directed take. Paused samples and a short advancing interval do not establish
 continuous lip/body synchronization, eye/mouth appearance, neutral geometry,

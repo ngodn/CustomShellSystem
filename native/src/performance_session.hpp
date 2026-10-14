@@ -36,6 +36,10 @@ public:
     void rate(uint64_t token,double value) { require(token);clock_.set_rate(value); }
     void pause(uint64_t token,bool value) { require(token);clock_.pause(value); }
     void stop(uint64_t token) { require(token);clock_.stop(); }
-    void interrupt() noexcept { clock_.stop(true); }
+    bool interrupt() noexcept {
+        const bool interrupted=active();
+        clock_.stop(true);
+        return interrupted;
+    }
 };
 }

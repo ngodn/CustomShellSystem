@@ -439,7 +439,9 @@ void PerformancePlayer::release() {
     character_=FName{};
 }
 void PerformancePlayer::interrupt(const std::string& reason) {
-    session_.interrupt();reason_=reason;release();
+    // Mesh restoration after a natural end must preserve that completed outcome.
+    if(session_.interrupt()) reason_=reason;
+    release();
 }
 void PerformancePlayer::prepare_mesh_change(UObject* component) {
     if(!component) return;
@@ -560,7 +562,7 @@ Json PerformancePlayer::command(const Json& value) {
     else if(op=="rate") session_.rate(token,value.at("rate").get<double>());
     else if(op=="pause") session_.pause(token,value.at("paused").get<bool>());
     else throw std::runtime_error("Unknown performance command");
-    if(!intact()) {interrupt("Performance binding changed");throw std::runtime_error(reason_);}
+    if(!intact()) {interrupt("Performance binding changed");throw std::runtime_error("Performance binding changed");}
     write_pose();return status();
 }
 Json PerformancePlayer::status() const {
