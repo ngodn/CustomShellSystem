@@ -27,7 +27,7 @@ historical rehearsal and is not the stable release tag.
 | Customize shows only Ground Height after form switch | Mirrored-selection fix installed; user accepts recovery | Preserve through remaining lifecycle checks |
 | First Stray summon produces no doubles | User confirms first-switch summon works after selection fix; live clone capture exists | Original cause was not isolated; do not claim a proven independent spawn fix |
 | Native Black Hole/Iris Out marked Unavailable | Native alternatives installed; user accepts both playing and interrupting | Full library contact, continuous playback and CINE validation |
-| Genessa face and visibility after outfit changes | Owner-restoration/visibility fix installed; cross-character Iris Out and interruption accepted | Both Genessa variants, CSS/CINE, both forms and doubles matrix |
+| Genessa face and visibility after outfit changes | Owner-restoration/visibility fix installed; cross-character Iris Out and interruption accepted. Both UG variants now pass numeric Iris Out/Come Closer track and explicit-stop restoration checks | Close-up visuals, directed CSS/CINE playback, gameplay interruption, both forms and doubles matrix |
 | Genessa rear cloth | World correction accepted; preview clipping explicitly accepted for now | Other poses/variants and cost, without reopening accepted preview limitation |
 | CW hair | User accepts installed strand trial and tested face/eyes/interruption | CINE, doubles, full lifecycle and measured cost |
 | CW inward/sideways walking feet | User accepts the walking-only correction after the boots-on/off prompt; jog/sprint already accepted. Permanent paths now installed with exact accepted compressed animation data and passing combined catalog/profile checks | Final paths now resolve live (36 matching samples/eight clips); terrain/lifecycle and performance regression checks remain; preserve native IK and rollback |
@@ -61,7 +61,8 @@ Accepted observations apply to their recorded test scope, not every variant.
   regression and performance requirements without reopening accepted minor flaws.
 - Complete the goal's Phase 4 matrix: actions, preview/world, lifecycle,
   both-form doubles, customization, attachments/gameplay and existing UI fixes.
-- Finish Genessa's two-variant CSS/CINE facial coverage and preserve Eve/CW.
+- Finish Genessa's two-variant CSS/CINE visual and gameplay coverage and preserve Eve/CW.
+  Both variants now pass [numeric facial-track and explicit-stop checks](../research/2026-10-14-genessa-live-face-tracks.md).
 - Finish locomotion review. All 59 additional native alternatives were authored
   and installed; validation remains. Do not redo conversion as if it were absent.
 - Complete matched performance measurements, repeated-switch lifetime checks

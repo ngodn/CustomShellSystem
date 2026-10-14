@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Genessa live facial tracks](2026-10-14-genessa-live-face-tracks.md): both variants pass Iris Out/Come Closer numeric weights, clock alignment and explicit-stop restoration. Directed CINE takes and visual/gameplay checks remain.
+
 - [CW permanent paths live](2026-10-14-cw-release-live-bindings.md): 36 samples, eight final clips and active facial/Belt20 ownership pass; exact saved-state restoration. No new walking, terrain or performance acceptance.
 
 - [Repaired Eve live variant captures](2026-10-14-eve-live-variant-capture.md): Black Pearl/Planet facial owners, body inputs and exact saved-state restoration pass in CINE. Shaded stills do not close the sunlight or continuous-motion gates.

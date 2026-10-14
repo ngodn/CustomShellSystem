@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 14, both Genessa variants pass live facial-track checks:** Iris Out
+and Come Closer match all 115 controls at three sampled poses each (1,380
+weight comparisons), with synchronized body/face clocks and exact restoration
+on explicit stop. Peony, full CSS saved state and the CINE model restore unchanged.
+[Evidence](../research/2026-10-14-genessa-live-face-tracks.md).
+Actual CINE takes, close-up visual checks, gameplay interruption, both forms,
+doubles and remaining lifecycle/performance gates are still open.
+
 **October 14, CW permanent walking paths resolve live:** the already-loaded
 final BlendSpace has 36 matching samples referencing all eight accepted final
 animation paths. The facial performance adapter and one Belt20 rig are active;
