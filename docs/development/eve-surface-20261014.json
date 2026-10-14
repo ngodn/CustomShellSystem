@@ -1986,5 +1986,73 @@
         "sha256": "8b1efb4bc4d0dae32eea22009902c2028c3d6976589847922c478fb6dc65c04b"
       }
     ]
+  },
+  "coordinated_upgrade": {
+    "passed": true,
+    "cases": [
+      {
+        "case": "all-current",
+        "returncode": 0,
+        "packages": 1021,
+        "failures": 0,
+        "overlapping_packages": 0,
+        "divergent_packages": [],
+        "expected_face_matches": 10
+      },
+      {
+        "case": "legacy-genessa",
+        "returncode": 0,
+        "packages": 1045,
+        "failures": 0,
+        "overlapping_packages": 0,
+        "divergent_packages": [],
+        "expected_face_matches": 8
+      },
+      {
+        "case": "legacy-commander",
+        "returncode": 0,
+        "packages": 1022,
+        "failures": 0,
+        "overlapping_packages": 0,
+        "divergent_packages": [],
+        "expected_face_matches": 9
+      },
+      {
+        "case": "both-legacy",
+        "returncode": 0,
+        "packages": 1045,
+        "failures": 0,
+        "overlapping_packages": 1,
+        "divergent_packages": [],
+        "expected_face_matches": 7
+      }
+    ],
+    "scope": "Current candidate plus mixed published legacy/current outfits: package imports, duplicate-provider content and catalog/facial revision matching. Not live rendering, save migration, CINE execution or stable release artifacts.",
+    "receipts": [
+      {
+        "path": "build/coordinated-upgrade-20261014-2/report.json",
+        "sha256": "faf4d3721a116cc22ed49a7416932a6bdd23d9a8a99d0f8e8c7ac37863940b00"
+      },
+      {
+        "path": "build/coordinated-upgrade-20261014-2/inputs.json",
+        "sha256": "6979429ebf538ae71e1ce9ccf3783f5e751dc3a534c9ac5f5465e17e58199a25"
+      },
+      {
+        "path": "build/coordinated-upgrade-20261014-2/expectations.json",
+        "sha256": "05914e6149a07619423fea48e8b347ddf9d417a623a657aa0de332a9dae2b5f0"
+      },
+      {
+        "path": "build/coordinated-upgrade-20261014-2/catalog-exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "build/coordinated-upgrade-20261014-2/metadata-cleanup-plan.json",
+        "sha256": "cfb846e0ded6c91c5003b4a0af2dd4a97f384500c4d4417eed8926d6e205c95f"
+      },
+      {
+        "path": "build/coordinated-upgrade-20261014-2/metadata-cleanup-completed.json",
+        "sha256": "2d303d188d2bd4dbc0cc201f75c18f719e506c248cccf830ef82ba0f3110e313"
+      }
+    ]
   }
 }

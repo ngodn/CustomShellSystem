@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, current coordinated upgrade combinations pass offline:** the
+new Eve/shared pair passes import and production catalog checks with current
+Genessa/CW, either legacy outfit, and both legacy outfits. All four cases have
+zero import failures; current packages have zero overlaps. The legacy pair's
+one shared skeleton has identical export-chunk hashes. Facial-match counts are
+10/8/9/7 as expected. [Evidence](../research/2026-10-14-coordinated-upgrade-audit.md).
+No game changes or release promotion. Save migration, live CSS/CINE, rendering,
+performance and coordinated stable version/package gates remain open.
+
 **October 14, supporting Eve rig provenance verified:** original and migrated
 sources, successful reload/cook receipts and eight supporting payloads match for
 hair, hand and both feet graphs. The current writer reproduces both preserved

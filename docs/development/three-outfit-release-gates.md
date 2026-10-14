@@ -67,7 +67,9 @@ Accepted observations apply to their recorded test scope, not every variant.
 - Complete matched performance measurements, repeated-switch lifetime checks
   and investigation of any new hitch, crash or regression.
 - Finish shared migration's live CSS/CINE and clean/upgrade coverage. The four
-  passing offline upgrade cases do not deliver the new Genessa/CW versions.
+  [current-container compatibility cases](../research/2026-10-14-coordinated-upgrade-audit.md)
+  now pass with current/mixed legacy Genessa and CW. They do not test save
+  migration or deliver the new stable Genessa/CW versions.
 - Prepare coordinated stable artifacts only after applicable gates pass or the
   user explicitly accepts a remaining limitation. Verify final versions,
   dependency fingerprints, source/tag/build provenance, checksums and notes.
@@ -83,10 +85,11 @@ now passes all twelve mesh-preservation checks, 1,545 catalog checks and the
 1,008-package/272-reference audit. Customization targets and the guarded
 installation plan pass. The [source/package chain](../research/2026-10-14-eve-source-package-chain.md)
 accounts for the repaired editor meshes and 273 older material/texture packages.
-The combined candidate is now installed offline with rollback and exact
-post-install readback. Continue offline as requested; the game remains closed.
-Preserve accepted Peony/CW motion and the separate MISC workaround. Runtime
-checks and the full stable-release gates above remain open.
+The combined candidate is installed with rollback and exact post-install
+readback. The user has since opened the game; Peony's live bindings and tighter
+motion limits pass a read-only capture. Black Pearl/Planet visual checking is
+pending. Preserve accepted Peony/CW motion and the separate MISC workaround.
+Runtime checks and the full stable-release gates above remain open.
 
 All 46 parts across the six original Eve outfits now have passing editable-source
 comparisons linked to their accepted imports and installed geometry checks.
@@ -94,7 +97,10 @@ Black Pearl's complete export also reproduces byte-for-byte. Recovered Alice,
 Planet and Skin Suit parts are explicitly marked as import-derived sources.
 See [source coverage](../research/2026-10-14-eve-six-source-coverage.md).
 The repaired mesh/material assembly and cooked surface checks now pass offline.
-Full rig/source provenance and live regression remain open; source verification
+Eve's body source/cook and four supporting rig source/cook chains now also pass,
+and the current writer reproduces the preserved secondary graph exactly. See
+[motion provenance](../research/2026-10-14-eve-motion-preservation.md).
+Full goal source coverage and live regression remain open; source verification
 does not require another install.
 
 The older Eve saved-graph input/update check now passes all 36 cases with each

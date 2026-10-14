@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Current coordinated upgrade audit](2026-10-14-coordinated-upgrade-audit.md): four current/mixed legacy package combinations pass imports, provider-content and facial catalog checks. Save/CINE/live checks remain.
+
 - [Eve motion preserved in the installed shading candidate](2026-10-14-eve-motion-preservation.md): six packages, retained tighter source/cook, four supporting cook chains and exact compiled graph replay verified. Peony live bindings pass; older-outfit visual checks remain.
 
 - October 14: [combined Eve candidate installed](2026-10-14-eve-surface-tangents.md#installed-candidate)
