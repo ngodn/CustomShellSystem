@@ -989,5 +989,84 @@
       }
     ],
     "scope": "Private Planet normal/facial source, tangent, cloth/config and paired mapping preservation through cook/readback. Final paths, Knitwear/Alice, combined integration and all runtime/performance/release gates remain."
+  },
+  "planet_final_paths": {
+    "passed": true,
+    "installed": false,
+    "receipts": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/plan.json",
+        "sha256": "e2044baee074b88de4794532b80f3fd7e9da337d158f0e84ea1f4d6665d2bb02"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/create.json",
+        "sha256": "d7b3de840ead07073f0b4d10ffc4257f81dd1919f6f981ea729279fce83478f8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/create-exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/reload.json",
+        "sha256": "7c05bce1326b640c8b38edf5a639aa3c4b8795f912e68cb2e90a2454e7bbb634"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/reload-exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/cook/exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/pack/verified.json",
+        "sha256": "f556ae4d9c10227338d654e8be5cc247d5b0559cce747536b5069214c33e1214"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/pack/meshes.json",
+        "sha256": "5a83fa115545cc2cc492475979f69845061dc1ae35f15e957d9583f88189e363"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/cleanup-plan.json",
+        "sha256": "44a97327f59edfca3a5a223c653f6fbbd7b2a84c24399b69eb4e3de92ac1d8f0"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/cleanup-completed.json",
+        "sha256": "0bdcacb978e31baa44fb4954606dcadf7a40c46dda6012143a9b8991bcbb061d"
+      }
+    ],
+    "sources": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/editor/Content/CSS/eins0fx/EveSB/Fit/SK_PFit14.uasset",
+        "sha256": "3045ede8c6e7c72b385618913c6b503654260837725a097f9a723630441a1825"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-cloth-final/editor/Content/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_PFit14.uasset",
+        "sha256": "30f7f318da0680d38eed15c08446a19de8559abdc4b92b75af29d6cb64033a9b"
+      }
+    ],
+    "recipes": [
+      {
+        "path": "tools/diagnostics/run_eve_cloth_final.py",
+        "sha256": "3a2295d5b4faab1d691703c49b4740f78831616d125d0919ccc60a75132be3f1"
+      },
+      {
+        "path": "tools/diagnostics/finalize_eve_cloth_editor.py",
+        "sha256": "b83300ae4644000d0336a0021d323ee58bd973b89d3933ce80f5a6d04d019e78"
+      },
+      {
+        "path": "tools/diagnostics/cook_eve_cloth_final.py",
+        "sha256": "e04a95ee11ae79fcc25b6817066e1d74fae060dd65bd99d3961fa25c0cf0131c"
+      },
+      {
+        "path": "tools/diagnostics/check_eve_cloth_final.py",
+        "sha256": "04414e2da6e3a4cb1490926da59fe2f7ecf06b235ba962fd3656998b5696ea94"
+      },
+      {
+        "path": "tools/diagnostics/cleanup_eve_cloth_final.py",
+        "sha256": "1ab4bbc477de7c5f130d30439796801f86347ab7a88e0069aa284ba5226c88f0"
+      }
+    ],
+    "scope": "Permanent Planet normal/facial paths verified through editor reload, cook/IoStore and exact decoded comparison with the accepted private pair. Full integration, Knitwear/Alice and runtime/performance/release remain."
   }
 }

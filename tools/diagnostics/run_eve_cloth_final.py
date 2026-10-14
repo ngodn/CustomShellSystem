@@ -1,0 +1,103 @@
+"""Stage a verified cloth-bearing Eve pair at its existing release paths."""
+import argparse
+import json
+from pathlib import Path
+import shutil
+import subprocess
+
+from check_import_cooked_mesh import sha
+
+ROOT = Path(__file__).resolve().parents[2]
+SURFACE = (ROOT/'work/three-outfit-rig-physics/eve-surface-20261014').resolve()
+BASE = SURFACE/'cloth-transfer'
+EDITOR_BASE = SURFACE/'blackpearl-ordered'
+
+
+def read(path):
+    return json.loads(path.read_text())
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--variant',choices=('planet','knit','alice'),required=True)
+    parser.add_argument('--normal-attempt',type=int,required=True)
+    parser.add_argument('--facial-attempt',type=int,required=True)
+    args = parser.parse_args()
+    WORK = SURFACE/(args.variant+'-cloth-final')
+    checked = BASE/(args.variant+'-pack/bindings-verified.json')
+    source_check = BASE/(args.variant+'-pack/readbacks-verified.json')
+    if not read(source_check)['passed']:
+        raise ValueError('Private source comparisons are not verified')
+    if not read(checked)['passed']:
+        raise ValueError('Private cooked assemblies are not verified')
+    if shutil.disk_usage(BASE).free<3*1024**3:
+        raise ValueError('Need 3 GiB for final-path staging')
+    WORK.mkdir(exist_ok=False)
+    inventory_path = ROOT/'work/three-outfit-rig-physics/current-inventory-20261014/inventory.json'
+    inventory = read(inventory_path)
+    script = Path(__file__).with_name('finalize_eve_cloth_editor.py')
+    protected = {str(p):sha(p) for p in (Path(__file__),script,checked,source_check,inventory_path)}
+    mapping,assets = {},{}
+    for variant in (args.variant,):
+        plan_path = SURFACE/(variant+'-ordered')/'binding-plan.json'
+        plan = read(plan_path)
+        protected.update(plan['protected'])
+        protected[str(plan_path)] = sha(plan_path)
+        pair = next(v['meshes'] for v in inventory['variants'] if v['meshes']['normal']==plan['reference_mesh'])
+        for package,row in plan['sources'].items():
+            if package in assets and assets[package]!=row:
+                raise ValueError('Dependency source conflict')
+            assets[package] = row
+        for kind,attempt in (('normal',args.normal_attempt),('facial',args.facial_attempt)):
+            if attempt<1:
+                raise ValueError('Attempt must be positive')
+            proof_path = BASE/(variant+'-'+kind+('-'+str(attempt) if attempt>1 else '')+'-verified.json')
+            proof = read(proof_path)
+            if not proof['passed']:
+                raise ValueError('Private editor source is not verified')
+            protected[str(proof_path)] = sha(proof_path)
+            if len(proof['outputs'])!=1:
+                raise ValueError('Expected one verified source mesh')
+            mapping[next(iter(proof['outputs']))] = pair[kind]
+            for package,digest in proof['outputs'].items():
+                assets[package] = dict(path=str(BASE/'editor/Content'/(package.removeprefix('/Game/')+'.uasset')),sha256=digest)
+    for final in mapping.values():
+        assets.pop(final,None)
+    module = read(EDITOR_BASE/'inputs.json')
+    for name in ('CSSAuthoring.uproject','Binaries/Linux/UnrealEditor.modules','Binaries/Linux/libUnrealEditor-CSSAuthoring.so'):
+        source = EDITOR_BASE/'editor'/name
+        if sha(source)!=module[str(source)]:
+            raise ValueError('Pinned editor module changed')
+        target = WORK/'editor'/name
+        target.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copy2(source,target)
+        protected[str(source)] = protected[str(target)] = sha(source)
+    for package,row in assets.items():
+        source = Path(row['path']).resolve(strict=True)
+        if sha(source)!=row['sha256']:
+            raise ValueError('Editor source changed')
+        target = WORK/'editor/Content'/(package.removeprefix('/Game/')+'.uasset')
+        target.parent.mkdir(parents=True,exist_ok=True)
+        target.symlink_to(source)
+        protected[str(source)] = row['sha256']
+    for name in ('tmp','ddc','user'):
+        (WORK/name).mkdir()
+    (WORK/'plan.json').write_text(json.dumps(dict(mapping=mapping,assets=assets,protected=protected),indent=2)+'\n')
+    for mode in ('create','reload'):
+        command = [v.replace(str(EDITOR_BASE),str(WORK)) for v in read(EDITOR_BASE/'import-command.json')[:-2]]
+        position = command.index('--')
+        command[position:position] = ['--setenv','CSS_SURFACE_FINAL_MODE',mode,'--setenv','CSS_CLOTH_FINAL_VARIANT',args.variant]
+        command += ['-run=pythonscript','-script='+str(script)]
+        (WORK/(mode+'-command.json')).write_text(json.dumps(command,indent=2)+'\n')
+        with (WORK/(mode+'.log')).open('w') as log:
+            result = subprocess.run(command,stdout=log,stderr=subprocess.STDOUT)
+        changed = [p for p,h in protected.items() if sha(Path(p))!=h]
+        row = dict(returncode=result.returncode,changed_inputs=changed)
+        (WORK/(mode+'-exit.json')).write_text(json.dumps(row,indent=2)+'\n')
+        print(mode,row,flush=True)
+        if result.returncode or changed or not (WORK/(mode+'.json')).exists():
+            raise SystemExit(1)
+
+
+if __name__=='__main__':
+    main()

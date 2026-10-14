@@ -1,5 +1,15 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Planet Diving permanent paths verified offline:**
+both regular/facial meshes now use their existing release paths. Creation,
+fresh reload, Windows cook and independent IoStore readback preserve the
+verified private pair's geometry, shading, cloth/configs, bindings and 22/137
+morphs. No diagnostic dependencies remain; the reader excludes the old Eve
+mesh providers. See [permanent Planet evidence](../research/2026-10-14-eve-surface-tangents.md#permanent-planet-diving-paths).
+No installation. Knitwear/Alice repairs, combined Eve packaging and all full-goal
+runtime/performance/release gates remain. Continue offline. Prelisted duplicate
+cleanup leaves root/theark at 94G/6.9G immediately afterward.
+
 **October 14, Planet Diving private cloth pair verified offline:**
 the reordered normal/facial pair now passes tangent repair, cloth transfer,
 fresh reload, Windows cook and independent readback. Original simulation,

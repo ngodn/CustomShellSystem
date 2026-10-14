@@ -507,6 +507,36 @@ The earlier standalone cleanup removed another 1,462,198,829 logical bytes.
 Retained data includes sources, compiled module, useful DDC, package/readbacks
 and failure evidence. No unknown or unrelated folders were touched.
 
+## Permanent Planet Diving paths
+
+Both Planet meshes now use their existing release paths:
+`/Game/CSS/eins0fx/EveSB/Fit/SK_PFit14` and
+`/Game/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_PFit14`.
+Sources and receipts are under `eve-surface-20261014/planet-cloth-final`.
+
+Creation and a separate fresh reload preserve the entire mesh-description
+byte stream, all 27 built sections including their cloth mappings, bind poses,
+persistent cloth data and all 22/137 morphs. There are 27 direct dependencies
+across the pair, with none in a diagnostic namespace.
+
+Windows cook and two-package IoStore roundtrip pass. Independent decoded
+comparison (`pack/verified.json`) matches the verified private pair exactly
+for render, tangent, bind, morph and cloth-mapping digests, normalized mesh and
+cloth/config properties (including GUIDs), material slots, bounds and empty
+Nanite metadata. The reader excludes the old Eve mesh containers and uses
+only 24 direct Eve material/rig dependencies plus shared/base-game packages.
+This fixture is not a playable release package.
+
+After the [prelisted cleanup](../development/cleanup-2026-10-14-eve-planet-final.md),
+2,034,305,402 logical bytes of duplicate cook inputs/output and the disposable
+Wine prefix were removed. Retained final sources and shipping payload hashes
+remain intact. Immediate `df -h` was root/theark 94G/6.2G before and 94G/6.9G
+after cleanup. Sources, useful DDC, receipts and package/readback evidence remain.
+
+No installation or live check. The 294 known collapsed-UV fallbacks per mesh
+remain. Knitwear/Alice repairs, combined Eve packaging and the full goal's
+runtime, performance and release requirements are still open.
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six

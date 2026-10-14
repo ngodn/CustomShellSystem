@@ -1,5 +1,15 @@
 # Three-outfit implementation status
 
+**October 14, Planet permanent paths pass offline:**
+normal/facial final assets preserve the verified private cloth pair through
+fresh reload, Windows cook and independent readback. The reader uses 24 direct
+Eve dependencies and excludes original mesh providers. All decoded cloth/config
+and mapping data match, alongside geometry, tangents, bind and 22/137 morphs.
+See [final-path evidence](../research/2026-10-14-eve-surface-tangents.md#permanent-planet-diving-paths).
+No installation. Continue with Knitwear/Alice and combined packaging; the
+existing full runtime/performance/release gates remain. Cleanup immediately
+reports root/theark 94G/6.9G free.
+
 **October 14, Planet Diving private cloth pair passes offline:**
 normal/facial reload, Windows cook, IoStore roundtrip and independent source,
 tangent and cloth/config comparisons pass. The accepted simulation/settings
