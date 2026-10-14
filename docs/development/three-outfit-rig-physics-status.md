@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, Knitwear permanent paths pass offline:**
+regular/facial sources preserve all 28 sections, cloth data and 22/137 morphs
+through reload, cook and independent readback. The finished pair matches the
+verified private assets; the reader excludes old Eve mesh providers.
+See [final-path checks](../research/2026-10-14-eve-surface-tangents.md#permanent-knitwear-paths).
+No installation. Alice, combined Eve integration and all full-goal runtime,
+performance and release gates remain. Final cleanup immediately reports
+root/theark 94G/5.4G free.
+
 **October 14, Knitwear private cloth pair passes offline:**
 normal/facial sources, one repaired zero tangent each, cloth/configs and
 22/137 morphs survive reload/cook/readback. All 38,792 garment triangles remain;

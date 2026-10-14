@@ -582,6 +582,34 @@ removed 2,520,604,139 duplicate/disposable logical bytes after verifying both
 retained sources and every shipping payload. Immediate root/theark free space
 changed from 94G/4.6G to 94G/5.3G. Receipts, sources, DDC and readbacks remain.
 
+## Permanent Knitwear paths
+
+Both repaired Knitwear meshes now use their existing release paths:
+`/Game/CSS/eins0fx/EveSB/Fit/SK_KCloth4` and
+`/Game/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_KCloth4`.
+Source assets and receipts are under `eve-surface-20261014/knit-cloth-final`.
+
+Creation and fresh reload preserve the entire mesh-description byte stream,
+all 28 built sections including cloth mappings, bind poses, persistent cloth
+data and all 22/137 morphs. Neither final mesh has diagnostic dependencies.
+The pair has 28 direct dependencies; the readback fixture uses 25 Eve material/
+rig packages plus shared/base-game inputs and excludes the old Eve mesh providers.
+
+Windows cook, IoStore roundtrip and independent decoded comparison pass.
+`pack/verified.json` records exact agreement with the verified private pair
+for render, tangent, bind, morph and cloth-mapping digests, normalized mesh
+and cloth/config properties including GUIDs, material slots, bounds and empty
+Nanite metadata. Counts remain 150,466 vertices and 216,613 triangles per mesh.
+
+The [prelisted final cleanup](../development/cleanup-2026-10-14-eve-knit-final.md)
+removed 2,054,587,132 duplicate/disposable logical bytes after checking the
+retained final sources and all shipping payloads. Immediate `df -h` changed
+from root/theark 94G/4.7G to 94G/5.4G. Useful DDC, sources, package/readbacks
+and receipts remain. This is an offline final-path result, not installation
+or visual acceptance. Alice, combined Eve packaging and the full goal's live,
+performance and stable-release gates remain. The 284 known collapsed-UV
+fallbacks per mesh are still recorded as a shading limitation.
+
 ## Shared retained cook cache
 
 The [cache cleanup list](../development/cleanup-2026-10-14-eve-cook-caches.md)
@@ -599,6 +627,20 @@ root/theark 94G/6.6G, so this is not a claim of equivalent physical space gained
 All 230 existing checkpoint pins still matched afterward. Black Pearl, Bikini
 and the first Planet caches were not identical subsets and were left intact.
 Everything outside the explicit list was unassessed and untouched.
+
+## Cloth-transfer build cleanup
+
+The [prelisted build cleanup](../development/cleanup-2026-10-14-cloth-transfer-build.md)
+removed only `cloth-transfer/editor/Intermediate` after confirming the successful
+build receipt, compiled module hashes and no active project compiler/editor
+process. Its 335,578,238 logical bytes were regenerable object files and the
+precompiled header. Source files, the compiled module, earlier build evidence
+and all assets remain, with retained hashes checked after removal.
+
+Receipts: `cloth-transfer/intermediate-cleanup-plan.json` and
+`intermediate-cleanup-completed.json`. Immediate `df -h` read root/theark
+94G/6.1G both before and after; a later reading was 94G/6.4G. The logical-byte
+count is not a physical-space claim.
 
 ## Combined Eve packaging notes
 

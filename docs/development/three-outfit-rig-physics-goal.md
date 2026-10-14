@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Knitwear permanent paths verified offline:**
+both regular/facial meshes now use their existing release paths. Fresh reload,
+Windows cook and independent IoStore readback preserve the verified private
+pair's geometry, shading, cloth/configs, bindings and 22/137 morphs exactly.
+The reader excludes old Eve mesh providers; no diagnostic dependencies remain.
+See [permanent Knitwear evidence](../research/2026-10-14-eve-surface-tangents.md#permanent-knitwear-paths).
+No installation or launch request. Alice is the last older Eve pair needing
+this repair, followed by combined packaging and the full live/performance/
+release gates. Prelisted cleanup immediately reports root/theark 94G/5.4G free.
+Check available space before Alice's cook; retain sources and the canonical cache.
+
 **October 14, Knitwear private cloth pair verified offline:**
 the regular/facial pair now passes source, tangent, cloth transfer, fresh
 reload, Windows cook and independent readback. Original simulation/settings,
