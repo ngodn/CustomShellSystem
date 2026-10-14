@@ -822,6 +822,51 @@ cloth, facial/lifecycle, performance, upgrade and stable-release checks are stil
 open. This does not establish that the tangent repairs fix Vistani's sunlight
 noise report. The user requested offline work, so no launch request is pending.
 
+## Customization preservation and installation plan
+
+The combined candidate passes an additional comparison against the accepted
+October 14 Eve inventory. All twelve regular/facial meshes retain their full
+material-slot identities and visible triangle totals per slot at every stored
+LOD. Each outfit's garment/occlusion controls, material bindings and surface
+layers address existing slots; all six body-shape controls target nonempty
+morphs. The entire catalog, including palettes and defaults, is unchanged.
+
+The checker also rejects four deliberate corruptions on each mesh: altered
+material identity, altered triangle coverage, an absent garment slot and a
+missing shape morph. All 48 negative controls fail for their intended reason.
+CSS's `Appearance::reconcile_sections` addresses global material slots using
+`SectionIndex=-1`, so these checks use material identity rather than assuming
+render-section numbers are customization IDs. Evidence is `customization.json`,
+with its command, exit and input hashes. Material parameter execution and visual
+results still need runtime checks.
+
+`installation-plan.json` binds the candidate, accepted installed package hashes,
+current CW walking core, loader, CSS/CSSX saved state and CINE extension files.
+It changes Eve's trio and Shared Assets metadata only. The existing transactional
+installer stages both full trios, retaining the old trios outside `Paks` for
+rollback. CW/Genessa files and the core selector are protected. Staging needs
+1,732,341,477 bytes plus the installer's reserve, available on the game drive.
+No staging transaction or deployment receipt exists yet; game files are unchanged.
+
+The installer suite passes 24 isolated tests, including the new Eve/shared
+asset-only pair and a failure after the second package mounts. Both rollback
+and unchanged core/other-outfit checks pass. These use temporary fixtures, not
+the game installation. To execute the prepared plan later, with the game closed:
+
+```sh
+python3 tools/diagnostics/install_eve_surface_package.py install \
+  --candidate build/eve-surface-package1 \
+  --transaction /mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-eve-surface-20261014
+```
+
+The installer rechecks the plan, saved state and source hashes before writing.
+If another session or gameplay changes that baseline, preserve this plan and
+prepare a fresh one. Rollback uses `tools/asset-paths/install_namespace_trial.py`
+with `restore --transaction` pointing to the same directory.
+No new full cook or bulk copy was needed for these checks. Full live regression,
+performance, source/material recipe coverage, upgrade and stable-release gates
+remain open. Continue offline until the user is ready for game testing.
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six

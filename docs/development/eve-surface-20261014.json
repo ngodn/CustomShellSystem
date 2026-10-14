@@ -1700,5 +1700,67 @@
       }
     ],
     "pending": "Runtime shading/cloth/facial/lifecycle, performance, upgrade and stable-release gates. Not proof of the sunlight-noise cause."
+  },
+  "customization_and_install_preflight": {
+    "passed_offline": true,
+    "installed": false,
+    "meshes": 12,
+    "negative_controls": 48,
+    "installer_tests": 24,
+    "changed_files": [
+      "CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.pak",
+      "CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.ucas",
+      "CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.utoc",
+      "CSS_SharedAssets_P/CSS_SharedAssets_P.pak"
+    ],
+    "transaction": "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-eve-surface-20261014",
+    "stage_bytes": 1732341477,
+    "receipts": [
+      {
+        "path": "build/eve-surface-package1/customization.json",
+        "sha256": "374cb5d18e21752575c2cafd8ff60ee46100d34d588a19b1acc272c96b6c389f"
+      },
+      {
+        "path": "build/eve-surface-package1/customization-command.json",
+        "sha256": "35606eb920903778d81fc87013c72bb2685ac0f7e461a079cc40a3887a30108f"
+      },
+      {
+        "path": "build/eve-surface-package1/customization-exit.json",
+        "sha256": "df4d721d233a2334088d2d2e0110346ae9e509ff46bf0b379fbcfa85c715af4d"
+      },
+      {
+        "path": "build/eve-surface-package1/customization.log",
+        "sha256": "c5e5a80ea842f2b3c2115416418b8763a5ca469b8b242b1ecc8c6498a384b1a4"
+      },
+      {
+        "path": "build/eve-surface-package1/installation-plan.json",
+        "sha256": "98684c2e9be8f9ad16f8e612e2fd0370c3aea113099fa5cc230c0e17b1992b00"
+      },
+      {
+        "path": "build/eve-surface-package1/installer-tests-command.json",
+        "sha256": "46820000c5c07d8e0ed18b1462ed7ea244dd1a5726e81d28417f166204e8b076"
+      },
+      {
+        "path": "build/eve-surface-package1/installer-tests-exit.json",
+        "sha256": "91b9d38ae89917e779f496a0ecf3d5833dce41bbffb184615cc8a3c0e5c66a8d"
+      },
+      {
+        "path": "build/eve-surface-package1/installer-tests.log",
+        "sha256": "1436629f8fc5860cb03ff63ac3d2586cf429a107b1fa646cb7fed9cd40505a95"
+      },
+      {
+        "path": "tools/diagnostics/check_eve_surface_customization.py",
+        "sha256": "c7df1420d10efd7755c39f396a5ce17974768dbe0dc24020cfd9a90e083e22fa"
+      },
+      {
+        "path": "tools/diagnostics/install_eve_surface_package.py",
+        "sha256": "d01128e5b2b19291057ffafcb9f7f0103d6cc46e25a96d2b85a670d119fc8b50"
+      },
+      {
+        "path": "tests/namespace_install_tests.py",
+        "sha256": "d20d1e6b95a316cf1c8a0b7f3987a28d98cfb45a692f655620006a23464806e3"
+      }
+    ],
+    "scope": "Accepted material slots, triangle coverage and control targets. Prepared installation only; no game or visual acceptance."
   }
 }

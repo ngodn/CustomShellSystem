@@ -1,5 +1,15 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, customization and install preflight pass:** all twelve repaired
+Eve meshes preserve accepted material-slot identities and visible garment
+coverage. All shape controls resolve; palettes/defaults are unchanged. The
+checker rejects 48 deliberately invalid targets/data changes. The prepared
+Eve/shared installation uses the accepted CW core and protects CW/Genessa and
+saved state; 24 transaction tests pass, including partial-install rollback.
+[Evidence and install recipe](../research/2026-10-14-eve-surface-tangents.md#customization-preservation-and-installation-plan).
+Nothing installed. The user still prefers offline work; no launch request.
+Full gameplay, performance, upgrade, source and stable-release gates remain.
+
 **October 14, combined Eve package verified offline:** all twelve repaired
 meshes preserve their verified geometry, facial bindings and cloth/configs in
 one candidate. Catalog checks pass 1,545; dependency checks pass 1,008 packages

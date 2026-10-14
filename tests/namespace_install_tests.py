@@ -235,6 +235,39 @@ class NamespaceInstallTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.install()
         self.assertFalse(self.transaction.exists())
 
+    def make_eve_surface_pair(self):
+        for name in mod.RETIRED:
+            shutil.rmtree(self.game / 'Content/Paks/~mods' / name)
+            del self.plan['old'][name]
+        self.plan['retained'] = {}
+        for name in ('CSS_CommanderWhite_eins0fx_P', 'CSS_UnholyGenessa_eins0fx_P'):
+            self.plan['retained'][name] = self.plan['old'].pop(name)
+            del self.plan['new'][name]
+        self.plan['new_selector'] = self.old_selector.copy()
+        self.plan['core_source'] = str(self.runtime / 'cores/old.dll')
+        self.plan['core_sha256'] = mod.sha(Path(self.plan['core_source']))
+
+    def test_eve_shared_pair_preserves_core_and_other_outfits(self):
+        self.make_eve_surface_pair()
+        selector_before = (self.runtime / 'core.json').stat().st_mtime_ns
+        self.install()
+        self.assertEqual((self.runtime / 'core.json').stat().st_mtime_ns, selector_before)
+        self.assertEqual([p.name for p in (self.runtime / 'cores').iterdir()], ['old.dll'])
+        for name, rows in self.plan['new'].items():
+            mod.package_matches(self.game / 'Content/Paks/~mods' / name,
+                                {n: r['sha256'] for n, r in rows.items()})
+        mod.retained_unchanged(self.plan)
+        mod.restore(self.transaction, lambda: None)
+        self.baseline()
+
+    def test_eve_shared_pair_second_mount_failure_restores_both(self):
+        self.make_eve_surface_pair()
+        def fault(step):
+            if step == 'mounted:CSS_SharedAssets_P': raise OSError('injected second mount failure')
+        with self.assertRaises(OSError): self.install(fault)
+        self.baseline()
+        mod.mounts(self.game, mod.NAMES)
+
     def test_disk_estimate_accounts_for_both_new_core_copies(self):
         files_bytes = sum(r['bytes'] for rows in self.plan['new'].values() for r in rows.values())
         self.plan['stage_bytes'] = files_bytes + Path(self.plan['core_source']).stat().st_size

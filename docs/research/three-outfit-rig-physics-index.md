@@ -1,5 +1,10 @@
 # Three-outfit rig and physics research index
 
+- October 14: [customization and installation preflight](2026-10-14-eve-surface-tangents.md#customization-preservation-and-installation-plan)
+  verifies twelve repaired meshes against accepted garment and shape targets,
+  rejects 48 deliberate corruptions and passes 24 installer tests. The plan
+  preserves the accepted core/CW/Genessa/settings. No installation or launch.
+
 - October 14: [combined Eve package](2026-10-14-eve-surface-tangents.md#combined-eve-package)
   passes twelve-mesh preservation, 1,545 catalog checks, 1,008 package and
   272 reference checks. Accepted Peony content and current CW metadata remain.
