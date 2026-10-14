@@ -1,13 +1,22 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
-**October 14, accepted walk finalization in progress:** CW's nine permanent-path
+**October 14, accepted walk finalized and installed:** CW's nine permanent-path
 source assets are saved under `Animations/Locomotion/Walk`. Fresh reload preserves
 all raw animation data, 395 reference transforms and 36 sample bindings; all
 fourteen recorded directional captures match the accepted trial exactly after
-path mapping. The Windows cook is still running at this checkpoint, under CW
-`work/walk-final-paths1/cook`; package/readback and combined assembly are next.
-Poll the existing cook before continuing, do not restart it from this note.
-The installed accepted trial is unchanged. See CW's walking report.
+path mapping. Windows cook, standalone IoStore roundtrip and independent
+readback now pass, including exact compressed animation digests against the
+accepted installed trial. Receipts are under CW `work/walk-final-paths1`.
+Combined CW/shared assembly, 924-package/272-reference import checks, 434 native
+checks and 1,406 outfit checks pass. The final-path package is installed with the
+game closed, preserving the accepted motion, core, saved settings and other
+outfits. Receipt: CW `work/walk-final-paths1/assembly/installed.json`; rollback:
+`MortalShell2/Content/CSS-cw-walk-final-20261014`. The permanent paths still need
+a runtime resolution check on the next game session. Do not ask for subjective
+walking acceptance again unless behavior changes. Temporary cook/extraction
+trees are removed; immediate final df reports root 92G and theark 15G available.
+See CW's walking report and October 14 cleanup receipt. The full stable-release
+goal remains active, including lifecycle, performance and final delivery gates.
 
 **October 14, CW walking accepted:** in response to the installed walking-only
 trial's boots-on/off check, the user says "Walking looks right now". Close the
@@ -1273,6 +1282,13 @@ Commander White's current E9 facial replacement preserves 206 morphs and the opt
 **Exit:** before/after deformation evidence and import/cook readback show the intended improvement, with no unexplained skeletal, morph or attachment changes.
 
 ### Queued CW walking foot-alignment report
+
+**October 14 resolution:** the user accepts the walking-only correction after
+the boots-on/off prompt ("Walking looks right now"). The reported obvious tilt
+is closed at that scope. The accepted clips now have permanent outfit-owned
+paths and are installed; runtime resolution of those renamed paths, terrain
+and wider lifecycle/performance coverage remain separate. The investigation
+and acceptance criteria below record the original report.
 
 On October 9 the user reported Commander White's feet look tilted inward or
 sideways, most clearly while walking. Treat this as a visible motion defect

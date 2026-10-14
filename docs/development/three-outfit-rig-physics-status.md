@@ -3,8 +3,12 @@
 **October 14, CW walking accepted:** the user answered "Walking looks right
 now" to the installed walking-only trial's boots-on/off check. The reported
 obvious walking tilt is accepted as corrected for that check. Preserve accepted
-jog/sprint and belt/skirt behavior. Finalize private walk paths before stable
-delivery; terrain/lifecycle and performance remain separate requirements.
+jog/sprint and belt/skirt behavior. The exact accepted walk is now cooked,
+packaged and installed at permanent `Animations/Locomotion/Walk` paths. Combined
+imports, saved aliases and facial/playback metadata pass; no core or settings
+change. CW `work/walk-final-paths1/assembly/installed.json` is the current
+receipt. Runtime resolution of the renamed paths on the next game session,
+terrain/lifecycle and performance remain separate requirements.
 
 **October 14, facial preservation:** the current ten normal/facial pairs retain
 bind references and existing morphs. Eight have identical decoded render
