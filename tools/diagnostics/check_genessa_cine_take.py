@@ -1,4 +1,4 @@
-"""Run two stationary CINE portrait takes and restore the prior setup."""
+"""Run stationary CINE portrait takes and restore the prior setup."""
 import argparse
 import json
 from pathlib import Path
@@ -16,11 +16,19 @@ PRESET_ID = 'css-diagnostic-genessa-face-20261014'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--native', action='store_true',
+                        help='Check original Genessa body playback instead of both Unholy Genessa variants')
+    parser.add_argument('--cancel-at', type=float,
+                        help='Exit CINE at this clip time and require explicit-stop cleanup')
     parser.add_argument('--interrupt-at', type=float,
                         help='Change Genessa variant at this clip time and require a real interruption')
     args = parser.parse_args()
     if args.interrupt_at is not None and not 1 <= args.interrupt_at <= 10:
         parser.error('--interrupt-at must be between 1 and 10 seconds')
+    if args.native and args.interrupt_at is not None:
+        parser.error('The variant-interruption fixture applies to Unholy Genessa only')
+    if args.cancel_at is not None and (not 1 <= args.cancel_at <= 10 or args.interrupt_at is not None):
+        parser.error('--cancel-at must be between 1 and 10 seconds and cannot combine with --interrupt-at')
     out = args.output.resolve()
     installed = CSSX/'extensions/eins0fx.cine/presets'/f'{PRESET_ID}.cine.json'
 
@@ -57,9 +65,11 @@ def main():
     out.mkdir(parents=True)
     shutil.copyfile(__file__, out/'recipe.py')
     state = json.loads((CSS/'state/state.json').read_text())
-    memory = state['remembered_custom']['eins0fx.unholygenessa']
-    memory_variant = next((v for v in ('eve', 'genessa')
-                           if state['remembered_custom'].get('eins0fx.unholygenessa/'+v) == memory), None)
+    outfit = 'css.original_shells' if args.native else 'eins0fx.unholygenessa'
+    variants = ('genessa',) if args.native else ('eve', 'genessa')
+    memory = state['remembered_custom'][outfit]
+    memory_variant = next((v for v in variants
+                           if state['remembered_custom'].get(outfit+'/'+v) == memory), None)
     if memory_variant is None:
         raise RuntimeError('No unchanged variant can restore the outfit-level remembered customization')
     cine_state = json.loads((CSSX/'state/eins0fx.cine.json').read_text())
@@ -67,8 +77,11 @@ def main():
     atomic(out/'cine-before.json', cine_state)
     player = engine({'op': 'player'})
 
-    def call(target, function):
-        return engine({'op': 'call', 'target': target, 'function': function, 'args': {}})['ReturnValue']
+    def call(target, function, **fields):
+        return engine({'op': 'call', 'target': target, 'function': function, 'args': fields})['ReturnValue']
+
+    def get(target, prop):
+        return engine({'op': 'get', 'target': target, 'property': prop})
 
     def geometry():
         return dict(position=call(player['pawn'], 'K2_GetActorLocation'),
@@ -84,7 +97,13 @@ def main():
     atomic(out/'preset.json', preset)
     report = dict(passed=False, original=original, process_before=pids, geometry_before=before_geometry,
                   cases=[], movement_input=False, camera='Temporary CINE photo take', started_ns=time.time_ns(),
-                  interrupt_at=args.interrupt_at)
+                  interrupt_at=args.interrupt_at, cancel_at=args.cancel_at, native=args.native)
+    core = json.loads((CSS/'core.json').read_text())
+    assert core['file'] in Path(f'/proc/{pids[0]}/maps').read_text()
+    report['core'] = core
+    report['core_sha256'] = sha(CSS/'cores'/core['file'])
+    input_component = call(player['pawn'], 'GetSpartaInputComponent')
+    report['input_blocks_before'] = get(input_component, 'ActiveBlocks')
     target, expected = identity(original), original['customize']
     take_started = False
     installed_hash = None
@@ -100,19 +119,26 @@ def main():
         event('reload')
         event('preset', value=PRESET_ID)
         event('look', value='off')
-        for variant in ('eve', 'genessa'):
+        for variant in variants:
             guard()
             customize({'action': 'idle', 'value': 'eve'})
-            target = original['shell'], 'eins0fx.unholygenessa', variant
+            target = original['shell'], outfit, variant
             customize({'action': 'wear', 'outfit': target[1], 'variant': variant, 'persist': False})
             active = settled(target)
             expected = active['customize']
-            case = dict(variant=variant, samples=[], images=[], finished=False, interrupted=False)
+            case = dict(variant=variant, samples=[], images=[], finished=False, interrupted=False, cancelled=False)
             report['cases'].append(case)
+            if args.native:
+                mesh = get(player['pawn'], 'Mesh')
+                animation = call(mesh, 'GetAnimInstance')
+                case['native_mesh'] = call(mesh, 'GetSkeletalMeshAsset')
+                case['signatures'] = {name: engine({'op': 'describe', 'target': animation, 'function': name})
+                                      for name in ('GetCurrentActiveMontage', 'Montage_GetPosition')}
+                assert call(animation, 'GetCurrentActiveMontage') is None, 'Existing montage owns the native graph'
             event('take')
             take_started = True
             started = time.monotonic()
-            shot_at = [3., 10., 14.] if args.interrupt_at is None else []
+            shot_at = [3., 10., 14.] if args.interrupt_at is None and args.cancel_at is None else []
             own_token = None
             switch_sent = False
             while time.monotonic()-started < 45:
@@ -138,6 +164,25 @@ def main():
                 if p['active'] and p['id'] == 'css.eve.dance.irisout':
                     if own_token is None:
                         own_token = p['token']
+                    if args.native and p['token'] == own_token and p['weight'] == 1:
+                        montage = call(animation, 'GetCurrentActiveMontage')
+                        assert montage, 'Native performance has no live montage'
+                        sample = case['samples'][-1]
+                        sample['montage'] = montage
+                        sample['montage_seconds'] = call(animation, 'Montage_GetPosition', Montage=montage)
+                        if 'native_tracks' not in case:
+                            case['native_tracks'] = get(montage, 'SlotAnimTracks')
+                    if p['token'] == own_token and args.cancel_at is not None and p['seconds'] >= args.cancel_at:
+                        case['before_cancel'] = p
+                        case['cancel_model'] = event('exit')
+                        case['after_cancel'] = perf()
+                        assert not case['after_cancel']['active'], 'Explicit CINE exit left a performance active'
+                        assert case['after_cancel']['token'] == own_token, 'Performance owner changed at cancel'
+                        assert p['seconds'] < p['duration'], 'Cancel arrived after the clip ended'
+                        event('enter')
+                        take_started = False
+                        case['cancelled'] = True
+                        break
                     if p['token'] == own_token and shot_at and p['seconds'] >= shot_at[0]:
                         at = shot_at.pop(0)
                         css_capture.MEDIA = out
@@ -157,7 +202,9 @@ def main():
                     take_started = False
                     break
                 time.sleep(.35)
-            if args.interrupt_at is None:
+            if args.cancel_at is not None:
+                assert case['cancelled'], 'CINE take was not cancelled'
+            elif args.interrupt_at is None:
                 assert case['finished'], 'CINE take did not finish normally'
                 owned_samples = [s['performance'] for s in case['samples'] if s['performance']['token'] == own_token]
                 assert own_token is not None and max(s['seconds'] for s in owned_samples) > 16
@@ -170,10 +217,15 @@ def main():
             case['token'] = own_token
             case['geometry_after'] = geometry()
             assert case['geometry_after'] == before_geometry, 'Player/view ownership changed'
+            if args.native:
+                case['montage_after'] = call(animation, 'GetCurrentActiveMontage')
+                assert case['montage_after'] is None, 'Native performance montage did not release'
             case['passed'] = True
             atomic(out/'result.json', report)
-            print(variant, 'CINE appearance interruption pass' if args.interrupt_at is not None
-                  else 'CINE take and natural performance end pass', flush=True)
+            label = ('CINE explicit-stop cleanup pass' if args.cancel_at is not None else
+                     'CINE appearance interruption pass' if args.interrupt_at is not None else
+                     'CINE take and natural performance end pass')
+            print(variant, label, flush=True)
     except Exception as error:
         report['error'] = repr(error)
         raise
@@ -186,9 +238,9 @@ def main():
                 event('enter')
             event('preset', value=controls['preset'])
             event('look', value=controls['look'])
-            customize({'action': 'wear', 'outfit': 'eins0fx.unholygenessa', 'variant': memory_variant,
+            customize({'action': 'wear', 'outfit': outfit, 'variant': memory_variant,
                        'customize': memory, 'persist': False})
-            settled((original['shell'], 'eins0fx.unholygenessa', memory_variant), custom=memory)
+            settled((original['shell'], outfit, memory_variant), custom=memory)
             customize({'action': 'idle', 'value': original['idle_override']})
             customize({'action': 'wear', 'outfit': original['outfit'], 'variant': original['variant'],
                        'customize': original['customize'], 'persist': True})
@@ -207,6 +259,8 @@ def main():
             report['temporary_preset_removed'] = not installed.exists()
             report['geometry_after'] = geometry()
             assert report['geometry_after'] == before_geometry
+            report['input_blocks_after'] = get(input_component, 'ActiveBlocks')
+            assert report['input_blocks_after'] == report['input_blocks_before'], 'Input blocks did not restore'
             report['restored'] = True
         except Exception as error:
             report['restore_error'] = repr(error)
@@ -214,7 +268,7 @@ def main():
         finally:
             report['finished_ns'] = time.time_ns()
             report['process_after'] = processes()
-            report['passed'] = not report.get('error') and not report.get('restore_error') and all(c.get('passed') for c in report['cases']) and len(report['cases']) == 2
+            report['passed'] = not report.get('error') and not report.get('restore_error') and all(c.get('passed') for c in report['cases']) and len(report['cases']) == len(variants)
             atomic(out/'result.json', report)
     print(json.dumps({k: report[k] for k in ('passed', 'restored', 'saved_css_equal', 'saved_cine_equal')}))
 

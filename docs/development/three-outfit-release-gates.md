@@ -75,6 +75,9 @@ Accepted observations apply to their recorded test scope, not every variant.
   The [60-choice live idle check](../research/2026-10-15-native-idle-library.md)
   passes discovery and actual carrier bindings on original Genessa. It does not
   substitute for visual/contact, gait, full-clip or gameplay-interruption checks.
+  [Native Iris Out CINE](../research/2026-10-15-native-cine.md) now passes a full
+  take and explicit exit, with the correct montage released and state restored.
+  Other native clips, targets, facial support and gameplay remain separate.
 - Complete matched performance measurements, repeated-switch lifetime checks
   and investigation of any new hitch, crash or regression.
   The [30-case stationary outfit/facial check](../research/2026-10-14-outfit-switch-lifecycle.md)

@@ -1,5 +1,10 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, native CINE end and explicit exit pass:** original Genessa plays
+the full Iris Out take through the correct native montage and also releases it
+on an early CINE exit. Peony, saved CSS/CINE settings and exact player/view
+restore. [Evidence and remaining scope](../research/2026-10-15-native-cine.md).
+
 **October 15, all 60 native idle bindings pass live:** original Genessa lists
 every choice and selects the intended native sequence/carrier. All 240 carrier
 samples match, and 1,080 sampled bone positions are finite. Peony, full saved

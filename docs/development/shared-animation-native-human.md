@@ -1,5 +1,13 @@
 # Default human animation playback
 
+## October 15: native CINE end and cancellation pass
+
+Original Genessa completes a full Iris Out CINE take and an explicit-exit take.
+Both use the correct native montage segment and release it, restoring Peony,
+saved CSS/CINE settings and exact player/view transforms. The exit case also
+restores an empty input-block list. [Evidence and limits](../research/2026-10-15-native-cine.md).
+Other clips, full-body contact, native facial support and gameplay remain separate.
+
 ## October 15: all native idle choices bind in the live game
 
 All 60 native idle choices now pass menu discovery and actual animation-graph

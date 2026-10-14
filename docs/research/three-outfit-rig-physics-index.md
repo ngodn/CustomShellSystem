@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Native Genessa CINE](2026-10-15-native-cine.md): actual Iris Out natural completion and explicit exit release the correct native montage and restore Peony, saved settings and player/view. Other clips, facial support, contact and gameplay remain separate.
+
 - [Native idle library live bindings](2026-10-15-native-idle-library.md): all 60 choices resolve on original Genessa; 240 carrier samples match and 1,080 bone-position reads are finite. Peony, saved settings, CINE and player/view restore. Visual/contact, CINE and gameplay checks remain distinct.
 
 - [Sidearm gameplay input preparation](2026-10-15-sidearm-aim.md): keyboard input was rejected while the game was unfocused; an engine-command attempt also produced no aim. State and inputs remain restored. A focus preflight now rejects before runtime commands. Actual aim/fire/stow remains pending.
