@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 15, paired body-cost fixture completes:** 48 enabled/bypassed cases
+cover normal/facial Peony at 30/60/120 updates per second, with 28,800 measured
+updates and verified 120 Hz solver counters. Six existing input-handoff cases
+also pass (3,366 frames). [Evidence and timing limits](../research/2026-10-15-body-cost.md).
+Paired median added time is 0.21-0.59 ms in the editor fixture, with substantial
+variation. This does not close runtime FPS, cloth/GPU, other rigs or the full
+release performance gate. No game assets/settings changed; temporary build
+intermediates and DDC removed after successful verification.
+
 **October 14, live attachment check above 128 passes:** Peony completes three
 facial activation/restoration cycles with 129 direct children and 166 owned
 components. All 73 temporary empty components are removed, returning the exact

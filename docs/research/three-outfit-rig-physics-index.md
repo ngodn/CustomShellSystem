@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Paired body-solver timing](2026-10-15-body-cost.md): 48 editor cases and 28,800 measured updates at 30/60/120 Hz pass enable/bypass, step-count and finite-output checks. Existing six-case input regression passes. Timing variation prevents a precise runtime cost claim; no game settings or assets changed.
+
 - [Live attachment check above 128](2026-10-14-attachment-limit-live.md): three Peony facial/normal cycles pass at 129 direct children. Temporary components removed; original handles, attachments, settings and camera restored. Rendered-accessory cost and broader lifetime remain unproven.
 
 - [Default visibility profile restoration](2026-10-14-profile-default-restore.md): empty-map correction passes offline regression and actual world/preview profile loads after guarded installation. Exact settings and post-menu world restoration pass; wider migration remains open.

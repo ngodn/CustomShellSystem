@@ -1,6 +1,6 @@
 # Stable release and bug audit
 
-Updated 2026-10-14. Retains the user's October 12 release-scope correction.
+Updated 2026-10-15. Retains the user's October 12 release-scope correction.
 
 **Not release-ready.** Targets remain CSS v1.0.0, Eve v1.5.0, Unholy Genessa
 v0.3.0 and Commander White v0.1.0, with a separate compatible shared-assets ZIP.
@@ -79,6 +79,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   It has substantial tail variation, no matched comparator and no isolated
   rig/cloth or GPU timings. The game's trace interface exposes no channels.
   Performance acceptance, movement/transition and frame-rate coverage remain open.
+  The [paired editor body-cost fixture](../research/2026-10-15-body-cost.md)
+  now verifies 48 enabled/bypassed cases and 28,800 measured updates at
+  30/60/120 Hz. It estimates incremental body work with substantial variance;
+  it does not substitute for actual game frame-rate, cloth/GPU or other-rig checks.
 - Finish shared migration's live CSS/CINE and clean/upgrade coverage. The four
   [current-container compatibility cases](../research/2026-10-14-coordinated-upgrade-audit.md)
   now pass with current/mixed legacy Genessa and CW. They do not test save

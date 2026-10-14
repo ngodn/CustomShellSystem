@@ -16,5 +16,9 @@ public:
     static FString Evaluate(class USkeletalMesh* Mesh, class UAnimBlueprint* Blueprint, int32 Fps);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Diagnostics")
+    static FString MeasureBodyCost(class USkeletalMesh* Mesh, class UAnimBlueprint* Blueprint,
+        int32 Fps, bool BodyEnabled, int32 Frames);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Diagnostics")
     static FString CompareRestoreSnapshot(class USkeletalMesh* Mesh, class UAnimBlueprint* Blueprint);
 };

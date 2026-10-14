@@ -14,6 +14,99 @@
 
 IMPLEMENT_MODULE(FDefaultModuleImpl, CSSBodyInputs)
 
+FString UCSSBodyInputsLibrary::MeasureBodyCost(USkeletalMesh* Mesh, UAnimBlueprint* Blueprint,
+    int32 Fps, bool BodyEnabled, int32 Frames)
+{
+    auto Fail=[](const FString& Why) { return FString(TEXT("ERROR: "))+Why; };
+    if (!IsRunningCommandlet() || !IsInGameThread() || !Mesh || !Blueprint ||
+        !Blueprint->GeneratedClass || Mesh->GetSkeleton()!=Blueprint->TargetSkeleton ||
+        !Mesh->GetPathName().StartsWith(TEXT("/Game/CSS/")) ||
+        (Fps!=30 && Fps!=60 && Fps!=120) || Frames<120 || Frames>3600)
+        return Fail(TEXT("Invalid isolated timing fixture"));
+    FMemMark Mark(FMemStack::Get());
+    FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));
+    auto* Component=NewObject<USkeletalMeshComponent>();
+    Component->SetSkeletalMesh(Mesh);
+    Component->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    Component->SetOverridePostProcessAnimBP(TSubclassOf<UAnimInstance>(Blueprint->GeneratedClass.Get()),true);
+    Component->SetDisablePostProcessBlueprint(false);
+    Component->bDisableClothSimulation=true;
+    Component->bEnableUpdateRateOptimizations=false;
+    Scene.AddComponent(Component,FTransform::Identity);
+    Component->InitAnim(true);
+    auto* Instance=Component->GetPostProcessInstance();
+    if (!Instance) return Fail(TEXT("No post-process instance"));
+    auto* Enable=FindFProperty<FBoolProperty>(Instance->GetClass(),TEXT("CSSBodyEnabled"));
+    auto* Filter=FindFProperty<FArrayProperty>(FAnimNode_ControlRigBase::StaticStruct(),TEXT("OutputBonesToTransfer"));
+    if (!Enable || !Filter) return Fail(TEXT("Missing body contract"));
+    Enable->SetPropertyValue_InContainer(Instance,BodyEnabled);
+    TArray<TSharedPtr<FJsonValue>> Samples;
+    UControlRig* Body=nullptr;
+    int32 RigCount=0, PreviousSteps=-1;
+    const int32 Warmup=2*Fps;
+    for (int32 Frame=0; Frame<Warmup+Frames; ++Frame)
+    {
+        Component->SetWorldLocation(FVector(0,0,10*FMath::Sin(2*UE_PI*double(Frame)/Fps)));
+        const double Begin=FPlatformTime::Seconds();
+        Component->TickAnimation(Frame ? 1.f/Fps : 0.f,true);
+        const double Updated=FPlatformTime::Seconds();
+        // No tick function is supplied, so UE 5.6.1 evaluates synchronously.
+        Component->RefreshBoneTransforms();
+        const double End=FPlatformTime::Seconds();
+        if (Component->GetPostProcessInstance()!=Instance || Enable->GetPropertyValue_InContainer(Instance)!=BodyEnabled)
+            return Fail(TEXT("Instance or public enable changed"));
+        if (!Body)
+        {
+            for (TFieldIterator<FStructProperty> It(Instance->GetClass()); It; ++It)
+            {
+                if (It->Struct!=FAnimNode_ControlRig::StaticStruct()) continue;
+                ++RigCount;
+                auto* Node=It->ContainerPtrToValuePtr<FAnimNode_ControlRig>(Instance);
+                const auto& Bones=*Filter->ContainerPtrToValuePtr<TArray<FBoneReference>>(Node);
+                if (Bones.Num()==7)
+                {
+                    if (Body) return Fail(TEXT("Multiple body rig nodes"));
+                    Body=Node->GetControlRig();
+                }
+            }
+            if (!Body) return Fail(TEXT("No body rig"));
+        }
+        auto* RigEnable=FindFProperty<FBoolProperty>(Body->GetClass(),TEXT("Enabled"));
+        if (!RigEnable || RigEnable->GetPropertyValue_InContainer(Body)!=BodyEnabled)
+            return Fail(TEXT("Rig enable transfer failed"));
+        const int32 Steps=FCString::Atoi(*Body->GetVariableAsString(TEXT("TotalSteps")));
+        if (PreviousSteps>=0 && (BodyEnabled ? Steps<=PreviousSteps : Steps!=PreviousSteps))
+            return Fail(TEXT("Solver execution does not match enable state"));
+        PreviousSteps=Steps;
+        for (const FTransform& Bone : Component->GetComponentSpaceTransforms())
+            if (Bone.ContainsNaN()) return Fail(TEXT("Non-finite output bone transform"));
+        if (Frame>=Warmup)
+        {
+            auto Row=MakeShared<FJsonObject>();
+            Row->SetNumberField(TEXT("frame"),Frame-Warmup);
+            Row->SetNumberField(TEXT("update_ms"),(Updated-Begin)*1000);
+            Row->SetNumberField(TEXT("refresh_ms"),(End-Updated)*1000);
+            Row->SetNumberField(TEXT("total_ms"),(End-Begin)*1000);
+            Row->SetNumberField(TEXT("steps"),Steps);
+            Samples.Add(MakeShared<FJsonValueObject>(Row));
+        }
+    }
+    auto Result=MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("passed"),true);
+    Result->SetBoolField(TEXT("body_enabled"),BodyEnabled);
+    Result->SetNumberField(TEXT("fps"),Fps);
+    Result->SetNumberField(TEXT("warmup_frames"),Warmup);
+    Result->SetNumberField(TEXT("rig_count"),RigCount);
+    Result->SetStringField(TEXT("body_class"),Body->GetClass()->GetPathName());
+    Result->SetStringField(TEXT("limits"),Body->GetVariableAsString(TEXT("Limits")));
+    Result->SetStringField(TEXT("travel"),Body->GetVariableAsString(TEXT("MaxTravel")));
+    Result->SetStringField(TEXT("mesh"),Mesh->GetPathName());
+    Result->SetArrayField(TEXT("samples"),Samples);
+    FString Json;
+    FJsonSerializer::Serialize(Result,TJsonWriterFactory<>::Create(&Json));
+    return Json;
+}
+
 bool UCSSBodyInputsLibrary::SetBodyMovementLimits(UBlueprint* Blueprint,
     const TArray<float>& Angles, const TArray<float>& Travel)
 {

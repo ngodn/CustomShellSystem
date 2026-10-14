@@ -38,3 +38,19 @@ first loses Firm; the second preserves all three seven-region arrays. Evidence
 and commands are in `work/three-outfit-rig-physics/peony-v2-body-restore1`.
 This isolates restoration ordering. It does not execute CSS core, a playback
 adapter, or the game's UI event ordering.
+
+`MeasureBodyCost` and `tools/diagnostics/measure_body_graph_cost.py` add a
+separate synchronous editor timing fixture. It compares the actual body solver
+enabled and bypassed, checking the rig's enable value and step counter on every
+frame. Regional Off is not used as the bypass, because it suppresses output
+while the solver still executes. Four alternating-order pairs at 30/60/120 Hz
+cover normal/facial Peony, with two seconds of warmup and 600 measured frames per
+case. `verify_body_graph_cost.py` verifies the 48 cases, retained input hashes,
+120 Hz solver increments, accepted limits and paired timing summaries.
+
+The measured interval encloses `TickAnimation` and synchronous
+`RefreshBoneTransforms`, with cloth disabled and NullRHI. It includes all three
+secondary rigs and can include thread preemption. Paired differences estimate
+incremental body-solver work in this fixture, not shipped-game FPS, cloth/GPU
+cost or a baseline-versus-candidate release comparison. The October 15 commands,
+sources and results are retained in `work/three-outfit-rig-physics/body-cost-20261015`.
