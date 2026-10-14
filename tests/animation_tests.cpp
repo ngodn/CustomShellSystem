@@ -51,6 +51,31 @@ int main() {
         const auto beacon=resolve_animation(set.slots.at(AnimationSlot::Beacon),AnimationSlot::Beacon,"graceful");
         expect(beacon.option && !beacon.option->arrive.empty() && !beacon.hide_weapons,"Beacon pair incomplete");
 
+        auto adapted=definitions;
+        adapted["walk"][0]["id"]="css.eve.walk";
+        adapted["walk"][0]["aliases"]={"eve"};
+        adapted["walk"][0]["blend_space"]="/Game/CSS/CommanderWhite/BS_Walk.BS_Walk";
+        const auto adapted_set=AnimationSet::parse(adapted);
+        const auto& adapted_walk=adapted_set.slots.at(AnimationSlot::Walk);
+        const std::string old_walk="eve";
+        expect(resolve_animation(adapted_walk,AnimationSlot::Walk,old_walk).asset==adapted_walk[0].blend_space,
+               "Saved legacy walk did not resolve its outfit correction");
+        const auto adapted_menu=animation_menu(adapted_walk,AnimationSlot::Walk,&old_walk,false);
+        expect(adapted_menu.items.size()==3 && adapted_menu.items[adapted_menu.selected].id=="css.eve.walk",
+               "Legacy walk alias created a duplicate or unavailable menu row");
+        expect(resolve_animation(adapted_set.slots.at(AnimationSlot::Jog),AnimationSlot::Jog,old_walk).asset==
+               set.slots.at(AnimationSlot::Jog)[0].blend_space,"Walk alias changed jogging");
+        for(const auto& aliases:std::vector<Json>{"eve",Json::array({1}),Json::array({"original"}),
+                Json::array({"css.feminine"}),Json::array({"css.eve.walk"}),Json::array({"eve","eve"})}) {
+            auto bad=adapted;bad["walk"][0]["aliases"]=aliases;
+            rejects([&]{AnimationSet::parse(bad);});
+        }
+        for(bool alias_first:{false,true}) {
+            auto bad=adapted;bad["walk"].push_back(definitions["walk"][0]);
+            if(!alias_first) std::swap(bad["walk"][0],bad["walk"][1]);
+            rejects([&]{AnimationSet::parse(bad);});
+        }
+
         Json outfit=Json::parse(R"({
           "id":"eve","name":"Eve","shells":["CharacterId.Player.Shell.Genessa"],
           "variants":[

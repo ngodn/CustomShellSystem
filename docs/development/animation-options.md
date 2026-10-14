@@ -21,6 +21,16 @@ omitted slots inherit from the outfit, and an empty array disables an
 inherited slot. A missing outfit or variant never borrows another one's
 animations. IDs are unique within a slot. Display order follows the manifest.
 
+An option may declare `aliases`, an array of up to 32 previous saved IDs.
+Each alias resolves to that option without adding another menu row. IDs and
+aliases must be unique within the slot, and neither may use `original` or
+`css.feminine`. An outfit-specific replacement can retain a shared canonical
+ID and its older saved ID, for example `"id": "css.eve.walk"` with
+`"aliases": ["eve"]`. Its private BlendSpace then owns both selections for
+that outfit. Other outfits continue to resolve their own or shared assets.
+This requires the CSS build with manifest-alias support; older parsers reject
+the field. The field does not install or validate the referenced animation.
+
 ```json
 {
   "animations": {

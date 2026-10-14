@@ -1,5 +1,32 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW walking-only trial installed:** private eight-direction clips
+and a 36-sample blend now serve CW's existing Eve walk selection. The paired
+development core supports manifest aliases so both `eve` and `css.eve.walk`
+resolve to the correction without duplicate choices. Existing CW binary assets,
+jog/sprint, accepted belt/skirt, shared animation binaries, Eve and Genessa are
+preserved. Saved state and CINE files are unchanged. Developer mode remains on.
+
+Fresh-process directional replay and Windows cook/readback pass. A strict
+compressed local-preservation check fails at small differences despite unchanged
+raw non-foot keys; the separate surface audit bounds residual foot displacement
+below 0.247 mm and the neutral full-mesh residual below 1.666 mm. This qualifies
+the private trial, not a visible walking fix. Combined imports pass for 924
+packages and 272 references; native and outfit catalog/profile checks pass.
+The user has been asked to reopen and judge boots-on/off walking. Keep the foot
+bug open until that response, and finalize private study paths before release
+if accepted. Full stable-release scope and other outstanding gates remain active.
+
+Receipt: CW `work/foot-walk-orientation3/assembly/installed.json`; core
+`css_core-cw-walk-acab6363906f0e88.dll`; rollback
+`MortalShell2/Content/CSS-cw-walk-20261014`. CW `docs/walking-foot-report.md`
+records both rejected authoring/fixture checks and the successful final checks.
+Accounted-for rejected captures, temporary Wine prefix, full extracted package
+trees and obsolete validation caches were removed after the cleanup list was
+written. The current trial/source/evidence uses 2.9G on root. `df -h` across this
+work is root 99G to 97G available and theark unchanged at 15G. See CW
+`docs/cleanup-2026-10-14.md` for exact deletion receipts and logical byte totals.
+
 **October 14, private CW walking candidate:** a copied forward-walk sequence
 changes only raw foot rotations and preserves the imported retarget reference
 through a procedural save. Normal/facial 241-frame engine captures preserve

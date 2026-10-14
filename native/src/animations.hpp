@@ -21,6 +21,7 @@ struct AnimationOption {
     bool hide_weapons = false;
     // Resolved catalog metadata, never accepted from an outfit manifest.
     std::string library_identity;
+    // Manifest aliases and IDs retained when merging a shared library choice.
     std::vector<std::string> saved_aliases;
 };
 bool animation_choice_matches(const AnimationOption&,const std::string&);

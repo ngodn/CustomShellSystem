@@ -250,6 +250,21 @@ int main(int argc,char** argv) {
         expect(!resolve("eve",specialized,base).entry,"Alias silently changed weapon visibility");
         specialized=bundled;specialized[0].id="css.eve.idle";
         expect(!resolve("css.eve.idle",specialized,base).entry,"Shared identity took over an unaliased outfit choice");
+        {
+            auto owned=AnimationSet::parse(Json::parse(R"({"idle":[{
+                "id":"css.eve.idle","aliases":["eve"],"name":"Outfit idle",
+                "clip":"/Game/CSS/CommanderWhite/AN_Idle.AN_Idle","hide_weapons":true}]} )"));
+            const auto& options=owned.slots.at(AnimationSlot::Idle);
+            const auto merged_owned=merge_library_animation_options(libraries,AnimationSlot::Idle,options);
+            expect(merged_owned.size()==2 && merged_owned[0].library_identity.empty(),
+                   "Shared menu duplicated the outfit-owned canonical option");
+            for(const auto* id:{"eve","css.eve.idle"}) {
+                expect(resolve_animation(merged_owned,AnimationSlot::Idle,id).asset==options[0].clip,
+                       "Outfit alias selected a shared asset");
+                expect(!resolve(id,options,base).entry,
+                       "Shared resolver overrode an explicit outfit alias");
+            }
+        }
         auto alternatives=libraries;
         alternatives[0].entries[0].assets.push_back({"/Game/CSS/Locomotion/Wings/AN_Idle.AN_Idle",wings});
         match=resolve_library_animation(alternatives,AnimationSlot::Idle,"eve",bundled,wings);
@@ -484,6 +499,33 @@ int main(int argc,char** argv) {
                         expect(actual.option && actual.asset==declared.asset && actual.hide_weapons==declared.hide_weapons,
                                "Migrated choice changed its asset or weapon behavior");
                         const auto resolved=resolve_library_animation(packages.animation_libraries,slot,option.id,bundled,skeleton);
+                        if(!option.saved_aliases.empty()) {
+                            expect(actual.option->saved_aliases==option.saved_aliases && !resolved.entry,
+                                   "Outfit correction lost aliases or was overridden by the library");
+                            expect(resolve_animation(merged,slot,option.id).asset==actual.asset,
+                                   "Canonical outfit correction did not reach the merged menu");
+                            for(const auto& alias:option.saved_aliases) {
+                                expect(resolve_animation(bundled,slot,alias).asset==actual.asset &&
+                                       resolve_animation(merged,slot,alias).asset==actual.asset &&
+                                       !resolve_library_animation(packages.animation_libraries,slot,alias,bundled,skeleton).entry,
+                                       "Saved outfit alias bypassed its private correction");
+                                const auto old=resolve_library_animation(packages.animation_libraries,slot,alias,
+                                    legacy.slots.at(slot),fixture.at("old_skeleton").get<std::string>());
+                                expect(old.entry && old.entry->id==option.id,"Correction changed the saved choice identity");
+                                State state;
+                                state.selections["CharacterId.Player.Shell.Genessa"]={outfit,variant,{}};
+                                expect(set_animation_choice(state,packages,"CharacterId.Player.Shell.Genessa",outfit,
+                                    variant,slot,alias,skeleton),"Saved alias could not select its outfit correction");
+                                save_profile_snapshot(state,"corrected-walk");
+                                const auto restored=State::parse(state.json());
+                                expect(restored.animation_choices.get(outfit,variant,slot)==option.id &&
+                                       restored.presets.at("corrected-walk").animation_choices==restored.animation_choices,
+                                       "Corrected walk failed state/profile serialization");
+                            }
+                            expect(resolve_animation(merge_library_animation_options({},slot,bundled),slot,option.id).asset==actual.asset,
+                                   "Outfit correction depends on a shared catalog entry");
+                            continue;
+                        }
                         expect(resolved.entry && !resolved.candidates.empty() && !resolved.candidates.front().bundled,
                                "Migrated saved choice did not resolve through shared library");
                         const auto old=resolve_library_animation(packages.animation_libraries,slot,option.id,

@@ -41,14 +41,25 @@ AnimationSet AnimationSet::parse(const Json& value) {
         auto& options=result.slots[*slot];
         std::set<std::string> ids;
         for(const auto& entry:list) {
-            if(*slot==AnimationSlot::Idle) fields(entry,{"id","name","clip","by_weapon","hide_weapons"});
-            else if(*slot==AnimationSlot::Beacon) fields(entry,{"id","name","depart","arrive"});
-            else fields(entry,{"id","name","blend_space"});
+            if(*slot==AnimationSlot::Idle) fields(entry,{"id","aliases","name","clip","by_weapon","hide_weapons"});
+            else if(*slot==AnimationSlot::Beacon) fields(entry,{"id","aliases","name","depart","arrive"});
+            else fields(entry,{"id","aliases","name","blend_space"});
             AnimationOption option;
             option.id=entry.at("id").get<std::string>(); option.name=entry.at("name").get<std::string>();
             if(!valid_id(option.id) || option.id=="original" || option.id==feminine_animation_id || !ids.insert(option.id).second ||
                 option.name.empty() || option.name.size()>96)
                 throw std::runtime_error("Invalid or duplicate animation option");
+            if(entry.contains("aliases")) {
+                const auto& aliases=entry.at("aliases");
+                if(!aliases.is_array() || aliases.size()>32)
+                    throw std::runtime_error("Animation aliases must be an array of at most 32 IDs");
+                for(const auto& value:aliases) {
+                    const auto alias=value.get<std::string>();
+                    if(!valid_id(alias) || alias=="original" || alias==feminine_animation_id || !ids.insert(alias).second)
+                        throw std::runtime_error("Invalid or duplicate animation alias");
+                    option.saved_aliases.push_back(alias);
+                }
+            }
             if(*slot==AnimationSlot::Idle) {
                 if(entry.contains("clip")) option.clip=asset(entry,"clip");
                 option.hide_weapons=entry.value("hide_weapons",false);
