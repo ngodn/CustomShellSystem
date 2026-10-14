@@ -1906,5 +1906,20 @@
       }
     ],
     "pending": "Next authorized game session: Eve shading, cloth, facial/customization and full runtime/performance matrix. Stable public release still pending."
+  },
+  "motion_preservation": {
+    "passed": true,
+    "packages": 6,
+    "payloads": 12,
+    "pinned_inputs": 48,
+    "preset_cases": 36,
+    "preset_frames": 20196,
+    "receipts": [
+      {
+        "path": "build/eve-surface-package1/motion-preservation.json",
+        "sha256": "547674aeebeea9f6f88aed9ae242749e972d5f3e7c0838a1c09d8e0f036e6947"
+      }
+    ],
+    "scope": "Six motion packages preserved in the installed shading candidate. Retained body source, cook, decoded limits and prior preset fixture match. Supporting editor sources are retained; compiled ABP_Secondary remains preserved, not recompiled. No new live test or complete supporting-graph rebuild is claimed."
   }
 }

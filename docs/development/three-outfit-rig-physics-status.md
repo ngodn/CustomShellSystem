@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, accepted Eve motion preserved in the shading candidate:** all
+six body/hair/hand/secondary/feet packages retain their accepted twelve payloads.
+The tighter body source, reload, Windows cook and decoded limits match; retained
+supporting sources match the earlier 36-case preset fixture. Current installed
+Eve hashes match the verified candidate. [Evidence](../research/2026-10-14-eve-motion-preservation.md).
+No assets changed. The user asked about launching and was told the installed
+candidate is ready for a sunlight/shade check; no result has been received yet.
+Full source-rebuild, gameplay, performance and stable-release gates remain open.
+
 **October 14, combined Eve repair candidate installed:** the game was closed
 throughout installation and independent readback. Eve's trio and Shared Assets
 metadata now match the verified candidate. Previous trios are retained outside
