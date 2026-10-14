@@ -727,10 +727,9 @@ struct Core {
             auto selected = selections.find(appearance.shell);
             if (selected == selections.end()) { restore_pending = true; forget_current = true; }
             else { selected_outfit = selected->second.outfit; selected_variant = selected->second.variant; pending_custom=selected->second.custom; apply_pending = true; }
-            if(state.walk_animation!=preset.walk_animation) { state.walk_animation=preset.walk_animation; dirty=true; }
-            if(state.animation_choices!=preset.animation_choices) { state.animation_choices=preset.animation_choices; dirty=true; }
-            if(!preset.misc_rules.empty() && state.misc_rules!=preset.misc_rules) { state.misc_rules=preset.misc_rules; appearance.set_misc_rules(state.misc_rules); dirty=true; }
-            if(preset.doubles && state.doubles!=*preset.doubles) { state.doubles=*preset.doubles; dirty=true; }
+            const auto previous_misc=state.misc_rules;
+            if(restore_profile_settings(state,preset)) dirty=true;
+            if(state.misc_rules!=previous_misc) appearance.set_misc_rules(state.misc_rules);
             ui_refresh = true; report("Profile loaded: " + name);
         }
         else if(action=="delete_look" || action=="delete_profile") {

@@ -80,7 +80,17 @@ void save_profile_snapshot(State& state,const std::string& name) {
     if(!valid_id(name)) throw std::runtime_error("Use A-Z, 0-9, periods, underscores or hyphens; no spaces.");
     if(state.presets.size()>=64 && !state.presets.contains(name))
         throw std::runtime_error("All 64 profiles are used. Replace or delete a saved profile.");
-    state.presets[name]=Preset{state.selections,state.walk_animation,state.animation_choices,state.misc_rules,state.doubles};
+    state.presets[name]=Preset{state.selections,state.walk_animation,state.animation_choices,state.misc_rules,state.doubles,true};
+}
+bool restore_profile_settings(State& state,const Preset& preset) {
+    bool changed=false;
+    if(state.walk_animation!=preset.walk_animation) { state.walk_animation=preset.walk_animation; changed=true; }
+    if(state.animation_choices!=preset.animation_choices) { state.animation_choices=preset.animation_choices; changed=true; }
+    if((preset.has_misc_rules || !preset.misc_rules.empty()) && state.misc_rules!=preset.misc_rules) {
+        state.misc_rules=preset.misc_rules; changed=true;
+    }
+    if(preset.doubles && state.doubles!=*preset.doubles) { state.doubles=*preset.doubles; changed=true; }
+    return changed;
 }
 bool valid_asset(const std::string& s) {
     if (!s.starts_with("/Game/") || s.size() > 1024 || s.find("..") != s.npos) return false;
@@ -749,6 +759,7 @@ static Preset parse_preset(const Json& j) {
         // "run_animation" and then a jog/sprint pair, and neither had its stride
         // matched. Whatever a template holds, it loads as normal.
         result.misc_rules=parse_misc_rules(j.value("misc_rules",Json::object()));
+        result.has_misc_rules=j.contains("misc_rules") && j.at("misc_rules").is_object();
         if(j.contains("doubles")) result.doubles=DoublesOptions::parse(j.at("doubles"));
     } else result.selections=parse_selections(j);
     return result;
@@ -827,7 +838,8 @@ Json State::json() const {
     Json remembered = Json::object();
     for(const auto& [id,custom]:remembered_custom) remembered[id]=custom.json();
     for (const auto& [name, preset] : presets) {
-        presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}, {"animation_choices",preset.animation_choices.json()}, {"misc_rules", misc_rules_json(preset.misc_rules)}};
+        presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}, {"animation_choices",preset.animation_choices.json()}};
+        if(preset.has_misc_rules || !preset.misc_rules.empty()) presets_json[name]["misc_rules"]=misc_rules_json(preset.misc_rules);
         if(preset.doubles) presets_json[name]["doubles"]=preset.doubles->json();
     }
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},

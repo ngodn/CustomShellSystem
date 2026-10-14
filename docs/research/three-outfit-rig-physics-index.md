@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Default visibility profile restoration](2026-10-14-profile-default-restore.md): fixes empty-map restoration while preserving missing legacy fields. Offline regression, archived states, package catalogs and Windows build pass. Candidate not installed; live migration remains open.
+
 - [Peony stationary timing reference](2026-10-14-peony-stationary-cost.md): three captures and 3,133 records pass archive checks with unchanged boundary contexts/settings. Tail variation, missing trace channels and unmatched comparison keep the performance gate open.
 
 - [Repeated outfit/facial lifecycle](2026-10-14-outfit-switch-lifecycle.md): 30 cases across all ten appearances retain identical component/attachment handles and restore meshes, owners, settings and camera. Live counts above 128, wider lifecycle and performance remain open.

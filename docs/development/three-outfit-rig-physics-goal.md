@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Default visibility profile defect corrected offline:** restoring
+an explicitly empty MISC snapshot now clears later visibility overrides, while
+legacy profiles without MISC retain current settings. The failing reproduction
+now passes, as do 26 host suites, 12 profile restore cases across three archived
+states, four package catalog cases and the Windows core build.
+[Evidence](../research/2026-10-14-profile-default-restore.md).
+Core-only candidate retained, not installed. Live profile application, broader
+save/CINE migration and the full stable-release matrix remain open.
+
 **October 14, stationary Peony timing reference recorded:** three 15-second
 captures contain 3,133 verified records with equal appearance/view boundaries
 and unchanged saved settings, process and core. Interval medians are

@@ -202,6 +202,7 @@ struct Preset {
     AnimationChoices animation_choices;
     std::map<std::string, MiscRule> misc_rules;
     std::optional<DoublesOptions> doubles;
+    bool has_misc_rules = false; // An explicit empty map restores Default; old profiles may omit it.
 };
 bool valid_walk_animation(const std::string&);
 // 1.0.0-beta: Profile is the full character snapshot across all systems
@@ -230,6 +231,7 @@ struct State {
 };
 State load_state(const fs::path&, bool* recovered = nullptr);
 void save_profile_snapshot(State&,const std::string& name);
+bool restore_profile_settings(State&,const Preset&);
 std::string appearance_selection_key(const State&,const Catalog&,const std::string& shell);
 bool set_animation_choice(State&,const Catalog&,const std::string& shell,
     const std::string& outfit,const std::string& variant,AnimationSlot,const std::string& choice,

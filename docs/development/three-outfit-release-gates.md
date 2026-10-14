@@ -21,6 +21,7 @@ historical rehearsal and is not the stable release tag.
 | Peony oversized/detached/broken outfit | Corrected V2 source, fit accepted in CSS and world | Preserve accepted candidate; remaining regression matrix |
 | Peony pockets, robotic ornaments, neckline | Included in the accepted V2 design, with requested gloves/collar/heels/ponytail retained | Preserve accepted appearance |
 | Peony palettes, removable pieces, flowing trim, profiles | User accepts four palettes, flow in CSS/world and restored profiles | Both-form and broader lifecycle coverage |
+| Profile saved at Default visibility retains later overrides | Empty MISC snapshot defect reproduced and corrected offline; legacy missing-field behavior preserved. 26 host suites, three archived states, four catalog cases and Windows build pass | Core-only candidate not installed; verify actual profile action and world/menu visibility restoration |
 | Peony excessive jiggle despite Firm/Natural | Restoration correction and tighter limits installed; user accepts walking/Iris Out motion, live limit readback passes | Other six Eve variants and lifecycle/performance regression |
 | Peony harsh lighting | User subsequently reports the unchanged build looks fine | No lighting fix established; monitor recurrence separately from sunlight report |
 | Older Eve tangent basis | All six regular/facial pairs now pass source, cook, cloth, customization and combined package preservation checks at permanent paths; source and native-material inputs are verified | Candidate installed offline with rollback and unchanged core/settings. Runtime shading/cloth/facial and performance regression remain; not a proven sunlight-noise fix |
@@ -82,6 +83,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   [current-container compatibility cases](../research/2026-10-14-coordinated-upgrade-audit.md)
   now pass with current/mixed legacy Genessa and CW. They do not test save
   migration or deliver the new stable Genessa/CW versions.
+  The [profile Default visibility correction](../research/2026-10-14-profile-default-restore.md)
+  now passes offline settings restoration with three archived user states.
+  Installation and live profile application remain pending; this does not close
+  save migration or missing-mod/reinstall coverage.
 - Prepare coordinated stable artifacts only after applicable gates pass or the
   user explicitly accepts a remaining limitation. Verify final versions,
   dependency fingerprints, source/tag/build provenance, checksums and notes.

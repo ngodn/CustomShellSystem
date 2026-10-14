@@ -14,7 +14,63 @@ static void rejected(css::State& state,const std::string& name,const std::string
     check(error==reason,"Save did not explain the specific name/capacity error");
     check(state.json()==before,"Rejected profile save changed state");
 }
-int main() {
+int main(int argc,char** argv) {
+    {
+        css::State defaults;
+        defaults.darkform_mirror_cleaned=true;
+        css::save_profile_snapshot(defaults,"all-default");
+        auto loaded=css::State::parse(defaults.json());
+        loaded.misc_rules["sidearms"]={"in_use"};
+        loaded.misc_rules["seal"]={"hidden"};
+        check(css::restore_profile_settings(loaded,loaded.presets.at("all-default")),
+              "Loading an explicit Default visibility profile did not report a change");
+        check(loaded.misc_rules.empty(),"Default visibility profile retained later overrides");
+        check(!css::restore_profile_settings(loaded,loaded.presets.at("all-default")),
+              "Loading the same profile again dirtied state");
+        for(const css::Json invalid:{css::Json{},css::Json::array(),css::Json("default")}) {
+            auto malformed=defaults.json();
+            malformed["presets"]["all-default"]["misc_rules"]=invalid;
+            auto recovered=css::State::parse(malformed);
+            recovered.misc_rules["seal"]={"hidden"};
+            css::restore_profile_settings(recovered,recovered.presets.at("all-default"));
+            check(recovered.misc_rules.at("seal").mode=="hidden",
+                  "Malformed profile visibility data cleared valid current settings");
+        }
+        for(const bool bare:{false,true}) {
+            auto legacy=defaults.json();
+            auto& profile=legacy["presets"]["all-default"];
+            if(bare) profile=profile.at("selections").get<css::Json>();
+            else profile.erase("misc_rules");
+            auto old=css::State::parse(legacy);
+            check(!old.presets.at("all-default").has_misc_rules,"Legacy profile invented visibility settings");
+            check(!old.json()["presets"]["all-default"].contains("misc_rules"),
+                  "Saving a legacy profile invented a Default visibility reset");
+            old=css::State::parse(old.json());
+            old.misc_rules["seal"]={"hidden"};
+            old.doubles={false,false};
+            const auto before=old.misc_rules;
+            css::restore_profile_settings(old,old.presets.at("all-default"));
+            check(old.misc_rules==before,"Legacy profile reset visibility it never stored");
+            if(bare) check(!old.doubles.faithful_css && !old.doubles.stray_css,
+                           "Bare legacy profile reset doubles it never stored");
+        }
+        defaults.misc_rules["seal"]={"hidden"};
+        defaults.walk_animation="feminine";
+        defaults.animation_choices.outfits["eins0fx.commanderwhite"]["original"][css::AnimationSlot::Walk]="eve";
+        defaults.doubles={false,true};
+        css::save_profile_snapshot(defaults,"custom");
+        loaded=css::State::parse(defaults.json());
+        loaded.misc_rules.clear();
+        loaded.walk_animation="normal";
+        loaded.animation_choices={};
+        loaded.doubles={true,false};
+        const auto saved=loaded.presets.at("custom");
+        check(css::restore_profile_settings(loaded,saved),"Custom profile did not restore settings");
+        check(loaded.misc_rules==defaults.misc_rules && loaded.walk_animation==defaults.walk_animation &&
+              loaded.animation_choices==defaults.animation_choices && loaded.doubles==defaults.doubles,
+              "Custom profile lost a saved visibility, animation or doubles setting");
+        check(loaded.json()["presets"]==defaults.json()["presets"],"Loading a profile rewrote stored profiles");
+    }
     check(css::ProfileSaveShortcut::key=="Enter","Save prompt uses a text-inserting key");
     css::ProfileSaveShortcut shortcut;
     check(!shortcut.update(true,false),"Entering the profile tab submitted a save");
@@ -48,5 +104,32 @@ int main() {
     state.presets.erase("profile.1");
     css::save_profile_snapshot(state,std::string(96,'a'));
     check(css::State::parse(state.json()).presets.size()==64,"Maximum-length valid name failed");
-    std::cout<<"Profile validation, snapshots, round trips and capacity checks passed\n";
+    size_t snapshots=0,profiles=0;
+    for(int i=1;i<argc;++i) {
+        const auto input=css::read_json(argv[i]);
+        const auto base=css::State::parse(input);
+        const auto canonical=base.json();
+        check(css::State::parse(canonical).json()==canonical,"Archived snapshot failed a second round trip");
+        for(const auto* key:{"selections","animation_choices","presets","remembered_custom","favorites","misc_rules","doubles"})
+            if(input.contains(key)) check(canonical.at(key)==input.at(key),"Archived saved settings changed on load");
+        for(const auto& [name,profile]:base.presets) {
+            auto working=base;
+            css::restore_profile_settings(working,profile);
+            check(working.walk_animation==profile.walk_animation && working.animation_choices==profile.animation_choices,
+                  "Archived profile animation choices changed on restore");
+            if(profile.has_misc_rules || !profile.misc_rules.empty())
+                check(working.misc_rules==profile.misc_rules,"Archived profile visibility changed on restore");
+            else check(working.misc_rules==base.misc_rules,"Archived legacy profile reset visibility");
+            check(working.doubles==profile.doubles.value_or(base.doubles),"Archived profile doubles changed on restore");
+            check(working.json()["selections"]==canonical["selections"] &&
+                  working.json()["remembered_custom"]==canonical["remembered_custom"] &&
+                  working.json()["presets"]==canonical["presets"],
+                  "Restoring global profile settings changed appearances or stored profiles");
+            check(!css::restore_profile_settings(working,profile),"Repeated archived profile restore dirtied state");
+            ++profiles;
+        }
+        ++snapshots;
+    }
+    std::cout<<"Profile validation, snapshots, round trips and capacity checks passed; "
+             <<snapshots<<" archived snapshots and "<<profiles<<" stored profiles checked\n";
 }
