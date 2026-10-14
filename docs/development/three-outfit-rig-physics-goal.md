@@ -24,6 +24,11 @@ the saved form flag only when the game mode permits session resume. Resume also
 gates saved Resolve. Its current live getter returns false; other loads remain
 unverified. Native save scheduling and a persistence-preserving override are
 still under investigation, using the retained `native-save1` analysis job.
+Independent static disassembly now links SaveSession, SaveToDisk and AutoSave
+to a common routine. Live reflection confirms GetSessionSave returns the runtime
+session object, and exposes an outdated SaveToDisk signature in the older native
+header dump. The exact serialization boundary and lifecycle remain unverified;
+no override or persistence hook is installed.
 
 **October 15, latest requested shot confirmed:** Peony fires Naylshotte with a
 100-to-72 Resolve drop; stowing hides its permanent Burn effect. Current view,

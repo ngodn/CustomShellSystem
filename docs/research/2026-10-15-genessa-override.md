@@ -9,7 +9,8 @@ alone cannot establish that a real form change has no game-save impact.
 Evidence lives in
 `work/three-outfit-rig-physics/genessa-revival-block-20261015/`.
 The installed core is `4a4402a210f4d1e8`, with developer probing enabled.
-Only getters and cooked-package extraction were used for this investigation.
+Only getters, reflected metadata, cooked-package extraction and static executable
+analysis were used for this investigation.
 No upgrade, gameplay effect, save object or autosave setting was changed.
 
 `override-packages.json` independently decodes five packages using the existing
@@ -127,6 +128,49 @@ there is no native result to cite. Follow the existing process rather than
 starting another import. These are per-command settings; no global tool or
 game configuration changed. The supported controls are documented in
 [REA's installation guide](https://github.com/morluto/rea/blob/main/docs/installation.md#ghidra).
+
+## Current executable and live session getter
+
+The older `CXXHeaderDump/Sparta.hpp` is not authoritative for the current native
+save ABI. `native-save1/save-signatures.json` captures the live reflected
+`SaveToDisk` signature with only `bSaveAsync`, whereas the older header declares
+three arguments. No save function was invoked to discover this difference.
+Use live metadata for calls and verify native layouts against this executable.
+
+`native-save1/locate_tables.py` identifies candidate UE name/function-pointer
+pairs in the exact SHA-256-pinned PE above. It retains duplicate candidates,
+neighboring entries and a negative-name control with no matches in
+`native-table-candidates.json`. Class attribution cannot follow from a name pair
+alone. Bounded GNU objdump captures corroborate the save wrappers and their
+argument handling:
+
+- The `SaveSession` wrapper at `0x145b10260` branches to `0x145cce440`, which
+  sets both byte arguments to one and branches to `0x145cce600`.
+- `SaveToDisk` at `0x145b10280` reads one boolean, then calls `0x145cce5f0`.
+  That sets the third argument to one and branches to the same routine.
+- `AutoSave` at `0x145b0e8e0` branches through `0x145cc4600`. After object
+  checks, it reaches the same routine with both byte arguments set to one.
+- `GetSessionSave` at `0x145b0fa60` calls `0x142101b90`, which returns the
+  pointer at subsystem offset `0x100`. The older header uses different offsets.
+
+The independent read-only receipt `session-getter-readonly.json` compares the
+actual reflected getter result with both named properties. It matches
+`RuntimeSessionSaveObject`, not `SessionSaveObject`, on this live subsystem.
+The common routine's retained window contains a conditional virtual call on
+that offset's object followed by passing it to `0x145c32ba0`. These calls have
+not yet been attributed to pre-save or serialization, so they do not establish
+a safe interception boundary. Shared entry paths also do not prove when the
+autosave timer fires or whether every call writes a session record.
+
+All addresses are static image virtual addresses for this exact build, not
+runtime hook addresses. `read_function.py` retains the command, hash, range and
+stderr beside each assembly file. PE exception-table entries can describe only
+function fragments; explicit windows are labeled as such, including the
+3,300-byte window beginning at `0x145cce600`. The helpers use the documented
+[PE section and RVA mapping](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format)
+and [GNU objdump address bounds](https://sourceware.org/binutils/docs/binutils/objdump.html).
+These are static artifact findings, separate from the still-running REA import.
+No override, save hook, effect mutation or game configuration change was made.
 
 ## Implementation constraints
 
