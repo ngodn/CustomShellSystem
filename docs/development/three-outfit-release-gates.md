@@ -30,7 +30,7 @@ historical rehearsal and is not the stable release tag.
 | Older Eve tangent basis | All six regular/facial pairs now pass source, cook, cloth, customization and combined package preservation checks at permanent paths; source and native-material inputs are verified | Candidate installed offline with rollback and unchanged core/settings. Runtime shading/cloth/facial and performance regression remain; not a proven sunlight-noise fix |
 | Customize shows only Ground Height after form switch | Mirrored-selection fix installed; user accepts recovery | Preserve through remaining lifecycle checks |
 | First Stray summon produces no doubles | User confirms first-switch summon works after selection fix; live clone capture exists | Original cause was not isolated; do not claim a proven independent spawn fix |
-| Native Black Hole/Iris Out marked Unavailable | Native alternatives installed; user accepts both playing and interrupting | Full library contact, continuous playback and CINE validation |
+| Native Black Hole/Iris Out marked Unavailable | Native alternatives installed; user accepts both playing and interrupting. All 60 native idle choices now pass live discovery and actual carrier/sequence binding on original Genessa, with exact restoration | Full library contact, continuous playback, other native meshes and CINE validation |
 | Genessa face and visibility after outfit changes | Owner-restoration/visibility fix installed; cross-character Iris Out and interruption accepted. Both UG variants pass numeric Iris Out/Come Closer tracks, explicit-stop restoration and full Iris Out CINE takes after the natural-end repair | Broader facial/lighting visuals, other directed clips, gameplay interruption, both forms and doubles matrix |
 | Genessa rear cloth | World correction accepted; preview clipping explicitly accepted for now | Other poses/variants and cost, without reopening accepted preview limitation |
 | CW hair | User accepts installed strand trial and tested face/eyes/interruption | CINE, doubles, full lifecycle and measured cost |
@@ -72,6 +72,9 @@ Accepted observations apply to their recorded test scope, not every variant.
   interruption at natural end. Six close-ups do not close the lighting gate.
 - Finish locomotion review. All 59 additional native alternatives were authored
   and installed; validation remains. Do not redo conversion as if it were absent.
+  The [60-choice live idle check](../research/2026-10-15-native-idle-library.md)
+  passes discovery and actual carrier bindings on original Genessa. It does not
+  substitute for visual/contact, gait, full-clip or gameplay-interruption checks.
 - Complete matched performance measurements, repeated-switch lifetime checks
   and investigation of any new hitch, crash or regression.
   The [30-case stationary outfit/facial check](../research/2026-10-14-outfit-switch-lifecycle.md)

@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Native idle library live bindings](2026-10-15-native-idle-library.md): all 60 choices resolve on original Genessa; 240 carrier samples match and 1,080 bone-position reads are finite. Peony, saved settings, CINE and player/view restore. Visual/contact, CINE and gameplay checks remain distinct.
+
 - [Sidearm gameplay input preparation](2026-10-15-sidearm-aim.md): keyboard input was rejected while the game was unfocused; an engine-command attempt also produced no aim. State and inputs remain restored. A focus preflight now rejects before runtime commands. Actual aim/fire/stow remains pending.
 
 - [Naylshotte Burn visibility controls](2026-10-15-sidearm-effect-visibility.md): mesh-only hiding reproduces lingering orange Burn; hiding the owner removes it while preserving infusion. Twelve phases and 36 rendering observations pass with exact restoration. Natural aim/fire/stow and effect replacement remain open.

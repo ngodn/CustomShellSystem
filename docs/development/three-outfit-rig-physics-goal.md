@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, all 60 native idle bindings pass live:** original Genessa lists
+every choice and selects the intended native sequence/carrier. All 240 carrier
+samples match, and 1,080 sampled bone positions are finite. Peony, full saved
+state, CINE and exact player/view transforms restore. [Evidence and limits](../research/2026-10-15-native-idle-library.md).
+The three gait choices, native CINE, visual/contact and gameplay-interruption
+checks remain distinct. No assets or installed binaries changed.
+
 **October 15, sidearm gameplay test awaits focus:** the keyboard helper rejected
 input because the game was not foregrounded. An engine-command attempt also
 produced no aim. Neither is a gameplay pass; exact saved state, infusion, CINE,

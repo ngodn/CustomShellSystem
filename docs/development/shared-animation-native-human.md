@@ -1,5 +1,15 @@
 # Default human animation playback
 
+## October 15: all native idle choices bind in the live game
+
+All 60 native idle choices now pass menu discovery and actual animation-graph
+binding on original Genessa. The 240 live carrier samples point to the expected
+native sequences; 1,080 sampled bone positions are finite. Peony, saved settings,
+CINE and exact player/view transforms restore. [Evidence](../research/2026-10-15-native-idle-library.md).
+No conversion or recook was repeated. The 63-entry inventory distinguishes these
+60 checks from the three gait choices not exercised in this stationary run.
+Full-clip, contact, visual, native CINE and gameplay-interruption checks remain.
+
 ## October 9: missing native idle carriers found in gameplay
 
 The user reports `Unavailable` for the new choices. The installed log confirms
