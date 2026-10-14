@@ -1,5 +1,15 @@
 # Three-outfit rig and physics research index
 
+- October 14: CW's private walking correction is installed, awaiting boots-on/off
+  visual judgement. Eight corrected clips retain all 395 retarget-reference
+  transforms through procedural saving and Windows cooking. A copied-struct
+  blend binding mistake was caught and repaired. Strict non-foot compressed-pose
+  equality fails, while the separate surface audit limits unintended foot motion
+  to 0.247 mm and bounds the neutral mesh residual at 1.666 mm. Saved-ID alias,
+  profile and combined catalog checks pass; jog/sprint and accepted belt/skirt
+  assets remain unchanged. See CW `docs/walking-foot-report.md` and
+  `work/foot-walk-orientation3`. This is a trial, not a closed foot bug.
+
 - October 14: user accepts current CW belt/skirt walking and turning. Live
   Belt20 execution, Iris Out footage and nine successful shape-input cases
   are retained in `cw-belt-live1`. Exact saved-state recovery is verified

@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, installed inventory refreshed:** readback pins all ten appearances
+(the original nine plus Peony), twenty normal/facial meshes and 1,021 unique
+exported packages across the four installed containers. Facial-adapter source
+fingerprints and mesh skeleton/physics/graph ownership pass. No duplicate
+providers occur within these containers; retired Astral/Locomotion TOCs are
+absent. Installed files and the selected core remained unchanged. This is an
+identity audit, not new gameplay or source-provenance acceptance. See
+[installed inventory](three-outfit-installed-inventory.md). CW walking still
+awaits the user's response to the installed trial. Root has 97G available and
+theark 15G after the audit; no full asset trees were copied.
+
 **October 14, CW walking-only trial installed:** private eight-direction clips
 and a 36-sample blend now serve CW's existing Eve walk selection. The paired
 development core supports manifest aliases so both `eve` and `css.eve.walk`

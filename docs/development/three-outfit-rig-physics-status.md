@@ -1,5 +1,18 @@
 # Three-outfit implementation status
 
+**October 14, walking-only trial installed:** CW now has a private eight-clip
+walking blend. Saved `eve` and `css.eve.walk` selections resolve to that blend
+through explicit manifest aliases in core `acab6363906f0e88`. Existing CW mesh,
+rig and garment binaries, jog/sprint, shared animation binaries and other outfit
+packages are unchanged. The user has been asked to check boots-on/off walking;
+visible tilt acceptance remains open. Windows cook, independent readback,
+924-package import audit and actual catalog/profile tests pass. The strict local
+pose screen is not an exact-preservation pass: separate surface checks bound
+unintended foot displacement below 0.247 mm and the neutral whole-mesh residual
+below 1.666 mm. See CW `docs/walking-foot-report.md` and
+`work/foot-walk-orientation3/assembly/installed.json`. Rollback is
+`MortalShell2/Content/CSS-cw-walk-20261014`. Developer mode remains enabled.
+
 **October 14, CW walking still fails:** the user accepts jog and sprint but
 still sees obvious foot tilt while walking. The four ankle/toe AnimationRelative
 modes are installed, but have not resolved the walking report. Preserve the
@@ -2025,18 +2038,18 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 
 | Workstream | Current state |
 | --- | --- |
-| Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
-| Mesh/weights/contacts | All 18 current normal/facial meshes pass normalized-weight and influence-index checks. Genessa world rear-panel repair accepted on the tested appearance; menu clipping explicitly accepted for now. Continuous contact and both-variant coverage remain |
+| Ten-appearance provenance | October 14 inventory pins all 20 installed normal/facial meshes, adapter fingerprints and 1,021 unique package owners. Earlier source audit pinned 16 editable mesh identities and candidates or alias recipes for all 790 migration paths. Final Blender-to-cook recipe comparisons remain; see [installed inventory](three-outfit-installed-inventory.md) |
+| Mesh/weights/contacts | Earlier normalized-weight and influence-index checks passed for 18 meshes at their recorded revisions. The new 20-mesh inventory records surface/morph digests without extending that weight result. Genessa world rear-panel repair accepted on the tested appearance; menu clipping explicitly accepted for now. Continuous contact and both-variant coverage remain |
 | Unholy facial support | Two adapters, 21 presets and six facial performances integrated. User accepts Iris Out faces/eyes and attack/aim interruption while switching Eve, Genessa and Commander White. Exact variants unspecified; both Genessa variants and CINE still need explicit coverage |
-| Shared organization | Four coordinated packages installed. CW integration audit resolves 864 packages; 426 native catalog and 1,396 outfit checks pass. Public IDs and legacy aliases retained; earlier 28 dependency scenarios pass. Clean/upgrade documentation and CINE live acceptance remain |
+| Shared organization | Four coordinated packages installed. CW walking integration audit resolves 924 packages and 272 references; 434 native catalog and 1,406 outfit assertions pass. Public IDs and legacy aliases retained; earlier 28 dependency scenarios pass. Clean/upgrade documentation and CINE live acceptance remain |
 | Locomotion | All 63 native alternatives installed, including carriers for 60 Idle Animation choices. Black Hole and Iris Out play and interrupt on the tested original human appearance. Remaining visible contact, continuous motion and CINE review pending |
 | Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
 | Hair | Genessa unused-solver candidate is installed; matched cost remains. CW separate-strand trial is installed and the user reports it looks fine. Both normal/facial regular and scene graphs pass paired component lifecycle checks. Two source-visible left-bang head-turn intersections improve but remain. CINE/doubles, full lifecycle and measured gameplay cost remain; see [CW study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md) |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
-| CW walking feet | October 14 user check: jog and sprint are fine, walking still visibly tilts. Four ankle/toe AnimationRelative modes are installed; full-leg retargeting and native IK bypass were rejected. Prior boots-on/off report remains relevant. Preserve accepted gaits and pursue a walking-specific correction. See [foot investigation](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/walking-foot-report.md) |
+| CW walking feet | October 14 user check accepts jog/sprint but reports walking tilt. A later walking-only trial is installed and awaits boots-on/off visual acceptance. Four ankle/toe AnimationRelative modes remain; full-leg retargeting and native IK bypass were rejected. Accepted gaits and belt/skirt assets are preserved. See [foot investigation](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/walking-foot-report.md) |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: investigate the reported CW walking-foot tilt, then complete CW
+Next: collect visual acceptance for the installed CW walking trial, then complete CW
 CINE/doubles and matched performance checks, retaining the Genessa
 unused-hair-solver acceptance gap. Native conversion authoring
 is complete; remaining native work is validation, not conversion. Preserve the

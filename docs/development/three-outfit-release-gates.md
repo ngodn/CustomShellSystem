@@ -29,14 +29,14 @@ historical rehearsal and is not the stable release tag.
 | Genessa face and visibility after outfit changes | Owner-restoration/visibility fix installed; cross-character Iris Out and interruption accepted | Both Genessa variants, CSS/CINE, both forms and doubles matrix |
 | Genessa rear cloth | World correction accepted; preview clipping explicitly accepted for now | Other poses/variants and cost, without reopening accepted preview limitation |
 | CW hair | User accepts installed strand trial and tested face/eyes/interruption | CINE, doubles, full lifecycle and measured cost |
-| CW inward/sideways walking feet | Four-bone reference-alignment trial installed; booted/bare short walks restore state; six editor gait cases improve mean bank but some phases worsen; sparse world-contact measurements retained | Full-cycle gameplay, terrain and visual acceptance; preserve native IK and original rollback |
-| CW belt physics and janky skirt | Belt20 and matching normal/facial scene adapters installed with rollback; offline poses, body-shape contacts, cooked assets and catalog checks recorded; image approval provisional | Live belt contact/recovery/cost; separate skirt baseline and motion diagnosis |
+| CW inward/sideways walking feet | User accepts jog/sprint but rejects walk. A walking-only eight-clip correction is now installed with saved-ID aliases; cooked data, bounded surface residual and catalog/profile checks pass | Boots-on/off visual acceptance, full-cycle gameplay and terrain; finalize private clip paths if accepted; preserve native IK and rollback |
+| CW belt physics and janky skirt | User accepts both while walking/turning. Live Belt20 execution and nine shape-input routing cases pass, with exact saved-state restoration | Extreme-shape visual checks, lifecycle and matched cost; preserve accepted physics and stop solver tuning |
 | CW dev/Development display qualifiers | Clean Commander White manifest/catalog name and description installed; packaging recipes updated; assets and IDs unchanged | Final stable version/archive filenames and release text; historical releases remain immutable |
 | More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children | Live recovery/facial behavior above 128 and repeated-switch leak/lifetime checks |
 | Vistani moving sunlight reflection noise | Default-off MISC source-angle workaround installed; live 4 to 0.5357 to 4 restoration, actual UI clicks and persistence pass; cold-load ownership failure fixed and tested; sharper shadows visible; user acceptance pending | Verify maps, continuous motion and cost before public delivery; no CVar mutation; do not describe workaround as a proven engine correction |
 | Local core reload temporarily loses shared animation/facial availability | Reproduced during CW checks; later rescan experiment crashed in an animation subsystem; cold recovery passes; three controlled reload cycles with class inventories did not reproduce it | Root cause remains unconfirmed; preserve instrumented reproducer and crash evidence; the existing dump lacks the failing class memory |
 | Genessa Stray to Faithful after another save | Reported, not reproduced; offline native flow mapped and passive capture prepared | Actual two-save capture, same-save/fresh-launch comparison and valid-transition regression |
-| Naylshotte hidden Tarstone effect | Reported with Barrage/Emberseed; shipped assets identify the permanent Burn component path; live cause unconfirmed | Prepared read-only capture must identify the actual lingering object and flags before a repair; preserve infusion |
+| Naylshotte hidden Tarstone effect | Reported with Barrage/Emberseed; permanent Burn system identified. Live capture finds an active effect owned by the hidden weapon, not recently rendered; visible residue is not reproduced | Aim/fire/stow and effect-replacement capture must identify visible residue before a repair; preserve infusion |
 | Trebuchaxe hovering axe | Reported, not diagnosed | Identify object and test visibility/Tarstone transitions |
 | Zhirelle/Merrick and matching-skeleton NPCs | Explicit low-priority follow-up, not implemented | Asset/skeleton compatibility investigation and validated selector support |
 | Native shell shades for appearance overrides | Explicit low-priority follow-up, not implemented | Supported shade selection, persistence and unlock-preserving validation |
@@ -55,8 +55,9 @@ Accepted observations apply to their recorded test scope, not every variant.
 
 - Account for all nine original repair variants plus accepted Peony, including
   normal/facial sources, final cooked assets and required morph/pose checks.
-- Finish demonstrated CW foot, belt and skirt work and other non-deferred
-  defects. Preserve accepted Genessa cloth and Peony motion/design.
+- Finish the CW walking defect and other non-deferred defects. Preserve accepted
+  belt/skirt motion, Genessa cloth and Peony motion/design; complete their separate
+  regression and performance requirements without reopening accepted minor flaws.
 - Complete the goal's Phase 4 matrix: actions, preview/world, lifecycle,
   both-form doubles, customization, attachments/gameplay and existing UI fixes.
 - Finish Genessa's two-variant CSS/CINE facial coverage and preserve Eve/CW.
@@ -80,8 +81,12 @@ The older Eve saved-graph input/update check now passes all 36 cases with each
 outfit's actual post-process graph, including Bikini/Knit feet graphs, and both
 normal/facial meshes. See the
 [regression record](../research/2026-10-12-eve-existing-motion-regression.md).
-This is not full visual or cloth acceptance. Continue CW's demonstrated foot
-defect from the installed four-bone ankle trial. Native rig reference replacement
+This is not full visual or cloth acceptance. CW's new walking-only trial is
+installed with the developer core `acab6363906f0e88`; the user has been asked to
+reopen and compare booted/bare walking. Its source records, fourteen directional
+editor replays, standalone cooked readback and combined catalog checks are in CW
+`work/foot-walk-orientation3`. Existing jog/sprint and accepted belt/skirt assets
+are unchanged. The correction is not visually accepted yet. Native rig reference replacement
 did not establish an improvement; phase matching shows the active rig preserves
 foot orientation while adjusting position. Keep native grounding. The narrower
 ankle alignment improves mean reference bank in walk/jog/sprint but not every
