@@ -1,5 +1,19 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW display-name cleanup:** the installed package and outfit
+catalog now use `Commander White`, and the package description no longer
+calls it a development build. Only those three metadata fields changed;
+asset containers, selection IDs, controls, adapters and the developer core
+remain unchanged. Package/resource readback and both combined native catalog
+checks pass. CW `work/display-name41/installed.json` records installation and
+rollback at `MortalShell2/Content/display-name41`. Its metadata pak SHA256 is
+`db6fad85b424b5fea377a1ad09b161e459a2adcf3b4426a800567285335763d4`.
+The previous assembly40 receipts still describe the preceding pak. Its asset
+payload checks continue to apply. Build version remains an internal trial
+version until the stable release is actually prepared; historical release
+artifacts were not rewritten. Current packaging recipes preserve the clean
+name. Game remains closed, so CW movement/collision acceptance is pending.
+
 **October 14, belt package integration:** the user provisionally accepts the
 images, with working physics, body collision and no obvious normal-motion
 clipping as the practical target. This is not gameplay acceptance. Belt20's
