@@ -1,5 +1,36 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, belt package integration:** the user provisionally accepts the
+images, with working physics, body collision and no obvious normal-motion
+clipping as the practical target. This is not gameplay acceptance. Belt20's
+Normal/Facial scene adapters now pass six fresh editor captures: scene blend
+starts/releases, non-belt poses and body/hair rig state match the baselines,
+and test facial/body morphs apply and clear. Actual Iris Out/game input remains
+untested. The final eight private roots cooked in the reused cook33 project.
+Independent readback in CW `work/belt-pack36` passes geometry, all 16/206
+morphs, materials, cloth data, four ankle modes and rig input bindings. The
+388-bone installed CW bind prefix and its retarget/virtual definitions are
+preserved, with one waist helper added.
+
+The first merged private-path package was rejected before installation:
+CSS requires scene adapter targets in `Animations/Adapters`, not `Studies`.
+Its 915-package/271-reference import check passed, but catalog loading failed.
+Accounted-for heavy assembly37 intermediates were removed; failure logs,
+manifests and recipes remain. CW `work/belt-final38` migrated the eight
+finished roots to normal asset folders in the existing cook project, without
+another project copy. Save/fresh reload, final Windows cook and independent
+readback now pass. CSS explicitly allows the audited final waist skeleton;
+host skeleton/library tests and its developer Windows core build pass.
+The final assembly40 passes combined catalog checks and is **installed** with
+hash verification. Core SHA256 is
+`bdcef63385cf0d28b101022cc5cc0a164f172612465cc10c4f8e689caa8e4a35`.
+Rollback is `MortalShell2/Content/CSS-cw-belt-20261014`. Peony/Genessa packages,
+the four ankle modes and saved settings are preserved. User has been asked to
+reopen and leave CW in the world for live checks. Physics/collision, shape
+restoration, scene/face behavior and performance are **not game-accepted** yet.
+The full stable public release goal remains active.
+See CW `docs/belt-and-skirt-motion.md` and `docs/cleanup-2026-10-12.md`.
+
 **October 14, practical CW belt candidate:** Belt20 adds up to 1 cm of
 shape-dependent clearance to the saved Belt19 contact margins, preserving
 neutral poses exactly. Twelve Normal/Facial captures pass morph readback,

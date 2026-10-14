@@ -10,6 +10,8 @@ inline constexpr std::string_view authored_wing_skeleton =
     "/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2";
 inline constexpr std::string_view authored_cw_hair_skeleton =
     "/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
+inline constexpr std::string_view authored_cw_belt_skeleton =
+    "/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Waist1.SKEL_Waist1";
 
 inline bool is_audited_base_skeleton(std::string_view path) {
     // The namespace cook preserves every decoded Skeleton field. See
@@ -32,7 +34,9 @@ inline bool compatible_animation_skeletons(std::string_view source, std::string_
     // tracks must not be accepted in reverse or across the two extensions.
     return equivalent_animation_skeletons(source, target) ||
         (is_audited_base_skeleton(source) &&
-         (is_audited_wing_skeleton(target) || target == authored_cw_hair_skeleton));
+         (is_audited_wing_skeleton(target) || target == authored_cw_hair_skeleton ||
+          target == authored_cw_belt_skeleton)) ||
+        (source == authored_cw_hair_skeleton && target == authored_cw_belt_skeleton);
 }
 
 // Different skeleton objects are permitted only for the audited human, CSS
@@ -50,7 +54,8 @@ inline bool compatible_standard_skeletons(std::string_view before, std::string_v
         "/Game/CSSAuthoring/DiagnosticReferences/SKEL_B2GameReferenceMetadata_V2.SKEL_B2GameReferenceMetadata_V2";
     const auto audited = [&](std::string_view path) {
         return path == human || path == base || path == b2 || is_audited_base_skeleton(path) ||
-            is_audited_wing_skeleton(path) || path == authored_cw_hair_skeleton;
+            is_audited_wing_skeleton(path) || path == authored_cw_hair_skeleton ||
+            path == authored_cw_belt_skeleton;
     };
     return before != target && audited(before) && audited(target);
 }

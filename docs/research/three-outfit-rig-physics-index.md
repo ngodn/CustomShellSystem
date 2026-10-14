@@ -1,5 +1,11 @@
 # Three-outfit rig and physics research index
 
+- October 14: CW `work/belt-playback35/REPRODUCE.md`, scene start/release
+  preservation, successful private eight-root cook/readback, and rejected
+  Studies-path catalog integration. Final asset-path migration reuses cook33;
+  save/reload, final cook/readback, core tests and combined catalog checks pass.
+  Assembly40/core bdcef63385cf0d28 are installed. Game checks remain open.
+
 - October 14: CW `work/belt-hybrid29/REPRODUCE.md`, physical fallback plus
   stable contact-mode hold. Jog/Sprint neutral contact evidence, Normal/Facial
   fractional timing and reset checks. Live body-size and game checks pending.

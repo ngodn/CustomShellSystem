@@ -116,5 +116,22 @@ int main() {
         check(!css::compatible_animation_skeletons(other, cw), "Unknown animation accepted for CW");
         check(!css::compatible_animation_skeletons(cw, other), "CW animation accepted on unknown rig");
     }
+    const std::string belt(css::authored_cw_belt_skeleton);
+    for (const auto& previous : {human, base, b2, standard, authored, wings, authored_wings, cw}) {
+        check(compatible_standard_skeletons(previous, belt), "CW belt appearance rejected");
+        check(compatible_standard_skeletons(belt, previous), "Restoring from CW belt rejected");
+    }
+    for (const auto& source : {standard, authored, cw}) {
+        check(css::compatible_animation_skeletons(source, belt), "Audited prefix animation rejected on belt rig");
+        check(!css::compatible_animation_skeletons(belt, source), "Belt-only animation accepted on smaller rig");
+    }
+    check(css::compatible_animation_skeletons(belt, belt), "Same belt rig animation rejected");
+    check(!compatible_standard_skeletons(belt, belt), "Identical belt rig treated as remap");
+    for (const auto& other : std::vector<std::string>{"", human, wings, authored_wings, belt + "_Invalid",
+            "/Game/CSS/eins0fx/CommanderWhite/Studies/BeltWaist1/SKEL_Waist1.SKEL_Waist1",
+            "/Game/CSS/another_author/CommanderWhite/Skeletons/SKEL_Waist1.SKEL_Waist1"}) {
+        check(!css::compatible_animation_skeletons(other, belt), "Unaudited animation source accepted for belt");
+        check(!css::compatible_animation_skeletons(belt, other), "Belt animation accepted on unaudited target");
+    }
     std::cout << "Skeleton allowlist and lookalike rejection passed\n";
 }

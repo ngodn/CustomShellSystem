@@ -1,5 +1,18 @@
 # Three-outfit implementation status
 
+**October 14, CW belt integration:** Belt20's six fresh scene captures preserve
+non-belt poses and release back to gait. Its eight private cooked roots pass
+surface, morph, material/cloth, ankle-mode and rig-binding readback. The first
+merged package is rejected before installation because its scene adapter
+targets use Studies paths. Finalization into normal asset folders, fresh reload,
+final cook/readback and combined catalog checks now pass. Assembly40 and the
+developer core `bdcef63385cf0d28` are installed with rollback at
+`MortalShell2/Content/CSS-cw-belt-20261014`. Ankle modes, accepted Peony/Genessa
+packages and saved settings are preserved. Game physics, shape restoration,
+scene/face and performance acceptance remain open. The user has been asked to
+reopen with CW selected. See CW
+[integration evidence](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md#scene-adapters-and-cooked-integration-october-14).
+
 **October 13, CW belt:** 18 weighted chain bones are not driven by the active
 rigs; all affected vertices belong to the belt. The private AnimDynamics trial
 fails attachment/stability and is rejected without installation. Its 241-frame

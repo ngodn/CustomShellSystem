@@ -202,13 +202,14 @@ int main(int argc,char** argv) {
         expect(resolve("css.eve.idle",{},base).candidates.size()==1,"Shared-only installation needs an outfit alias");
         const std::string authored_base="/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.SKEL_Base";
         const std::string cw_hair="/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
+        const std::string cw_belt="/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Waist1.SKEL_Waist1";
         expect(resolve("css.eve.idle",{},authored_base).candidates.size()==1,
                "Legacy animation library rejected the migrated base skeleton");
         auto migrated_base_library=library;
         const std::string migrated_idle="/Game/CSS/eins0fx/Shared/Locomotion/Eve/AN_Idle.AN_Idle";
         migrated_base_library["entries"][0]["assets"][0]={{"asset",migrated_idle},{"skeleton",authored_base}};
         const std::vector<AnimationLibrary> migrated_base_libraries{AnimationLibrary::parse(migrated_base_library)};
-        for (const auto& target : {base, authored_base, wings, authored_wings, cw_hair}) {
+        for (const auto& target : {base, authored_base, wings, authored_wings, cw_hair, cw_belt}) {
             for (const auto* choice : {"eve", "css.eve.idle"}) {
                 const auto migrated_match=resolve_library_animation(migrated_base_libraries,
                     AnimationSlot::Idle,choice,bundled,target);
@@ -223,6 +224,9 @@ int main(int argc,char** argv) {
         const auto cw_scene=resolve_library_performance(migrated_base_libraries,"css.eve.idle",cw_hair);
         expect(cw_scene.candidates.size()==1 && cw_scene.candidates[0].asset==migrated_idle,
                "CINE lost shared animation on the CW hair extension");
+        const auto belt_scene=resolve_library_performance(migrated_base_libraries,"css.eve.idle",cw_belt);
+        expect(belt_scene.candidates.size()==1 && belt_scene.candidates[0].asset==migrated_idle,
+               "CINE lost shared animation on the CW belt extension");
         auto cw_specific=migrated_base_libraries;
         const std::string cw_idle="/Game/CSS/eins0fx/CommanderWhite/Animations/AN_HairIdle.AN_HairIdle";
         cw_specific[0].entries[0].assets.push_back({cw_idle,cw_hair});
@@ -420,8 +424,13 @@ int main(int argc,char** argv) {
                 return fixture.at("outfit")=="eins0fx.seduxtress" && fixture.at("variant")=="peony";
             })==1,"Peony fixture is missing or duplicated");
             const std::string cw_hair="/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
+            const std::string cw_belt="/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Waist1.SKEL_Waist1";
+            const bool belt_cw=std::any_of(fixtures.begin(),fixtures.end(),[&](const auto& fixture) {
+                return fixture.at("outfit")=="eins0fx.commanderwhite" && fixture.at("skeleton")==cw_belt;
+            });
             const bool extended_cw=std::any_of(fixtures.begin(),fixtures.end(),[&](const auto& fixture) {
-                return fixture.at("outfit")=="eins0fx.commanderwhite" && fixture.at("skeleton")==cw_hair;
+                return fixture.at("outfit")=="eins0fx.commanderwhite" &&
+                    (fixture.at("skeleton")==cw_hair || fixture.at("skeleton")==cw_belt);
             });
             expect(library.entries.size()==63 && library.adapters.size()==(extended_cw?6:5) && library.faces.size()==3,
                    "Migrated shared inventory changed");
@@ -429,10 +438,13 @@ int main(int argc,char** argv) {
                 size_t count=0;
                 for(const auto& adapter:library.adapters) if(adapter.source_outfit=="eins0fx.commanderwhite") {
                     const auto prefix=std::string("/Game/CSS/eins0fx/CommanderWhite/");
-                    const bool normal=adapter.source_class==prefix+"Rig/ABP_NormalStrands1.ABP_NormalStrands1_C";
-                    const bool facial=adapter.source_class==prefix+"Rig/ABP_FacialStrands1.ABP_FacialStrands1_C";
-                    const auto target=normal?"ABP_PerformanceStrands1":"ABP_FacialPerformanceStrands1";
-                    expect((normal || facial) && adapter.skeleton==cw_hair &&
+                    const auto normal_name=belt_cw?"ABP_NormalBelt20":"ABP_NormalStrands1";
+                    const auto facial_name=belt_cw?"ABP_FacialBelt20":"ABP_FacialStrands1";
+                    const bool normal=adapter.source_class==prefix+"Rig/"+normal_name+"."+normal_name+"_C";
+                    const bool facial=adapter.source_class==prefix+"Rig/"+facial_name+"."+facial_name+"_C";
+                    const auto target=belt_cw?(normal?"ABP_NormalPerformanceBelt20":"ABP_FacialPerformanceBelt20"):
+                        (normal?"ABP_PerformanceStrands1":"ABP_FacialPerformanceStrands1");
+                    expect((normal || facial) && adapter.skeleton==(belt_cw?cw_belt:cw_hair) &&
                            adapter.target_class==prefix+"Animations/Adapters/"+target+"."+target+"_C",
                            "CW scene restoration does not retain its normal/facial graph identity");
                     ++count;
