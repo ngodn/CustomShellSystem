@@ -23,7 +23,7 @@ historical rehearsal and is not the stable release tag.
 | Peony palettes, removable pieces, flowing trim, profiles | User accepts four palettes, flow in CSS/world and restored profiles | Both-form and broader lifecycle coverage |
 | Peony excessive jiggle despite Firm/Natural | Restoration correction and tighter limits installed; user accepts walking/Iris Out motion, live limit readback passes | Other six Eve variants and lifecycle/performance regression |
 | Peony harsh lighting | User subsequently reports the unchanged build looks fine | No lighting fix established; monitor recurrence separately from sunlight report |
-| Older Eve tangent basis | All six regular/facial pairs now pass source, cook, cloth, customization and combined package preservation checks at permanent paths; source and native-material inputs are verified | Candidate not installed. Runtime shading/cloth/facial and performance regression remain; not a proven sunlight-noise fix |
+| Older Eve tangent basis | All six regular/facial pairs now pass source, cook, cloth, customization and combined package preservation checks at permanent paths; source and native-material inputs are verified | Candidate installed offline with rollback and unchanged core/settings. Runtime shading/cloth/facial and performance regression remain; not a proven sunlight-noise fix |
 | Customize shows only Ground Height after form switch | Mirrored-selection fix installed; user accepts recovery | Preserve through remaining lifecycle checks |
 | First Stray summon produces no doubles | User confirms first-switch summon works after selection fix; live clone capture exists | Original cause was not isolated; do not claim a proven independent spawn fix |
 | Native Black Hole/Iris Out marked Unavailable | Native alternatives installed; user accepts both playing and interrupting | Full library contact, continuous playback and CINE validation |
@@ -83,9 +83,10 @@ now passes all twelve mesh-preservation checks, 1,545 catalog checks and the
 1,008-package/272-reference audit. Customization targets and the guarded
 installation plan pass. The [source/package chain](../research/2026-10-14-eve-source-package-chain.md)
 accounts for the repaired editor meshes and 273 older material/texture packages.
-No candidate assets are installed. Continue offline as requested; preserve the
-accepted Peony/CW motion and separate MISC workaround. Runtime checks and the
-full stable-release gates above remain open.
+The combined candidate is now installed offline with rollback and exact
+post-install readback. Continue offline as requested; the game remains closed.
+Preserve accepted Peony/CW motion and the separate MISC workaround. Runtime
+checks and the full stable-release gates above remain open.
 
 All 46 parts across the six original Eve outfits now have passing editable-source
 comparisons linked to their accepted imports and installed geometry checks.

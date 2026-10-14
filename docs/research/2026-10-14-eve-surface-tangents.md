@@ -867,6 +867,48 @@ No new full cook or bulk copy was needed for these checks. Full live regression,
 performance, source/material recipe coverage, upgrade and stable-release gates
 remain open. Continue offline until the user is ready for game testing.
 
+## Installed candidate
+
+The verified combined candidate was installed offline on October 14. Game
+process checks were empty before installation, throughout the guarded
+transaction and in the independent post-install check. The game was not launched.
+
+Changed files are Eve's `.pak`, `.utoc` and `.ucas`, plus Shared Assets `.pak`.
+The installer exchanged both complete trios so their old versions remain intact
+for rollback, including the unchanged shared cooked containers. Current CW,
+Genessa and the accepted `css_core-cw-walk-acab6363906f0e88.dll` are unchanged.
+Exact CSS/CSSX state and CINE extension tree comparisons pass. No provider with
+a retired or duplicate container filename was found.
+
+Evidence in `build/eve-surface-package1`:
+
+- `installation-plan.json`: source/baseline hashes, protected state and core, four changed files.
+- `installation-command.json`, `installation.log`, `installation-exit.json`: guarded installer exits zero.
+- `deployment.json`: installed, activation on next launch, live verification false.
+- `installation-postcheck.json`: independent installed and rollback hashes, unchanged core/settings/CW/Genessa, provider uniqueness and closed-game observation.
+
+Rollback is retained at:
+
+`/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-eve-surface-20261014`
+
+Use the established rollback command only with the game closed:
+
+```sh
+python3 tools/asset-paths/install_namespace_trial.py restore \
+  --transaction /mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-eve-surface-20261014
+```
+
+No temporary staging payload remains outside the installed candidate and
+necessary rollback. The source package and all verification evidence remain.
+Earlier sections describe the pre-install state at those checkpoints.
+
+The user prefers offline work, so no new launch or repeat CW walking judgment
+was requested. At the next authorized game session, verify older Eve shading,
+normal/facial playback and cloth/customization, then continue the full goal's
+runtime matrix and matched performance checks. Peony's accepted content and
+CW's accepted motion were not retuned. No claim is made that this corrects
+Vistani's sunlight noise. Stable versioning and public release remain pending.
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six

@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, combined Eve repair candidate installed:** the game was closed
+throughout installation and independent readback. Eve's trio and Shared Assets
+metadata now match the verified candidate. Previous trios are retained outside
+`Paks` for rollback. The accepted CW walking core, CW/Genessa assets, CSS/CSSX
+saved state and CINE files are unchanged; no duplicate or retired providers were
+found. [Installation receipt](../research/2026-10-14-eve-surface-tangents.md#installed-candidate).
+The game remains closed. No launch requested; this is an installed local trial,
+not live acceptance or the stable public release. Full regression gates remain.
+
 **October 14, mesh/material source chain verified:** all twelve repaired final
 editor meshes match their successful cook inputs and combined shipping payloads.
 The 273 older material/texture packages remain exact. Missing original material

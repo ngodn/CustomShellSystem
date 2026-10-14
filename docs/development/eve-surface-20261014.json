@@ -1867,5 +1867,44 @@
       }
     ],
     "scope": "Twelve final editor meshes linked to successful cook and combined payloads; 272 original material/texture packages replayed from retained exports plus one authored hair parent with retained cook inputs. No fresh cook, live rendering, shader execution or full-release source-completeness claim."
+  },
+  "deployment": {
+    "installed": true,
+    "live_verified": false,
+    "game_closed": true,
+    "transaction": "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-eve-surface-20261014",
+    "core_unchanged": true,
+    "saved_state_preserved": true,
+    "receipts": [
+      {
+        "path": "build/eve-surface-package1/installation-command.json",
+        "sha256": "af6f0605bbb79830d72ae4a90a83825cdf81077ff259e3e0bb412720ea456ad2"
+      },
+      {
+        "path": "build/eve-surface-package1/installation-exit.json",
+        "sha256": "df4d721d233a2334088d2d2e0110346ae9e509ff46bf0b379fbcfa85c715af4d"
+      },
+      {
+        "path": "build/eve-surface-package1/installation.log",
+        "sha256": "a152a6c0b8549d5bfa1d6b755c993b67bb67a5c2a6214b06b836b3887277942c"
+      },
+      {
+        "path": "build/eve-surface-package1/deployment.json",
+        "sha256": "cb1951557f0171ec8aed8b15970a0cb7cbb5c81726cd7be6ac3ffa6b9295e9b1"
+      },
+      {
+        "path": "build/eve-surface-package1/installation-postcheck.json",
+        "sha256": "8c4be54560c370a91b3906b3bf99713bccf244f63742f7854570a07c0a8dcb46"
+      },
+      {
+        "path": "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-eve-surface-20261014/plan.json",
+        "sha256": "98684c2e9be8f9ad16f8e612e2fd0370c3aea113099fa5cc230c0e17b1992b00"
+      },
+      {
+        "path": "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-eve-surface-20261014/result.json",
+        "sha256": "37976ae7bfbf3743e6267002ac6c35dea110cebf91cd0a1f843ebe07cd46d677"
+      }
+    ],
+    "pending": "Next authorized game session: Eve shading, cloth, facial/customization and full runtime/performance matrix. Stable public release still pending."
   }
 }

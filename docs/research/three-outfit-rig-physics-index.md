@@ -1,5 +1,10 @@
 # Three-outfit rig and physics research index
 
+- October 14: [combined Eve candidate installed](2026-10-14-eve-surface-tangents.md#installed-candidate)
+  with the game closed, exact installed/rollback readback and unchanged
+  core/CW/Genessa/settings. The game remains closed; live and release gates
+  are open, with no repeat CW walking judgment requested.
+
 - October 14: [Eve source/package chain](2026-10-14-eve-source-package-chain.md)
   connects twelve repaired editor meshes to their cooked payloads, restores
   745 original material inputs and reproduces their migrations with the current
