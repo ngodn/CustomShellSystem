@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, sidearm effect ownership:** seven shipped weapon/VFX packages
+identify the persistent Naylshotte Burn system and its `SpawnedPermanent`
+component lifecycle. CSS hides the actor and meshes but rechecks only the
+tracked mesh flag; this is a candidate gap, not a confirmed cause. A bounded
+read-only capture now follows the equipped sidearm, effect and attachment
+flags. Help and the closed-game guard pass; live checks are pending. No core,
+asset or installation changes. See `sidearm-tarstone-visibility.md`. CW image
+approval remains provisional under the practical collision/movement target.
+
 **October 14, native skirt contact check:** baseline42 repeats exactly with
 read-only native contact capture in CW `work/skirt-contacts43`. The worst
 particle switches sides of the same leg collider. A single two-substep test
