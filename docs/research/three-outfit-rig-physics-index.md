@@ -3,7 +3,10 @@
 - October 14: [older Eve surface/tangent checks](2026-10-14-eve-surface-tangents.md)
   preserve UVs, colors and imported normals, but identify widespread tangent
   alignment errors in all six original outfits. The private Black Pearl
-  corner-order rebuild imports/reloads; full candidate verification remains.
+  corner-order rebuild now passes Windows cook, package roundtrip and geometry/
+  surface/skin/morph comparisons. Its remaining 488 exceptions are the known
+  collapsed-UV unit-X fallback. Full assemblies and visual/performance checks
+  remain; nothing installed. Continue offline at the user's request.
 
 - October 14: [six original Eve source coverage](2026-10-14-eve-six-source-coverage.md)
   passes all 46 selected parts with the current checker. Black Pearl's complete

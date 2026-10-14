@@ -3,9 +3,14 @@
 **October 14, older Eve shading-basis finding:** UVs, colors and imported normals
 pass across all six original cooked meshes; tangent alignment does not. A private
 Black Pearl corner-order rebuild imports and reloads with preserved counts and
-fewer render vertices. Cooked candidate validation, assembly and runtime checks
-remain. [Evidence and next actions](../research/2026-10-14-eve-surface-tangents.md).
-Accepted installations are unchanged.
+fewer render vertices. Windows cook, IoStore roundtrip and independent geometry,
+surface, skin and morph comparisons now pass. Its 488 remaining tangent
+exceptions all match the established collapsed-UV unit-X fallback, with zero
+unexpected exceptions versus 540,075 in the installed Black Pearl readback.
+Full assembly and runtime checks remain.
+[Evidence and next actions](../research/2026-10-14-eve-surface-tangents.md).
+Accepted installations are unchanged. The user requests offline work for now;
+CW's final-path live binding check stays pending without another launch request.
 
 **October 14, six-outfit source coverage:** all 46 original Eve parts now pass
 the current source correspondence checker. Black Pearl's complete export also

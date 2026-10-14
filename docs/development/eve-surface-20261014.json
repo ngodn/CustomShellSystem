@@ -107,5 +107,61 @@
     "path": "work/three-outfit-rig-physics/eve-surface-20261014/cleanup-completed.json",
     "sha256": "d5049db9947a80c615d1be50e4027e70c40cf24d9853a76eb85ff1bb136dcfa2"
   },
-  "scope": "Six original Eve surface fields pass; tangent basis anomalies require repair. Black Pearl candidate imported and reloaded, not cooked, installed or visually accepted."
+  "scope": "Six original Eve surface fields pass. Private ordered Black Pearl import, Windows cook, IoStore/readback and accepted-import comparisons pass. All 488 remaining nonorthogonal frames match the collapsed-UV unit-X fallback. Full outfit/facial assembly, rendered shading and performance remain unverified; nothing installed.",
+  "private_candidate_cook": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/cook/exit.json",
+    "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+  },
+  "private_candidate_package": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/pack/verified.json",
+    "sha256": "7355c19e19c4b3a7405095535a95645d364f274207e99cf0985032839a29fd70"
+  },
+  "private_candidate_geometry": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/pack/geometry.json",
+    "sha256": "f19d856e68396629f5b7962ee2131948a2231a2d518944dea48abe8856d227f6"
+  },
+  "private_candidate_surface": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/pack/surface.json",
+    "sha256": "52f4b35b4a82a19182618562e09f1c9a0cb80fd26ef090f648efe75c88e293e5"
+  },
+  "private_candidate_roundtrip": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/pack/roundtrip.json",
+    "sha256": "f2c3048daaac61b8d513638a7d040577eac75ad4db7b9dde395c53c6972bb647"
+  },
+  "private_candidate_tangents": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/pack/tangents.json",
+    "sha256": "62a245cc1bcf6e1261ac1546270b7124ad6187c14a8f8d7dcb15d97d407cc23e"
+  },
+  "fallback_classification": {
+    "installed_black_pearl": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/black_pearl/tangent-fallbacks.json",
+      "sha256": "5b109a91cc031451c70d81111b4b2ee955fb992590f5429acdcd2571ae1abe88"
+    },
+    "private_candidate": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/pack/tangent-fallbacks.json",
+      "sha256": "59162545bddadea8bd526411196c4fa8c5f1b2abd2f5f5b97df61ac35a49820a"
+    },
+    "installed_peony": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/peony-control/tangent-fallbacks.json",
+      "sha256": "ac6c5eaf236912fd22a4f7e7e2e417c37eb3b8116fb37fb1a541c76938765652"
+    }
+  },
+  "cook_recipe": {
+    "path": "tools/diagnostics/cook_eve_corner_trial.py",
+    "sha256": "fd33091184491733f60f8612730cf404de36709bf96051307a88d72c39ee7e86"
+  },
+  "package_recipe": {
+    "path": "tools/diagnostics/check_eve_corner_cook.py",
+    "sha256": "1f09b0562703501748d68f57a057924ebb020587680031afabd80cce5f5ee4ba"
+  },
+  "fallback_recipe": {
+    "path": "tools/diagnostics/classify_eve_tangent_fallbacks.py",
+    "sha256": "e56515cc86238a9c0b62e94f961ca111d8df7e25b0adbd858b6a0dcfc0f63fba"
+  },
+  "cook_cleanup": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/cleanup-completed.json",
+    "sha256": "eda340faee0f64f78a5693e707ae119b5d238f82c863fa9d7842228cb1f5c57c"
+  },
+  "user_direction": "Continue offline for now. Final CW live bindings remain pending; no repeat walking judgment.",
+  "work_location": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work"
 }

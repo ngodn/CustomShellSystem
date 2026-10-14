@@ -1,5 +1,20 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, continue offline as requested:** the user deferred the next live
+CW binding check. Do not request another launch or repeat accepted walking
+judgment while this preference is active. Offline Black Pearl ordered-corner
+import, Windows cook, IoStore roundtrip and independent geometry/surface/skin/
+morph comparisons now pass through the relocated `work` symlink. The candidate
+has zero unexpected nonorthogonal frames under the established Peony check,
+compared with 540,075 in the installed Black Pearl mesh. Its 488 remaining
+exceptions are unit-X fallbacks on collapsed UV0 triangles, still a shading
+limitation. Current Peony has 430 such exceptions and zero unexpected ones.
+See [the cooked results](../research/2026-10-14-eve-surface-tangents.md#private-windows-cook-and-readback).
+No game assets were installed. Full material/rig/cloth/facial assemblies and
+visual/performance checks remain open. The finished cook's disposable Wine
+prefix was removed after verification; sources, recipe and readbacks remain.
+The work location is `/run/media/eins0fx/theark/CSS/CustomShellSystem-work`.
+
 **October 14, older Eve tangent repair now identified:** the six original
 outfits pass cooked UV/color/imported-normal correspondence, but have widespread
 tangent alignment errors matching the earlier CW/Peony corner-order defect.
