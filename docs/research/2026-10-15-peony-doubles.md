@@ -172,7 +172,10 @@ ability returns false. Only primary clones were observed in the actual Stray
 summons. An upgraded save was requested for later secondary-clone coverage;
 current progression and save files remain untouched.
 
-Remaining doubles work includes that secondary clone, other outfits, more
-customization combinations and useful moving visual/contact coverage. These
-captures test the current Black and white floral look only. No core or cooked
-package changed.
+The later upgraded-save [secondary-clone check](2026-10-15-outfit-doubles.md#peony-and-both-genessa-variants-completed-secondary-clone-checks)
+passes Peony mesh copying and cleanup on both Stray actors, with full state
+and player/view restoration. It does not extend the material-parameter capture
+above to the secondary actor. Remaining work includes that parameter coverage,
+other outfits, more customization combinations and moving visual/contact
+coverage. The captures above test the Black and white floral look only. No
+core or cooked package changed for either check.

@@ -62,6 +62,16 @@ This is a read of cached objects, not a save/load experiment or proof that form
 is never persisted. The exact native session-save scheduling and load behavior
 remain unverified.
 
+The first REA/Ghidra native search for `SaveSession` timed out at the MCP
+client's 300-second limit without returning analysis evidence. A later session
+check still identifies the selected executable, but reports no active analysis;
+the previously observed Ghidra process and its temporary directory are gone.
+This attempt establishes no native call flow. The executable SHA-256 was
+`363322022a0fdfd0cf87c494619da91e0985e6435d105a37def8a89cb3e29922`.
+Recover through a retained analysis or a supported longer-running analysis
+path before repeating the query. The Blueprint persistence findings above
+remain valid; native scheduling and loading remain open.
+
 ## Implementation constraints
 
 Normal native rules remain the default. Selecting an override must first show

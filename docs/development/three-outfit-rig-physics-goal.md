@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Peony and both UG secondary clones verified:** three normal
+Stray Use CSS summons pass on `4a4402a210f4d1e8`, each observing primary and
+secondary with matching source meshes and complete two-group cleanup. Each
+case restores CW, saved customization/idle, full CSS state, CINE and exact
+player/view geometry. The complete sequence also passes an independent
+state/geometry comparison. No core or cooked assets changed. Visual
+cloth/contact, secondary material parameters and remaining outfit/form cases
+stay open. [Evidence](../research/2026-10-15-outfit-doubles.md#peony-and-both-genessa-variants-completed-secondary-clone-checks).
+
 **October 15, native revival restriction explained:** the upgraded save's active
 Alteration blocks Faithful through `State.ReviveBlock`. Core `4a4402a210f4d1e8`
 now reports this immediately; the live blocked request preserves form, resources,

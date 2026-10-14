@@ -93,8 +93,8 @@ Default clones intentionally use the native mesh. This capture uses the older
 The following Use CSS child stops before input because the game loses focus.
 The camera also changes, so the parent declines to reposition the character.
 `idle-restoration.json` separately verifies full saved-state restoration and
-preservation of that newer position/view. The parent remains failed and CSS
-secondary-copy acceptance remains open.
+preservation of that newer position/view. That parent remains failed; the later
+`cw-css-revival-core` run above closes its CSS secondary-copy check.
 
 Two earlier attempts are retained: `cw-modes` stops before summon because the
 saved Iris Out idle is playing; `cw-modes-idle-original` pauses that idle but
@@ -102,3 +102,42 @@ stops before input because the game lacks focus. Both restore the full state.
 The wrapper now temporarily pauses automatic idles and separately restores its
 owned idle choice even when geometry restoration stops. The latter interrupted
 cleanup path is compiled but not yet exercised as an integrated live run.
+
+## Peony and both Genessa variants: completed secondary-clone checks
+
+After the user restored game focus, three sequential Use CSS checks passed on
+core `4a4402a210f4d1e8`. Evidence directories below are relative to
+`doubles-secondary-20261015/`:
+
+| Appearance | Evidence | Active actor observations | Finite visual bone transforms |
+| --- | --- | --- | --- |
+| Peony V2 | `peony/summon/stray-css` | 48 | 384 |
+| Unholy Genessa, Eve | `ug-eve/summon/stray-css` | 46 | 368 |
+| Unholy Genessa, Genessa | `ug-genessa/summon/stray-css` | 46 | 368 |
+
+Every case observes both `AstralClonePrimary` and `AstralCloneSecondary`, with
+one copied component matching the captured source mesh on each actor. The
+normal summon input is observed and released. Each case creates and removes
+two CSS groups; active/cached groups return to zero without fallback or error.
+Health is preserved. These counts aggregate observations over each clone's
+lifetime, not distinct actors or rendered frames.
+
+The new `tools/diagnostics/check_stray_outfit_doubles.py` wrapper uses each
+variant's existing saved customization. It restores outfit-level memories,
+Commander White, the original idle choice, full saved CSS state, CINE and exact
+player/view geometry after each case. An independent raw-sample verification
+also compares all three starting and ending state files and geometry values;
+they match across the entire sequence. Its receipt is
+`three-outfit-secondary-verification.json`. Each parent and child passes, with
+the recipe, requests and before/after state retained alongside its result.
+
+The earlier unfocused launch stopped before creating evidence or changing an
+appearance. Python 3.14.7 compilation passes. No core or cooked assets changed
+for these three checks. The wrapper's normal restoration is now verified live;
+interrupted restoration remains a separate case.
+
+This closes secondary mesh-copy and cleanup coverage for Peony and both UG
+variants, alongside the earlier CW pass. Visual cloth/contact, secondary ghost
+material parameter coverage, other customization combinations, six older Eve
+secondary cases and the missing Faithful UG/CW cases remain open. No native
+form override or save-file edit was used.

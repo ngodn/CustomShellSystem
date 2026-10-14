@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 15, three further secondary-clone cases pass:** Peony and both UG
+variants each pass a normal Stray Use CSS summon, matching source meshes on
+both clones and cleaning up two CSS groups. CW, full CSS state, saved idle,
+CINE and exact player/view restore after each case and across the sequence.
+The independent verifier checks 140 active actor observations and 1,120 finite
+visual bone transforms. This adds to CW's earlier pass; it does not establish
+visual cloth/contact or secondary ghost parameter coverage. Remaining
+outfit/form cases stay open. [Evidence](../research/2026-10-15-outfit-doubles.md#peony-and-both-genessa-variants-completed-secondary-clone-checks).
+
 **October 15, upgraded-save diagnosis and doubles follow-up:** Alteration's
 native revival blocker explains the captured Faithful refusal. Core
 `4a4402a210f4d1e8` now explains it immediately; a live request preserves actual
