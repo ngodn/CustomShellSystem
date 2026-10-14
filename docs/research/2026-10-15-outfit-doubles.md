@@ -192,3 +192,25 @@ No game core code or cooked assets changed. This completes Stray mesh-copy and
 cleanup coverage for all ten release appearances. Faithful UG/CW, visual
 cloth/contact, secondary ghost parameters and additional customization remain
 separate open checks.
+
+
+## Peony secondary ghost materials
+
+`doubles-secondary-20261015/peony-secondary-materials/` passes a focused normal
+Stray summon targeting `AstralCloneSecondary` explicitly. The recorded component
+is still owned by that active actor after the material reads. Six Peony ghost
+families preserve all 58 captured source parameters, two nonzero morphs and
+seven hidden sections; private material instances carry the correct Stray form
+controls. Both actors are observed across 36 samples with 288 finite visual
+bone transforms, and both CSS groups expire cleanly. Full saved state, CINE,
+appearance, exact player/view geometry and the previous focused window restore.
+
+`independent-verification.json` rechecks the recorded data and rejects three
+negative controls: a primary actor label, an unrelated component and a missing
+live actor. The capture tool now accepts an explicit customization actor; the
+form wrapper rejects incompatible form/mode combinations before any game work.
+Python compilation and whitespace checks pass. No core or asset changes.
+
+This closes current Peony secondary ghost-parameter, morph and hidden-section
+copying. Other outfits' material combinations, visual cloth/contact and the
+remaining Faithful UG/CW cases are still open.

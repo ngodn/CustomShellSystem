@@ -79,8 +79,9 @@ Accepted observations apply to their recorded test scope, not every variant.
   cleanup. Peony and both UG variants also pass both Stray clones in Use CSS,
   with full restoration across the three-case sequence. All six older Eve
   secondary cases now pass too, completing Stray mesh-copy/cleanup coverage
-  for all ten appearances. Faithful UG/CW, cloth/contact, secondary material
-  parameters and additional customization combinations remain open.
+  for all ten appearances. Peony secondary ghost parameters, morphs and hidden
+  sections also pass with explicit actor ownership. Faithful UG/CW, cloth/contact
+  and other material/customization combinations remain open.
 - Finish Genessa's two-variant CSS/CINE visual and gameplay coverage and preserve Eve/CW.
   Both variants now pass [numeric facial-track and explicit-stop checks](../research/2026-10-14-genessa-live-face-tracks.md).
   [Actual Iris Out CINE takes](../research/2026-10-14-cine-natural-end.md) also

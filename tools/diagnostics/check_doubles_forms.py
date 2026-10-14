@@ -34,10 +34,15 @@ def main():
     parser.add_argument('--cases', nargs='+', choices=('faithful-default','faithful-css','stray-default','stray-css'),
                         default=['faithful-default','faithful-css','stray-default','stray-css'])
     parser.add_argument('--customization', action='store_true', help='Capture Peony customization instead of full physics details')
+    parser.add_argument('--customization-actor', choices=('AstralCopy', 'AstralClonePrimary', 'AstralCloneSecondary'))
     parser.add_argument('--details', action='store_true', help='Read full physics details; short-lived objects may expire during the read')
     args = parser.parse_args()
     if args.details and args.customization:
         parser.error('Choose one detail scope per summon')
+    if args.customization_actor and not args.customization:
+        parser.error('--customization-actor requires --customization')
+    if args.customization_actor and any(case != ('faithful-css' if args.customization_actor == 'AstralCopy' else 'stray-css') for case in args.cases):
+        parser.error('The selected customization actor must match every requested form/mode case')
     out = args.output.resolve()
     original, pids = describe(), processes()
     before = json.loads((MOD / 'state/state.json').read_text())
@@ -157,6 +162,8 @@ def main():
                         '--output', str(folder), '--core-sha256', args.core_sha256]
                 if mode == 'css' and (args.customization or args.details):
                     argv.append('--customization' if args.customization else '--details')
+                if args.customization_actor:
+                    argv.extend(['--customization-actor', args.customization_actor])
                 with (out / (form+'-'+mode+'.log')).open('x') as output:
                     result = subprocess.run(argv, stdout=output, stderr=subprocess.STDOUT)
                 row = dict(form=form, mode=mode, evidence=str(folder), returncode=result.returncode)

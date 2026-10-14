@@ -213,6 +213,27 @@ No hardcoded address from this investigation has been installed as a hook.
 The next runtime observation should determine whether the session pre-save event
 actually executes during normal saving before attempting any interception.
 
+
+### Current save-context flag identity
+
+The context layout is now checked against the current executable, rather than
+assumed from the older header. The `ReceiveSpartaPreSave` parameter descriptor
+points to the generated `SpartaSaveContext` constructor at `0x145b0bf20`.
+`read_save_context.py` follows its descriptor at `0x14affd140`: six properties,
+48 bytes, alignment eight. The generated boolean setters independently write
+`bSaveWholeObject` at `0x2c`, `IsSaving` at `0x2d` and `IsSavingSession` at
+`0x2e`. Their eight-byte disassemblies and `save-context-descriptor.json` are
+retained under `native-save1/`. The live pre-save signature also reports a
+48-byte context; its function was not called.
+
+This identifies the previously unnamed context byte as `IsSavingSession`.
+The common writer initializes it to zero and skips the runtime-session pre-save
+and copy branch when it remains zero. The runtime object still reads
+`IsInDarkform=false` on the current Stray player in
+`session-context-live-signature.json`. This does not prove all callers or loads
+skip session persistence, and no interception or save mutation was attempted.
+
+
 ## Implementation constraints
 
 Normal native rules remain the default. Selecting an override must first show

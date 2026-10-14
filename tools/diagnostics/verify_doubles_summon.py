@@ -45,10 +45,15 @@ def verify_appearance(folder, form='faithful', secondary=False):
                 actor_kinds=sorted(expected_ids), meshes_match=True, group_cleanup=True)
 
 
-def verify_customization(result, form):
+def verify_customization(result, form, actor_id=None):
     assert result['passed'] and not result.get('error') and not result.get('cleanup_error')
     source = result['source']['components'][0]
     actual = result['customization']
+    if actor_id:
+        assert actual['actor_id'] == actor_id
+        actors = result['observed_after_customization']['actors']
+        observed = next(a for a in actors if a['id'] == actor_id and a['active'])
+        assert any(p['component'] == actual['component'] for p in observed['poses'])
     assert actual['component'] != source['component']
     assert len(actual['materials']) == len(source['materials']) == 46
     assert actual['morphs'] == source['morphs']
@@ -80,7 +85,7 @@ def verify_customization(result, form):
         assert scalar('CSS_AstralCorrupted') == (1 if form == 'stray' else 0)
         assert scalar('CSS_AstralUseFixedTime') == 0
         assert math.isfinite(scalar('CSS_AstralOpacity')) and 0 <= scalar('CSS_AstralOpacity') <= 1
-    return dict(form=form, material_families=6, source_parameters_equal=compared,
+    return dict(form=form, actor_id=actual.get('actor_id'), material_families=6, source_parameters_equal=compared,
                 morphs_equal=len(source['morphs']), hidden_sections_equal=sum(map(len,hidden)),
                 private_materials=True, ghost_form_controls=True,
                 scope='Current selected customization, sequential reads across the double lifetime. Not all palettes, morph combinations or visual motion acceptance.')

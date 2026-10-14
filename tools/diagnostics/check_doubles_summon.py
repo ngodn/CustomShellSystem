@@ -21,9 +21,13 @@ def main():
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--details', action='store_true', help='Read the first active visual materials and physics inputs')
     parser.add_argument('--customization', action='store_true', help='Compare current Peony morphs, hidden sections and six material families')
+    parser.add_argument('--customization-actor', choices=('AstralCopy', 'AstralClonePrimary', 'AstralCloneSecondary'),
+                        help='Read customization from this specific active double')
     args = parser.parse_args()
     if args.details and args.customization:
         parser.error('Choose one capture scope per short-lived summon')
+    if args.customization_actor and not args.customization:
+        parser.error('--customization-actor requires --customization')
     out = args.output.resolve()
     pids = processes()
     if out.exists() or len(pids) != 1 or not out.is_relative_to((ROOT / 'work').resolve()):
@@ -93,7 +97,7 @@ def main():
             visual = next(row for row in actor['poses'] if row['mesh']['name'] == source['mesh']['name'])
             component = visual['component']
             materials = get(component, 'OverrideMaterials')
-            result = dict(component=component, materials=materials, lod_info=get(component, 'LODInfo'),
+            result = dict(actor_id=actor['id'], component=component, materials=materials, lod_info=get(component, 'LODInfo'),
                 morphs={name: p.call(component, 'GetMorphTarget', MorphTargetName=name) for name in source['morphs']},
                 families=[])
             # Serialize each completed read before a later object can expire.
@@ -196,9 +200,11 @@ def main():
                         report['observed_after_details'] = p.send('astral.observe', poses=True)
                         atomic(out / 'result.json', report)
                     if args.customization and 'customization' not in report:
-                        customization(active[0])
-                        report['observed_after_customization'] = p.send('astral.observe', poses=True)
-                        atomic(out / 'result.json', report)
+                        selected = next((a for a in active if not args.customization_actor or a['id'] == args.customization_actor), None)
+                        if selected:
+                            customization(selected)
+                            report['observed_after_customization'] = p.send('astral.observe', poses=True)
+                            atomic(out / 'result.json', report)
                 elif report['active_samples']:
                     inactive_since = inactive_since or time.monotonic()
                     if time.monotonic()-inactive_since > 3 and status['active'] == 0 and status['cached'] == 0:
@@ -210,6 +216,8 @@ def main():
             report['status_after'] = json.loads((MOD / 'runtime/status.json').read_text()).get('astral')
             report['resources_after'] = {n: get(health_set, n) for n in ('Health', 'Resolve')}
             report['abilities_after'] = get(asc, 'ActivatableAbilities')
+            if args.customization and 'customization' not in report:
+                raise RuntimeError('Requested customization actor was never observed')
         except Exception as error:
             report['error'] = repr(error)
         finally:

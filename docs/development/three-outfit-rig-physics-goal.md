@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Peony secondary customization verified:** the explicit secondary
+Stray actor preserves all six ghost families, 58 source parameters, two morphs
+and seven hidden sections. Both clones clean up, and saved settings, CINE,
+appearance, exact player/view and prior window focus restore. Independent
+verification rejects incorrect actor/component controls. No core or assets
+changed. [Evidence and limits](../research/2026-10-15-outfit-doubles.md#peony-secondary-ghost-materials).
+
 **October 15, all six older Eve Stray pairs verified:** Black Pearl, Planet
 Diving Suit, Skin Suit, Bikini, Casual Knitwear and Midsummer Alice now pass both
 clones, mesh matching, finite sampled poses and complete two-group cleanup.
