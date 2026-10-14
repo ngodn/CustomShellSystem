@@ -1,5 +1,9 @@
 # Three-outfit rig and physics research index
 
+- [Genessa native revival restriction](../development/genessa-form-save-switch.md): active Alteration blocks Faithful on the upgraded save. Immediate explanatory message installed and verified without changing form, resources, saved settings or view. Optional confirmed override queued; autosave behavior and broader cross-save checks remain open.
+
+- [Doubles across outfits](2026-10-15-outfit-doubles.md): all six older Eve outfits pass Faithful mesh binding/cleanup. Default Stray verifies both native clones with CW selected. Interrupted CSS secondary-copy captures remain failed; saved state and idle are restored without overwriting the newer view.
+
 - [Peony normal doubles in both forms](2026-10-15-peony-doubles.md): four Default/Use CSS cases verify mesh selection and group cleanup. Focused captures additionally match six ghost families, 58 explicit source parameters, two morphs and seven hidden sections in both forms. Failed long reads/restoration guards and subsequent guarded recovery remain recorded. Secondary clone requires an eligible Mirage upgrade; visuals/contact and other outfits remain open.
 
 - [Facial playback interrupted by aiming](2026-10-15-outfit-aim-interruption.md): twenty cases across all ten release variants pass actual aim, early facial-playback release, drawn/stowed Burn visibility and restoration. Two failed preflights and an RPC-envelope comparison correction are retained. Other actions, Stray/doubles, contact and cost remain separate.

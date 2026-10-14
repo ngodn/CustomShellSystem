@@ -259,13 +259,20 @@ def main():
                 raise RuntimeError('Resources or focus changed before the shot')
             report['ability_before_shot'] = call(player['controller'], 'GetLastActivatedAbility')
             report['firing_input'] = True
+            report['resolve_samples'] = []
             atomic(out / 'result.json', report)
             try:
                 subprocess.run(['xdotool', 'mousedown', '1'], capture_output=True, check=True, timeout=3)
                 time.sleep(.12)
+                report['resolve_samples'].append(get(health_set, 'Resolve')['CurrentValue'])
                 report['fire_key_observed'] = keys()['LeftMouseButton']
             finally:
                 subprocess.run(['xdotool', 'mouseup', '1'], capture_output=True, check=True, timeout=3)
+            for _ in range(8):
+                report['resolve_samples'].append(get(health_set, 'Resolve')['CurrentValue'])
+                if min(report['resolve_samples']) < initial_resources['resolve']['CurrentValue']:
+                    break
+                time.sleep(.03)
             report['focus_after_click'] = focused_game()
             if not report['fire_key_observed']:
                 raise RuntimeError('Game did not observe the mouse button; firing is unverified')
@@ -275,7 +282,8 @@ def main():
                 observation = dict(resources=resources(), ability=call(player['controller'], 'GetLastActivatedAbility'),
                                    sidearm=snapshot())
                 report['shot_observations'].append(observation)
-                if observation['resources']['resolve']['CurrentValue'] < initial_resources['resolve']['CurrentValue']:
+                report['resolve_samples'].append(observation['resources']['resolve']['CurrentValue'])
+                if min(report['resolve_samples']) < initial_resources['resolve']['CurrentValue']:
                     break
                 if time.monotonic() > deadline:
                     raise RuntimeError('No Resolve expenditure observed after the single click')
@@ -283,7 +291,7 @@ def main():
             time.sleep(.6)
             report['resources_after_shot'] = resources()
             report['resolve_drop_observed'] = initial_resources['resolve']['CurrentValue'] - min(
-                row['resources']['resolve']['CurrentValue'] for row in report['shot_observations'])
+                report['resolve_samples'])
             if report['resolve_drop_observed'] <= 0 or report['resources_after_shot']['health'] != initial_resources['health']:
                 raise RuntimeError('Unexpected resources after firing')
             guard(aiming=True)

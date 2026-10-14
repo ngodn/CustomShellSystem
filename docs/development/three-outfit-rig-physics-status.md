@@ -1,12 +1,24 @@
 # Three-outfit implementation status
 
+**October 15, upgraded-save diagnosis and doubles follow-up:** Alteration's
+native revival blocker explains the captured Faithful refusal. Core
+`4a4402a210f4d1e8` now explains it immediately; a live request preserves actual
+form, resources, settings, appearance and camera. A confirmed temporary override
+is queued for investigation, including autosave behavior, not implemented.
+[Diagnosis and exact scope](genessa-form-save-switch.md).
+All six older Eve outfits pass Faithful copy binding/cleanup. CW selected with
+Default Stray mode passes both native clones; Use CSS stops before input after
+focus loss. Full saved state and Iris Out restore while preserving the newer
+view. [Evidence and remaining checks](../research/2026-10-15-outfit-doubles.md).
+
 **October 15, Peony double customization verified in both forms:** Faithful
 and Stray primary each match six ghost-material families, 58 explicit source
 parameters, two nonzero morphs and seven hidden sections. The focused captures
 pass after retaining a failed overlong read. Settings, CINE and player/view
 restore. [Evidence and remaining scope](../research/2026-10-15-peony-doubles.md#current-customization-follow-up).
-Secondary Stray needs an eligible Mirage upgrade/save; its live eligibility
-getter currently returns false. Other outfits and visual/contact coverage remain.
+The original save's secondary eligibility getter returned false. The later
+upgraded save enables both clones; full CSS secondary-copy and visual/contact
+coverage remain.
 
 **October 15, Peony normal doubles checked in four form/mode cases:** Faithful
 and Stray primary select the native mesh in Default and Peony V2 in Use CSS.

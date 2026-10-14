@@ -1,12 +1,33 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, native revival restriction explained:** the upgraded save's active
+Alteration blocks Faithful through `State.ReviveBlock`. Core `4a4402a210f4d1e8`
+now reports this immediately; the live blocked request preserves form, resources,
+appearance, saved settings and view. The requested optional confirmation-based
+override is queued below, with autosave impact to investigate before promising
+no save changes. [Diagnosis and verification](genessa-form-save-switch.md).
+
+**October 15, latest requested shot confirmed:** Peony fires Naylshotte with a
+100-to-72 Resolve drop; stowing hides its permanent Burn effect. Current view,
+settings and input restore. Earlier attempts with the temporary `eve` idle and
+Casual Sweater registered the button without observed expenditure; isolate that
+idle/outfit interaction in the remaining gameplay checks. See the
+[shot record](../research/2026-10-15-sidearm-aim.md#user-requested-repeat-shot).
+The wider Faithful doubles checks now pass all six older Eve outfits, including
+Casual Knitwear and Midsummer Alice. Both interrupted parent receipts remain.
+The upgraded save confirms both Stray clones in Default mode with CW selected;
+Use CSS still needs a complete uninterrupted capture. Temporary appearance and
+idle state are restored while preserving the newer camera view. See
+[the outfit doubles evidence](../research/2026-10-15-outfit-doubles.md).
+
 **October 15, Peony double customization verified in both forms:** Faithful
 and Stray primary each match six ghost-material families, 58 explicit source
 parameters, two nonzero morphs and seven hidden sections. The focused captures
 pass after retaining a failed overlong read. Settings, CINE and player/view
 restore. [Evidence and remaining scope](../research/2026-10-15-peony-doubles.md#current-customization-follow-up).
-Secondary Stray needs an eligible Mirage upgrade/save; its live eligibility
-getter currently returns false. Other outfits and visual/contact coverage remain.
+The original save's secondary eligibility getter returned false. The later
+upgraded save returns true and the Default-mode two-clone check passes; full CSS
+secondary-copy and visual/contact coverage remain.
 
 **October 15, Peony normal doubles checked in four form/mode cases:** Faithful
 and Stray primary select the native mesh in Default and Peony V2 in Use CSS.
@@ -1970,15 +1991,28 @@ confirm an inconspicuous close-up intersection.
 
 ## Deferred follow-up: Genessa Form after switching save games
 
-**Status:** queued from the user's October 11 report, not reproduced or diagnosed. Keep Peony as the current priority. The user reports that after using a different save game, if the last **MISC > Genessa Form** choice was **Stray**, switching to **Faithful** may no longer work. The exact sequence and cause are unconfirmed.
+**October 15:** the upgraded save reproduces a refused Faithful request. Its
+active Alteration upgrade applies `State.ReviveBlock`; the native revival
+ability explicitly rejects this tag. Native player-zero and CSS resolve the
+same pawn. This explains the captured failure, not every cross-save case.
 
 October 14 offline investigation confirms that CSS does not persist a forced
 form preference, and pending requests cancel on player replacement. The native
 revival helper sends an event without reporting success. This does not establish
-the cause of the user's failure. A bounded passive capture is prepared for the
-two-save sequence; only its no-game guard has been exercised. See
-[the source findings and capture procedure](genessa-form-save-switch.md).
-No gameplay or save changes, and no speculative fix installed.
+the cause by itself. October 15 live tags, owned upgrade effects and extracted
+ability bytecode identify the restriction above. See
+[the diagnosis and capture procedure](genessa-form-save-switch.md).
+
+**Queued October 15, optional override requested:** investigate a temporary
+Faithful override while retaining the user's Alteration upgrade. Normal game
+rules remain the default. Present a confirmation dialog describing the native
+restriction and the override's verified effects, with Confirm and Cancel.
+Cancel must leave the game unchanged. Do not persist the override in CSS
+profiles or change progression. Before promising no save impact, inspect native
+form persistence and autosave, including save/load, death, travel, disabling CSS
+and ending the override. Restore only state CSS owns. Do not simply remove a
+gameplay tag or upgrade without a verified lifecycle and restoration path.
+Finish the current cleanup/message check before implementing this queued feature.
 
 Reproduce by selecting Stray on one save, returning to the menu and loading another save, then requesting Faithful. Compare switching saves within a session with a full restart, and compare previous Auto/Default and Faithful choices. Check whether the destination save's gameplay shell is actually Genessa and whether the character is in a state where the native transition is permitted. Observe the actual form, requested form, UI selection, transition completion and ability state separately.
 

@@ -1,8 +1,48 @@
 """Verify recorded Peony summon cases without treating them as visual acceptance."""
 import argparse
+from collections import Counter
 import json
 import math
 from pathlib import Path
+
+
+def verify_appearance(folder, form='faithful', secondary=False):
+    assert not secondary or form == 'stray'
+    result = json.loads((folder / 'result.json').read_text())
+    before = json.loads((folder / 'state-before.json').read_text())
+    after = json.loads((folder / 'state-after.json').read_text())
+    assert result['passed'] and before == after and before['doubles'][form] == 'css'
+    assert all(result[k] for k in ('input_sent','key_observed','keys_released','state_unchanged',
+                                  'cine_unchanged','process_unchanged','view_unchanged'))
+    assert not result.get('error') and not result.get('cleanup_error')
+    start, end = result['status_before'], result['status_after']
+    assert end['active'] == end['cached'] == 0 and not end['error']
+    assert end['fallbacks'] == start['fallbacks'] == 0
+    assert end['prepared']-start['prepared'] == end['removed']-start['removed'] == (2 if secondary else 1)
+    assert result['resources_before']['Health'] == result['resources_after']['Health']
+    assert result['source']['status'] == 'captured' and result['source']['retained_objects_restored']
+    parts = result['source']['components']
+    wanted = Counter(part['mesh']['name'] for part in parts)
+    rows = [json.loads(line) for line in (folder / 'samples.jsonl').read_text().splitlines()]
+    active = [a for row in rows for a in row['observed']['actors'] if a['active']]
+    expected_ids = {'AstralCopy'} if form == 'faithful' else {'AstralClonePrimary'}
+    if secondary:
+        expected_ids.add('AstralCloneSecondary')
+    assert active and {a['id'] for a in active} == expected_ids
+    bones = 0
+    for actor in active:
+        assert len(actor['poses']) == len(parts)+1
+        copied = [pose for pose in actor['poses'] if pose['mesh']['name'] in wanted]
+        assert Counter(pose['mesh']['name'] for pose in copied) == wanted
+        body = next(pose for pose in copied if pose['mesh']['name'] == parts[0]['mesh']['name'])
+        assert all(name in body['bones'] for name in ('pelvis','thigh_l','calf_l','foot_l','thigh_r','calf_r','foot_r','head'))
+        for pose in copied:
+            for transform in pose['bones'].values():
+                assert all(math.isfinite(x) for value in transform.values() for x in value.values())
+                bones += 1
+    return dict(outfit=result['original']['outfit'], variant=result['original']['variant'], form=form,
+                active_observations=len(active), copied_components=len(parts), finite_visual_bone_transforms=bones,
+                actor_kinds=sorted(expected_ids), meshes_match=True, group_cleanup=True)
 
 
 def verify_customization(result, form):
@@ -46,7 +86,8 @@ def verify_customization(result, form):
                 scope='Current selected customization, sequential reads across the double lifetime. Not all palettes, morph combinations or visual motion acceptance.')
 
 
-def verify(folder, form, mode):
+def verify(folder, form, mode, secondary=False):
+    assert not secondary or form == 'stray'
     result = json.loads((folder / 'result.json').read_text())
     before = json.loads((folder / 'state-before.json').read_text())
     after = json.loads((folder / 'state-after.json').read_text())
@@ -59,11 +100,14 @@ def verify(folder, form, mode):
     start, end = result['status_before'], result['status_after']
     assert end['active'] == end['cached'] == 0 and not end['error']
     assert end['fallbacks'] == start['fallbacks'] == 0
-    assert end['prepared']-start['prepared'] == end['removed']-start['removed'] == (1 if mode == 'css' else 0)
+    expected_groups = (2 if secondary else 1) if mode == 'css' else 0
+    assert end['prepared']-start['prepared'] == end['removed']-start['removed'] == expected_groups
     samples = [json.loads(line) for line in (folder / 'samples.jsonl').read_text().splitlines()]
     active = [a for row in samples for a in row['observed']['actors'] if a['active']]
-    expected_id = 'AstralCopy' if form == 'faithful' else 'AstralClonePrimary'
-    assert active and {a['id'] for a in active} == {expected_id}
+    expected_ids = {'AstralCopy'} if form == 'faithful' else {'AstralClonePrimary'}
+    if secondary:
+        expected_ids.add('AstralCloneSecondary')
+    assert active and {a['id'] for a in active} == expected_ids
     mesh = result['source']['components'][0]['mesh']['name']
     bones = 0
     for actor in active:
@@ -76,7 +120,7 @@ def verify(folder, form, mode):
                 assert all(math.isfinite(x) for value in transform.values() for x in value.values())
                 bones += 1
     checks = dict(form=form, mode=mode, active_observations=len(active), finite_bone_transforms=bones,
-                  actor_kind=expected_id, mesh_selection=True, group_cleanup=True)
+                  actor_kinds=sorted(expected_ids), mesh_selection=True, group_cleanup=True)
     if mode == 'css' and result.get('details'):
         visual = next(v for v in result['details'] if v['mesh']['name'] == mesh)
         source = result['source']['components'][0]['physics']
@@ -106,15 +150,20 @@ def main():
     parser.add_argument('directory', type=Path)
     parser.add_argument('--customization-form', choices=('faithful','stray'),
                         help='Verify one captured customization case instead of the four-case matrix')
+    parser.add_argument('--secondary', action='store_true',
+                        help='Require both primary and secondary actors in each Stray case')
     args = parser.parse_args()
     if args.customization_form:
+        if args.secondary:
+            parser.error('Customization captures inspect one actor; use the summon matrix for secondary coverage')
         result = json.loads((args.directory / 'result.json').read_text())
         print(json.dumps(verify_customization(result, args.customization_form), indent=2))
         return
-    rows = [verify(args.directory / (form+'-'+mode), form, mode)
+    rows = [verify(args.directory / (form+'-'+mode), form, mode, args.secondary and form == 'stray')
             for form in ('faithful','stray') for mode in ('default','css')]
     output = dict(cases=rows, summon_checks_passed=True,
-        scope='Peony, one Faithful copy and one Stray primary per press. Not secondary clone, cloth motion/contact, damage, all customizations or overall restoration proof.')
+        scope=('Peony, one Faithful copy and ' + ('both Stray clones' if args.secondary else 'one Stray primary') +
+               ' per press. Not cloth motion/contact, damage, all customizations or overall restoration proof.'))
     print(json.dumps(output, indent=2))
 
 

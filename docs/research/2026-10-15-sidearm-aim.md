@@ -55,6 +55,19 @@ of the firing ability identity.
 
 ## User-requested repeat shot
 
+`sidearm-user-shot-20261015-5/` confirms another normal shot after restoring
+Peony and clearing the temporary `eve` idle from an interrupted doubles test.
+Resolve samples are 72, 100, 100 from a baseline of 100. Drawn Burn renders;
+stowed Burn does not. Settings, current view, infusion and CINE restore, and
+all sampled keys are released. The diagnostic now samples Resolve immediately
+after pressing and releasing, before the slower ability and component reads.
+
+Attempts `sidearm-user-shot-20261015-3/` and `-4/` registered the fire button
+but observed no expenditure while Casual Sweater and the temporary `eve` idle
+were active. Both retained their failed result and completed input/state cleanup.
+The later success changes both outfit and idle, so it does not isolate the cause.
+Follow up on gameplay interruption with that idle instead of calling it fixed.
+
 A further requested shot is recorded in
 `work/three-outfit-rig-physics/sidearm-user-shot-20261015-2/`.
 The focused keyboard/mouse fixture exits 0: the game observes the fire button,

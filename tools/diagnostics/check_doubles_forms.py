@@ -41,8 +41,12 @@ def main():
     out = args.output.resolve()
     original, pids = describe(), processes()
     before = json.loads((MOD / 'state/state.json').read_text())
-    if out.exists() or len(pids) != 1 or original['shell'] != SHELLS['faithful'] or original['busy']:
-        raise RuntimeError('Need settled Faithful and a new output')
+    if out.exists() or len(pids) != 1 or original['shell'] not in SHELLS.values() or original['busy']:
+        raise RuntimeError('Need settled Genessa and a new output')
+    original_form = next(form for form, shell in SHELLS.items() if shell == original['shell'])
+    changes_form = any(case.split('-')[0] != original_form for case in args.cases)
+    if changes_form and original_form != 'faithful':
+        raise RuntimeError('Start cross-form checks in Faithful; Stray supports same-form cases')
     out.mkdir(parents=True)
     shutil.copyfile(__file__, out / 'recipe.py')
     atomic(out / 'state-before.json', before)
@@ -63,7 +67,7 @@ def main():
         def get(target, name):
             return p.send('get', target=target, property=name)
 
-        def guard():
+        def guard(allow_idle_performance=False):
             current = p.send('player')
             if processes() != pids or any(current[k] != player[k] for k in ('pawn', 'controller')):
                 raise RuntimeError('Player or process changed')
@@ -73,7 +77,7 @@ def main():
                 raise RuntimeError('Concurrent input detected')
             health = get(player['pawn'], 'HealthComponent')
             anim = call(get(player['pawn'], 'Mesh'), 'GetAnimInstance')
-            if call(health, 'IsDeadOrDying') or get(anim, 'Speed') > .05 or call(anim, 'IsAnyMontagePlaying'):
+            if call(health, 'IsDeadOrDying') or get(anim, 'Speed') > .05 or (not allow_idle_performance and call(anim, 'IsAnyMontagePlaying')):
                 raise RuntimeError('Player is not stationary and alive')
 
         def geometry():
@@ -107,11 +111,29 @@ def main():
                 time.sleep(.3)
             raise TimeoutError('Form did not settle')
 
-        guard()
+        old_idle = before['animation_choices'][original['outfit']][original['variant']]['idle']
+        idle_changed = False
+        if original['idle_override']:
+            raise RuntimeError('An external idle override is active')
+        guard(allow_idle_performance=old_idle != 'original')
         baseline = report['geometry_before'] = geometry()
         checkpoints = report['geometry_checkpoints'] = [baseline]
         try:
-            if not expected['harbinger_mirror']:
+            if old_idle != 'original':
+                idle_changed = True
+                command('animation_choice', outfit=original['outfit'], variant=original['variant'], slot='idle', value='original')
+                expected['animation_choices'][original['outfit']][original['variant']]['idle'] = 'original'
+                wait_json(MOD / 'state/state.json', lambda s: s == expected)
+                end = time.monotonic() + 60
+                while True:
+                    current = describe()
+                    if not current['busy'] and not current['expression']['performance']:
+                        break
+                    if time.monotonic() > end:
+                        raise TimeoutError('Automatic idle did not stop')
+                    time.sleep(.2)
+            guard()
+            if changes_form and not expected['harbinger_mirror']:
                 command('harbinger_mirror', value=True)
                 expected['harbinger_mirror'] = True
                 wait_json(MOD / 'state/state.json', lambda s: s == expected)
@@ -148,9 +170,9 @@ def main():
                         command('doubles_mode', kind=form, mode=before['doubles'][form])
                         expected['doubles'][form] = before['doubles'][form]
                         wait_json(MOD / 'state/state.json', lambda s: s == expected)
-                if p.send('player')['shell'] != SHELLS['faithful']:
-                    command('genessa_form', mode='faithful')
-                    wait_form('faithful')
+                if p.send('player')['shell'] != SHELLS[original_form]:
+                    command('genessa_form', mode=original_form)
+                    wait_form(original_form)
                 if expected['harbinger_mirror'] != before['harbinger_mirror']:
                     command('harbinger_mirror', value=before['harbinger_mirror'])
                     expected['harbinger_mirror'] = before['harbinger_mirror']
@@ -172,6 +194,11 @@ def main():
                     time.sleep(.5)
                 report['geometry_after'] = geometry()
                 report['geometry_restored'] = all(report['geometry_after'][k] == baseline[k] for k in ('position','view_target','control_rotation')) and all(abs((report['geometry_after']['rotation'][a]-baseline['rotation'][a]+180)%360-180)<1e-8 for a in ('Pitch','Yaw','Roll'))
+                if idle_changed:
+                    command('animation_choice', outfit=original['outfit'], variant=original['variant'], slot='idle', value=old_idle)
+                    expected['animation_choices'][original['outfit']][original['variant']]['idle'] = old_idle
+                    wait_json(MOD / 'state/state.json', lambda s: s == expected)
+                    idle_changed = False
                 after = json.loads((MOD / 'state/state.json').read_text())
                 atomic(out / 'state-after.json', after)
                 report['state_restored'] = after == before
@@ -181,6 +208,21 @@ def main():
                     and all(report[k] for k in ('geometry_restored','state_restored','cine_restored','appearance_restored')) and 'error' not in report)
             except Exception as error:
                 report['restore_error'] = repr(error)
+            if idle_changed:
+                try:
+                    current = p.send('player')
+                    if processes() != pids or any(current[k] != player[k] for k in ('pawn', 'controller')):
+                        raise RuntimeError('Player changed; idle restoration stopped')
+                    if json.loads((MOD / 'state/state.json').read_text()) != expected:
+                        raise RuntimeError('New settings preserved; idle restoration stopped')
+                    command('animation_choice', outfit=original['outfit'], variant=original['variant'], slot='idle', value=old_idle)
+                    expected['animation_choices'][original['outfit']][original['variant']]['idle'] = old_idle
+                    after = wait_json(MOD / 'state/state.json', lambda s: s == expected)
+                    atomic(out / 'state-after.json', after)
+                    report['idle_restored'] = True
+                    report['state_restored'] = after == before
+                except Exception as error:
+                    report['idle_restore_error'] = repr(error)
             atomic(out / 'result.json', report)
     print(json.dumps({k: report.get(k) for k in ('passed','cases','error','restore_error',
         'geometry_restored','state_restored','cine_restored','appearance_restored')}))

@@ -1117,6 +1117,9 @@ struct Core {
             const auto health=query({{"op","get"},{"target",pending.pawn},{"property","HealthComponent"}});
             if(health.is_null() || call(health,"IsDeadOrDying").at("ReturnValue").get<bool>())
                 throw std::runtime_error("Genessa form switch cancelled: player is not alive");
+            if(pending.target=="faithful" && call(pending.pawn,"HasMatchingGameplayTag",
+                {{"TagToCheck",{{"TagName","State.ReviveBlock"}}}}).at("ReturnValue").get<bool>())
+                throw std::runtime_error("The game is blocking shell revival. Genessa's Alteration upgrade can prevent switching to Faithful.");
             if(!appearance.ready_to_apply()) return;
             if(appearance.performance.cleanup_pending()) return;
             // Send once through the native ability path. Never retry a gameplay event.

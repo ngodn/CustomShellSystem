@@ -223,9 +223,12 @@ def main():
                 report['state_unchanged'] = after == saved
                 report['cine_unchanged'] = request(GAME, {'op': 'model', 'extension': 'eins0fx.cine'})['result'] == cine['result']
                 report['process_unchanged'] = processes() == pids
-                report['view_unchanged'] = all(report['geometry_after'][k] == report['geometry_before'][k]
-                                               for k in ('view_target', 'control_rotation'))
-                report['position_unchanged'] = report['geometry_after']['position'] == report['geometry_before']['position']
+                if 'geometry_before' in report:
+                    report['view_unchanged'] = all(report['geometry_after'][k] == report['geometry_before'][k]
+                                                   for k in ('view_target', 'control_rotation'))
+                    report['position_unchanged'] = report['geometry_after']['position'] == report['geometry_before']['position']
+                else:
+                    report['view_unchanged'] = report['position_unchanged'] = None
                 status = report.get('status_after', {})
                 report['passed'] = bool('error' not in report and report['active_samples'] and report.get('key_observed')
                     and status.get('active') == 0 and status.get('cached') == 0 and not status.get('error')
