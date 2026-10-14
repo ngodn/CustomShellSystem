@@ -1,5 +1,20 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, lower-skirt localization:** the user's acceptance of the images
+is provisional, with usable physics/body collision and no obvious movement
+clipping as the target. Baseline42's worst particles are in the lower skirt,
+at source heights 17.90 to 48.28 cm. The largest jump is 12.16 cm versus
+0.677 cm of animated target motion; neighboring edges stretch up to 7.496
+times their 1.57 to 2.45 cm rest lengths. All pinned points match independent
+skinning within 0.000029 cm, supporting the coordinate/index correspondence.
+The largest-jump particle is body-outside at both endpoints; that does not
+establish a clear trajectory or native contact cause. Four physical-mesh/body
+diagnostic renders and the hashed report are in CW baseline42 `jump-views`
+and `jump-contact.json`. No mesh, solver, collider or installed files changed.
+Prior C13/C15 and self-collision investigations remain authoritative: do not
+restart broad parameter or custom-solver work. The Belt20 game trial remains
+pending; use practical movement evidence to judge further repair needs.
+
 **October 14, skirt baseline:** the final CW mesh/graph now has a 241-frame
 native cloth capture at 60 Hz using its unchanged saved solver and collider.
 It confirms 4,893 particles with active simulation. Individual particle steps
