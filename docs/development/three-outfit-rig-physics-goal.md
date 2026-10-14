@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, older Eve tangent repair now identified:** the six original
+outfits pass cooked UV/color/imported-normal correspondence, but have widespread
+tangent alignment errors matching the earlier CW/Peony corner-order defect.
+A private ordered Black Pearl import reloads with 150,791 render vertices
+instead of 558,243, retaining 193,589 triangles, 379 bones and 22 morphs.
+See [surface evidence and repair sequence](../research/2026-10-14-eve-surface-tangents.md).
+The candidate is not cooked or installed. Verify its basis and preservation,
+then carry the correction through normal/facial assemblies with cloth and
+materials intact. Do not call this a proven fix for Vistani's sunlight report.
+The game remains closed; final CW path resolution and other live checks remain
+pending. No accepted installed assets or saved settings changed.
+
 **October 14, all six original Eve part sources accounted for:** current
 comparisons pass all 46 parts (803,379 points; 1,160,081 triangles), including
 fresh Skin Suit checks. Black Pearl's full exporter replay is byte-identical to

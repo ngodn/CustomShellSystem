@@ -1,0 +1,111 @@
+{
+  "surface_correspondence_passed": true,
+  "tangent_repair_complete": false,
+  "rows": [
+    {
+      "variant": "black_pearl",
+      "comparison": {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/black_pearl/comparison.json",
+        "sha256": "b6bfe5200aef11d0bdbec28e641e9ae31f3b9677afa53d6a090fa82f5dcde226"
+      },
+      "vertices": 558243,
+      "triangles": 193589,
+      "uv_channels": 3,
+      "max_normal_component_error": 0.011747121810913086
+    },
+    {
+      "variant": "prototype",
+      "comparison": {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/prototype/comparison.json",
+        "sha256": "afdcc1ba8c3946d8211ab37a0c78747044db8c18173b6c5ef3524b20bcc3112f"
+      },
+      "vertices": 510980,
+      "triangles": 175142,
+      "uv_channels": 3,
+      "max_normal_component_error": 0.011747121810913086
+    },
+    {
+      "variant": "skin_suit",
+      "comparison": {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/skin_suit/comparison.json",
+        "sha256": "bb0b46258c7201754bad97d8f057ce6d07c6cc6c4da7bf90f06d4d1a7a9ec566"
+      },
+      "vertices": 444427,
+      "triangles": 153507,
+      "uv_channels": 3,
+      "max_normal_component_error": 0.011747121810913086
+    },
+    {
+      "variant": "bikini",
+      "comparison": {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/bikini/comparison.json",
+        "sha256": "dda8baf12c52a67c8f2ad0db358171b2712deb38a4467311f79efcaf8974b5e5"
+      },
+      "vertices": 569795,
+      "triangles": 200619,
+      "uv_channels": 3,
+      "max_normal_component_error": 0.011747479438781738
+    },
+    {
+      "variant": "casual_sweater",
+      "comparison": {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/casual_sweater/comparison.json",
+        "sha256": "ee28b3436c6d0f73c91959a63fb38b424a320241ce85a6ce0c610c196187245f"
+      },
+      "vertices": 616658,
+      "triangles": 216613,
+      "uv_channels": 3,
+      "max_normal_component_error": 0.011747479438781738
+    },
+    {
+      "variant": "midsummer_alice",
+      "comparison": {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/midsummer_alice/comparison.json",
+        "sha256": "debd7171a8e8b85a8a8129fa4519ead0b325e3e3775a41f360001aba910c3a51"
+      },
+      "vertices": 631411,
+      "triangles": 220611,
+      "uv_channels": 3,
+      "max_normal_component_error": 0.011747479438781738
+    }
+  ],
+  "tangent_diagnostic": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-basis-verified.json",
+    "sha256": "a849cb56b4868d8fb91f6764d0f2d914051301e52c5bb268e3a3fedbc6f668f8"
+  },
+  "candidate_import": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/verified.json",
+    "sha256": "572c6430d50807d6340a0856c643d9e359b30456648f431b65f475718c743719"
+  },
+  "candidate_preservation": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/candidate.mesh.receipt.json",
+    "sha256": "6d1f9d0c3408fd77a9997fe00d104fd99c7f64fe263aa66b828e3cc4465faec7"
+  },
+  "tests": {
+    "command": [
+      "/usr/bin/python3",
+      "-B",
+      "-m",
+      "unittest",
+      "-v",
+      "test_eve_surface_correspondence"
+    ],
+    "environment": {
+      "PYTHONPATH": "tools/diagnostics"
+    },
+    "returncode": 0,
+    "log": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/tests.log",
+      "sha256": "c01c6420e8fb4043aeee9af2cf5160e72b414d2447f7fe2df2959ac7c2138950"
+    },
+    "source": {
+      "path": "tools/diagnostics/test_eve_surface_correspondence.py",
+      "sha256": "22e9d6f723afa57e85078b9a72ab7fb076c08e218f820e5d108d0cdf91e96fa1"
+    }
+  },
+  "cleanup": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/cleanup-completed.json",
+    "sha256": "d5049db9947a80c615d1be50e4027e70c40cf24d9853a76eb85ff1bb136dcfa2"
+  },
+  "scope": "Six original Eve surface fields pass; tangent basis anomalies require repair. Black Pearl candidate imported and reloaded, not cooked, installed or visually accepted."
+}

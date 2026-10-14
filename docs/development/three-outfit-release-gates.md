@@ -23,6 +23,7 @@ historical rehearsal and is not the stable release tag.
 | Peony palettes, removable pieces, flowing trim, profiles | User accepts four palettes, flow in CSS/world and restored profiles | Both-form and broader lifecycle coverage |
 | Peony excessive jiggle despite Firm/Natural | Restoration correction and tighter limits installed; user accepts walking/Iris Out motion, live limit readback passes | Other six Eve variants and lifecycle/performance regression |
 | Peony harsh lighting | User subsequently reports the unchanged build looks fine | No lighting fix established; monitor recurrence separately from sunlight report |
+| Older Eve tangent basis | All six original meshes retain UV/color/imported-normal correspondence but show widespread tangent alignment errors. Private ordered Black Pearl import/reload succeeds with fewer render vertices | Independent candidate basis and cooked preservation; six normal/facial assemblies with cloth/materials intact; shading and performance regression. Not yet installed or a proven sunlight-noise fix |
 | Customize shows only Ground Height after form switch | Mirrored-selection fix installed; user accepts recovery | Preserve through remaining lifecycle checks |
 | First Stray summon produces no doubles | User confirms first-switch summon works after selection fix; live clone capture exists | Original cause was not isolated; do not claim a proven independent spawn fix |
 | Native Black Hole/Iris Out marked Unavailable | Native alternatives installed; user accepts both playing and interrupting | Full library contact, continuous playback and CINE validation |
@@ -76,6 +77,11 @@ discarded. They retain their original scheduling in the full goal. This audit
 does not invent new deferrals for the primary repairs or release gates.
 
 ## Immediate continuation
+
+The new [surface audit](../research/2026-10-14-eve-surface-tangents.md) identifies
+a concrete repair for the six older Eve imports. Continue the private Black Pearl
+corner-order candidate through basis/cooked validation before changing installed
+meshes. Keep this separate from the accepted Peony/CW motion and MISC workaround.
 
 All 46 parts across the six original Eve outfits now have passing editable-source
 comparisons linked to their accepted imports and installed geometry checks.
