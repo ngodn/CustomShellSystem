@@ -1,6 +1,6 @@
 # Three-outfit rig and physics research index
 
-- [Outfit frame-cap capture](2026-10-15-outfit-frame-caps.md): running ten-variant extension of the native-cap fixture, with actual secondary-rig owners, counters and bounded state. Read-only preflight and five corruption controls pass; the live matrix is not yet complete.
+- [Outfit frame-cap capture](2026-10-15-outfit-frame-caps.md): Black Pearl and Planet pass nine captures each. Skin Suit's original-cap reset check fails with complete restoration; a focused repeat passes, while the first event remains unresolved. The remaining-variant continuation is running with the same criterion.
 
 - [Twenty outfit combo interruptions](2026-10-15-outfit-combo-interruption.md): native two-hit Axatana axe chains interrupt both facial clips on all ten release variants in Stray, with 863 raw active-ability observations, five negative controls and complete restoration.
 

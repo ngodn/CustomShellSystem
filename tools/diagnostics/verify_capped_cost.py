@@ -96,14 +96,17 @@ def main():
     assert report['cvars_before'] == report['cvars_after']
     assert report['geometry_before'] == report['geometry_after']
     assert hashlib.sha256((root / 'GameUserSettings-before.ini').read_bytes()).hexdigest() == report['settings_sha256']
-    assert [r['cap'] for r in report['cases']] == [30., 60., report['original_cap']]
+    expected_caps = report.get('requested_caps', [30., 60., report['original_cap']])
+    assert expected_caps and len(expected_caps) == len(set(expected_caps))
+    assert set(expected_caps) <= {30., 60., report['original_cap']}
+    assert [r['cap'] for r in report['cases']] == expected_caps
     requests = [read_row['request'] for line in (root / 'requests.jsonl').read_text().splitlines()
                 if 'request' in (read_row := json.loads(line))]
     calls = [r for r in requests if r['op'] == 'call']
     assert {r['function'] for r in calls} <= {'GetSpartaUserSettings', 'GetFrameRateLimit_Always',
         'SetFrameRateLimit_Always', 'K2_GetActorLocation', 'K2_GetActorRotation',
         'GetControlRotation', 'GetViewTarget', 'GetConsoleVariableStringValue'}
-    assert [r['args']['NewLimitFPS'] for r in calls if r['function'] == 'SetFrameRateLimit_Always'] == [30., 60., 999., 999.]
+    assert [r['args']['NewLimitFPS'] for r in calls if r['function'] == 'SetFrameRateLimit_Always'] == expected_caps + [report['original_cap']]
     summaries = []
     for case in report['cases']:
         verify_case(case, report['flags_before'], report.get('rig_observer', 'eve_body'))

@@ -21,7 +21,10 @@ def main():
     parser.add_argument('--outfit', default='eins0fx.seduxtress')
     parser.add_argument('--variant', default='peony')
     parser.add_argument('--all-rigs', action='store_true')
+    parser.add_argument('--caps', type=float, nargs='+', choices=(30., 60., 999.), default=[30., 60., 999.])
     args = parser.parse_args()
+    if len(set(args.caps)) != len(args.caps):
+        parser.error('Frame caps must not repeat')
     out = args.output.resolve()
     pids = processes()
     if out.exists() or len(pids) != 1:
@@ -111,12 +114,13 @@ def main():
                   flags_before=flags.initial, geometry_before=baseline, cvars_before=original_cvars,
                   settings_file=str(settings_path), settings_sha256=settings_sha, cases=[],
                   gameplay_input=False, raw_memory_writes=False,
+                  requested_caps=args.caps,
                   rig_observer='secondary_rigs' if args.all_rigs else 'eve_body')
     atomic(out / 'state-before.json', before)
     atomic(out / 'result.json', report)
     try:
         focus(game_window['address']); guard()
-        for cap in (30., 60., original_cap):
+        for cap in args.caps:
             guard()
             row = dict(cap=cap, before=flags.read())
             report['cases'].append(row)

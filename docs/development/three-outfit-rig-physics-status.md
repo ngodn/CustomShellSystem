@@ -1,9 +1,10 @@
 # Three-outfit implementation status
 
-**October 15, outfit frame-cap matrix running:** all ten release variants are
-queued for the established 30/60/original-cap recordings with live secondary-rig
-boundary reads. Peony's read-only rig preflight and five corrupted-record
-controls pass. The live matrix has not completed or earned final acceptance.
+**October 15, outfit frame-cap matrix partial:** Black Pearl and Planet pass
+all nine captures each. Skin Suit records ten additional hair/body resets at
+the original cap; the first matrix fails and restores completely. A focused
+repeat passes without new resets, but does not explain the earlier event.
+A continuation from Skin Suit is running with the same reset criterion.
 [Method and evidence](../research/2026-10-15-outfit-frame-caps.md).
 
 **October 15, twenty Stray combo interruptions pass:** all ten release variants

@@ -3,7 +3,10 @@ from check_peony_live_presets import engine
 
 
 FIELDS = ('Enabled', 'TotalSteps', 'ResetCount', 'SeenUpdate', 'SubSteps',
-          'StepSeconds', 'Limits', 'MaxTravel', 'orientation', 'Display', 'Omega')
+          'StepSeconds', 'Limits', 'MaxTravel', 'orientation', 'Display', 'Omega',
+          'TickSeconds', 'ResetEpoch', 'SeenEpoch', 'UpdateSerial', 'Remainder',
+          'Initialized', 'OwnerTransform', 'PreviousScale', 'ScaleChanged',
+          'Teleport', 'SupportedScale', 'ValidScale', 'PoseChanged')
 
 
 def sample_secondary_rigs():

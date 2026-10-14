@@ -18,25 +18,52 @@ def read(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)
-    root = parser.parse_args().directory.resolve()
+    parser.add_argument('--prior', type=Path, action='append', default=[],
+                        help='Retain verified completed cases from a fully restored earlier sequence')
+    args = parser.parse_args()
+    root = args.directory.resolve()
     matrix = read(root / 'result.json')
+    assert matrix.get('only') is None
+    assert matrix.get('requested_caps', [30., 60., 999.]) == [30., 60., 999.]
     assert matrix['passed'] and matrix['cases_passed']
     assert not matrix.get('error') and not matrix.get('restore_error')
-    assert all(matrix[k] for k in ('state_restored', 'geometry_restored', 'cine_restored', 'process_preserved'))
-    assert read(root / 'state-before.json') == read(root / 'state-after.json')
-    assert read(root / 'cine-before.json') == read(root / 'cine-after.json')
-    assert geometry_restored(matrix['geometry_before'], matrix['geometry_after'])
+    sources = [root, *[p.resolve() for p in args.prior]]
+    assert len(sources) == len(set(sources))
+    completed, failures, hashes = [], [], {}
+    for source in sources:
+        run = read(source / 'result.json')
+        assert not run.get('restore_error') and all(run[k] for k in
+            ('state_restored', 'geometry_restored', 'cine_restored', 'process_preserved'))
+        assert read(source / 'state-before.json') == read(source / 'state-after.json') == read(root / 'state-before.json')
+        assert read(source / 'cine-before.json') == read(source / 'cine-after.json') == read(root / 'cine-before.json')
+        assert geometry_restored(run['geometry_before'], run['geometry_after'])
+        assert geometry_restored(run['geometry_before'], matrix['geometry_before'])
+        assert run['core'] == matrix['core'] and run['core_sha256'] == matrix['core_sha256']
+        assert run['player'] == matrix['player'] and run.get('only') is None
+        assert run.get('requested_caps', [30., 60., 999.]) == [30., 60., 999.]
+        for case in run['cases']:
+            assert 'returncode' in case, 'Earlier sequence is not terminal'
+            if case.get('passed') and case['returncode'] == 0:
+                completed.append((case, source))
+            else:
+                failures.append(dict(source=str(source), case=case, error=run.get('error')))
+        if not run['passed']:
+            assert run.get('error') and any(not c.get('passed') for c in run['cases'])
+        hashes[str(source)] = {name: hashlib.sha256((source / name).read_bytes()).hexdigest()
+                              for name in ('result.json', 'state-before.json', 'state-after.json',
+                                           'cine-before.json', 'cine-after.json', 'recipe.py')}
     expected = {(o, v) for o, variants in OUTFITS.items() for v in variants}
-    actual = [(r['outfit'], r['variant']) for r in matrix['cases']]
+    actual = [(r['outfit'], r['variant']) for r, source in completed]
     assert len(actual) == len(expected) and set(actual) == expected
     summaries = []
     frames = 0
     controls = set()
-    for case in matrix['cases']:
+    for case, source in completed:
         assert case['passed'] and case['returncode'] == 0
         folder = Path(case['evidence'])
-        assert folder.parent == root
+        assert folder.parent == source
         report = read(folder / 'result.json')
+        assert report.get('requested_caps', [30., 60., 999.]) == [30., 60., 999.]
         assert report['rig_observer'] == 'secondary_rigs'
         assert (report['original']['outfit'], report['original']['variant']) == (case['outfit'], case['variant'])
         assert report['original']['shell'] == matrix['original']['shell']
@@ -70,14 +97,13 @@ def main():
                                   observed_hz=[row['engine_tick_rate_hz'] for row in selected],
                                   median_run_statistics=timings, rig_counters=counters))
     assert controls == {'changed priority', 'stalled rig', 'nonfinite rig'}
-    result = dict(passed=True, outfits=len(matrix['cases']), captures=len(summaries) * 3,
+    result = dict(passed=True, outfits=len(completed), captures=len(summaries) * 3,
                   frames=frames, rejected_controls=sorted(controls), summaries=summaries,
-                  hashes={name: hashlib.sha256((root / name).read_bytes()).hexdigest()
-                          for name in ('result.json', 'state-before.json', 'state-after.json',
-                                       'cine-before.json', 'cine-after.json', 'recipe.py')},
+                  hashes=hashes, prior_failed_attempts=failures, all_attempts_passed=not failures,
                   scope='Stationary timing and boundary rig reads at native caps; no matched baseline, GPU or cloth-cost claim.')
-    (root / 'verified.json').write_text(json.dumps(result, indent=2) + '\n')
-    print(json.dumps({k: v for k, v in result.items() if k not in ('summaries', 'hashes')}))
+    target = root / ('combined-verified.json' if args.prior else 'verified.json')
+    target.write_text(json.dumps(result, indent=2) + '\n')
+    print(json.dumps({k: v for k, v in result.items() if k not in ('summaries', 'hashes', 'prior_failed_attempts')}))
 
 
 if __name__ == '__main__':

@@ -16,6 +16,11 @@ from check_sidearm_aim_visibility import MOD, geometry_restored
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    selection = parser.add_mutually_exclusive_group()
+    choices = [o + '/' + v for o, variants in OUTFITS.items() for v in variants]
+    selection.add_argument('--only', choices=choices)
+    selection.add_argument('--start-at', choices=choices, help='Start at a variant after separately verified earlier cases')
+    parser.add_argument('--caps', type=float, nargs='+', choices=(30., 60., 999.), default=[30., 60., 999.])
     args = parser.parse_args()
     out = args.output.resolve()
     original, pids = describe(), processes()
@@ -63,13 +68,20 @@ def main():
     atomic(out / 'state-before.json', before)
     atomic(out / 'cine-before.json', cine)
     report = dict(passed=False, original=original, player=player, geometry_before=baseline,
-                  core=core, core_sha256=core_sha256, cases=[])
+                  core=core, core_sha256=core_sha256, cases=[], requested_caps=args.caps,
+                  only=args.only, start_at=args.start_at)
     atomic(out / 'result.json', report)
     try:
         customize({'action': 'idle', 'value': 'eve'})
         idle = 'eve'
+        selected = args.start_at is None
         for outfit, variants in OUTFITS.items():
             for variant in variants:
+                selected = selected or args.start_at == outfit + '/' + variant
+                if not selected:
+                    continue
+                if args.only and args.only != outfit + '/' + variant:
+                    continue
                 guard()
                 target = original['shell'], outfit, variant
                 expected = memories[outfit + '/' + variant]
@@ -80,7 +92,8 @@ def main():
                 guard()
                 folder = out / (outfit + '-' + variant)
                 command = [sys.executable, str(ROOT / 'tools/diagnostics/capture_capped_cost.py'),
-                           '--output', str(folder), '--outfit', outfit, '--variant', variant, '--all-rigs']
+                           '--output', str(folder), '--outfit', outfit, '--variant', variant, '--all-rigs',
+                           '--caps', *[str(cap) for cap in args.caps]]
                 row = dict(outfit=outfit, variant=variant, evidence=str(folder), command=command)
                 report['cases'].append(row)
                 atomic(out / 'result.json', report)
@@ -93,7 +106,7 @@ def main():
                 result.check_returncode()
                 if not row.get('passed'):
                     raise RuntimeError('Child did not verify captures and restoration')
-                print(outfit, variant, 'three caps pass', flush=True)
+                print(outfit, variant, args.caps, 'caps pass', flush=True)
         report['cases_passed'] = True
     except Exception as error:
         report['error'] = repr(error)
