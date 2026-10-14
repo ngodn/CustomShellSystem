@@ -1,5 +1,19 @@
 # Three-outfit implementation status
 
+**October 14, CW walking accepted:** the user answered "Walking looks right
+now" to the installed walking-only trial's boots-on/off check. The reported
+obvious walking tilt is accepted as corrected for that check. Preserve accepted
+jog/sprint and belt/skirt behavior. Finalize private walk paths before stable
+delivery; terrain/lifecycle and performance remain separate requirements.
+
+**October 14, facial preservation:** the current ten normal/facial pairs retain
+bind references and existing morphs. Eight have identical decoded render
+digests; both Genessa facial meshes match their retained editor geometry and
+all 137 morphs within cooking precision. All sixteen decoded clothing assets
+and their configurations match between paired meshes. Expected CW optical
+materials and Belt20 graphs are accounted for. See
+[current facial comparison](../research/2026-10-14-facial-preservation.md).
+
 **October 14, current Eve import correspondence:** all six original normal
 outfits pass the retained-import versus installed-mesh comparison for positions,
 UV0/material slots, triangle multiplicity/winding, bind transforms, bounded
@@ -2055,10 +2069,10 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
 | Hair | Genessa unused-solver candidate is installed; matched cost remains. CW separate-strand trial is installed and the user reports it looks fine. Both normal/facial regular and scene graphs pass paired component lifecycle checks. Two source-visible left-bang head-turn intersections improve but remain. CINE/doubles, full lifecycle and measured gameplay cost remain; see [CW study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md) |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
-| CW walking feet | October 14 user check accepts jog/sprint but reports walking tilt. A later walking-only trial is installed and awaits boots-on/off visual acceptance. Four ankle/toe AnimationRelative modes remain; full-leg retargeting and native IK bypass were rejected. Accepted gaits and belt/skirt assets are preserved. See [foot investigation](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/walking-foot-report.md) |
+| CW walking feet | User accepts the later installed walking-only correction after the boots-on/off prompt. Finalize private paths and retain terrain/lifecycle/performance checks. Four ankle/toe AnimationRelative modes remain; full-leg retargeting and native IK bypass were rejected. Accepted gaits and belt/skirt assets are preserved. See [foot investigation](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/walking-foot-report.md) |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: collect visual acceptance for the installed CW walking trial, then complete CW
+Next: finalize the accepted CW walking correction's asset paths, then complete CW
 CINE/doubles and matched performance checks, retaining the Genessa
 unused-hair-solver acceptance gap. Native conversion authoring
 is complete; remaining native work is validation, not conversion. Preserve the

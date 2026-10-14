@@ -29,7 +29,7 @@ historical rehearsal and is not the stable release tag.
 | Genessa face and visibility after outfit changes | Owner-restoration/visibility fix installed; cross-character Iris Out and interruption accepted | Both Genessa variants, CSS/CINE, both forms and doubles matrix |
 | Genessa rear cloth | World correction accepted; preview clipping explicitly accepted for now | Other poses/variants and cost, without reopening accepted preview limitation |
 | CW hair | User accepts installed strand trial and tested face/eyes/interruption | CINE, doubles, full lifecycle and measured cost |
-| CW inward/sideways walking feet | User accepts jog/sprint but rejects walk. A walking-only eight-clip correction is now installed with saved-ID aliases; cooked data, bounded surface residual and catalog/profile checks pass | Boots-on/off visual acceptance, full-cycle gameplay and terrain; finalize private clip paths if accepted; preserve native IK and rollback |
+| CW inward/sideways walking feet | User now accepts the installed walking-only correction after the boots-on/off prompt; jog/sprint already accepted. Cooked data, bounded surface residual and catalog/profile checks pass | Finalize private clip paths; retain terrain/lifecycle and performance regression checks; preserve native IK and rollback |
 | CW belt physics and janky skirt | User accepts both while walking/turning. Live Belt20 execution and nine shape-input routing cases pass, with exact saved-state restoration | Extreme-shape visual checks, lifecycle and matched cost; preserve accepted physics and stop solver tuning |
 | CW dev/Development display qualifiers | Clean Commander White manifest/catalog name and description installed; packaging recipes updated; assets and IDs unchanged | Final stable version/archive filenames and release text; historical releases remain immutable |
 | More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children | Live recovery/facial behavior above 128 and repeated-switch leak/lifetime checks |
@@ -55,7 +55,7 @@ Accepted observations apply to their recorded test scope, not every variant.
 
 - Account for all nine original repair variants plus accepted Peony, including
   normal/facial sources, final cooked assets and required morph/pose checks.
-- Finish the CW walking defect and other non-deferred defects. Preserve accepted
+- Finalize the accepted CW walking correction and finish other non-deferred defects. Preserve accepted
   belt/skirt motion, Genessa cloth and Peony motion/design; complete their separate
   regression and performance requirements without reopening accepted minor flaws.
 - Complete the goal's Phase 4 matrix: actions, preview/world, lifecycle,
@@ -82,11 +82,11 @@ outfit's actual post-process graph, including Bikini/Knit feet graphs, and both
 normal/facial meshes. See the
 [regression record](../research/2026-10-12-eve-existing-motion-regression.md).
 This is not full visual or cloth acceptance. CW's new walking-only trial is
-installed with the developer core `acab6363906f0e88`; the user has been asked to
-reopen and compare booted/bare walking. Its source records, fourteen directional
+installed with the developer core `acab6363906f0e88`; the user now confirms
+walking looks right after the booted/bare prompt. Its source records, fourteen directional
 editor replays, standalone cooked readback and combined catalog checks are in CW
 `work/foot-walk-orientation3`. Existing jog/sprint and accepted belt/skirt assets
-are unchanged. The correction is not visually accepted yet. Native rig reference replacement
+are unchanged. Finalize the private paths while preserving this accepted result. Native rig reference replacement
 did not establish an improvement; phase matching shows the active rig preserves
 foot orientation while adjusting position. Keep native grounding. The narrower
 ankle alignment improves mean reference bank in walk/jog/sprint but not every

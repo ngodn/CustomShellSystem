@@ -1,5 +1,11 @@
 # Three-outfit rig and physics research index
 
+- October 14: the user accepts the installed CW walking-only correction:
+  "Walking looks right now". Preserve the accepted correction and finalize
+  private paths before public packaging. The current ten-pair
+  [facial preservation audit](2026-10-14-facial-preservation.md) also passes its
+  stated geometry/morph/decoded-cloth scope; gameplay coverage remains separate.
+
 - October 14: all six original Eve normal meshes pass retained-import versus
   current installed geometry, weight and positional-morph comparisons. This
   expands the earlier Black Pearl/Skin Suit coverage and refreshes both against

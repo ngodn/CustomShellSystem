@@ -1,5 +1,21 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW walking accepted:** in response to the installed walking-only
+trial's boots-on/off check, the user says "Walking looks right now". Close the
+reported obvious walking tilt at this tested scope. Jog/sprint and belt/skirt
+motion were already accepted. Preserve these assets; finalize private walking
+paths before stable packaging, and retain the separate terrain/lifecycle and
+performance requirements.
+
+**October 14, current facial preservation checked:** all ten pairs retain bind
+references and original morphs. Eight pairs also retain exact decoded render
+digests; Genessa's two intentionally extended facial meshes instead pass the
+complete retained-editor versus current-cook geometry and 137-morph comparison.
+Decoded clothing properties/configurations match across all sixteen clothing
+assets. Expected CW optical/graph changes are accounted for. See
+[facial preservation](../research/2026-10-14-facial-preservation.md). No game
+files changed; runtime facial/CINE/doubles and performance gates remain open.
+
 **October 14, six original Eve imports checked against current installation:**
 Black Pearl, Planet Diving, Skin Suit, Bikini, Knitwear and Midsummer Alice all
 pass LOD0 position/UV0/material-slot, topology, bind, bounded weight and positional
