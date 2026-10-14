@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 14, live attachment check above 128 passes:** Peony completes three
+facial activation/restoration cycles with 129 direct children and 166 owned
+components. All 73 temporary empty components are removed, returning the exact
+original 56 children/93 components, parents and sockets. Saved settings, CINE,
+appearance and player/camera state restore. [Evidence and scope](../research/2026-10-14-attachment-limit-live.md).
+This closes the live snapshot-cap check, not high-count rendered-accessory cost,
+follower/offset stress, broader lifetime or the full stable-release matrix.
+
 **October 14, profile visibility fix installed and verified live:** guarded
 stationary core reload passes. Actual Default-profile loads restore sidearm/seal
 visibility in the world and wardrobe preview, including repeated loads. Original

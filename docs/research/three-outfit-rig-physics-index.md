@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Live attachment check above 128](2026-10-14-attachment-limit-live.md): three Peony facial/normal cycles pass at 129 direct children. Temporary components removed; original handles, attachments, settings and camera restored. Rendered-accessory cost and broader lifetime remain unproven.
+
 - [Default visibility profile restoration](2026-10-14-profile-default-restore.md): empty-map correction passes offline regression and actual world/preview profile loads after guarded installation. Exact settings and post-menu world restoration pass; wider migration remains open.
 
 - [Peony stationary timing reference](2026-10-14-peony-stationary-cost.md): three captures and 3,133 records pass archive checks with unchanged boundary contexts/settings. Tail variation, missing trace channels and unmatched comparison keep the performance gate open.

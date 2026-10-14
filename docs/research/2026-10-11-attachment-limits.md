@@ -1,5 +1,11 @@
 # Attachment limits in CSS
 
+**October 14 follow-up:** the current installed core passes three Peony
+facial/restoration cycles with 129 real registered direct children. The 73
+temporary empty components are removed and original handles/parents/sockets,
+settings and camera restore. See [the live evidence and limitations](2026-10-14-attachment-limit-live.md).
+The staged-only status below records the original October 11 candidate.
+
 The recorded accessory-recovery and idle-facial errors both reach
 `attached_children`. Its fixed 128-child limit also affects performance weapon
 hiding. `AttachmentFollower` separately stops at 128 repaired children, and
