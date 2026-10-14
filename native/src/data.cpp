@@ -82,6 +82,20 @@ void save_profile_snapshot(State& state,const std::string& name) {
         throw std::runtime_error("All 64 profiles are used. Replace or delete a saved profile.");
     state.presets[name]=Preset{state.selections,state.walk_animation,state.animation_choices,state.misc_rules,state.doubles,true};
 }
+const Selection* profile_selection(const Preset& preset,const Catalog& catalog,const std::string& shell) {
+    const auto selected=preset.selections.find(shell);
+    if(selected==preset.selections.end()) return nullptr;
+    const auto& choice=selected->second;
+    if(std::none_of(catalog.outfits.begin(),catalog.outfits.end(),[&](const auto& outfit) {return outfit.id==choice.outfit;}))
+        throw std::runtime_error("Profile outfit is unavailable: "+choice.outfit+
+            ". Install the outfit and its required shared assets, then load the profile again.");
+    if(!catalog.find(choice.outfit,choice.variant))
+        throw std::runtime_error("Profile variant is unavailable: "+choice.outfit+"/"+choice.variant+
+            ". Install a version that includes this variant, or choose another profile.");
+    if(!catalog.compatible(choice.outfit,shell))
+        throw std::runtime_error("Profile outfit does not support the current shell: "+choice.outfit+".");
+    return &choice;
+}
 bool restore_profile_settings(State& state,const Preset& preset) {
     bool changed=false;
     if(state.walk_animation!=preset.walk_animation) { state.walk_animation=preset.walk_animation; changed=true; }

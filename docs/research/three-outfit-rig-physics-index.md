@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Unavailable profile preflight](2026-10-15-profile-dependencies.md): missing outfit, variant and compatibility rejection passes before global settings change. New core installed; repeated world profile loads preserve visibility/settings/view. Actual missing-provider/reinstall lifecycle and mirrored slot ownership remain open.
+
 - [Paired body-solver timing](2026-10-15-body-cost.md): 48 editor cases and 28,800 measured updates at 30/60/120 Hz pass enable/bypass, step-count and finite-output checks. Existing six-case input regression passes. Timing variation prevents a precise runtime cost claim; no game settings or assets changed.
 
 - [Live attachment check above 128](2026-10-14-attachment-limit-live.md): three Peony facial/normal cycles pass at 129 direct children. Temporary components removed; original handles, attachments, settings and camera restored. Rendered-accessory cost and broader lifetime remain unproven.

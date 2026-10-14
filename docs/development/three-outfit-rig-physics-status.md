@@ -1,5 +1,15 @@
 # Three-outfit implementation status
 
+**October 15, unavailable-profile preflight installed:** missing outfits, removed
+variants and shell incompatibility now reject before changing profile settings.
+The failing regression passes, along with 26 host suites, 12 archived profiles,
+four real catalog combinations and the Windows build. Guarded installation and
+repeated live Default-profile loads preserve the user's complete saved state,
+visibility, CINE model and player/view. [Evidence and limits](../research/2026-10-15-profile-dependencies.md).
+Missing-package/reinstall rejection is verified offline, not through live package
+removal. Mirrored profile-slot ownership, broader save/form lifecycle and stable
+release gates remain open.
+
 **October 15, paired body-cost fixture completes:** 48 enabled/bypassed cases
 cover normal/facial Peony at 30/60/120 updates per second, with 28,800 measured
 updates and verified 120 Hz solver counters. Six existing input-handoff cases

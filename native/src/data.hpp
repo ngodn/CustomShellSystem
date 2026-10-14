@@ -231,6 +231,7 @@ struct State {
 };
 State load_state(const fs::path&, bool* recovered = nullptr);
 void save_profile_snapshot(State&,const std::string& name);
+const Selection* profile_selection(const Preset&,const Catalog&,const std::string& shell);
 bool restore_profile_settings(State&,const Preset&);
 std::string appearance_selection_key(const State&,const Catalog&,const std::string& shell);
 bool set_animation_choice(State&,const Catalog&,const std::string& shell,

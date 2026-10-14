@@ -723,10 +723,9 @@ struct Core {
         else if (action == "load_look" || action == "load_profile") {
             auto name = command.at("name").get<std::string>();
             const auto& preset = state.presets.at(name);
-            const auto& selections = preset.selections;
-            auto selected = selections.find(appearance.shell);
-            if (selected == selections.end()) { restore_pending = true; forget_current = true; }
-            else { selected_outfit = selected->second.outfit; selected_variant = selected->second.variant; pending_custom=selected->second.custom; apply_pending = true; }
+            const auto* selected=profile_selection(preset,catalog,appearance.shell);
+            if (!selected) { restore_pending = true; forget_current = true; }
+            else { selected_outfit = selected->outfit; selected_variant = selected->variant; pending_custom=selected->custom; apply_pending = true; }
             const auto previous_misc=state.misc_rules;
             if(restore_profile_settings(state,preset)) dirty=true;
             if(state.misc_rules!=previous_misc) appearance.set_misc_rules(state.misc_rules);

@@ -16,6 +16,54 @@ static void rejected(css::State& state,const std::string& name,const std::string
 }
 int main(int argc,char** argv) {
     {
+        const std::string shell="CharacterId.Player.Shell.Genessa";
+        css::State state;
+        state.darkform_mirror_cleaned=true;
+        state.selections[shell]={"test.profile","regular",{}};
+        state.misc_rules["seal"]={"hidden"};
+        css::save_profile_snapshot(state,"installed");
+        state.misc_rules["seal"]={"in_use"};
+        state.walk_animation="feminine";
+        state.doubles={false,false};
+        const auto before=state.json();
+        auto preset=state.presets.at("installed");
+        css::Catalog catalog;
+        auto reject=[&](const std::string& reason) {
+            std::string error;
+            try {
+                css::profile_selection(preset,catalog,shell);
+                css::restore_profile_settings(state,preset);
+            } catch(const std::runtime_error& e) { error=e.what(); }
+            check(error.find(reason)!=std::string::npos,"Unavailable profile was not rejected before settings changed");
+            check(state.json()==before,"Unavailable profile changed current settings or saved choices");
+        };
+        reject("Profile outfit is unavailable: test.profile");
+        css::Outfit outfit;
+        outfit.id="test.profile";
+        outfit.shells={shell};
+        css::Variant variant;
+        variant.id="regular";
+        outfit.variants.push_back(variant);
+        catalog.outfits.push_back(outfit);
+        preset.selections[shell].variant="removed";
+        reject("Profile variant is unavailable: test.profile/removed");
+        preset.selections[shell].variant="regular";
+        catalog.outfits[0].shells={"CharacterId.Player.Shell.Tiel"};
+        reject("Profile outfit does not support the current shell");
+        catalog.outfits[0].shells={shell};
+        const auto* selected=css::profile_selection(preset,catalog,shell);
+        check(selected && selected->outfit=="test.profile" && selected->variant=="regular",
+              "Reinstalled profile did not resolve without resaving");
+        check(state.json()==before,"Preflight changed saved state");
+        check(css::restore_profile_settings(state,preset) && state.misc_rules.at("seal").mode=="hidden",
+              "Available profile no longer restores its settings");
+        check(!css::profile_selection(preset,catalog,"CharacterId.Player.Shell.Eredrim"),
+              "A profile without a shell selection invented an outfit");
+        preset.selections["CharacterId.Player.Shell.Eredrim"]={"absent.other","missing",{}};
+        check(css::profile_selection(preset,catalog,shell)!=nullptr,
+              "An unavailable selection for another shell blocked the current shell");
+    }
+    {
         css::State defaults;
         defaults.darkform_mirror_cleaned=true;
         css::save_profile_snapshot(defaults,"all-default");

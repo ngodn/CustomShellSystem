@@ -19,14 +19,17 @@ CORE_SHA = '7004a5a913f6c8ce31fb26b64e6b055134b684269074faa7eb42079b286b3dc1'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--core-sha256', default=CORE_SHA, help='Expected installed and mapped core SHA-256')
     parser.add_argument('--menu', action='store_true', help='Also verify the already-open wardrobe preview')
     args = parser.parse_args()
+    if len(args.core_sha256) != 64 or any(c not in '0123456789abcdef' for c in args.core_sha256):
+        parser.error('--core-sha256 must be a lowercase SHA-256 digest')
     out = args.output.resolve()
     if out.exists() or len(processes()) != 1:
         raise RuntimeError('Need one running game and a new output directory')
     pids, original = processes(), describe()
     core = json.loads((MOD/'core.json').read_text())
-    if sha(MOD/'cores'/core['file']) != CORE_SHA or core['file'] not in Path(f'/proc/{pids[0]}/maps').read_text():
+    if sha(MOD/'cores'/core['file']) != args.core_sha256 or core['file'] not in Path(f'/proc/{pids[0]}/maps').read_text():
         raise RuntimeError('Profile correction is not the mapped core')
     cine = request(GAME, {'op': 'model', 'extension': 'eins0fx.cine'})
     buttons = {c['id']: c.get('enabled', True) for s in cine['result']['sections'] for c in s['controls']}
@@ -40,7 +43,7 @@ def main():
     shutil.copyfile(__file__, out/'recipe.py')
     atomic(out/'state-before.json', before)
     atomic(out/'cine-before.json', cine)
-    report = dict(passed=False, process_before=pids, core=core, core_sha256=CORE_SHA,
+    report = dict(passed=False, process_before=pids, core=core, core_sha256=args.core_sha256,
                   temporary_profile=name, gameplay_input=False, camera_input=False, samples={})
     expected = copy.deepcopy(before)
     player = engine({'op': 'player'})
