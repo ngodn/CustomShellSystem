@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 15, hidden item actor drift repaired and installed:** the old core
+fails controlled actor-only visibility changes on Naylshotte, Infinite Seal and
+Genessa's catalyst. The candidate repairs all three, preserves Default mode and
+passes the natural form/profile sequence plus exact world visibility teardown.
+Saved settings, appearance, position/view and temporary-profile cleanup pass.
+[Evidence and timing limits](../research/2026-10-15-item-visibility-drift.md).
+The six short timing captures do not prove FPS non-regression. Visible Tarstone
+residue, aiming/firing and the broader gameplay/performance gates remain open.
+
 **October 15, mirrored profile restoration installed:** the failing Darkform
 selection regression is repaired. Profiles restore their saved selection table
 and use normal mirror reconciliation, preserving independent form choices.

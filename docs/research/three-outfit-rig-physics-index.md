@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Hidden item actor drift](2026-10-15-item-visibility-drift.md): three actor-only visibility failures reproduced and repaired; Default control, form/profile sequence and exact world-flag restoration pass. Six timing captures retain an unresolved sequential timing increase; visible Tarstone residue is not claimed fixed.
+
 - [Profiles across mirrored Genessa forms](2026-10-15-profile-forms.md): profile loads use the saved living choice, preserve the independent Darkform choice and restore the full selection snapshot. Offline regressions and repeated live Stray loads pass. The fixture now restores displacement during the form round trip; the cross-save report remains open.
 
 - [Unavailable profile preflight](2026-10-15-profile-dependencies.md): missing outfit, variant and compatibility rejection passes before global settings change. New core installed; repeated world profile loads preserve visibility/settings/view. Actual missing-provider/reinstall lifecycle and mirrored slot ownership remain open.

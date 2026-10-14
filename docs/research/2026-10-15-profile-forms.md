@@ -98,6 +98,10 @@ this live form check does not remove the user's outfits.
 
 ## Visibility follow-up found during regression
 
+Follow-up: the [actor-flag enforcement repair](2026-10-15-item-visibility-drift.md)
+now passes live fault injection, the form sequence and the complete world
+visibility teardown. The original failed results below remain historical evidence.
+
 The subsequent `live-default` check passes both actual Default-profile loads and
 restores the full saved state/CINE/view, but exits 1 on its final raw visibility
 comparison. Before it starts, Naylshotte, the Genessa catalyst and the Infinite

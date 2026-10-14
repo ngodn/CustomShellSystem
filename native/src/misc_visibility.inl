@@ -54,11 +54,11 @@ static void set_component_hidden(UObject* comp, bool hide) {
     set.set(L"bPropagateToChildren",false);
     set.run();
 }
-static bool component_game_hidden(UObject* comp) {
-    if(!comp) return false;
+static bool hidden_flag(UObject* object,const wchar_t* name) {
+    if(!object) return false;
     try {
-        if(auto* p=comp->GetPropertyByNameInChain(L"bHiddenInGame"); p && p->IsA<FBoolProperty>())
-            return static_cast<FBoolProperty*>(p)->GetPropertyValue(reinterpret_cast<std::byte*>(comp)+p->GetOffset_Internal());
+        if(auto* p=object->GetPropertyByNameInChain(name); p && p->IsA<FBoolProperty>())
+            return static_cast<FBoolProperty*>(p)->GetPropertyValue(reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal());
     } catch(...) {}
     return false;
 }
@@ -247,7 +247,10 @@ void MiscVisibility::evaluate(const std::map<std::string,MiscRule>& rules, bool 
     // Hide what should be hidden: newly wanted, or an item the game turned back on this frame.
     for(auto& w:want) {
         auto* comp=w.component.Get();
-        if(comp && (!has(hidden_,comp) || !component_game_hidden(comp))) set_item_hidden(comp,w.owner.Get(),true);
+        auto* owner=w.owner.Get();
+        // A form transition can reveal the actor while leaving its mesh hidden.
+        if(comp && (!has(hidden_,comp) || !hidden_flag(comp,L"bHiddenInGame") ||
+                    (owner && !hidden_flag(owner,L"bHidden")))) set_item_hidden(comp,owner,true);
     }
     hidden_=std::move(want);
 }
