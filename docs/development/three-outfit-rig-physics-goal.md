@@ -2046,9 +2046,16 @@ Inspect form-control state across save/world/player replacement, including stale
 
 ## Low-priority follow-up: Trebuchaxe sidearm visibility
 
-**Status:** user-supplied report, not reproduced or diagnosed. Investigate and fix after the primary rig, facial and animation work; this does not change the current priority.
+**Status:** original report now supported by the user's October 15 in-game screenshot. Controlled reproduction, diagnosis and repair remain pending. Investigate and fix after the primary rig, facial and animation work; this reminder does not change the current priority.
 
 DirektorSvemira reported on 2026-10-08 at 00:05 (report timezone unspecified) that CSS sidearm visibility set to **Only when in use** produces a hovering axe above the Trebuchaxe. The offset persists when the weapon turns sideways for a charged shot. The reporter says gameplay is unaffected and no other installed mod alters the weapon or its hiding behavior. CSS causation and any Tarstone interaction remain unverified.
+
+The user's [October 15 screenshot](/home/eins0fx/Pictures/screenshot-2026-10-15_04-53-53.png)
+shows Peony aiming the Trebuchaxe with a visibly separated axe suspended above
+the weapon. The screenshot does not establish the current visibility setting,
+Tarstone loadout, charged-shot behavior or the detached object's identity.
+Keep those details from the original report separate until checked. The passing
+Naylshotte Burn draw/fire/stow test does not resolve this defect.
 
 Reported sidearm Tarstones, top slot to bottom:
 

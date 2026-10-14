@@ -157,9 +157,9 @@ The independent read-only receipt `session-getter-readonly.json` compares the
 actual reflected getter result with both named properties. It matches
 `RuntimeSessionSaveObject`, not `SessionSaveObject`, on this live subsystem.
 The common routine's retained window contains a conditional virtual call on
-that offset's object followed by passing it to `0x145c32ba0`. These calls have
-not yet been attributed to pre-save or serialization, so they do not establish
-a safe interception boundary. Shared entry paths also do not prove when the
+that offset's object followed by passing it to `0x145c32ba0`. The further
+attribution below identifies pre-save dispatch and `UpdateFrom`, but does not
+yet establish a verified interception boundary. Shared entry paths do not prove when the
 autosave timer fires or whether every call writes a session record.
 
 All addresses are static image virtual addresses for this exact build, not
@@ -171,6 +171,47 @@ function fragments; explicit windows are labeled as such, including the
 and [GNU objdump address bounds](https://sourceware.org/binutils/docs/binutils/objdump.html).
 These are static artifact findings, separate from the still-running REA import.
 No override, save hook, effect mutation or game configuration change was made.
+
+### Registration validation and pre-save ordering
+
+`read_save_registration.py` follows the owning registration routines rather
+than treating every adjacent name/code pointer as a native entry. This matters:
+`FNameNativePtrPair` stores name then function, while `FClassFunctionLinkInfo`
+stores constructor then name. The initial candidate scan also matches across
+neighboring generated-link entries and can associate a name with the next
+constructor. Those generated-link candidates must not be used as named native
+functions. The original candidate files remain as discovery evidence.
+
+The corrected class-table read identifies `SpartaSaveSubSystem`, its native
+registration at `0x145b0e720`, and 63 native entries at `0x149a40ea0`.
+`native-registration-live-crosscheck.json` compares that complete name set
+with live reflection: 63 on each side, no missing or extra functions. The
+previously traced SaveSession, SaveToDisk, AutoSave and GetSessionSave entry
+points all agree. `HasValidSessionSave` calls `0x145cc9840`, identifying the
+previously unnamed validity check in `ShouldResumeRun`.
+
+`verified-save-registration-with-event.json` also retains the save-object
+class's 12 generated function links and eight native entries. Its constructor
+chain leads to the vtable written at `0x145c32522`. Slot `0x2b8` points to
+`0x145c32ad0`, which conditionally dispatches `ReceiveSpartaPreSave` through
+`0x145b0e530`. The event name is independently tied to the dispatcher's FName
+global by its initializer at `0x141072320`. The event's generated parameter
+descriptor confirms a 48-byte context, whereas the adjacent ReceiveTick has
+a four-byte parameter. Both descriptors are retained to expose the earlier
+candidate-table ambiguity explicitly.
+
+The common save routine tests context byte `0x2e` before calling that virtual
+slot on the runtime session object, then passes the same object to
+`0x145c32ba0`. The separately registered `UpdateFrom` wrapper directly calls
+that address. Thus this static branch collects pre-save data before copying
+from the runtime object. The context starts with that byte zero, and the
+save-object dispatch itself also checks it for session objects. This can explain
+the unchanged cached form, but is not proof that all session writes are skipped:
+other callers, scheduling and actual save/load behavior remain to be tested.
+
+No hardcoded address from this investigation has been installed as a hook.
+The next runtime observation should determine whether the session pre-save event
+actually executes during normal saving before attempting any interception.
 
 ## Implementation constraints
 
