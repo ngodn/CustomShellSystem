@@ -163,13 +163,67 @@ receipts include `bindings-{create,reload}.json`, `binding-cook/exit.json` and
 
 ## Next required work
 
-1. Integrate the verified Black Pearl pair at permanent paths, and carry the
-   demonstrated correction through the other five original normal/facial
-   assemblies, preserving materials, cloth, post-process rigs and customization.
+1. Assemble the verified permanent-path Black Pearl payloads into Eve's final
+   container with the remaining repairs. Carry the correction through the other
+   five original normal/facial assemblies, preserving materials, cloth,
+   post-process rigs and customization.
 2. Preserve the collapsed-UV limitation explicitly; do not claim every tangent
    frame is repaired or change accepted UVs merely to clear this diagnostic.
 3. Validate shading, motion and actual performance before replacing accepted
    installed assets. Retain rollback and the accepted Peony/CW behavior.
+
+## Permanent Black Pearl paths
+
+The final editor pair uses the existing paths:
+
+- `/Game/CSS/eins0fx/EveSB/SK_BlackPearl2`
+- `/Game/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_BlackPearl2`
+
+Fresh-process preservation checks exclude zero added morphs, so all original
+mesh-description and built-section data must match the verified private pair.
+Both saved meshes pass. Their 33 direct editor dependencies are the existing
+Skeleton, body physics, post-process graph and 30 materials; neither mesh
+references a diagnostic package.
+
+The first create command saved both meshes and passed the preservation checks,
+then exited 255 because the registry returned `None` for a newly saved package.
+The failed command/log/exit and initial plan remain. The correction explicitly
+rescans the saved files before querying dependencies, as supported by the
+[UE 5.6 registry API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/AssetRegistry?application_version=5.6).
+A recovery process checks the existing files without rebuilding, then a separate
+reload process repeats the checks. Both exit zero with protected inputs unchanged.
+This is not a successful first invocation or a retry after an observation timeout.
+
+Windows cooking and the final two-package IoStore roundtrip pass. A reader-only
+fixture supplies the 32 direct Eve material/rig dependencies from the installed
+container, alongside the accepted shared container and base game. The original
+Eve container is excluded from this readback mount, so the old Black Pearl
+packages cannot mask the replacement. This fixture is not a playable release
+package and will not be installed.
+
+Independent readback matches the verified private pair exactly for its complete
+decoded mesh digests, normalized properties, material-slot data and imported
+bounds. The digest's `Normal` field is the CUE4Parse packed basis array, including
+tangent and normal entries, not only a single surface normal. The comparison
+therefore retains the tangent correction and known fallback limitation, as well
+as topology, skin, colors, all UVs, morphs and bind data. Reader and mapping
+identities still match the earlier verified readback.
+
+Recipes and receipts are under `blackpearl-final`, including `recover.json`,
+`reload.json`, `cook/exit.json`, `pack/verified.json` and
+`pack/reader-identity.json`. Final cooked payloads remain under `pack/stage`.
+No installed asset, catalog or user setting changed. Combining these payloads
+with the complete Eve release container remains, along with the other five
+older outfits and gameplay/performance checks.
+
+For the three cloth-bearing outfits, the existing authoring code shows the
+required persistence step: `BindToSkeletalMesh` updates render mapping, and
+`UserSectionsData` must retain `CorrespondClothAssetIndex` and `ClothingData`
+before rebuilding. The next repair must preserve the accepted simulation mesh,
+weight maps and solver settings while rebinding the reordered render mesh.
+Regenerating cloth with the original factory defaults is not equivalent.
+Local references: UE 5.6.1 `ClothingAsset.cpp:139` and project
+`CSSBindClothCommandlet.cpp:167`. This transfer is not implemented or verified yet.
 
 This is an asset import issue distinct from proving the cause of Vistani's
 moving sunlight noise. It does not justify enabling a global graphics workaround
@@ -210,3 +264,12 @@ in `binding-pack/stage`. Removed logical file bytes total 2,040,966,091.
 Immediate `df -h` readings changed from root 95G/theark 12G to root 95G/theark
 13G. Sources, private editor pair/dependencies, DDC, recipes, logs, packages and
 readbacks remain. Cleanup receipt: `binding-cleanup-completed.json`.
+
+Final-path cleanup followed
+[its prewritten list](../development/cleanup-2026-10-14-blackpearl-final.md).
+The terminal cook's prefix, 45 verified duplicate cook inputs and regenerable
+cooked tree were removed after all four mesh payloads matched retained staging.
+Another 89 byte-identical editor copies became absolute links to retained sources.
+Total removed duplicate/disposable logical file bytes: 2,611,650,239. Immediate
+`df -h` changed from root 95G/theark 11G to root 95G/theark 13G. The created
+mesh sources, receipts, readbacks and useful DDC remain.

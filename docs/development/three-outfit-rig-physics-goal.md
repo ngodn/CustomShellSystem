@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Black Pearl permanent paths verified offline:** the repaired
+normal/facial pair is saved and cooked at the existing Eve paths. Fresh reload,
+IoStore roundtrip and independent decoded comparison preserve the verified
+private pair exactly, including the tangent basis and 22/137 morphs. Neither
+mesh references a diagnostic package. The first registry lookup failed after
+saving; explicit rescanning, recovery and separate reload now pass, with the
+failed-run evidence retained. See
+[final-path evidence](../research/2026-10-14-eve-surface-tangents.md#permanent-black-pearl-paths).
+No installation. Full Eve container integration, the other five older outfits,
+live checks and stable-release gates remain. Continue offline as requested.
+Accounted cleanup leaves root 95G/theark 13G free.
+
 **October 14, Black Pearl bound pair verified offline:** the repaired normal
 and facial meshes now pass fresh editor reload, Windows cook, two-package
 IoStore roundtrip and independent geometry/surface/skin/morph checks. Their

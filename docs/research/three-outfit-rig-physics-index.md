@@ -1,5 +1,11 @@
 # Three-outfit rig and physics research index
 
+- October 14: [permanent Black Pearl paths](2026-10-14-eve-surface-tangents.md#permanent-black-pearl-paths)
+  preserve the verified pair through editor save/reload, Windows cook and
+  independent container readback. Explicit registry rescanning resolves the
+  initial post-save dependency-query failure. Final Eve container integration,
+  five older outfit pairs and gameplay checks remain. No installation.
+
 - October 14: [Black Pearl's bound normal/facial pair](2026-10-14-eve-surface-tangents.md#bound-black-pearl-normal-and-facial-pair)
   passes fresh reload, Windows cook and two-mesh package/readback checks while
   preserving existing material/rig bindings, 22/137 morphs and respective bounds.

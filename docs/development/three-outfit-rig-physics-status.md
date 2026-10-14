@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 14, permanent Black Pearl paths checked:** final source meshes and
+Windows payloads now use the existing normal/facial names. Their independent
+decoded data matches the verified repaired pair exactly, including packed basis
+data and all morphs. The readback fixture excludes the old Eve mesh providers.
+See [evidence and registry recovery](../research/2026-10-14-eve-surface-tangents.md#permanent-black-pearl-paths).
+Full Eve container assembly and five remaining older outfit pairs are pending;
+nothing installed and the user's offline preference remains active.
+
 **October 14, Black Pearl assembly checked:** its repaired normal/facial pair
 preserves current material/rig references and cooked non-morph properties,
 including each installed mesh's respective bounds. Fresh editor reload,

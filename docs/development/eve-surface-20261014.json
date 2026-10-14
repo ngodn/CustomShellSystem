@@ -107,7 +107,7 @@
     "path": "work/three-outfit-rig-physics/eve-surface-20261014/cleanup-completed.json",
     "sha256": "d5049db9947a80c615d1be50e4027e70c40cf24d9853a76eb85ff1bb136dcfa2"
   },
-  "scope": "Six original Eve surface fields pass. Private ordered Black Pearl normal/facial assembly passes editor reload, Windows cook, IoStore/readback and accepted-import geometry/surface/skin/morph comparisons. Paired render data and current bindings/properties/bounds are preserved. Both meshes retain 488 known collapsed-UV tangent fallbacks. Permanent-path integration, five older Eve pairs and live/performance/release gates remain; nothing installed.",
+  "scope": "Six original Eve surface fields pass. Repaired Black Pearl normal/facial meshes now pass editor recovery and separate reload, Windows cook and independent IoStore readback at their permanent paths. Decoded geometry, packed tangent basis, skin, morphs, bindings and settings match the verified private pair. Both retain 488 known collapsed-UV tangent fallbacks. Full Eve container integration, five older Eve pairs and live/performance/release gates remain; nothing installed.",
   "private_candidate_cook": {
     "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/cook/exit.json",
     "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
@@ -245,6 +245,70 @@
       {
         "path": "tools/diagnostics/verify_blackpearl_surface_assembly.py",
         "sha256": "f30b7c22254c4e091bde54d9b4590a095b75b48353c8ad911ceb92b3949d72bf"
+      }
+    ]
+  },
+  "final_black_pearl": {
+    "plan": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/plan.json",
+      "sha256": "acb4e3267e4b4cd6b316521bdd642da1f43939b478a36f26af547d278a7a8c79"
+    },
+    "initial_plan": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/initial-plan.json",
+      "sha256": "14038c8988494b0297f4fbb64b2a10724b4a7d8beb3a93eb588f40566f27f6aa"
+    },
+    "failed_create_exit": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/create-exit.json",
+      "sha256": "77673046666c581a0612cc6164afd621363b51210d1967b01effbc8d706dc5a5"
+    },
+    "editor_recovery": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/recover.json",
+      "sha256": "ed9aeb85dc2514a4a2ce73f3ee88daad395296e011b85374e58e35caa84f6dca"
+    },
+    "editor_reload": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/reload.json",
+      "sha256": "ffd1dbd969d1194b23db7a1a2e3707b2264b9ef67903ccc706108baaf462ee4b"
+    },
+    "recovery_exit": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/recover-exit.json",
+      "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+    },
+    "reload_exit": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/reload-exit.json",
+      "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+    },
+    "cook": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/cook/exit.json",
+      "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+    },
+    "package": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/pack/verified.json",
+      "sha256": "e1aaf7d6d78f7a6ab341fdc12117a091d0d5ab0f07c9e849a636aa7daff00d20"
+    },
+    "reader_identity": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/pack/reader-identity.json",
+      "sha256": "50ae3588300fbc08acae67ea35bcf404daf087c4c7be66f812c8572c6ce43b4b"
+    },
+    "cleanup": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-final/cleanup-completed.json",
+      "sha256": "08de6c9743995d3878415838f5bd7fba83a7055afc697529166da4d97446c5eb"
+    },
+    "recipes": [
+      {
+        "path": "tools/diagnostics/finalize_blackpearl_surface_editor.py",
+        "sha256": "9fa6a588099ce3c8d5965576d90d2cf3b45317fcfde729f1224f441a91c1055c"
+      },
+      {
+        "path": "tools/diagnostics/run_blackpearl_surface_final.py",
+        "sha256": "9b326bf2dcd72f7a0701377dcf49979c16335f5b54e0c354e130693816c10ac3"
+      },
+      {
+        "path": "tools/diagnostics/cook_blackpearl_surface_final.py",
+        "sha256": "ce9d8052807b569eb2d305167b50d3f2a099c8a1b65a2d88807edca316cc7272"
+      },
+      {
+        "path": "tools/diagnostics/check_blackpearl_surface_final.py",
+        "sha256": "8736af0abe0436abc1a5c622f1d50062e891ce272ce9147339205131ec8d4f92"
       }
     ]
   }
