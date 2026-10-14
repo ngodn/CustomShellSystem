@@ -1,5 +1,15 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, combined Eve package verified offline:** all twelve repaired
+meshes preserve their verified geometry, facial bindings and cloth/configs in
+one candidate. Catalog checks pass 1,545; dependency checks pass 1,008 packages
+and 272 references. Exactly 24 mesh payloads change and 1,087 remain unchanged,
+including accepted Peony content. Current shared metadata retains CW's accepted
+walking changes. [Combined evidence](../research/2026-10-14-eve-surface-tangents.md#combined-eve-package).
+Nothing installed and no launch requested. Full runtime, performance, upgrade
+and stable-release gates remain open. Duplicate staging cleanup reports root
+90G and theark 20G free before and after; sources and evidence are retained.
+
 **October 14, Alice permanent paths verified offline:** the last older Eve
 regular/facial pair now passes reload, Windows cook and independent exact
 readback at its release paths, preserving the repaired shading, cloth/configs,

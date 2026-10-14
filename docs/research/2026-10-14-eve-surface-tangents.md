@@ -775,6 +775,53 @@ removed 2,051,009,258 logical bytes of disposable prefix and verified duplicate
 cook data. Retained hashes pass; useful DDC, sources, packages and proofs remain.
 Immediate root/theark free space was 92G/4.7G before and after removal.
 
+## Combined Eve package
+
+The twelve repaired meshes now pass together in
+`work/three-outfit-rig-physics/eve-surface-package1`, linked to
+`build/eve-surface-package1` on root. Nothing is installed.
+
+The package replaces exactly 24 mesh payloads and preserves the other 1,087
+payloads from the accepted Eve motion build. It retains Peony's accepted assets,
+controls, palettes and flowing trim, along with the tighter body-motion rig.
+Current CW and Unholy Genessa packages are unchanged. The shared metadata changes
+only ten Eve adapter container fingerprints; its cooked containers, catalogs,
+external facial resources and CW walking metadata are preserved.
+
+Validation passes 1,545 animation library checks and resolves 1,008 packages
+and 272 asset references without failures. The full Eve container roundtrip
+extracts all 435 assets and verifies all 1,111 payload identities or export/bulk
+hashes. Independent decoding of all twelve final meshes matches each previously
+verified pair: geometry, skinning, tangents, morphs, bounds, materials, bindings,
+cloth/configs and empty Nanite data. The reader mounts the candidate Eve provider
+instead of the installed older Eve container.
+
+Three recipe errors were isolated and corrected without rebuilding accepted
+meshes: repak needed an existing output parent; historical animation aliases
+were incorrectly included as mounted asset requests; and retoc's auxiliary
+`scriptobjects.bin` was counted as an unexpected asset. The latter is a separate
+global script table emitted by
+[retoc's conversion code](https://github.com/trumank/retoc/blob/master/retoc_cli/src/main.rs).
+The file set now permits exactly the planned payloads plus that named table,
+whose size and hash are recorded. Failed-step evidence and all three recipe
+revisions remain with the candidate. Package hashes stayed unchanged during
+verification-recipe corrections.
+
+The [prelisted cleanup](../development/cleanup-2026-10-14-eve-surface-package.md)
+removed 3,341,419,534 logical bytes of verified duplicate staging, container
+readback and metadata readback. Sources, package files, original/edited metadata,
+decoded mesh comparisons, commands and failure evidence remain. Immediate
+`df -h` before/after reports root 90G/90G and theark 20G/20G available. Rounded
+free-space readings are not a measurement of reclaimed logical bytes.
+
+Receipts: `plan.json`, `prepared.json`, `packaged.json`, `verified.json`,
+`imports.json`, `meshes.json`, `roundtrip-auxiliary.json` and
+`cleanup-completed.json` in the candidate directory. The checkpoint pins these,
+the recipes and packaged hashes. The full goal remains active: runtime shading,
+cloth, facial/lifecycle, performance, upgrade and stable-release checks are still
+open. This does not establish that the tangent repairs fix Vistani's sunlight
+noise report. The user requested offline work, so no launch request is pending.
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six

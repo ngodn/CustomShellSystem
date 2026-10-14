@@ -1570,5 +1570,135 @@
       }
     ],
     "scope": "Permanent Alice pair preserves verified private mesh, tangent, cloth/config, binding and morph data through reload, Windows cook and independent readback. Combined Eve packaging and full runtime/performance/release gates remain."
+  },
+  "combined_package": {
+    "passed_offline": true,
+    "installed": false,
+    "work_path": "work/three-outfit-rig-physics/eve-surface-package1",
+    "physical_path": "build/eve-surface-package1",
+    "catalog_checks": 1545,
+    "packages": 1008,
+    "references": 272,
+    "meshes": 12,
+    "unchanged_payloads": 1087,
+    "replaced_payloads": 24,
+    "roundtrip_payloads": 1111,
+    "files": {
+      "CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.utoc": "8cd8747b9390a5c5dacf3b992c491ab84e226c9db9747d66e41333288fbc634c",
+      "CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.ucas": "b52d9750c270e2d45d4f6e6dc86afb18959e340c4bdfa3000e269cafe1daf245",
+      "CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.pak": "efad08dee2eaa9a51da12b425d0069dd802482a331229c17278a9f2fbacc2b83",
+      "CSS_SharedAssets_P/CSS_SharedAssets_P.utoc": "b71dcf1a66047ca6035c9b41074aa31fa0a3f2930821a663fba749a37ee677aa",
+      "CSS_SharedAssets_P/CSS_SharedAssets_P.ucas": "aecee797b0a8ed983494087c78b18267dfa7b8e30f96e9c57bf1e33de675e64d",
+      "CSS_SharedAssets_P/CSS_SharedAssets_P.pak": "ee0008c683a677eb8d349d270fd4771eb12c6bea96183ff1c34d7b158652bd2e",
+      "CSS_CommanderWhite_eins0fx_P/CSS_CommanderWhite_eins0fx_P.pak": "e5be4cd9952ebe0fbaa8f85480bfe624caba1d73ff0103d81540c98597f433a9",
+      "CSS_CommanderWhite_eins0fx_P/CSS_CommanderWhite_eins0fx_P.utoc": "114aa8ca5d593de74d2f26d4d91726db894f5133c99fd9f0bfd0a348623a422c",
+      "CSS_CommanderWhite_eins0fx_P/CSS_CommanderWhite_eins0fx_P.ucas": "630a69e1af0603f2219f3df499cb0b735079b0dec40b67b63c95954199ffd687",
+      "CSS_UnholyGenessa_eins0fx_P/CSS_UnholyGenessa_eins0fx_P.pak": "656ebf55536a05411fc93f1e42e204869e1a4dd9953234e728d4283ac93d81ef",
+      "CSS_UnholyGenessa_eins0fx_P/CSS_UnholyGenessa_eins0fx_P.utoc": "059391f3b4966d56d0852cea564d6a7b2ab5bac2ed77d04a03125fd200dc6715",
+      "CSS_UnholyGenessa_eins0fx_P/CSS_UnholyGenessa_eins0fx_P.ucas": "04c76e215b675171686d6210726cba98c3c67378a217dd2eeb3d6e4742e3d531"
+    },
+    "receipts": [
+      {
+        "path": "build/eve-surface-package1/plan.json",
+        "sha256": "0798a924f8d5d88db8446d61f2cf76703a33493bee63b45ce4acf93710ee29c1"
+      },
+      {
+        "path": "build/eve-surface-package1/prepared.json",
+        "sha256": "5270af03e10580b45a591fc23b53f85f2b817b226ea6d4faa4a21fd86227d81b"
+      },
+      {
+        "path": "build/eve-surface-package1/packaged.json",
+        "sha256": "baebf5db17d2a721f1ea36f80b15c3f2c8ed7645cebb3264cc6cddee65705ec3"
+      },
+      {
+        "path": "build/eve-surface-package1/verified.json",
+        "sha256": "76d6e44dc89df4d23bae002c9efb939f5944e025cb2d1f3e8b6fc1b23110ba20"
+      },
+      {
+        "path": "build/eve-surface-package1/imports.json",
+        "sha256": "ba6eefe94e3e93c4a2a1d246aca9dac772212edb46c2015d3c7ee5fda291e724"
+      },
+      {
+        "path": "build/eve-surface-package1/meshes.json",
+        "sha256": "aa09145c76f1726b2cc400202bcc2259b76769d0f0911110e0bf278a783cf5f3"
+      },
+      {
+        "path": "build/eve-surface-package1/catalog-command.json",
+        "sha256": "f68904c876a044f599f23942eda3855b35c73f9992296da9c3720cb7abf4187c"
+      },
+      {
+        "path": "build/eve-surface-package1/catalog-exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "build/eve-surface-package1/catalog.log",
+        "sha256": "2011bb3ee9fbae0f06d8f5ece56a90e628027b7c1517080a63eec3c032f55524"
+      },
+      {
+        "path": "build/eve-surface-package1/imports-command.json",
+        "sha256": "4e7081c65e6f5b5ceeb41cd8ca276f3084aac52de10f6881e0083d7f912072da"
+      },
+      {
+        "path": "build/eve-surface-package1/imports-exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "build/eve-surface-package1/roundtrip-command.json",
+        "sha256": "5543d2239bf6459e6493d1276498ccd698b074ad25372e222d6bba72483c9d1b"
+      },
+      {
+        "path": "build/eve-surface-package1/roundtrip-exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "build/eve-surface-package1/roundtrip.log",
+        "sha256": "46bc36ac83e7043026d82bf1cb73589751009647648d5b904ba8fde890fe081e"
+      },
+      {
+        "path": "build/eve-surface-package1/roundtrip-auxiliary.json",
+        "sha256": "484c7ed34ea3b0bac552a86320a1a4e5a71be400102f9bc1a3dcc1c1db0041e6"
+      },
+      {
+        "path": "build/eve-surface-package1/meshes-command.json",
+        "sha256": "468fe3bb6071400cb6e4d8d80b0f828b68ec8c6e5e1875c24c70e11a87176565"
+      },
+      {
+        "path": "build/eve-surface-package1/meshes-exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "build/eve-surface-package1/cleanup-plan.json",
+        "sha256": "5afeefe1b432b2653f256c8272758005f5040b5a576ee61885bd676a1d7e5aba"
+      },
+      {
+        "path": "build/eve-surface-package1/cleanup-completed.json",
+        "sha256": "9af46a298cbc46360c8ff79433dbdd130aa01d81c7d65bc469f2b33aa04faf79"
+      },
+      {
+        "path": "build/eve-surface-package1/recipe-revision1.json",
+        "sha256": "55139c17ecabca69d3f14dddaf3061dcce1b6c84960948a95c427cbb0c6a41c6"
+      },
+      {
+        "path": "build/eve-surface-package1/recipe-revision2.json",
+        "sha256": "b88b1f9dacee5b0e65fd796900d8e17fb6e638610d6ce753277cd5921cc88bea"
+      },
+      {
+        "path": "build/eve-surface-package1/recipe-revision3.json",
+        "sha256": "dd73a4e7774eed2e9b51a48d4f49868820742675eaa09e2ee4f4ea43ca364388"
+      },
+      {
+        "path": "tools/diagnostics/assemble_eve_surface_package.py",
+        "sha256": "9268de91570cac32483d7fabf67b7490a67b74c33f5019303ba1e4fb0251a49b"
+      },
+      {
+        "path": "tools/diagnostics/cleanup_eve_surface_package.py",
+        "sha256": "68b1b5cd4f7199de1cf26131999dc60855ad42e3f7632807ac0a0429775a47be"
+      },
+      {
+        "path": "docs/development/cleanup-2026-10-14-eve-surface-package.md",
+        "sha256": "6870d92d27f3bcfa896e74f7f7e61bdbf541213a659b25126fa38808107117cb"
+      }
+    ],
+    "pending": "Runtime shading/cloth/facial/lifecycle, performance, upgrade and stable-release gates. Not proof of the sunlight-noise cause."
   }
 }

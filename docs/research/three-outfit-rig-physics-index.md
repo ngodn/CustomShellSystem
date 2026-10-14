@@ -1,5 +1,10 @@
 # Three-outfit rig and physics research index
 
+- October 14: [combined Eve package](2026-10-14-eve-surface-tangents.md#combined-eve-package)
+  passes twelve-mesh preservation, 1,545 catalog checks, 1,008 package and
+  272 reference checks. Accepted Peony content and current CW metadata remain.
+  No installation; full runtime/performance/upgrade/release gates remain.
+
 - October 14: [Alice permanent paths](2026-10-14-eve-surface-tangents.md#permanent-alice-paths)
   preserve the verified private cloth pair through reload, Windows cook and
   exact independent readback, including all 27 sections and 22/137 morphs.
