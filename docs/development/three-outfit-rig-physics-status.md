@@ -1,5 +1,12 @@
 # Three-outfit implementation status
 
+**October 14, six-outfit source coverage:** all 46 original Eve parts now pass
+the current source correspondence checker. Black Pearl's complete export also
+reproduces byte-for-byte, and all six imports share its 379-bone bind payload.
+Planet's tail is recovered separately with its accepted body-shape deltas.
+See [evidence and remaining scope](../research/2026-10-14-eve-six-source-coverage.md).
+No installed files changed; runtime and release gates remain open.
+
 **October 14, editable source recovery:** all 21 parts across Bikini, Knitwear
 and Alice match their accepted imports for the checked geometry, weights,
 morphs, UVs, normals and colors. Alice's old suit/ribbon sources fail two distinct

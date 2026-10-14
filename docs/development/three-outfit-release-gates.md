@@ -77,6 +77,14 @@ does not invent new deferrals for the primary repairs or release gates.
 
 ## Immediate continuation
 
+All 46 parts across the six original Eve outfits now have passing editable-source
+comparisons linked to their accepted imports and installed geometry checks.
+Black Pearl's complete export also reproduces byte-for-byte. Recovered Alice,
+Planet and Skin Suit parts are explicitly marked as import-derived sources.
+See [source coverage](../research/2026-10-14-eve-six-source-coverage.md).
+Complete material/rig assembly, remaining cooked surface fields and live
+regression remain open; this source checkpoint does not require another install.
+
 The older Eve saved-graph input/update check now passes all 36 cases with each
 outfit's actual post-process graph, including Bikini/Knit feet graphs, and both
 normal/facial meshes. See the

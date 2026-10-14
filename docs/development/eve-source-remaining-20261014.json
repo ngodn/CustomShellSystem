@@ -1,0 +1,336 @@
+{
+  "schema": 1,
+  "passed": true,
+  "outfits": [
+    {
+      "outfit": "black_pearl",
+      "import_payload": {
+        "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/grip-grounding-v1/heel-support-export-v2/candidate.mesh.json",
+        "sha256": "f8b62d9e4c6d7f9e472225a1db78ad27ff65078c8529abf9944536b3245b27bf"
+      },
+      "parts": [
+        {
+          "name": "Eve Body",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-0.json",
+            "sha256": "6a40c76e91e5993f678bbb4a7675dd2a2a4f14e417ec1f85a39132a2e0497418"
+          },
+          "points": 36787,
+          "triangles": 61814
+        },
+        {
+          "name": "Eve Black Pearl - Suit",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-1.json",
+            "sha256": "6eb11302f583dbb816489db392fe164b0c7c29582ee103102905ea7c52eedbc7"
+          },
+          "points": 14875,
+          "triangles": 28972
+        },
+        {
+          "name": "Eve Black Pearl - Stockings",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-2.json",
+            "sha256": "a766762c22e513e4c0394405be7e73c15d356a5742be16f3b05aa4367c9c9cc1"
+          },
+          "points": 1810,
+          "triangles": 3422
+        },
+        {
+          "name": "Eve Black Pearl - Footwear",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-3.json",
+            "sha256": "c87e3f1757b6716e38bd047579ee1f5a6a8d1d53921db02dc40ceb311e62948d"
+          },
+          "points": 4200,
+          "triangles": 8100
+        },
+        {
+          "name": "Eve Hair - Planet Diving Tail",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-4.json",
+            "sha256": "f4ec2b141e346129113479e6cd263a4b691d41aadfdd545210a1aa3535e6e23c"
+          },
+          "points": 26299,
+          "triangles": 27573
+        },
+        {
+          "name": "Eve Hair Ponytail Long",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-5.json",
+            "sha256": "595a58447e0cea78f8bf9132af83142ea4c454a3931b914bb588235461331fc8"
+          },
+          "points": 17309,
+          "triangles": 17103
+        },
+        {
+          "name": "Eve Black Pearl - Stocking Feet Flat",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-6.json",
+            "sha256": "755de3e6cc69aab898bd0b6e537d2789d8b86038900219ac4c4c38db314a2be6"
+          },
+          "points": 13880,
+          "triangles": 27702
+        },
+        {
+          "name": "Eve Black Pearl - Stocking Feet Heeled",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-7.json",
+            "sha256": "67d8801b6184d6ea188cca59111e8d200668980854a832a83f974c567d76aac6"
+          },
+          "points": 2234,
+          "triangles": 4334
+        },
+        {
+          "name": "Eve Black Pearl - Footwear Lining",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-8.json",
+            "sha256": "de242314e2a519dd33a895a98802da5e8db0e1561c3be7b558606ef7fa54de8b"
+          },
+          "points": 2712,
+          "triangles": 5302
+        },
+        {
+          "name": "Eve Hair Sword",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-9.json",
+            "sha256": "0c4667656269817b925f653c40342960e6aa5b91a9df8d232743537528f195dd"
+          },
+          "points": 12960,
+          "triangles": 8939
+        },
+        {
+          "name": "Eve Black Pearl - Heel Supports",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_HeelSupportsV45C.blend",
+            "sha256": "41472a40ec26dce37c4fa797fe33b1be6d663f1c43861f5c9aaefec108d98774"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/black_pearl-10.json",
+            "sha256": "88182eec4a7556236d0e006b082dba3cf340269b0ead7f96575559fa2dd45968"
+          },
+          "points": 168,
+          "triangles": 328
+        }
+      ],
+      "source_points": 133234,
+      "triangles": 193589,
+      "cooked_comparison": {
+        "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/blackpearl-current-cooked-provenance1/comparison.json",
+        "sha256": "11792252d0f19154703ce062b895b7efd773ed2573161253ae9a27e2fa67550c"
+      },
+      "installed_inputs": {
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.pak": "d0ff238fd26f692f9f4f7eadb7f8b96240cd05b26023b589c773d4b6212a79d4",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.utoc": "17307bca225d0b3e1a7678ba27c32c771c975dced11d7710e50a94e1a6e20068",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.ucas": "31eae2443d26d1b8f224db8850fe9970815e3da14186d7021d91cdb25e5b9053",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_SharedAssets_P/CSS_SharedAssets_P.utoc": "b71dcf1a66047ca6035c9b41074aa31fa0a3f2930821a663fba749a37ee677aa",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_SharedAssets_P/CSS_SharedAssets_P.ucas": "aecee797b0a8ed983494087c78b18267dfa7b8e30f96e9c57bf1e33de675e64d"
+      },
+      "max_position_error_cm": 0.0,
+      "max_weight_error": 1.1895796336869324e-07,
+      "max_morph_error_cm": 9.846330566530446e-05,
+      "max_uv_component_error": 0.0,
+      "max_normal_vector_error": 0.0,
+      "max_color_byte_error": 0
+    },
+    {
+      "outfit": "prototype",
+      "import_payload": {
+        "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26/planet-f14-import/planet.mesh.json",
+        "sha256": "56731e4ef79ada47fd6c23ac73248649881cc427be19fd14ed229874fdec1242"
+      },
+      "parts": [
+        {
+          "name": "Eve Body",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/prototype-0.json",
+            "sha256": "2def60e7321328d9c7c6fdd7cfeae3cc819cc0f403fd88e8cf907bb9091cb38e"
+          },
+          "points": 36787,
+          "triangles": 61814
+        },
+        {
+          "name": "Eve Prototype Planet Diving Suit - Suit",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26/planet-suit-f13.blend",
+            "sha256": "78e194a242592732e741de9db26fb41de6d56b6c98c2b82b485ac9ab6bd30fd2"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/prototype-1.json",
+            "sha256": "1ca44c26dbd9143e2026ab71664be5cc95773e697f9883626a40af741a6ad7ab"
+          },
+          "points": 28234,
+          "triangles": 55045
+        },
+        {
+          "name": "Eve Prototype Planet Diving Suit - Tail",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/eve-source-chain-20261014/planet-tail.blend",
+            "sha256": "bbce05f3ef1ca1f05b2bfdb1e63678c27ac8fbc18be41a1315909642a7e42876"
+          },
+          "origin": "reconstructed_from_accepted_import",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/repaired/results/prototype-2.json",
+            "sha256": "7a6bbe690c7452f15223e97fd259f9f8a3182af2ea893a3f094841e191dcf690"
+          },
+          "points": 840,
+          "triangles": 1648
+        },
+        {
+          "name": "Eve Prototype Planet Diving Suit - Ribbon Left",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/prototype-3.json",
+            "sha256": "dbac3ca35f2a06b472e65f91fbf8690bf4c0a37ec39ca6bbc234aef4c754aba2"
+          },
+          "points": 765,
+          "triangles": 1510
+        },
+        {
+          "name": "Eve Prototype Planet Diving Suit - Ribbon Right",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/prototype-4.json",
+            "sha256": "3dc764a5206fdcf46a721a1f7d57926624e22e62a5e920d11721df466f92f71c"
+          },
+          "points": 765,
+          "triangles": 1510
+        },
+        {
+          "name": "Eve Hair - Planet Diving Tail",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/prototype-5.json",
+            "sha256": "ed6c7122612ebf1c10d4fd0576efa8e4b5a7102b3ec9bef709eb65472849ab24"
+          },
+          "points": 26299,
+          "triangles": 27573
+        },
+        {
+          "name": "Eve Hair Ponytail Long",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/prototype-6.json",
+            "sha256": "4472d7815c4129997e04cb31ef4301fa73f2c30f49b01fdb00d3b66f223eff7b"
+          },
+          "points": 17309,
+          "triangles": 17103
+        },
+        {
+          "name": "Eve Hair Sword",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/results/prototype-7.json",
+            "sha256": "3e53a4e7485704532f2fa754168bc673709614d0a2270809ef816cf9af58f1b5"
+          },
+          "points": 12960,
+          "triangles": 8939
+        }
+      ],
+      "source_points": 123959,
+      "triangles": 175142,
+      "cooked_comparison": {
+        "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/planet-cooked-provenance1/comparison.json",
+        "sha256": "ac9c2ac6204a22a6fbec55e01279eebabc672ccc32046bd3c36e0e337eda45be"
+      },
+      "installed_inputs": {
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.pak": "d0ff238fd26f692f9f4f7eadb7f8b96240cd05b26023b589c773d4b6212a79d4",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.utoc": "17307bca225d0b3e1a7678ba27c32c771c975dced11d7710e50a94e1a6e20068",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.ucas": "31eae2443d26d1b8f224db8850fe9970815e3da14186d7021d91cdb25e5b9053",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_SharedAssets_P/CSS_SharedAssets_P.utoc": "b71dcf1a66047ca6035c9b41074aa31fa0a3f2930821a663fba749a37ee677aa",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_SharedAssets_P/CSS_SharedAssets_P.ucas": "aecee797b0a8ed983494087c78b18267dfa7b8e30f96e9c57bf1e33de675e64d"
+      },
+      "max_position_error_cm": 1.1920928955078125e-07,
+      "max_weight_error": 4.7284863358143525e-08,
+      "max_morph_error_cm": 7.759431835141218e-05,
+      "max_uv_component_error": 0.0,
+      "max_normal_vector_error": 1.82653228523303e-07,
+      "max_color_byte_error": 0
+    }
+  ],
+  "reconstructed_parts": [
+    "prototype-2"
+  ],
+  "scope": "Editable part correspondence for geometry, triangle order, named weights, body/corrective morphs, all three UV channels, corner normals and colors. Cooked correspondence only for fields covered by the linked import-to-cooked reports. No complete rig/material/cloth assembly or gameplay claim.",
+  "recipe": {
+    "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/assemble_manifest.py",
+    "sha256": "ac7761b18822bbe811681c14e467abfee884e8c3a68fedda13fccb77af66d5ad"
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "passed": true,
+  "outfits": [
+    {
+      "outfit": "skin_suit",
+      "import_payload": {
+        "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26/skin-f16-import/skin.mesh.json",
+        "sha256": "d5f15fb62826883653f60a5bf194cc502e4339bce45f1a6eafc5dd96b6d91120"
+      },
+      "parts": [
+        {
+          "name": "Eve Body",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/skin-current/results/skin_suit-0.json",
+            "sha256": "9e323fd1b020ed6d4b6020383c08e5a33f364e90ce9dd6bf4978f405d5ccd010"
+          },
+          "points": 36787,
+          "triangles": 61814
+        },
+        {
+          "name": "Eve Skin Suit - Suit Complete",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26/skin-suit-f16.blend",
+            "sha256": "2be246e04b7a892f7c8bb4bbc2e5440245460a0c7a9e6fa790c2db42f8b12cc1"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/skin-current/results/skin_suit-1.json",
+            "sha256": "61036687bf8461a75dbd3e518b1a0469502242abb86875c9a932c1701020899a"
+          },
+          "points": 18633,
+          "triangles": 33352
+        },
+        {
+          "name": "Eve Hair - Planet Diving Tail",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/skin-current/results/skin_suit-2.json",
+            "sha256": "99f768b01711af07708f4d039e6ae6081d822a0cf60ec76cae1a448ed07c7b4f"
+          },
+          "points": 26299,
+          "triangles": 27573
+        },
+        {
+          "name": "Eve Hair Ponytail Long",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/skin-current/results/skin_suit-3.json",
+            "sha256": "67601cf3bd0d8a0642e44f2e47759c69e6097bc2346cea4128c25a8ad256d6ed"
+          },
+          "points": 17309,
+          "triangles": 17103
+        },
+        {
+          "name": "Eve Hair Sword",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/CSS_SeduXtress_Variants_Fixed.blend",
+            "sha256": "e3330963929d08b8a8f49c5a02d517cff122e91c9382e33fe8b81f0e357c0436"
+          },
+          "origin": "retained_authoring_library",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/skin-current/results/skin_suit-4.json",
+            "sha256": "985a427a61aa497239f579b9de6a1709a121c7f97404ecf6a762115643d42a24"
+          },
+          "points": 12960,
+          "triangles": 8939
+        },
+        {
+          "name": "Eve Skin Suit - Footwear Lining",
+          "source": {
+            "path": "/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/skin-source-preserved3.blend",
+            "sha256": "1e05baaf56ad48834fce7f0c3f0a4ca103aafc0363779c8b7f1367ffae3b2829"
+          },
+          "origin": "reconstructed_from_accepted_import",
+          "report": {
+            "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/skin-current/results/skin_suit-5.json",
+            "sha256": "d94d764eabe9f2a3cc0d3e85cc7c827e6baf3fc6ff5f44f600734e7b110bc5f4"
+          },
+          "points": 2385,
+          "triangles": 4726
+        }
+      ],
+      "source_points": 114373,
+      "triangles": 153507,
+      "cooked_comparison": {
+        "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/skin-current-cooked-provenance1/comparison.json",
+        "sha256": "1abe408d232fc39c7931ddb099c7fb6ca7c15d382f93b8da6ce6fe14d0f2391b"
+      },
+      "installed_inputs": {
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.pak": "d0ff238fd26f692f9f4f7eadb7f8b96240cd05b26023b589c773d4b6212a79d4",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.utoc": "17307bca225d0b3e1a7678ba27c32c771c975dced11d7710e50a94e1a6e20068",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_EveStellarBlade_eins0fx_P/CSS_EveStellarBlade_eins0fx_P.ucas": "31eae2443d26d1b8f224db8850fe9970815e3da14186d7021d91cdb25e5b9053",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_SharedAssets_P/CSS_SharedAssets_P.utoc": "b71dcf1a66047ca6035c9b41074aa31fa0a3f2930821a663fba749a37ee677aa",
+        "/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/Paks/~mods/CSS_SharedAssets_P/CSS_SharedAssets_P.ucas": "aecee797b0a8ed983494087c78b18267dfa7b8e30f96e9c57bf1e33de675e64d"
+      },
+      "max_position_error_cm": 1.066240299940009e-06,
+      "max_weight_error": 4.7284863358143525e-08,
+      "max_morph_error_cm": 7.759431835141218e-05,
+      "max_uv_component_error": 0.0,
+      "max_normal_vector_error": 1.7120130796843852e-07,
+      "max_color_byte_error": 0
+    }
+  ],
+  "reconstructed_parts": [
+    "Eve Skin Suit - Footwear Lining"
+  ],
+  "scope": "Editable part correspondence for geometry, triangle order, named weights, body/corrective morphs, all three UV channels, corner normals and colors. Cooked correspondence only for fields covered by the linked import-to-cooked reports. No complete rig/material/cloth assembly or gameplay claim.",
+  "recipe": {
+    "path": "/home/eins0fx/development/mods/msII/CustomShellSystem/work/three-outfit-rig-physics/eve-source-remaining-20261014/skin-current/assemble_manifest.py",
+    "sha256": "8d08b990316ca4c95bf341be2e51b27c877616d6533cfbafa6008d82d0bddf86"
+  }
+}

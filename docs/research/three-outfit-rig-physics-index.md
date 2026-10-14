@@ -1,5 +1,11 @@
 # Three-outfit rig and physics research index
 
+- October 14: [six original Eve source coverage](2026-10-14-eve-six-source-coverage.md)
+  passes all 46 selected parts with the current checker. Black Pearl's complete
+  exporter replay is byte-identical. Planet's missing tail morphs now have an
+  import-derived editable source. Assembly/material, cooked surface fields and
+  live regression remain separate; installed assets are unchanged.
+
 - October 14: [editable source checks and Alice recovery](2026-10-14-eve-editable-source-recovery.md)
   account for all 21 parts across Bikini, Knitwear and Alice. Two Alice source
   mismatches are repaired in separate import-derived libraries; installed

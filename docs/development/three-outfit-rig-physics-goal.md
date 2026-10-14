@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, all six original Eve part sources accounted for:** current
+comparisons pass all 46 parts (803,379 points; 1,160,081 triangles), including
+fresh Skin Suit checks. Black Pearl's full exporter replay is byte-identical to
+its accepted import, and all six imports share that verified 379-bone payload.
+Planet Diving's missing tail morphs are recovered in a separate import-derived
+library, with the original source/failure preserved. See
+[six-outfit source coverage](../research/2026-10-14-eve-six-source-coverage.md).
+No installed files changed. The regenerated duplicate was removed after exact
+comparison; root/theark settle at 95G/15G free. Full assembly/material recipes,
+remaining cooked surface fields, gameplay and performance are still open.
+The game is closed; a request to reopen CW for runtime checks is pending.
+
 **October 14, three Eve editable-source chains checked:** all 21 parts of
 Bikini, Knitwear and Alice now reproduce their accepted imports for geometry,
 weights, morphs and surface corner data. Alice's suit triangulation/normals and
