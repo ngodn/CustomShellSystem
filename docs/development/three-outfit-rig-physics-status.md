@@ -1,5 +1,15 @@
 # Three-outfit implementation status
 
+**October 14, Planet Diving private cloth pair passes offline:**
+normal/facial reload, Windows cook, IoStore roundtrip and independent source,
+tangent and cloth/config comparisons pass. The accepted simulation/settings
+are preserved, including the 1,648-triangle tail assignment. Exactly one zero
+tangent per mesh was repaired; 294 known collapsed-UV fallbacks remain.
+See [Planet evidence](../research/2026-10-14-eve-surface-tangents.md#planet-diving-cloth-transfer).
+No game installation or launch request. Next are permanent Planet paths,
+Knitwear/Alice repairs and combined packaging, with existing live/performance/
+release gates still open. Root/theark free space is 94G/7.0G after cleanup.
+
 **October 14, Skin Suit/Bikini permanent paths pass offline:** fresh reload,
 Windows cook and independent container readback preserve all four verified
 private meshes exactly at their existing release paths. The reader fixture

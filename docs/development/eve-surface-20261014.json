@@ -813,5 +813,181 @@
       }
     ],
     "scope": "Four permanent mesh sources and cooked payloads verified. Full Eve package integration, three cloth-bearing outfit repairs and full goal runtime/performance/release gates remain."
+  },
+  "planet_cloth_pair": {
+    "passed_offline_private_pair": true,
+    "installed": false,
+    "permanent_paths_complete": false,
+    "regular_facial_morphs": [
+      22,
+      137
+    ],
+    "render_vertices_per_mesh": 136940,
+    "render_triangles_per_mesh": 175142,
+    "simulation_vertices": 18,
+    "simulation_triangles": 16,
+    "mapped_render_vertices": 1174,
+    "cloth_render_triangles": 1648,
+    "known_collapsed_uv_fallbacks_per_mesh": 294,
+    "unexpected_nonorthogonal_vertices": 0,
+    "receipts": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-ordered/candidate.mesh.receipt.json",
+        "sha256": "1c96ea1931c2b49082a90ddaa9a677438d5b836d7c5aa87d82428ca900d4f847"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-ordered/pack/verified.json",
+        "sha256": "620b1ce08bd6278c20ac811fc993413c82a8c3dd947cdef492c6b1033c994d83"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-ordered/pack/tangent-fallbacks.json",
+        "sha256": "5c979a6dac104a928e18766ab020a119874f1e07da16651616f801ad18a13849"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-ordered/binding-plan.json",
+        "sha256": "e66670d41ed928131505f5bd129beb89d7450a7527269f265b832b2dacd95e6d"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-ordered/bindings-reload.json",
+        "sha256": "20d1b0cb9fa65151265b3a8037ddc66bf074655a76be8aca98178f06688bcb7d"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/planet-ordered/candidate-cleanup-completed.json",
+        "sha256": "4c434ba0705d615a27da6e6c39f633c461f04c40ee7e763d89e62638a21a7e02"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/planet-normal-1-verified.json",
+        "sha256": "87d12458a594ce933c0488aff1e27820776b9fda4bb7485ee379800496a391b0"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/planet-facial-1-verified.json",
+        "sha256": "f85ee7e21c5272f5b3d42c2943f0a87309b26002d14f9fb41b75497e0c547486"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/build-exit.json",
+        "sha256": "f116f26fbaaf05be4b1b5d08f85f19936e7093441be13968ce5d4478d0f82ced"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/module.json",
+        "sha256": "12fb94ffd76a379d1a45af4efeb95a5e3df75a655084515a67ad529fd1f0fb56"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-normal-create-exit.json",
+        "sha256": "a1a91c0908b3f1423c65e5302acf148f7862ef3a762b8d80b541aa60a85ac554"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-normal-2-verified.json",
+        "sha256": "a4d31b8c370430d8716e665d3912bffbbd8e7332baea57b4cb6e4428a3b70c3a"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-facial-verified.json",
+        "sha256": "2cfc8801c16b7d4049c7b86d104206e76a739395f565c2dcc0004c68ecb2047c"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-cook/exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-pack/roundtrip.json",
+        "sha256": "042474a535de25ae03de7b5535d9fb8ca1793f817d7dfa18f4f2dcbef49df9b9"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-pack/readbacks-verified.json",
+        "sha256": "ae7bcc594f365f790cb0a839ddcea290c4411907a1e4c481ccd3fea2e2784b71"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-pack/bindings-verified.json",
+        "sha256": "1ff26eec934722b1679512bdd09674688d7d1848d0f129715f4e2c217c112277"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-pack/normal/basis.json",
+        "sha256": "197a0f3971dee4bebb07dd91262f1a8d0a5974458fb1d1f45879a104692e1931"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-pack/facial/basis.json",
+        "sha256": "410fcafed71b3544f149dfdf3ad07d01a1701f6f4181b0b388af33ffef4bbc5b"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-pack/normal/fallback.json",
+        "sha256": "ee2b7360d9f9a2f8de0335433f27b13c27be191da16485faae4411c702aa0294"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-pack/facial/fallback.json",
+        "sha256": "42b8a0c0269be2d711aa6e8377905b496bcb97a8721ab8452e01c789a3d48d38"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-pack/failed-comparator/failure.json",
+        "sha256": "de447569b198afaa76117a747d79389a3b083cf737598e15e75357b72f38a2cc"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/planet-cleanup-completed.json",
+        "sha256": "5bf6a43fff4cc5013b33a2284a61c0d75169c7a114fe50a2cb65c08545d74c94"
+      }
+    ],
+    "sources": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/editor/Content/CSSAuthoring/EveSurface20261014/SK_PlanetNormalCloth2.uasset",
+        "sha256": "096d514d8ce9cb0517a34eaf70e6434a049d9b3108adf887b1333c5cef7a9946"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/editor/Content/CSSAuthoring/EveSurface20261014/SK_PlanetFaceCloth1.uasset",
+        "sha256": "1935d14622e8243d9a9c83dac4bdb48e74276f701d9b53c0fc270d5366d8f594"
+      }
+    ],
+    "recipes": [
+      {
+        "path": "tools/diagnostics/build_eve_cloth_transfer.py",
+        "sha256": "54ea64ea1b866de8484617a9645753b0e39475b9a03cd6232716fc4457957223"
+      },
+      {
+        "path": "tools/diagnostics/stage_eve_cloth_bindings.py",
+        "sha256": "2452ac5241b192878ea96688883c8f59dd8f1add5000ac2e76b59bfc203a4dbe"
+      },
+      {
+        "path": "tools/diagnostics/bind_eve_cloth_editor.py",
+        "sha256": "aff4582ef378e10b08577a38bb6dd8639ea0f8e77b2c83652220dde7b4bcede8"
+      },
+      {
+        "path": "tools/diagnostics/run_eve_cloth_bindings.py",
+        "sha256": "34dcf0f29fac612aa45c95d75a5837f978ef3f467f347653eacfaa544b5fcd89"
+      },
+      {
+        "path": "tools/diagnostics/run_eve_cloth_tangents.py",
+        "sha256": "cb8ba4d16d11fbbb4814dfca12934dd4ce4ecd5082cf74c61ad24fc9054fc759"
+      },
+      {
+        "path": "tools/diagnostics/run_eve_cloth_transfer.py",
+        "sha256": "6e831134640d4c0a32e7c163dfa1083c16c2209a6b7bc5c039d71d2fa61297be"
+      },
+      {
+        "path": "tools/diagnostics/cook_eve_cloth_transfer.py",
+        "sha256": "7767d96f512dbf013070f17b97a81346e61cbd1f13fb46546b938ca7154f67c5"
+      },
+      {
+        "path": "tools/diagnostics/check_eve_cloth_cook.py",
+        "sha256": "dac1885bd9d274843621ab9b61e6b8f31601b4fd35b0bc6d49153bee623249a3"
+      },
+      {
+        "path": "tools/diagnostics/compare_eve_cloth_cook.py",
+        "sha256": "d0c2bc7b91d82bc76c3f35babf2df2e5d3208885755832262ab92a3933cf8bc0"
+      },
+      {
+        "path": "tools/diagnostics/cleanup_eve_cloth_cook.py",
+        "sha256": "4eaa8d210b0abaeea7621b10d9d2a0381064c3d650f806b07e1ffcbba644c155"
+      },
+      {
+        "path": "tools/authoring/cloth-transfer/CSSAuthoring.Build.cs",
+        "sha256": "1745251b815acb1c594dcfb9300c7338f0346d8143272f7f7ada12c6a9420ef2"
+      },
+      {
+        "path": "tools/authoring/cloth-transfer/CSSClothTransferCommandlet.cpp",
+        "sha256": "af46fd5b29a5734907f6aa9ec32f698705cad1ae12f56fb5605b03f56e6b4a78"
+      },
+      {
+        "path": "tools/authoring/cloth-transfer/CSSClothTransferCommandlet.h",
+        "sha256": "728a6b36d3a22d489b52910b019a155872b210d64a4b706028fdd681a867f0a5"
+      }
+    ],
+    "scope": "Private Planet normal/facial source, tangent, cloth/config and paired mapping preservation through cook/readback. Final paths, Knitwear/Alice, combined integration and all runtime/performance/release gates remain."
   }
 }

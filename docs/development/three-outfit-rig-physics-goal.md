@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Planet Diving private cloth pair verified offline:**
+the reordered normal/facial pair now passes tangent repair, cloth transfer,
+fresh reload, Windows cook and independent readback. Original simulation,
+cloth settings, geometry, bindings and 22/137 morphs are preserved; both meshes
+share matching render/mapping digests. The first transfer failed because a
+rebuild ran before persistent section data was written; using UE's editor
+sequence fixes that failure. See [Planet evidence](../research/2026-10-14-eve-surface-tangents.md#planet-diving-cloth-transfer).
+The 294 known collapsed-UV fallbacks remain a shading limitation. No installation.
+Continue offline: Planet permanent paths, Knitwear/Alice, combined Eve packaging
+and all full-goal runtime/performance/release gates remain. Prelisted duplicate
+cleanup leaves root/theark at 94G/7.0G free.
+
 **October 14, Skin Suit/Bikini permanent paths verified offline:** the four
 regular/facial meshes now use their existing release paths. Fresh reload,
 Windows cook, IoStore roundtrip and independent decoded comparison preserve

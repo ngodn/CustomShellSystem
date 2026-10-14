@@ -436,6 +436,77 @@ After the [prelisted cleanup](../development/cleanup-2026-10-14-eve-final-paths.
 recipes, packages and readbacks remain. Immediate `df -h` readings changed from
 root/theark 94G/7.9G to 94G/8.8G; logical bytes are not a physical-space measure.
 
+## Planet Diving cloth transfer
+
+Planet's reordered source preserves all original corners, weights and morphs.
+Its first Windows cook/readback passes geometry and surface correspondence,
+but leaves one zero tangent. The retained `planet-ordered/pack/tangent-fallbacks.json`
+records that failure alongside 294 known collapsed-UV unit-X fallbacks and no
+unexpected nonorthogonal vertices. Both regular and facial editor tangents now
+pass the explicit bake and separate reload with zero zero-length/nonunit
+vectors (`tangent-bake/planet-normal-1-verified.json` and
+`planet-facial-1-verified.json`). Counts are 136,940 vertices, 175,142 triangles
+and 22/137 morphs.
+
+The first native cloth transfer failed its post-rebuild binding check and saved
+no target asset. Its command, failure log, exit receipt and original host recipe
+remain under `cloth-transfer`. UE 5.6.1's `BindToSkeletalMesh` itself triggers a
+scoped post-edit rebuild. The failed helper wrote persistent section data only
+after that call. The revised helper follows the engine's
+`FSkeletalMeshEditor::ApplyClothing`: hold an outer post-edit scope around both
+the bind and the section-data write, so the rebuild sees the persistent binding.
+Local source: `SkeletalMeshEditor.cpp:958` and `SkeletalMesh.cpp:279` in the
+pinned engine. Epic also describes the required persistent section fields in
+[its cloth-binding support reply](https://forums.unrealengine.com/t/stitching-together-meshes-issues-with-cloth/2593003/3).
+
+Both meshes now pass transfer and separate reload
+(`cloth-transfer/planet-normal-2-verified.json` and
+`planet-facial-verified.json`). They preserve the accepted
+18-vertex/16-triangle simulation, all reflected cloth/config values except the
+new asset GUID, transition arrays and tether data. A deliberate physical-vertex
+mutation is rejected by the comparator. The reordered tail has 1,174 mapped
+render vertices on material slot 26; its lower vertex count reflects the repaired
+corner sharing, not removed tail triangles: all 1,648 tail render triangles remain.
+
+The Windows paired cook, IoStore roundtrip and independent source checks now
+pass. Every previously valid packed tangent/handedness value is unchanged from
+the ordered standalone cook. Exactly one zero corner is repaired in each mesh,
+with UV-gradient direction error 0.002736 and matching handedness. All 294
+known collapsed-UV fallbacks remain; no unexpected exceptions or zero tangents
+remain. Geometry, weights, all UVs/colors/imported normals and 22/137 morphs
+pass source comparisons.
+
+`cloth-transfer/planet-pack/bindings-verified.json` confirms decoded physical
+cloth/config preservation except the new GUID, unchanged materials, bounds,
+bind references and mesh properties except explicit tangent storage. Normal
+and facial render and cloth-mapping digests match. This does not prove runtime
+collision or row-for-row mapping equality with the differently indexed old
+mesh. Native transfer checks also cover transition and tether arrays that the
+cooked summary does not fully expose.
+
+The first cooked binding comparator rejected the shifted file offset of an
+empty Nanite bulk header. Its source and failure explanation remain in
+`planet-pack/failed-comparator`. The current check reuses the established
+`empty_nanite` comparison, which first requires zero elements, zero disk size
+and no bulk flags. All other Nanite fields still match. No asset was changed
+to resolve that comparator failure.
+
+Private outputs remain `SK_PlanetNormalCloth2` and `SK_PlanetFaceCloth1` under
+`/Game/CSSAuthoring/EveSurface20261014`. Permanent paths, full Eve integration,
+Knitwear/Alice repairs and runtime/performance/release gates remain open.
+
+The new tools operate on private copies and hash their inputs before and after
+use. No game installation, settings change or launch request. The earlier
+175 checkpoint pins still match. The cloth simulation was preserved, not retuned.
+
+After the [prelisted cleanup](../development/cleanup-2026-10-14-eve-planet-cloth.md),
+2,406,783,008 logical bytes of paired cook duplicates and disposable prefix
+were removed. Both target sources and all shipping payload hashes remain intact.
+Immediate `df -h` changed from root/theark 94G/6.3G to 94G/7.0G available.
+The earlier standalone cleanup removed another 1,462,198,829 logical bytes.
+Retained data includes sources, compiled module, useful DDC, package/readbacks
+and failure evidence. No unknown or unrelated folders were touched.
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six
