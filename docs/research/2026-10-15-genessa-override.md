@@ -72,6 +72,62 @@ Recover through a retained analysis or a supported longer-running analysis
 path before repeating the query. The Blueprint persistence findings above
 remain valid; native scheduling and loading remain open.
 
+## Conditional form restoration on load
+
+`controller-class-path.json` resolves the loaded controller's class default
+object to `/Game/Sparta/Core/Player/BP_PlayerController`. Independent cooked
+readback in `controller-packages.json` establishes the following Blueprint path:
+
+- `LoadCharacter` calls the separate Darkform and shell item-definition loaders
+  outside its editor-default branch. Those read the player save's selected item
+  definitions; they do not decide which form becomes active.
+- `ActivateShellOrDarkform` gets the native subsystem's `GetSessionSave`, casts
+  it to `BPSO_PlayerSession`, then combines `ShouldResumeSession` with its
+  `IsInDarkform` flag. If both are true, it calls `ActivateDarkform(true, true)`.
+  Otherwise it activates the shell when `ActiveShellItemDefinition` is valid,
+  falling back to Darkform when it is not. A failed session cast also takes
+  that valid-shell/fallback branch.
+- `BPFL_SaveLoad.ShouldResumeSession` returns the native game mode's
+  `ShouldResumeRun`. The game-settings default `ResumeLastRun=false` alone
+  therefore does not establish the result of this runtime getter.
+- The controller's post-load graph separately gates loading saved Resolve on
+  the same resume-session predicate. Masking the whole resume decision would
+  consequently affect more than form selection.
+
+Full simplified bytecode, with branch offsets, is retained in
+`ActivateShellOrDarkform.json`, `LoadCharacter.json`, `LoadDarkFormFromSave.json`,
+`LoadShellFromSave.json` and `ExecuteUbergraph_BP_PlayerController.json`.
+`ReceiveOnLoaded` on the session Blueprint calls its native parent and starts
+the transform-check timer; it does not itself select the player's form.
+
+Additional bounded leads are retained in `load-packages.json` and
+`spawn-packages.json`. The Darkform load item is a definition with a display
+name; the skin-handler and spawn Blueprint functions inspected there do not
+read `IsInDarkform` or call `GetSessionSave`. This does not exclude inherited
+or native behavior. Class-path lookups were read-only; none of these loading,
+activation or saving functions was invoked.
+
+This confirms a consumer of the saved form flag, not that the current game
+session will resume or that Alteration permits the resulting form. Native
+save scheduling, `GetSessionSave` selection and `ShouldResumeRun` remain to
+be traced before a persistence interception is justified.
+
+`resume-live-readonly.json` additionally resolves the current world game mode
+through its reflected `GetInstance` signature and reads `ShouldResumeRun`:
+it returns false. This describes this already-loaded world only, not the next
+load or all save slots. The getter's signature was inspected before invocation.
+No resume flag, session object or gameplay form was changed.
+
+The replacement native analysis runs through the installed REA 6.4.0 CLI,
+avoiding the MCP request timeout. Its reproducible command is
+`native-save1/recipe.sh`, with a 3,600,000 ms startup deadline and an 8 GiB Java
+heap verified in the owned JVM arguments. It requests a `SaveSession` trace
+and retained snapshot. While `trace.json` is empty and the job is running,
+there is no native result to cite. Follow the existing process rather than
+starting another import. These are per-command settings; no global tool or
+game configuration changed. The supported controls are documented in
+[REA's installation guide](https://github.com/morluto/rea/blob/main/docs/installation.md#ghidra).
+
 ## Implementation constraints
 
 Normal native rules remain the default. Selecting an override must first show

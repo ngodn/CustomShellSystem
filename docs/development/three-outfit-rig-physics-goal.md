@@ -19,6 +19,11 @@ The configured native session-save class does serialize the current Darkform
 tag. A nonpersistent CSS option alone cannot meet that promise; save scheduling,
 loading and scoped restoration require investigation. No save or ability state
 was modified by the [override research](../research/2026-10-15-genessa-override.md).
+Further cooked readback identifies the loader: the player controller consumes
+the saved form flag only when the game mode permits session resume. Resume also
+gates saved Resolve. Its current live getter returns false; other loads remain
+unverified. Native save scheduling and a persistence-preserving override are
+still under investigation, using the retained `native-save1` analysis job.
 
 **October 15, latest requested shot confirmed:** Peony fires Naylshotte with a
 100-to-72 Resolve drop; stowing hides its permanent Burn effect. Current view,

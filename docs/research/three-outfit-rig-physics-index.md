@@ -4,7 +4,7 @@
 
 - [Doubles across outfits](2026-10-15-outfit-doubles.md): all six older Eve outfits pass Faithful mesh binding/cleanup. CW passes both Stray clones in Default and Use CSS. Peony and both UG variants now also pass both Stray clones in Use CSS, with full settings/CINE/player/view restoration across the three-case sequence. Earlier interrupted captures remain failed; visual cloth/contact and remaining outfit/form combinations stay open.
 
-- [Temporary Genessa override](2026-10-15-genessa-override.md): the native session-save class writes a SaveGame-tagged form field from the Darkform tag. The ability owns its blocker handle and revival has broader gameplay effects. Save scheduling/loading and reversible override behavior still need validation; no override or save mutation is installed.
+- [Temporary Genessa override](2026-10-15-genessa-override.md): the session-save class writes a SaveGame-tagged form field. The player controller consumes it only when the game mode allows session resume, which also gates resource restoration. The ability owns its blocker handle and revival has broader gameplay effects. Native scheduling/resume decisions and reversible override behavior still need validation; no override or save mutation is installed.
 
 - [Peony normal doubles in both forms](2026-10-15-peony-doubles.md): four Default/Use CSS cases verify mesh selection and group cleanup. Focused captures additionally match six ghost families, 58 explicit source parameters, two morphs and seven hidden sections in both forms. Failed long reads/restoration guards and subsequent guarded recovery remain recorded. Secondary clone requires an eligible Mirage upgrade; visuals/contact and other outfits remain open.
 
