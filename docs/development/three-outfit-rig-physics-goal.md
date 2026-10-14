@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, repeated outfit/facial lifecycle check passes:** all ten scoped
+appearances complete three rounds (30 cases, 90 snapshots), retaining the same
+93 owned components and 56 direct mesh attachments. Facial mesh/adapter
+activation and restoration pass; full CSS state, CINE model and player/camera
+state restore exactly. [Evidence](../research/2026-10-14-outfit-switch-lifecycle.md).
+Both Genessa variants also retain genuine CINE appearance-interruption reporting.
+This does not close live counts above 128, long-session leaks, action coverage,
+world/save/form transitions, doubles, rendering or frame-time gates.
+
 **October 14, CINE natural-end defect repaired and verified live:** normal
 face-mesh cleanup no longer relabels a completed clip as interrupted. Full Iris
 Out photo takes finish on both Genessa variants, with exact player/view and

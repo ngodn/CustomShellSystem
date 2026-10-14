@@ -33,7 +33,7 @@ historical rehearsal and is not the stable release tag.
 | CW inward/sideways walking feet | User accepts the walking-only correction after the boots-on/off prompt; jog/sprint already accepted. Permanent paths now installed with exact accepted compressed animation data and passing combined catalog/profile checks | Final paths now resolve live (36 matching samples/eight clips); terrain/lifecycle and performance regression checks remain; preserve native IK and rollback |
 | CW belt physics and janky skirt | User accepts both while walking/turning. Live Belt20 execution and nine shape-input routing cases pass, with exact saved-state restoration | Extreme-shape visual checks, lifecycle and matched cost; preserve accepted physics and stop solver tuning |
 | CW dev/Development display qualifiers | Clean Commander White manifest/catalog name and description installed; packaging recipes updated; assets and IDs unchanged | Final stable version/archive filenames and release text; historical releases remain immutable |
-| More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children | Live recovery/facial behavior above 128 and repeated-switch leak/lifetime checks |
+| More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children. Thirty live outfit/facial cases preserve identical component/attachment handles at 56 direct children | Live recovery/facial behavior above 128 and broader long-session leak/lifetime checks |
 | Vistani moving sunlight reflection noise | Default-off MISC source-angle workaround installed; live 4 to 0.5357 to 4 restoration, actual UI clicks and persistence pass; cold-load ownership failure fixed and tested; sharper shadows visible; user acceptance pending | Verify maps, continuous motion and cost before public delivery; no CVar mutation; do not describe workaround as a proven engine correction |
 | Local core reload temporarily loses shared animation/facial availability | Reproduced during CW checks; later rescan experiment crashed in an animation subsystem; cold recovery passes; three controlled reload cycles with class inventories did not reproduce it | Root cause remains unconfirmed; preserve instrumented reproducer and crash evidence; the existing dump lacks the failing class memory |
 | Genessa Stray to Faithful after another save | Reported, not reproduced; offline native flow mapped and passive capture prepared | Actual two-save capture, same-save/fresh-launch comparison and valid-transition regression |
@@ -70,6 +70,9 @@ Accepted observations apply to their recorded test scope, not every variant.
   and installed; validation remains. Do not redo conversion as if it were absent.
 - Complete matched performance measurements, repeated-switch lifetime checks
   and investigation of any new hitch, crash or regression.
+  The [30-case stationary outfit/facial check](../research/2026-10-14-outfit-switch-lifecycle.md)
+  passes with exact component identities and state restoration; broader lifecycle
+  and frame-time measurements remain separate.
 - Finish shared migration's live CSS/CINE and clean/upgrade coverage. The four
   [current-container compatibility cases](../research/2026-10-14-coordinated-upgrade-audit.md)
   now pass with current/mixed legacy Genessa and CW. They do not test save

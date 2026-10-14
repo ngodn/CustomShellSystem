@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Repeated outfit/facial lifecycle](2026-10-14-outfit-switch-lifecycle.md): 30 cases across all ten appearances retain identical component/attachment handles and restore meshes, owners, settings and camera. Live counts above 128, wider lifecycle and performance remain open.
+
 - [CINE natural completion repair](2026-10-14-cine-natural-end.md): reproduced and fixed false interruption during face restoration. Full Iris Out takes pass on both Genessa variants; camera and saved states restore exactly. Limited close-ups retain unresolved shadow patches.
 
 - [Genessa live facial tracks](2026-10-14-genessa-live-face-tracks.md): both variants pass Iris Out/Come Closer numeric weights, clock alignment and explicit-stop restoration. Directed CINE takes and visual/gameplay checks remain.
