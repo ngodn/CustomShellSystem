@@ -1,4 +1,4 @@
-"""Verify recorded attack interruptions and restoration without contacting the game."""
+"""Verify recorded native action interruptions and restoration without contacting the game."""
 import argparse
 import copy
 import hashlib
@@ -18,8 +18,14 @@ def verify_case(row, before, after, active_attacks):
     assert .5 <= playing['seconds'] <= stopped['seconds'] < stopped['duration']
     assert stopped['reason'] in ('Player is moving', 'A gameplay action is blocking input',
                                  'Gameplay montage is active', 'Wait for the gameplay montage to finish')
-    assert active_attacks, 'No actual native attack was recorded'
-    assert row['attack_input'] and row['attack_key_observed']
+    assert active_attacks, 'No actual native action was recorded'
+    for observed in active_attacks:
+        name = observed['ability']['class']
+        assert observed['count'] > 0
+        assert ('/Dash/GA_Dash_CorruptedGenessa.' in name if row.get('action') == 'dodge' else
+                '/Axatana/' in name and '/GA_Player_Attack_' in name)
+    assert row.get('action_input', row.get('attack_input'))
+    assert row.get('action_key_observed', row.get('attack_key_observed'))
     assert not row['movement_input'] and not row['camera_input']
     assert not row.get('forced_stop') and not row.get('error') and not row.get('restore_error')
     assert row['samples'] and not row['samples'][-1]['expression']['performance']
@@ -28,7 +34,7 @@ def verify_case(row, before, after, active_attacks):
         'state_restored', 'cine_restored', 'health_unchanged', 'keys_released', 'focus_restored'))
 
 
-def recorded_attacks(path):
+def recorded_attacks(path, action='secondary_attack'):
     lines = [json.loads(line) for line in path.read_text().splitlines()]
     attacks = []
     for request, reply in zip(lines, lines[1:]):
@@ -37,7 +43,9 @@ def recorded_attacks(path):
             continue
         for spec in reply['result']['Items']:
             name = spec['Ability']['class']
-            if spec['ActiveCount'] > 0 and '/Axatana/' in name and '/GA_Player_Attack_' in name:
+            matched = ('/Dash/GA_Dash_CorruptedGenessa.' in name if action == 'dodge' else
+                       '/Axatana/' in name and '/GA_Player_Attack_' in name)
+            if spec['ActiveCount'] > 0 and matched:
                 attacks.append(dict(ability=spec['Ability'], count=spec['ActiveCount']))
     return attacks
 
@@ -49,6 +57,8 @@ def main():
     root = args.directory.resolve()
     read = lambda p: json.loads(p.read_text())
     matrix = read(root / 'result.json')
+    action = matrix.get('action', 'secondary_attack')
+    assert action in ('secondary_attack', 'dodge')
     expected = {(o, v, c) for o, variants in OUTFITS.items() for v in variants for c in ('irisout', 'comecloser')}
     actual = [(r['outfit'], r['variant'], r['clip']) for r in matrix['cases']]
     assert len(actual) == len(expected) and set(actual) == expected
@@ -56,9 +66,10 @@ def main():
     for case in matrix['cases']:
         folder = Path(case['evidence'])
         row, before, after = (read(folder / n) for n in ('result.json', 'state-before.json', 'state-after.json'))
-        attacks = recorded_attacks(folder / 'requests.jsonl')
+        attacks = recorded_attacks(folder / 'requests.jsonl', action)
         assert case['passed'] and case['returncode'] == 0
         assert row['core_sha256'] == matrix['core_sha256']
+        assert row.get('action', 'secondary_attack') == action
         assert row['original']['outfit'] == case['outfit'] and row['original']['variant'] == case['variant']
         assert row['clip'] == 'css.eve.dance.' + case['clip']
         assert row['original']['shell'] == matrix['original']['shell']
@@ -66,7 +77,7 @@ def main():
         first = first or (row, before, after, attacks)
         results.append(dict(outfit=case['outfit'], variant=case['variant'], clip=case['clip'],
                             stopped_seconds=row['stopped']['seconds'], reason=row['stopped']['reason'],
-                            active_attack_observations=len(attacks), evidence=str(folder),
+                            active_action_observations=len(attacks), evidence=str(folder),
                             sha256={name: hashlib.sha256((folder / name).read_bytes()).hexdigest()
                                     for name in ('result.json', 'requests.jsonl', 'recipe.py')}))
     assert read(root / 'state-before.json') == read(root / 'state-after.json')
@@ -88,9 +99,10 @@ def main():
         except AssertionError:
             rejected.append(label)
     assert len(rejected) == 3
-    verified = dict(passed=True, cases=len(results), shell=matrix['original']['shell'],
+    verified = dict(passed=True, action=action, cases=len(results), shell=matrix['original']['shell'],
                     results=results, rejected_controls=rejected,
-                    scope='Secondary Axatana attacks interrupt Iris Out and Come Closer on ten outfits; no combo, dodge, damage or visual-contact acceptance.')
+                    scope=f'{action} interrupts Iris Out and Come Closer on ten outfits; '
+                          'no combo, damage, visual-contact or other-action acceptance.')
     (root / 'verified.json').write_text(json.dumps(verified, indent=2) + '\n')
     print(json.dumps({k: v for k, v in verified.items() if k != 'results'}))
 

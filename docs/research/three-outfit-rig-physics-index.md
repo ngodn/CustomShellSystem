@@ -1,6 +1,10 @@
 # Three-outfit rig and physics research index
 
-- [Dodge and frame-cap preflight](2026-10-15-dodge-preflight.md): nearby visibility traces do not establish safe dash terrain. No dodge or cap change was sent; current tools also cannot verify console-priority restoration. Records bridge array limitations and preserves the live state.
+- [Native frame-cap verification](2026-10-15-native-frame-caps.md): nine Peony captures and 4,151 raw records pass, with cap priority and all owned state restored. Actual cadence is about 30 and 53 to 55 Hz; sustained 60/higher-rate and matched performance acceptance remain open.
+
+- [Twenty outfit dodge interruptions](2026-10-15-outfit-dodge-interruption.md): stationary Stray dodges interrupt both facial clips across all ten release variants, with actual native activation and full restoration. The failed downhill fixture and recovery remain recorded; the passing matrix uses a checked uphill corridor.
+
+- [Dodge and frame-cap preflight](2026-10-15-dodge-preflight.md): historical initial limits, before the later uphill matrix and verified native cap setter. No dodge or cap change was sent during that preflight. Records bridge array limitations and preserves the live state.
 
 - [Twenty outfit attack interruptions](2026-10-15-outfit-attack-interruption.md): actual secondary attacks interrupt Iris Out and Come Closer on all ten variants in Stray form. Raw active-ability records, three negative controls and full state/view restoration pass. Initial Axatana form-change fixture failure and recovery are retained; combos, dodge, interaction and damage remain separate.
 

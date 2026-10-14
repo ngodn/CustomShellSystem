@@ -71,8 +71,11 @@ Accepted observations apply to their recorded test scope, not every variant.
   [Twenty actual secondary-attack interruptions](../research/2026-10-15-outfit-attack-interruption.md)
   now pass both clips on all ten variants in Stray form, with raw native
   ability activation and full state/view restoration independently verified.
-  Combo, dodge, interaction, damage, other-form cases and the rest of this
-  matrix remain open.
+  [Twenty actual stationary dodge interruptions](../research/2026-10-15-outfit-dodge-interruption.md)
+  now pass both clips on all ten variants in Stray, with native activation,
+  complete restoration and retained failed downhill preflight/recovery evidence.
+  Combo, moving/directional dodge, interaction, damage, other-form cases and
+  the rest of this matrix remain open.
   [Peony's four normal summon cases](../research/2026-10-15-peony-doubles.md)
   verify Default/Use CSS selection, body-input copying and cleanup for Faithful
   and Stray primary. Focused follow-ups also verify both forms' six Peony ghost
@@ -109,6 +112,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   It has substantial tail variation, no matched comparator and no isolated
   rig/cloth or GPU timings. The game's trace interface exposes no channels.
   Performance acceptance, movement/transition and frame-rate coverage remain open.
+  [Nine native-cap Peony captures](../research/2026-10-15-native-frame-caps.md)
+  now preserve console priority and settings, with 4,151 verified timing records
+  and advancing finite body state. Actual cadence is about 30 and 53 to 55 Hz;
+  sustained 60/higher-rate, other-outfit and matched comparisons remain open.
   The [paired editor body-cost fixture](../research/2026-10-15-body-cost.md)
   now verifies 48 enabled/bypassed cases and 28,800 measured updates at
   30/60/120 Hz. It estimates incremental body work with substantial variance;

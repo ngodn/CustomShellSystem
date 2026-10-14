@@ -1,4 +1,4 @@
-"""Interrupt one facial performance with Axatana's secondary attack and restore the view."""
+"""Interrupt one facial performance with a mapped native action and restore the view."""
 import argparse
 import json
 import math
@@ -17,6 +17,8 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--clip', default='css.eve.dance.irisout')
+    parser.add_argument('--action', choices=('secondary_attack', 'dodge'), default='secondary_attack')
+    parser.add_argument('--ground-proof', type=Path, help='Required checked corridor for the stationary Stray dodge')
     args = parser.parse_args()
     out = args.output.resolve()
     if out.exists():
@@ -37,7 +39,7 @@ def main():
     atomic(out / 'state-before.json', before)
     report = dict(passed=False, core=core, core_sha256=args.core_sha256,
                   clip=args.clip, original=original, samples=[], movement_input=False,
-                  camera_input=False, attack_input=False)
+                  camera_input=False, action=args.action, action_input=False)
     log = (out / 'requests.jsonl').open('x')
 
     def send(value):
@@ -73,14 +75,21 @@ def main():
         raise RuntimeError('This stationary fixture was prepared for the equipped Axatana axe')
     player_input = get(player['controller'], 'PlayerInput')
     mappings = get(player_input, 'EnhancedActionMappings')
-    if not any(r['Action']['name'].endswith('.IA_Attack_Secondary') and
-               r['Key']['KeyName'] == 'RightMouseButton' for r in mappings):
-        raise RuntimeError('Secondary attack is not mapped to the expected button')
+    dodge = args.action == 'dodge'
+    input_action, input_key = ('IA_Dodge', 'SpaceBar') if dodge else ('IA_Attack_Secondary', 'RightMouseButton')
+    if not any(r['Action']['name'].endswith('.' + input_action) and
+               r['Key']['KeyName'] == input_key for r in mappings):
+        raise RuntimeError('Action is not mapped to the expected key')
+    down, up = (['keydown', 'space'], ['keyup', 'space']) if dodge else (['mousedown', '3'], ['mouseup', '3'])
 
-    def active_attacks():
+    def action_matches(ability):
+        name = ability['class']
+        return ('/Dash/GA_Dash_CorruptedGenessa.' in name if dodge else
+                '/Axatana/' in name and '/GA_Player_Attack_' in name)
+
+    def active_actions():
         return [v['Ability'] for v in get(asc, 'ActivatableAbilities')['Items']
-                if v['ActiveCount'] and '/Axatana/' in v['Ability']['class'] and
-                '/GA_Player_Attack_' in v['Ability']['class']]
+                if v['ActiveCount'] and action_matches(v['Ability'])]
 
     def geometry():
         return {k: call(player[t], f) for k, t, f in (
@@ -92,6 +101,36 @@ def main():
                      'keys': ['W', 'A', 'S', 'D', 'F', 'SpaceBar', 'LeftControl', 'LeftMouseButton', 'RightMouseButton']})
 
     baseline = geometry()
+    expected_control = baseline['control_rotation']
+    test_yaw = None
+    if dodge:
+        if args.ground_proof is None or player['shell'] != 'CharacterId.Player.Darkform.CorruptedGenessa':
+            raise RuntimeError('Stationary dodge requires the checked Stray corridor')
+        proof = json.loads(args.ground_proof.read_text())
+        if (proof['player'] != player or proof['position'] != baseline['position'] or
+                proof['control_rotation'] != baseline['control_rotation'] or
+                proof['misses'] or proof['penetrating'] or len(proof['samples']) != 93):
+            raise RuntimeError('Dodge corridor does not match this player and view')
+        if not all(v['trace']['ReturnValue'] and not v['trace']['OutHit']['bStartPenetrating']
+                   for v in proof['samples']):
+            raise RuntimeError('Dodge corridor has an unsupported sample')
+        if {(v['distance'], v['width']) for v in proof['samples']} != {
+                (distance, width) for distance in range(0, 751, 25) for width in (-50, 0, 50)}:
+            raise RuntimeError('Dodge corridor coverage is incomplete')
+        test_yaw = proof['test_yaw']
+        if not math.isfinite(test_yaw) or abs(test_yaw - baseline['rotation']['Yaw']) > .001:
+            raise RuntimeError('Dodge corridor is not the checked uphill heading')
+        specs = [v for v in get(asc, 'ActivatableAbilities')['Items'] if action_matches(v['Ability'])]
+        if len(specs) != 1 or len(specs[0]['NonReplicatedInstances']) != 1:
+            raise RuntimeError('Expected one native Stray dash instance')
+        dash = specs[0]['NonReplicatedInstances'][0]
+        report['dash_parameters'] = {name: get(dash, name) for name in
+                                     ('DashDistance', 'StrafeDashDistance', 'DashTravelTime')}
+        if report['dash_parameters'] != {'DashDistance': 425., 'StrafeDashDistance': 465.,
+                                        'DashTravelTime': .3499999940395355}:
+            raise RuntimeError('Native dash parameters differ from the prepared corridor')
+        report['ground_proof'] = str(args.ground_proof.resolve())
+        report['ground_sha256'] = sha(args.ground_proof)
     report.update(player=player, geometry_before=baseline, health_before=health_before)
     window = lambda name: json.loads(subprocess.check_output(['hyprctl', name, '-j']))
     prior_window = window('activewindow')
@@ -114,13 +153,15 @@ def main():
         if get(health_set, 'Health') != health_before or call(health, 'IsDeadOrDying'):
             raise RuntimeError('Health changed')
         g = geometry()
-        if any(g[k] != baseline[k] for k in ('control_rotation', 'view_target')):
+        if g['control_rotation'] != expected_control or g['view_target'] != baseline['view_target']:
             raise RuntimeError('Camera changed')
         distance = math.dist(list(g['position'].values()), list(baseline['position'].values()))
-        if distance > 200:
-            raise RuntimeError('Attack travelled beyond the prepared restoration range')
+        if distance > (800 if dodge else 200):
+            raise RuntimeError('Action travelled beyond the prepared restoration range')
         if any(keys().values()):
             raise RuntimeError('Unexpected held input')
+        if dodge and any(call(player['controller'], 'GetMoveInput').values()):
+            raise RuntimeError('Stationary dodge requires zero movement input')
         if require_stationary:
             anim = call(body, 'GetAnimInstance')
             if get(anim, 'Speed') > .05 or call(anim, 'IsAnyMontagePlaying'):
@@ -130,7 +171,7 @@ def main():
             raise RuntimeError('A menu is open')
         return g
 
-    token, mouse = None, False
+    token, mouse, camera_changed = None, False, False
     atomic(out / 'result.json', report)
     try:
         focus(game_window['address']); guard()
@@ -142,6 +183,13 @@ def main():
             raise RuntimeError('Pointer is outside the game')
         if get(input_component, 'ActiveBlocks'):
             raise RuntimeError('Gameplay input is blocked')
+        if dodge:
+            camera_changed = True
+            call(player['controller'], 'SetControlRotation', NewRotation={**expected_control, 'Yaw': test_yaw})
+            expected_control = call(player['controller'], 'GetControlRotation')
+            report['test_control_rotation'] = expected_control
+            if abs(expected_control['Yaw'] - test_yaw) > .001:
+                raise RuntimeError('Prepared heading did not apply')
         started = report['started'] = perf(op='start', id=args.clip, seconds=.5, rate=1.)
         token = started['token']
         deadline = time.monotonic() + 12
@@ -156,34 +204,36 @@ def main():
         guard()
         if window('activewindow').get('address') != game_window['address']:
             raise RuntimeError('Game lost focus')
-        report['attack_input'] = True; atomic(out / 'result.json', report)
+        report['action_input'] = True; atomic(out / 'result.json', report)
         mouse = True
-        subprocess.run(['xdotool', 'mousedown', '3'], check=True, capture_output=True, timeout=3)
-        time.sleep(.1)
-        report['attack_key_observed'] = keys()['RightMouseButton']
-        report['attacks_while_pressed'] = active_attacks()
-        subprocess.run(['xdotool', 'mouseup', '3'], check=True, capture_output=True, timeout=3)
+        pressed_at = time.monotonic()
+        subprocess.run(['xdotool', *down], check=True, capture_output=True, timeout=3)
+        time.sleep(.02)
+        report['action_key_observed'] = keys()[input_key]
+        subprocess.run(['xdotool', *up], check=True, capture_output=True, timeout=3)
         mouse = False
+        report['key_hold_seconds'] = time.monotonic() - pressed_at
+        report['actions_after_release'] = active_actions()
         deadline = time.monotonic() + 8
         while True:
             anim = call(body, 'GetAnimInstance')
-            row = dict(active_attacks=active_attacks(), performance=perf(op='status'), expression=describe()['expression'],
+            row = dict(active_actions=active_actions(), performance=perf(op='status'), expression=describe()['expression'],
                        ability=call(player['controller'], 'GetLastActivatedAbility'),
                        montage=call(anim, 'GetCurrentActiveMontage'), geometry=geometry())
             report['samples'].append(row); atomic(out / 'result.json', report)
             if not row['performance']['active'] and not row['expression']['performance']:
                 break
             if time.monotonic() > deadline:
-                raise TimeoutError('Attack did not interrupt performance')
+                raise TimeoutError('Action did not interrupt performance')
             time.sleep(.1)
         stopped = report['stopped'] = row['performance']
         if stopped['token'] != token or stopped['seconds'] >= stopped['duration'] or not stopped['reason']:
             raise RuntimeError('No early interruption of the requested performance')
-        if not report['attack_key_observed']:
-            raise RuntimeError('Attack input not observed')
-        action_objects = report['attacks_while_pressed'] + [a for v in report['samples'] for a in v['active_attacks']]
+        if not report['action_key_observed']:
+            raise RuntimeError('Action input not observed')
+        action_objects = report['actions_after_release'] + [a for v in report['samples'] for a in v['active_actions']]
         if not action_objects:
-            raise RuntimeError('No native Axatana action was observed')
+            raise RuntimeError('No expected native action was observed')
         time.sleep(3)
         report['after_action'] = guard(require_stationary=True)
         report['action_passed'] = True
@@ -192,7 +242,7 @@ def main():
     finally:
         try:
             if mouse:
-                subprocess.run(['xdotool', 'mouseup', '3'], check=True, capture_output=True, timeout=3)
+                subprocess.run(['xdotool', *up], check=True, capture_output=True, timeout=3)
             current = perf(op='status')
             if token is not None and current['active'] and current['token'] == token:
                 report['forced_stop'] = perf(op='stop', token=token)
@@ -204,6 +254,8 @@ def main():
                                 bSweep=False, bTeleport=True)
                 if not restored:
                     raise RuntimeError('Position restoration failed')
+            if camera_changed:
+                call(player['controller'], 'SetControlRotation', NewRotation=baseline['control_rotation'])
             report['geometry_after'] = geometry()
             report['geometry_restored'] = geometry_restored(baseline, report['geometry_after'])
             after = json.loads((MOD / 'state/state.json').read_text())

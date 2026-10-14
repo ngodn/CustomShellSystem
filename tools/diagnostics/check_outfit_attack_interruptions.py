@@ -1,4 +1,4 @@
-"""Check secondary-attack interruption across all ten release variants."""
+"""Check mapped action interruption across all ten release variants."""
 import argparse
 import json
 from pathlib import Path
@@ -17,6 +17,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
+    parser.add_argument('--action', choices=('secondary_attack', 'dodge'), default='secondary_attack')
+    parser.add_argument('--ground-proof', type=Path)
     args = parser.parse_args()
     out = args.output.resolve()
     original, pids = describe(), processes()
@@ -60,7 +62,7 @@ def main():
     atomic(out / 'state-before.json', before)
     atomic(out / 'cine-before.json', cine)
     report = dict(passed=False, original=original, player=player, geometry_before=baseline,
-                  core_sha256=args.core_sha256, cases=[], action='secondary_attack')
+                  core_sha256=args.core_sha256, cases=[], action=args.action)
     atomic(out / 'result.json', report)
     try:
         customize({'action': 'idle', 'value': 'eve'})
@@ -78,7 +80,9 @@ def main():
                     folder = out / (outfit + '-' + variant + '-' + clip)
                     command = [sys.executable, str(ROOT / 'tools/diagnostics/check_attack_interruption.py'),
                                '--output', str(folder), '--core-sha256', args.core_sha256,
-                               '--clip', 'css.eve.dance.' + clip]
+                               '--clip', 'css.eve.dance.' + clip, '--action', args.action]
+                    if args.ground_proof:
+                        command += ['--ground-proof', str(args.ground_proof.resolve())]
                     row = dict(outfit=outfit, variant=variant, clip=clip, evidence=str(folder), command=command)
                     report['cases'].append(row); atomic(out / 'result.json', report)
                     with (out / (folder.name + '.log')).open('x') as log:
@@ -91,7 +95,7 @@ def main():
                     atomic(out / 'result.json', report)
                     result.check_returncode()
                     if not row.get('passed'):
-                        raise RuntimeError('Child did not verify attack and restoration')
+                        raise RuntimeError('Child did not verify action and restoration')
                     print(outfit, variant, clip, 'pass', flush=True)
         report['cases_passed'] = True
     except Exception as error:

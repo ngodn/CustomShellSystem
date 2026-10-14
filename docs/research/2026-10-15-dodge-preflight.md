@@ -1,7 +1,12 @@
 # Dodge preflight and frame-cap limits
 
 The user authorized unattended tests in the open game. No dodge input or
-frame-cap change was sent during this preflight. Both checks remain open.
+frame-cap change was sent during this initial preflight. The subsequent
+[twenty-case dodge matrix](2026-10-15-outfit-dodge-interruption.md) passes in a
+separately checked uphill corridor. The notes below retain the initial limits.
+The later [native frame-cap check](2026-10-15-native-frame-caps.md) also verifies
+priority-preserving changes and restoration; the console-assignment limitation
+below is not a remaining blocker for that native path.
 
 Evidence: `work/three-outfit-rig-physics/dodge-interruption-20261015/`.
 The current core remains `5f04a31900c8e323`, PID 1944353, with Peony selected

@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 15, twenty Stray dodge interruptions pass:** all ten variants release
+Iris Out and Come Closer on actual native dash activation. Full state, health,
+position/view and focus restoration pass; Peony and all outfit memories restore.
+The failed downhill fixture and its verified recovery are retained. The accepted
+matrix uses a separately checked uphill corridor. Other forms, moving dodges,
+combos, interaction and broader lifecycle remain open.
+[Evidence](../research/2026-10-15-outfit-dodge-interruption.md).
+
 **October 15, twenty Stray attack interruptions pass:** actual Axatana secondary
 attacks interrupt Iris Out and Come Closer on all ten release variants. Raw
 ability records and three negative controls independently verify the results.
@@ -9,10 +17,14 @@ The initial primary-attack fixture and native weapon-form recovery remain
 recorded. Combo, dodge, interaction and other-form checks stay open.
 [Evidence](../research/2026-10-15-outfit-attack-interruption.md).
 
-The [dodge preflight](../research/2026-10-15-dodge-preflight.md) found gaps in
-nearby visibility traces, so it sent no movement input. Frame-cap changes were
-also withheld because the current tools cannot verify priority restoration.
-Both checks remain open; the accepted live state is preserved.
+The initial [dodge preflight](../research/2026-10-15-dodge-preflight.md) found
+gaps in nearby visibility traces and withheld frame-cap changes. The later
+uphill matrix resolves the stationary dodge fixture. A verified native cap
+setter now preserves console priority: [nine Peony captures](../research/2026-10-15-native-frame-caps.md)
+contain 4,151 independently checked timing records, advancing finite body
+updates and no extra reset. Original settings, graphics, view and focus restore.
+Observed cadence is about 30 Hz and 53 to 55 Hz. Sustained 60/higher-rate,
+other-outfit and matched performance checks remain open.
 
 **October 15, Trebuchaxe visibility repair installed:** `5f04a31900c8e323` preserves
 the native hidden preview instead of showing every nested weapon mesh. Thirteen

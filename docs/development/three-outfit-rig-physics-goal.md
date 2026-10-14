@@ -1,5 +1,23 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, native frame-cap capture passes:** the verified game setter
+preserves both cap value and console priority. Nine Peony captures contain
+4,151 independently checked timing records, with advancing finite body state
+and no additional rig reset. Settings, graphics, camera and focus restore.
+Actual cadence is about 30 Hz and 53 to 55 Hz, so sustained 60/higher-rate and
+matched performance acceptance remain open. No production core or assets changed.
+[Evidence](../research/2026-10-15-native-frame-caps.md).
+
+**October 15, twenty Stray dodge interruptions pass:** Iris Out and Come Closer
+release facial playback after actual native dash activation on all ten release
+variants. Each case restores position/facing, camera, health, settings, CINE and
+focus; the parent restores Peony, its original idle and all outfit memories.
+The first downhill fixture exceeded its displacement guard and remains failed,
+with a separate verified recovery. The completed matrix uses the checked uphill
+corridor. No core or assets changed. Moving/directional and Faithful dodge,
+combos, interaction and broader lifecycle remain open.
+[Evidence](../research/2026-10-15-outfit-dodge-interruption.md).
+
 **October 15, twenty actual attack interruptions pass:** Axatana secondary
 attacks interrupt Iris Out and Come Closer across all ten release variants in
 Stray form. Raw ability records verify 40 active-attack observations, and the
@@ -11,10 +29,11 @@ and verified recovery remain recorded. No core or assets changed. Combos, dodge,
 interaction, damage and Faithful attack coverage remain open.
 [Evidence](../research/2026-10-15-outfit-attack-interruption.md).
 
-The subsequent [dodge preflight](../research/2026-10-15-dodge-preflight.md)
+The initial [dodge preflight](../research/2026-10-15-dodge-preflight.md)
 finds eight missed ground traces and three penetrating starts around the current
-position; no dodge input was sent. Live frame-cap testing also remains open
-until both value and console priority can be preserved. No cap change occurred.
+position; it sent no dodge input or cap change. The later uphill matrix and
+native frame-cap capture above resolve those fixture limitations within their
+recorded scope.
 
 **October 15, Trebuchaxe hovering preview repaired:** CSS revealed the native
 hidden `SM_Projectile_Preview` whenever it showed every owned weapon mesh.
