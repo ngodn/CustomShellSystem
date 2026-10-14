@@ -1323,7 +1323,7 @@
   "alice_cloth_pair": {
     "passed_offline_private_pair": true,
     "installed": false,
-    "permanent_paths_complete": false,
+    "permanent_paths_complete": true,
     "render_vertices_per_mesh": 161517,
     "render_triangles_per_mesh": 220611,
     "regular_facial_morphs": [
@@ -1470,6 +1470,105 @@
         "sha256": "c18e9edaf3198f97865a1b0478cc91dabed474ab413a149889a6064b345af944"
       }
     ],
-    "scope": "Private Alice normal/facial source, tangent, cloth/config and paired mapping checks pass through cook/readback. Permanent paths, combined package and all runtime/performance/release gates remain."
+    "scope": "Private Alice normal/facial source, tangent, cloth/config and paired mapping checks pass through cook/readback. Permanent paths, combined package and all runtime/performance/release gates remain.",
+    "final_paths_evidence": "alice_final_paths"
+  },
+  "alice_final_paths": {
+    "passed_offline": true,
+    "installed": false,
+    "packages": [
+      "/Game/CSS/eins0fx/EveSB/Fit/SK_ACloth3",
+      "/Game/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_ACloth3"
+    ],
+    "comparison": [
+      {
+        "cloth_and_configs_preserved": true,
+        "source": "/Game/CSSAuthoring/EveSurface20261014/SK_AliceNormalCloth1",
+        "target": "/Game/CSS/eins0fx/EveSB/Fit/SK_ACloth3",
+        "exact_decoded_preservation": true,
+        "vertices": 161517,
+        "morphs": 22
+      },
+      {
+        "cloth_and_configs_preserved": true,
+        "source": "/Game/CSSAuthoring/EveSurface20261014/SK_AliceFaceCloth1",
+        "target": "/Game/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_ACloth3",
+        "exact_decoded_preservation": true,
+        "vertices": 161517,
+        "morphs": 137
+      }
+    ],
+    "reader_fixture_dependencies": 24,
+    "receipts": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/plan.json",
+        "sha256": "75783f1c18139ee0efbbcddeab47c3768f594ed062f7e03c346caf66557a8e5c"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/create.json",
+        "sha256": "8585de446b570abaee4528122f1c494f158a7b7e29926027f25bbe14e273f3de"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/reload.json",
+        "sha256": "e2c04496a48655b2e9af87012646df51d682f019c3f55ec9a99310fff2d03f18"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/cook/exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/cook/storage.json",
+        "sha256": "9140528f52018e167787f592947026f322e3067cd13106be1e28374872dfe587"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/cook/mount-verified.json",
+        "sha256": "71e39a854a054a2e3927ece346c662823411d2022cbd44933e3db1083b08f371"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/pack/verified.json",
+        "sha256": "90baabf05b4b486bd21da79ffe582f150cd8f63c90fb464daae79b4491c0b9d7"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/cleanup-plan.json",
+        "sha256": "1ef71f80e0cf925167b159b06788e3653ae4cc6dc7e192f1f1ff8ab29f9d2ab5"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/cleanup-completed.json",
+        "sha256": "8354966fefd06a3a24b45f3dc46a4ff8bef6b09063e71db700e5fca2d12de80c"
+      }
+    ],
+    "sources": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/editor/Content/CSS/eins0fx/EveSB/Fit/SK_ACloth3.uasset",
+        "sha256": "ef1587ac13a27e1e44a0f1e030d6366513802bb9dfd9383025af700ca32314d5"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/alice-cloth-final/editor/Content/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_ACloth3.uasset",
+        "sha256": "e5e1dcbbc307c6106ef4203a894fd88d1a6539a995213077f56c038b07ebb766"
+      }
+    ],
+    "recipes": [
+      {
+        "path": "tools/diagnostics/run_eve_cloth_final.py",
+        "sha256": "3a2295d5b4faab1d691703c49b4740f78831616d125d0919ccc60a75132be3f1"
+      },
+      {
+        "path": "tools/diagnostics/finalize_eve_cloth_editor.py",
+        "sha256": "b83300ae4644000d0336a0021d323ee58bd973b89d3933ce80f5a6d04d019e78"
+      },
+      {
+        "path": "tools/diagnostics/cook_eve_alice_final.py",
+        "sha256": "068d2c1cac3a81e9254f2e10a9afb29828b0dcbc71a9680edc583663bb42004b"
+      },
+      {
+        "path": "tools/diagnostics/check_eve_cloth_final.py",
+        "sha256": "04414e2da6e3a4cb1490926da59fe2f7ecf06b235ba962fd3656998b5696ea94"
+      },
+      {
+        "path": "tools/diagnostics/cleanup_eve_alice_final.py",
+        "sha256": "8e2be677d82a04ad46aa6ea3805a889ced56ec6d6ba14b3d015a847978830fec"
+      }
+    ],
+    "scope": "Permanent Alice pair preserves verified private mesh, tangent, cloth/config, binding and morph data through reload, Windows cook and independent readback. Combined Eve packaging and full runtime/performance/release gates remain."
   }
 }

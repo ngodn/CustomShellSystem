@@ -1,5 +1,11 @@
 # Three-outfit rig and physics research index
 
+- October 14: [Alice permanent paths](2026-10-14-eve-surface-tangents.md#permanent-alice-paths)
+  preserve the verified private cloth pair through reload, Windows cook and
+  exact independent readback, including all 27 sections and 22/137 morphs.
+  This completes permanent-path checks for the six older Eve pairs. Combined
+  packaging and full live/performance/release gates remain; nothing installed.
+
 - October 14: [Alice repair](2026-10-14-eve-surface-tangents.md#alice-cloth-repair)
   passes ordered import and standalone cook/readback with source fields retained.
   Tangent repairs and accepted cloth/configs survive reload and paired cook/

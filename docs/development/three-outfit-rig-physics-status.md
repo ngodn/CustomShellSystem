@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, Alice permanent paths pass offline:** all 27 sections, original
+cloth/configs, repaired shading and 22/137 morphs match the verified private
+pair through reload, Windows cook and independent readback. Old Eve mesh
+providers are excluded from the reader fixture.
+See [final-path checks](../research/2026-10-14-eve-surface-tangents.md#permanent-alice-paths).
+All six older regular/facial pairs are ready for combined packaging. Nothing
+installed; full integration, gameplay, performance and release gates remain.
+Cleanup immediately reports root/theark 92G/4.7G free.
+
 **October 14, Alice private pair verified offline:** source-preserving import,
 tangent bake, cloth transfer, fresh reload and paired Windows cook/readback pass
 with 161,517 vertices, 220,611 triangles and 22/137 morphs. Original cloth/configs

@@ -657,8 +657,9 @@ and historical baseline are not the new assembly recipe.
 shared version. Do not use it as the stable-release path. The active goal
 requires CSS/shared 1.0.0 and Eve 1.5.0, alongside the other two outfit releases.
 Use the current shared metadata that includes accepted CW walking support;
-reusing the older Peony baseline would risk discarding later changes. Final
-packaging remains pending Knitwear/Alice and full-goal release gates.
+reusing the older Peony baseline would risk discarding later changes. All six
+older normal/facial pairs now have verified permanent-path assets. Combined
+packaging and full-goal release gates remain.
 
 ## Alice cloth repair
 
@@ -745,6 +746,34 @@ removed with retained hashes unchanged. Immediate root/theark free space changed
 from 91G/4.9G to 92G/4.9G. The useful cache, editor assets, private packages and
 readbacks remain; root scratch links still resolve. Receipts:
 `cloth-transfer/alice-cleanup-{plan,completed}.json`.
+
+## Permanent Alice paths
+
+The verified private pair now uses its existing release paths:
+
+- `/Game/CSS/eins0fx/EveSB/Fit/SK_ACloth3`
+- `/Game/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_ACloth3`
+
+Creation and fresh reload under `alice-cloth-final` preserve 108,855,500 regular
+and 313,030,080 facial mesh-description bytes. All 27 built sections, including
+cloth, match the private pair (22,549,823 bytes). Cloth assets, bindings and
+22/137 morphs remain intact. Each mesh has 27 direct dependencies and no
+diagnostic package dependency.
+
+The Windows cook and independent IoStore readback pass. Exact mesh digests,
+normalized properties, materials, bounds, empty Nanite resources and complete
+cloth/config data, including GUID, match the verified private pair. The reader
+uses only 24 direct Eve dependency packages plus shared/base data and excludes
+the old Eve mesh providers. Evidence: `alice-cloth-final/pack/verified.json`.
+This is a two-mesh fixture, not the combined release or gameplay acceptance.
+
+`cook_eve_alice_final.py` places both project and output in
+`build/cook-scratch/alice-final/{project,out}`, with links at the established
+work paths. Live mount inspection is retained in `cook/mount-verified.json`.
+The [prelisted cleanup](../development/cleanup-2026-10-14-eve-alice-final.md)
+removed 2,051,009,258 logical bytes of disposable prefix and verified duplicate
+cook data. Retained hashes pass; useful DDC, sources, packages and proofs remain.
+Immediate root/theark free space was 92G/4.7G before and after removal.
 
 ## Receipts and disk use
 

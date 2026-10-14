@@ -1,5 +1,15 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Alice permanent paths verified offline:** the last older Eve
+regular/facial pair now passes reload, Windows cook and independent exact
+readback at its release paths, preserving the repaired shading, cloth/configs,
+bindings and 22/137 morphs. No diagnostic dependencies remain.
+See [Alice final paths](../research/2026-10-14-eve-surface-tangents.md#permanent-alice-paths).
+All twelve older Eve mesh repairs are ready for combined packaging with the
+current shared metadata. No installation or launch request. The full goal's
+integration, gameplay, performance and release gates remain open. Final cleanup
+immediately reports root/theark 92G/4.7G free; new cook scratch is on root.
+
 **October 14, Alice private pair verified offline:** ordered source, import,
 fresh reload, tangent repair, cloth transfer and paired Windows cook/readback
 pass. Normal/facial bindings, 22/137 morphs, original simulation/configs and all
