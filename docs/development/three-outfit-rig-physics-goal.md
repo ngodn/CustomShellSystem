@@ -1,5 +1,30 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, practical CW belt candidate:** Belt20 adds up to 1 cm of
+shape-dependent clearance to the saved Belt19 contact margins, preserving
+neutral poses exactly. Twelve Normal/Facial captures pass morph readback,
+length/cone bounds and non-belt pose preservation. A fresh-load maximum-size
+capture passes hair toggle, body epoch, reinitialization and teleport resets.
+Maximum-size Sprint frame 51 now has 26.21 mm distal clearance instead of
+11.96 mm penetration. The full centerline screen has one startup contact
+at frame 3; mixed-size Sprint samples have contacts at 3 and 51. These are
+known brief early-motion issues to judge in the practical trial, not a claim
+of zero clipping. Maximum-size Jog samples clear. Keep minor cosmetic bends
+deferred under the user's threshold. Six candidate assets and their dependency
+closure are staged for Windows cooking in `work/belt-cook33`; no installation.
+The first cook could not connect to the stopped project Docker daemon. It
+was restarted using the existing wrapper, and the pinned image verified;
+the retry uses the same staged files. That retry completed with zero errors;
+all six expected cooked roots have matching package names and export sidecars.
+Four warnings concern the placeholder optical material, which must not be
+packaged. Separately, `work/belt-bind34` saves and freshly reloads Normal/Facial
+meshes bound to Belt20, preserving bones, morphs, materials and cloth. These
+bindings are newer than cook33. Next integrate the scene adapters and bound
+meshes into the same cook staging area, independently read the cooked assets,
+update the private catalog/core trial and check it in game. Preserve the ankle
+trial and accepted Peony. CW `work/belt-padding32/REPRODUCE.md` records evidence
+and remaining integration. Full stable release remains active.
+
 **October 14, CW morphed contacts:** private Belt19 connects all six body
 coefficients to ten contact envelopes and 24 waistband support points.
 Twelve fresh-load Normal/Facial captures cover neutral, mixed and maximum
