@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Black Pearl bound pair verified offline:** the repaired normal
+and facial meshes now pass fresh editor reload, Windows cook, two-package
+IoStore roundtrip and independent geometry/surface/skin/morph checks. Their
+render data matches each other; material slots, rig/Skeleton references,
+non-morph cooked properties and respective bounds match the installed pair.
+The normal/facial meshes retain 22/137 morphs and 150,791 vertices each. Both
+have only the 488 known collapsed-UV tangent fallbacks. See
+[assembly evidence](../research/2026-10-14-eve-surface-tangents.md#bound-black-pearl-normal-and-facial-pair).
+No installation or game check. Continue offline: permanent-path integration,
+the other five older Eve pairs, and existing live/performance/release gates
+remain. Duplicate cook inputs/output and disposable Wine prefix are removed
+after verification; root/theark now read 95G/13G free.
+
 **October 14, continue offline as requested:** the user deferred the next live
 CW binding check. Do not request another launch or repeat accepted walking
 judgment while this preference is active. Offline Black Pearl ordered-corner

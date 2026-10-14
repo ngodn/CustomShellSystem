@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, Black Pearl assembly checked:** its repaired normal/facial pair
+preserves current material/rig references and cooked non-morph properties,
+including each installed mesh's respective bounds. Fresh editor reload,
+Windows cook, two-mesh IoStore roundtrip and full geometry/surface/skin/morph
+comparisons pass, with identical paired render data and 22/137 morphs. Only the
+known 488 collapsed-UV tangent fallbacks remain. The pair uses private paths;
+permanent integration and the other five older Eve pairs remain. No install.
+See [bound-pair receipts](../research/2026-10-14-eve-surface-tangents.md#bound-black-pearl-normal-and-facial-pair).
+
 **October 14, older Eve shading-basis finding:** UVs, colors and imported normals
 pass across all six original cooked meshes; tangent alignment does not. A private
 Black Pearl corner-order rebuild imports and reloads with preserved counts and

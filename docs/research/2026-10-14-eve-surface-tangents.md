@@ -115,9 +115,56 @@ or facial assembly. It is not suitable for installation as the finished outfit.
 All cook/package commands, inputs, exit receipts and readbacks are retained in
 `blackpearl-ordered/{cook,pack}` under the work directory below.
 
+## Bound Black Pearl normal and facial pair
+
+The next private candidate binds the verified geometry to Black Pearl's existing
+shared Skeleton, `PA_Body`, `ABP_Secondary` and all 30 material slots. The earlier
+Peony dependency workflow supplies 44 pinned editor dependencies. Their object
+paths match the current installed readback. These dependencies are editor-only
+inputs; no regenerated material, rig, texture or Skeleton enters the package.
+Black Pearl has no cloth assets, unlike Planet Diving, Knitwear and Alice.
+
+The accepted expression source adds 115 shapes to the rebuilt mesh's 22 existing
+morphs. Creation and fresh-process reload pass the existing facial verifier,
+including exact non-expression mesh-description and built-section preservation:
+96,587,582 description bytes, 28 sections and zero cloth assets. The shared
+Skeleton's bones, nine virtual bones and sockets remain unchanged. Both meshes
+retain their original 379 raw mesh bones.
+
+Windows cooking exits zero. The private IoStore contains only
+`SK_BlackPearlBound` and `SK_Face_BlackPearlOrdered`; its `.ucas` is 28,213,218
+bytes. Exact export/bulk roundtrip and independent geometry, all-UV/color/normal,
+skin and positional-morph comparisons pass for both meshes against the accepted
+import plus the accepted expression input. Each has 150,791 render vertices and
+193,589 triangles. The normal mesh has 22 morphs and the facial mesh 137. Existing
+weight/morph cooking bounds remain unchanged.
+
+The paired cooked render digests are identical, and all original morph digests
+are preserved by the facial addition. Compared with each corresponding installed
+mesh, all decoded non-morph properties, material-slot structures, imported bounds
+and bind-reference digests match. The normal and facial meshes already have
+different bounding-sphere radii in the installed package (105.43666 and
+93.069046 cm); the rebuilt pair preserves those respective values. Empty Nanite
+resource fields match after excluding only the offset of their verified
+zero-byte bulk header, which moves with the serialized file size.
+
+Both meshes retain exactly 488 collapsed-UV unit-X tangent fallbacks and zero
+unexpected exceptions under the established check. This is not proof of rendered
+shading, normal-map handedness, runtime motion or performance. The repaired pair
+still uses private paths and is not installed. Permanent-path integration and
+the other five older Eve pairs remain.
+
+Recipes are `stage_blackpearl_surface_bindings.py`,
+`bind_blackpearl_surface_editor.py`, `run_blackpearl_surface_bindings.py`,
+`cook_blackpearl_surface_bindings.py`, `check_blackpearl_surface_bindings.py`
+and `verify_blackpearl_surface_assembly.py` under `tools/diagnostics`. Retained
+receipts include `bindings-{create,reload}.json`, `binding-cook/exit.json` and
+`binding-pack/{readbacks-verified,assembly-verified}.json`.
+
 ## Next required work
 
-1. Carry the demonstrated correction through the six original normal/facial
+1. Integrate the verified Black Pearl pair at permanent paths, and carry the
+   demonstrated correction through the other five original normal/facial
    assemblies, preserving materials, cloth, post-process rigs and customization.
 2. Preserve the collapsed-UV limitation explicitly; do not claim every tangent
    frame is repaired or change accepted UVs merely to clear this diagnostic.
@@ -154,3 +201,12 @@ was removed (1,084,763,594 logical file bytes). Both immediate `df -h` readings
 show root 95G and theark 13G available; rounded filesystem figures do not
 establish equivalent reclaimed physical space. Recipes, useful DDC, cooked
 outputs, original assets and readback evidence remain.
+
+After the bound-pair checks, the
+[binding cleanup list](../development/cleanup-2026-10-14-blackpearl-bindings.md)
+removed the finished Wine prefix, 46 verified duplicate cook inputs and the
+regenerable dependency cook. The four shipping mesh payloads remain byte-identical
+in `binding-pack/stage`. Removed logical file bytes total 2,040,966,091.
+Immediate `df -h` readings changed from root 95G/theark 12G to root 95G/theark
+13G. Sources, private editor pair/dependencies, DDC, recipes, logs, packages and
+readbacks remain. Cleanup receipt: `binding-cleanup-completed.json`.

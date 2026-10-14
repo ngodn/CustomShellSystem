@@ -107,7 +107,7 @@
     "path": "work/three-outfit-rig-physics/eve-surface-20261014/cleanup-completed.json",
     "sha256": "d5049db9947a80c615d1be50e4027e70c40cf24d9853a76eb85ff1bb136dcfa2"
   },
-  "scope": "Six original Eve surface fields pass. Private ordered Black Pearl import, Windows cook, IoStore/readback and accepted-import comparisons pass. All 488 remaining nonorthogonal frames match the collapsed-UV unit-X fallback. Full outfit/facial assembly, rendered shading and performance remain unverified; nothing installed.",
+  "scope": "Six original Eve surface fields pass. Private ordered Black Pearl normal/facial assembly passes editor reload, Windows cook, IoStore/readback and accepted-import geometry/surface/skin/morph comparisons. Paired render data and current bindings/properties/bounds are preserved. Both meshes retain 488 known collapsed-UV tangent fallbacks. Permanent-path integration, five older Eve pairs and live/performance/release gates remain; nothing installed.",
   "private_candidate_cook": {
     "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/cook/exit.json",
     "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
@@ -163,5 +163,89 @@
     "sha256": "eda340faee0f64f78a5693e707ae119b5d238f82c863fa9d7842228cb1f5c57c"
   },
   "user_direction": "Continue offline for now. Final CW live bindings remain pending; no repeat walking judgment.",
-  "work_location": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work"
+  "work_location": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work",
+  "bound_black_pearl": {
+    "plan": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-plan.json",
+      "sha256": "735e9884986a24a984ecfb9c3c2b78c03b99368e958637ef649f7960ef99019c"
+    },
+    "editor_create": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/bindings-create.json",
+      "sha256": "01801967e2bd1982cf0a831f4c611a8c158a8b692452484e1c1f7812ce041619"
+    },
+    "editor_reload": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/bindings-reload.json",
+      "sha256": "85fd5da05655b00bcb17c94173172b5bd3fe8501dece764a3320e50cb04b3231"
+    },
+    "cook": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-cook/exit.json",
+      "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+    },
+    "roundtrip": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/roundtrip.json",
+      "sha256": "861eeb557647e31c0cf8c56eeecd2dee1ec2bfa535075d1c916bf2486b56f0e7"
+    },
+    "readbacks": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/readbacks-verified.json",
+      "sha256": "c5dc560476a1a0b7bac021485a56c59d034407f0951045cdf213bbc35dbf7f8c"
+    },
+    "assembly": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/assembly-verified.json",
+      "sha256": "021a5857822318178533055e3e8f5df9e8604fa5167fafbef30f9e3374a0859e"
+    },
+    "normal_geometry": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/normal/geometry.json",
+      "sha256": "a6d93d8b86f94d7af473b47fd45828fa52cf37ad8cd2e0b40e65911e8b506eb6"
+    },
+    "facial_geometry": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/facial/geometry.json",
+      "sha256": "209f51e7aa83e5caa45206da5b4c4808dfcc7bdc59ab2969aadba4d46b65e0cd"
+    },
+    "normal_surface": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/normal/surface.json",
+      "sha256": "d8b75ccd0c61211a86108791f1618dfc60f06d7d9343c02c031aadad584ab345"
+    },
+    "facial_surface": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/facial/surface.json",
+      "sha256": "8b825e39be99f128bd9067dbcb40cdbfec4433e0231ddda8dbcfcf77afe35862"
+    },
+    "normal_fallback": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/normal/fallback.json",
+      "sha256": "644c0b5cff37e7a98447cc2e18a4aebc16e039843fa23704b96e393b523cebcb"
+    },
+    "facial_fallback": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-pack/facial/fallback.json",
+      "sha256": "27c8c5c25c631193d6aa9098f6d74827cdceeeafa4026911ad65d5590fedf97b"
+    },
+    "cleanup": {
+      "path": "work/three-outfit-rig-physics/eve-surface-20261014/blackpearl-ordered/binding-cleanup-completed.json",
+      "sha256": "b5789c32e33f7ad5c508476d938d2eedf15e55fce480dd602171fe43fba2e22e"
+    },
+    "recipes": [
+      {
+        "path": "tools/diagnostics/stage_blackpearl_surface_bindings.py",
+        "sha256": "a8fe9680f2fe242d31aa979c81fda949d6247fa29eac7738fdc52ddafc06abaa"
+      },
+      {
+        "path": "tools/diagnostics/bind_blackpearl_surface_editor.py",
+        "sha256": "1feef579297e4cc8b1585d8349ba49e9a36c2a86c13802e3e956d3321ec77223"
+      },
+      {
+        "path": "tools/diagnostics/run_blackpearl_surface_bindings.py",
+        "sha256": "cc8f353dc855c5dfa8ce6f7598c444b1cbc946920392d2ac87c0571cdb5e7041"
+      },
+      {
+        "path": "tools/diagnostics/cook_blackpearl_surface_bindings.py",
+        "sha256": "d071bcf2b07bb42c7f2dd4366d07c7a15844e8d1ad973dff3c4b33573c87a1c1"
+      },
+      {
+        "path": "tools/diagnostics/check_blackpearl_surface_bindings.py",
+        "sha256": "e6c1a4ea5d53102687f385f48b360598763658104dbd10ab193bfa63dca62961"
+      },
+      {
+        "path": "tools/diagnostics/verify_blackpearl_surface_assembly.py",
+        "sha256": "f30b7c22254c4e091bde54d9b4590a095b75b48353c8ad911ceb92b3949d72bf"
+      }
+    ]
+  }
 }

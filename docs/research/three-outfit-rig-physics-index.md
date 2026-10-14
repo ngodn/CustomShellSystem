@@ -1,5 +1,11 @@
 # Three-outfit rig and physics research index
 
+- October 14: [Black Pearl's bound normal/facial pair](2026-10-14-eve-surface-tangents.md#bound-black-pearl-normal-and-facial-pair)
+  passes fresh reload, Windows cook and two-mesh package/readback checks while
+  preserving existing material/rig bindings, 22/137 morphs and respective bounds.
+  The known collapsed-UV fallback remains. Private paths only, no installation;
+  permanent integration and five older Eve pairs remain.
+
 - October 14: [older Eve surface/tangent checks](2026-10-14-eve-surface-tangents.md)
   preserve UVs, colors and imported normals, but identify widespread tangent
   alignment errors in all six original outfits. The private Black Pearl
