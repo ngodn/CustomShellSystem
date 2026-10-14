@@ -1,5 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, native skirt contact check:** baseline42 repeats exactly with
+read-only native contact capture in CW `work/skirt-contacts43`. The worst
+particle switches sides of the same leg collider. A single two-substep test
+in `work/skirt-substeps44/verified` reduces that witness but retains an 11.6 cm
+jump at its neighbor and almost doubles measured editor cloth-step cost.
+Rejected as a repair; no saved asset or installed files changed. All poses,
+rig values and asset hashes are preserved. The probe now checks actual solver
+substeps because UE's simulation-level statistic retains its initialization
+value. Do not repeat CCD, broad collider enlargement or increasing-substep
+trials; prior failures remain recorded. Current Belt20 game acceptance is
+still pending, with game closed. Full stable-release gates remain active.
+
 **October 14, lower-skirt localization:** the user's acceptance of the images
 is provisional, with usable physics/body collision and no obvious movement
 clipping as the target. Baseline42's worst particles are in the lower skirt,
