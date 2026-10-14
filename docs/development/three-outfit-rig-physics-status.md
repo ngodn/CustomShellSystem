@@ -1,11 +1,19 @@
 # Three-outfit implementation status
 
+**October 15, twenty Stray combo interruptions pass:** all ten release variants
+complete an actual B1-to-B2 Axatana axe chain while interrupting Iris Out and
+Come Closer. Raw native history and 863 active-ability observations verify both
+stages; five negative controls are rejected. All owned state, health/equipment,
+position/view and focus restore, with original Peony/idle and released input
+confirmed in the final read-only check. No core or assets changed.
+[Evidence and scope](../research/2026-10-15-outfit-combo-interruption.md).
+
 **October 15, twenty Stray dodge interruptions pass:** all ten variants release
 Iris Out and Come Closer on actual native dash activation. Full state, health,
 position/view and focus restoration pass; Peony and all outfit memories restore.
 The failed downhill fixture and its verified recovery are retained. The accepted
 matrix uses a separately checked uphill corridor. Other forms, moving dodges,
-combos, interaction and broader lifecycle remain open.
+interaction and broader lifecycle remain open; two-hit combos pass above.
 [Evidence](../research/2026-10-15-outfit-dodge-interruption.md).
 
 **October 15, twenty Stray attack interruptions pass:** actual Axatana secondary
@@ -14,7 +22,8 @@ ability records and three negative controls independently verify the results.
 State, health, position/view, CINE and focus restore per case; the parent restores
 Peony, its original idle and all outfit memories. No core or assets changed.
 The initial primary-attack fixture and native weapon-form recovery remain
-recorded. Combo, dodge, interaction and other-form checks stay open.
+recorded. Subsequent stationary Stray dodge and two-hit combo matrices pass;
+interaction and other-form checks stay open.
 [Evidence](../research/2026-10-15-outfit-attack-interruption.md).
 
 The initial [dodge preflight](../research/2026-10-15-dodge-preflight.md) found
@@ -26,10 +35,10 @@ updates and no extra reset. Original settings, graphics, view and focus restore.
 Observed cadence is about 30 Hz and 53 to 55 Hz. Sustained 60/higher-rate,
 other-outfit and matched performance checks remain open.
 
-The [combo follow-up](../research/2026-10-15-combo-preflight.md) retains two
-failed diagnostics with complete restoration. Neither records B2, so combo
-acceptance remains open. The unproven test branch was removed; no production
-code or assets changed.
+The [combo preflight](../research/2026-10-15-combo-preflight.md) retains two
+failed diagnostics with complete restoration. Their second inputs fell inside
+the native input block. Waiting for that block to clear produces the verified
+two-hit chain above; no production code or assets changed.
 
 **October 15, Trebuchaxe visibility repair installed:** `5f04a31900c8e323` preserves
 the native hidden preview instead of showing every nested weapon mesh. Thirteen

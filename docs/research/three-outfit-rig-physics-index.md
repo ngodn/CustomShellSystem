@@ -1,6 +1,8 @@
 # Three-outfit rig and physics research index
 
-- [Combo diagnostic limits](2026-10-15-combo-preflight.md): two failed Peony attempts restore all owned state but do not establish stage-two progression. Retains native selector/counter evidence and executed recipes; the unproven test branch is removed.
+- [Twenty outfit combo interruptions](2026-10-15-outfit-combo-interruption.md): native two-hit Axatana axe chains interrupt both facial clips on all ten release variants in Stray, with 863 raw active-ability observations, five negative controls and complete restoration.
+
+- [Combo diagnostic timing](2026-10-15-combo-preflight.md): retains two failed Peony attempts and their complete restoration. Live input-block timing explains the failures; the corrected fixture waits for the block to clear and verifies actual B1-to-B2 progression.
 
 - [Native frame-cap verification](2026-10-15-native-frame-caps.md): nine Peony captures and 4,151 raw records pass, with cap priority and all owned state restored. Actual cadence is about 30 and 53 to 55 Hz; sustained 60/higher-rate and matched performance acceptance remain open.
 

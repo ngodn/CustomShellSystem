@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, twenty Stray combo interruptions pass:** actual two-hit Axatana
+axe chains interrupt Iris Out and Come Closer across all ten release variants.
+Raw native records verify both stages in every case, with 863 active-ability
+observations and five rejected negative controls. State, health, equipment,
+position/view, CINE and focus restore; a final read-only check confirms original
+Peony, idle, settings and released input. Earlier failed attempts remain recorded;
+their second press fell inside the native input block. No core or assets changed.
+[Evidence and scope](../research/2026-10-15-outfit-combo-interruption.md).
+
 **October 15, native frame-cap capture passes:** the verified game setter
 preserves both cap value and console priority. Nine Peony captures contain
 4,151 independently checked timing records, with advancing finite body state
@@ -8,10 +17,10 @@ Actual cadence is about 30 Hz and 53 to 55 Hz, so sustained 60/higher-rate and
 matched performance acceptance remain open. No production core or assets changed.
 [Evidence](../research/2026-10-15-native-frame-caps.md).
 
-The subsequent [combo fixture](../research/2026-10-15-combo-preflight.md) does
-not yet observe stage B2. Both failed attempts restore the complete owned
-state; the experimental test branch is removed and its recipes retained.
-Combo acceptance remains open. No production change was made.
+The initial [combo fixtures](../research/2026-10-15-combo-preflight.md) did not
+observe stage B2. Their failed receipts and complete restoration remain recorded.
+The later native-block timing check and twenty-case matrix above resolve that
+fixture limitation for the tested two-hit chain.
 
 **October 15, twenty Stray dodge interruptions pass:** Iris Out and Come Closer
 release facial playback after actual native dash activation on all ten release
@@ -20,7 +29,7 @@ focus; the parent restores Peony, its original idle and all outfit memories.
 The first downhill fixture exceeded its displacement guard and remains failed,
 with a separate verified recovery. The completed matrix uses the checked uphill
 corridor. No core or assets changed. Moving/directional and Faithful dodge,
-combos, interaction and broader lifecycle remain open.
+interaction and broader lifecycle remain open; two-hit combos are covered above.
 [Evidence](../research/2026-10-15-outfit-dodge-interruption.md).
 
 **October 15, twenty actual attack interruptions pass:** Axatana secondary
@@ -30,8 +39,9 @@ independent verifier rejects active, natural-end and missing-attack controls.
 Each case restores state, health, position/view, CINE and focus; the parent
 restores Peony, the original idle and all outfit memories. The initial diagnostic
 mistook Axatana's native form change for an equipment failure; the failed receipt
-and verified recovery remain recorded. No core or assets changed. Combos, dodge,
-interaction, damage and Faithful attack coverage remain open.
+and verified recovery remain recorded. No core or assets changed. Subsequent
+stationary Stray dodge and two-hit combo matrices pass above; interaction,
+damage and Faithful attack coverage remain open.
 [Evidence](../research/2026-10-15-outfit-attack-interruption.md).
 
 The initial [dodge preflight](../research/2026-10-15-dodge-preflight.md)

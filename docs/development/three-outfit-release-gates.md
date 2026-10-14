@@ -74,7 +74,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   [Twenty actual stationary dodge interruptions](../research/2026-10-15-outfit-dodge-interruption.md)
   now pass both clips on all ten variants in Stray, with native activation,
   complete restoration and retained failed downhill preflight/recovery evidence.
-  Combo, moving/directional dodge, interaction, damage, other-form cases and
+  [Twenty actual two-hit combo interruptions](../research/2026-10-15-outfit-combo-interruption.md)
+  now pass both clips on all ten variants in Stray. Raw native records confirm
+  B1-to-B2 progression, released facial ownership and complete restoration.
+  Moving/directional dodge, interaction, damage, other-form cases and
   the rest of this matrix remain open.
   [Peony's four normal summon cases](../research/2026-10-15-peony-doubles.md)
   verify Default/Use CSS selection, body-input copying and cleanup for Faithful

@@ -17,8 +17,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
-    parser.add_argument('--action', choices=('secondary_attack', 'dodge'), default='secondary_attack')
+    parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge'), default='secondary_attack')
     parser.add_argument('--ground-proof', type=Path)
+    parser.add_argument('--start-evidence', type=Path)
     args = parser.parse_args()
     out = args.output.resolve()
     original, pids = describe(), processes()
@@ -83,6 +84,8 @@ def main():
                                '--clip', 'css.eve.dance.' + clip, '--action', args.action]
                     if args.ground_proof:
                         command += ['--ground-proof', str(args.ground_proof.resolve())]
+                    if args.start_evidence:
+                        command += ['--start-evidence', str(args.start_evidence.resolve())]
                     row = dict(outfit=outfit, variant=variant, clip=clip, evidence=str(folder), command=command)
                     report['cases'].append(row); atomic(out / 'result.json', report)
                     with (out / (folder.name + '.log')).open('x') as log:

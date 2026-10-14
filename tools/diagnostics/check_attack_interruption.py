@@ -1,4 +1,4 @@
-"""Interrupt one facial performance with a mapped native action and restore the view."""
+"""Interrupt facial playback with a native attack, combo or dodge, then restore state."""
 import argparse
 import json
 import math
@@ -10,6 +10,20 @@ import time
 from capture_eve_surface_variant import ROOT, describe, processes, sha, atomic
 from check_peony_live_presets import engine, customize, request, GAME
 from check_sidearm_aim_visibility import MOD, geometry_restored
+import cssx
+
+
+def fast_wait(path, predicate, timeout):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            data = json.loads(path.read_text())
+            if predicate(data):
+                return data
+        except (OSError, json.JSONDecodeError):
+            pass
+        time.sleep(.005)
+    raise TimeoutError(f'No matching acknowledgement in {path}')
 
 
 def main():
@@ -17,9 +31,12 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--clip', default='css.eve.dance.irisout')
-    parser.add_argument('--action', choices=('secondary_attack', 'dodge'), default='secondary_attack')
-    parser.add_argument('--ground-proof', type=Path, help='Required checked corridor for the stationary Stray dodge')
+    parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge'), default='secondary_attack')
+    parser.add_argument('--ground-proof', type=Path, help='Required checked corridor for the stationary Stray dodge or combo')
+    parser.add_argument('--start-evidence', type=Path, help='Verified previously occupied staircase point for the combo')
     args = parser.parse_args()
+    if args.action == 'secondary_combo':
+        cssx.wait_json = fast_wait
     out = args.output.resolve()
     if out.exists():
         raise RuntimeError('Use a new evidence directory')
@@ -43,9 +60,9 @@ def main():
     log = (out / 'requests.jsonl').open('x')
 
     def send(value):
-        log.write(json.dumps({'request': value}) + '\n'); log.flush()
+        log.write(json.dumps({'request': value, 'monotonic': time.monotonic()}) + '\n'); log.flush()
         result = engine(value)
-        log.write(json.dumps({'result': result}) + '\n'); log.flush()
+        log.write(json.dumps({'result': result, 'monotonic': time.monotonic()}) + '\n'); log.flush()
         return result
 
     signatures = set()
@@ -76,6 +93,7 @@ def main():
     player_input = get(player['controller'], 'PlayerInput')
     mappings = get(player_input, 'EnhancedActionMappings')
     dodge = args.action == 'dodge'
+    combo = args.action == 'secondary_combo'
     input_action, input_key = ('IA_Dodge', 'SpaceBar') if dodge else ('IA_Attack_Secondary', 'RightMouseButton')
     if not any(r['Action']['name'].endswith('.' + input_action) and
                r['Key']['KeyName'] == input_key for r in mappings):
@@ -103,23 +121,24 @@ def main():
     baseline = geometry()
     expected_control = baseline['control_rotation']
     test_yaw = None
-    if dodge:
+    if dodge or combo:
         if args.ground_proof is None or player['shell'] != 'CharacterId.Player.Darkform.CorruptedGenessa':
-            raise RuntimeError('Stationary dodge requires the checked Stray corridor')
+            raise RuntimeError('This action requires the checked Stray corridor')
         proof = json.loads(args.ground_proof.read_text())
         if (proof['player'] != player or proof['position'] != baseline['position'] or
                 proof['control_rotation'] != baseline['control_rotation'] or
                 proof['misses'] or proof['penetrating'] or len(proof['samples']) != 93):
-            raise RuntimeError('Dodge corridor does not match this player and view')
+            raise RuntimeError('Checked corridor does not match this player and view')
         if not all(v['trace']['ReturnValue'] and not v['trace']['OutHit']['bStartPenetrating']
                    for v in proof['samples']):
-            raise RuntimeError('Dodge corridor has an unsupported sample')
+            raise RuntimeError('Checked corridor has an unsupported sample')
         if {(v['distance'], v['width']) for v in proof['samples']} != {
                 (distance, width) for distance in range(0, 751, 25) for width in (-50, 0, 50)}:
-            raise RuntimeError('Dodge corridor coverage is incomplete')
+            raise RuntimeError('Checked corridor coverage is incomplete')
         test_yaw = proof['test_yaw']
         if not math.isfinite(test_yaw) or abs(test_yaw - baseline['rotation']['Yaw']) > .001:
-            raise RuntimeError('Dodge corridor is not the checked uphill heading')
+            raise RuntimeError('Corridor is not the checked uphill heading')
+    if dodge:
         specs = [v for v in get(asc, 'ActivatableAbilities')['Items'] if action_matches(v['Ability'])]
         if len(specs) != 1 or len(specs[0]['NonReplicatedInstances']) != 1:
             raise RuntimeError('Expected one native Stray dash instance')
@@ -129,8 +148,16 @@ def main():
         if report['dash_parameters'] != {'DashDistance': 425., 'StrafeDashDistance': 465.,
                                         'DashTravelTime': .3499999940395355}:
             raise RuntimeError('Native dash parameters differ from the prepared corridor')
+    if dodge or combo:
         report['ground_proof'] = str(args.ground_proof.resolve())
         report['ground_sha256'] = sha(args.ground_proof)
+    if combo:
+        counter_class = send({'op': 'find', 'path': '/Game/Sparta/Core/Player/Components/BPC_Player_ComboCounter.BPC_Player_ComboCounter_C'})
+        counter = call(player['pawn'], 'GetComponentByClass', ComponentClass=counter_class)
+        report['combo_counter'] = counter
+        report['combo_history_before'] = get(counter, 'DebugComboHistory')
+        if get(counter, 'CurrentComboCount') != 0:
+            raise RuntimeError('Another combo is already active')
     report.update(player=player, geometry_before=baseline, health_before=health_before)
     window = lambda name: json.loads(subprocess.check_output(['hyprctl', name, '-j']))
     prior_window = window('activewindow')
@@ -156,7 +183,7 @@ def main():
         if g['control_rotation'] != expected_control or g['view_target'] != baseline['view_target']:
             raise RuntimeError('Camera changed')
         distance = math.dist(list(g['position'].values()), list(baseline['position'].values()))
-        if distance > (800 if dodge else 200):
+        if distance > (800 if dodge or combo else 200):
             raise RuntimeError('Action travelled beyond the prepared restoration range')
         if any(keys().values()):
             raise RuntimeError('Unexpected held input')
@@ -190,6 +217,21 @@ def main():
             report['test_control_rotation'] = expected_control
             if abs(expected_control['Yaw'] - test_yaw) > .001:
                 raise RuntimeError('Prepared heading did not apply')
+        if combo:
+            if args.start_evidence is None:
+                raise RuntimeError('Combo requires verified start evidence')
+            prior = json.loads(args.start_evidence.read_text())
+            if (not prior['passed'] or prior['player'] != player or prior['geometry_before'] != baseline or
+                    not prior['health_unchanged'] or prior['core_sha256'] != args.core_sha256):
+                raise RuntimeError('Previously occupied staircase point is not valid for this fixture')
+            report['test_start'] = prior['after_action']['position']
+            report['start_evidence'] = str(args.start_evidence.resolve())
+            report['start_evidence_sha256'] = sha(args.start_evidence)
+            if math.dist(list(report['test_start'].values()), list(baseline['position'].values())) > 750:
+                raise RuntimeError('Previously occupied start is outside the checked corridor')
+            if not call(player['pawn'], 'K2_SetActorLocationAndRotation',
+                        NewLocation=report['test_start'], NewRotation=baseline['rotation'], bSweep=False, bTeleport=True):
+                raise RuntimeError('Prepared staircase start did not apply')
         started = report['started'] = perf(op='start', id=args.clip, seconds=.5, rate=1.)
         token = started['token']
         deadline = time.monotonic() + 12
@@ -214,6 +256,54 @@ def main():
         mouse = False
         report['key_hold_seconds'] = time.monotonic() - pressed_at
         report['actions_after_release'] = active_actions()
+        if combo:
+            report['combo_inputs'] = [{'pressed_at': pressed_at, 'count': get(counter, 'CurrentComboCount'),
+                                       'active_actions': report['actions_after_release']}]
+            report['timeline_only'] = False
+            report['timeline'] = []
+            deadline = time.monotonic() + 6
+            saw_block, second_pressed = False, False
+            while time.monotonic() < deadline:
+                row = dict(start=time.monotonic(), blocks=get(input_component, 'ActiveBlocks'),
+                           queue=get(input_component, 'InputQueue'),
+                           count=get(counter, 'CurrentComboCount'),
+                           actions=active_actions(), position=call(player['pawn'], 'K2_GetActorLocation'))
+                row['end'] = time.monotonic()
+                report['timeline'].append(row)
+                atomic(out / 'result.json', report)
+                if math.dist(list(row['position'].values()), list(baseline['position'].values())) > 750:
+                    raise RuntimeError('Combo reached the observation distance limit')
+                saw_block = saw_block or bool(row['blocks'])
+                if saw_block and not row['blocks'] and not second_pressed:
+                    if row['count'] != 1 or get(counter, 'CurrentComboCount') != 1:
+                        raise RuntimeError('First combo stage expired before the next press')
+                    if window('activewindow').get('address') != game_window['address'] or any(keys().values()):
+                        raise RuntimeError('Input or focus changed before second attack')
+                    if get(health_set, 'Health') != health_before:
+                        raise RuntimeError('Health changed before second attack')
+                    second_pressed = True
+                    second = dict(pressed_at=time.monotonic(), before=row)
+                    report['second_input'] = second
+                    mouse = True
+                    subprocess.run(['xdotool', *down], check=True, capture_output=True, timeout=3)
+                    time.sleep(.08)
+                    second['key_observed'] = keys()['RightMouseButton']
+                    subprocess.run(['xdotool', *up], check=True, capture_output=True, timeout=3)
+                    mouse = False
+                    second['released_at'] = time.monotonic()
+                    if not second['key_observed']:
+                        raise RuntimeError('Second attack input was not observed')
+            if not second_pressed:
+                raise RuntimeError('No first-attack block transition observed')
+            report['combo_history_after'] = get(counter, 'DebugComboHistory')
+            history = report['combo_history_after']
+            prefix = report['combo_history_before']
+            if history[:len(prefix)] != prefix:
+                raise RuntimeError('Combo history changed outside the expected append')
+            report['combo_events'] = history[len(prefix):]
+            for index in (1, 2):
+                if not any(f'GA_Player_Attack_Axatana_Axe_B{index}_' in event for event in report['combo_events']):
+                    raise RuntimeError(f'No native combo stage B{index} recorded')
         deadline = time.monotonic() + 8
         while True:
             anim = call(body, 'GetAnimInstance')
@@ -236,6 +326,10 @@ def main():
             raise RuntimeError('No expected native action was observed')
         time.sleep(3)
         report['after_action'] = guard(require_stationary=True)
+        if combo:
+            report['combo_count_after'] = get(counter, 'CurrentComboCount')
+            if report['combo_count_after'] != 0:
+                raise RuntimeError('Combo count did not reset naturally')
         report['action_passed'] = True
     except Exception as error:
         report['error'] = repr(error)
@@ -247,6 +341,12 @@ def main():
             if token is not None and current['active'] and current['token'] == token:
                 report['forced_stop'] = perf(op='stop', token=token)
             time.sleep(.5)
+            if combo:
+                deadline = time.monotonic() + 8
+                while call(call(body, 'GetAnimInstance'), 'IsAnyMontagePlaying'):
+                    if time.monotonic() > deadline:
+                        raise RuntimeError('Native combo did not finish before restoration')
+                    time.sleep(.1)
             end_geometry = guard(require_stationary=True)
             if end_geometry != baseline:
                 restored = call(player['pawn'], 'K2_SetActorLocationAndRotation',

@@ -32,6 +32,16 @@ def verify_case(row, before, after, active_attacks):
     assert before == after and geometry_restored(row['geometry_before'], row['geometry_after'])
     assert row['passed'] and all(row[k] for k in ('action_passed', 'geometry_restored',
         'state_restored', 'cine_restored', 'health_unchanged', 'keys_released', 'focus_restored'))
+    if row.get('action') == 'secondary_combo':
+        assert not row['timeline_only'] and row['second_input']['key_observed']
+        assert row['combo_count_after'] == 0
+        assert row['combo_history_after'] == row['combo_history_before'] + row['combo_events']
+        for index in (1, 2):
+            assert any(f'GA_Player_Attack_Axatana_Axe_B{index}_' in event for event in row['combo_events'])
+            assert any(f'/GA_Player_Attack_Axatana_Axe_B{index}.' in a['ability']['class'] or
+                       f'/GA_Player_Attack_Axatana_Axe_B{index}_Hold.' in a['ability']['class'] for a in active_attacks)
+        assert any(r['blocks'] for r in row['timeline'] if r['end'] < row['second_input']['pressed_at'])
+        assert row['second_input']['before']['blocks'] == [] and row['second_input']['before']['count'] == 1
 
 
 def recorded_attacks(path, action='secondary_attack'):
@@ -53,12 +63,13 @@ def recorded_attacks(path, action='secondary_attack'):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)
+    parser.add_argument('--check-only', action='store_true', help='Verify without replacing the archived verification receipt')
     args = parser.parse_args()
     root = args.directory.resolve()
     read = lambda p: json.loads(p.read_text())
     matrix = read(root / 'result.json')
     action = matrix.get('action', 'secondary_attack')
-    assert action in ('secondary_attack', 'dodge')
+    assert action in ('secondary_attack', 'secondary_combo', 'dodge')
     expected = {(o, v, c) for o, variants in OUTFITS.items() for v in variants for c in ('irisout', 'comecloser')}
     actual = [(r['outfit'], r['variant'], r['clip']) for r in matrix['cases']]
     assert len(actual) == len(expected) and set(actual) == expected
@@ -67,6 +78,11 @@ def main():
         folder = Path(case['evidence'])
         row, before, after = (read(folder / n) for n in ('result.json', 'state-before.json', 'state-after.json'))
         attacks = recorded_attacks(folder / 'requests.jsonl', action)
+        if action == 'secondary_combo':
+            records = [json.loads(line) for line in (folder / 'requests.jsonl').read_text().splitlines()]
+            histories = [reply['result'] for request, reply in zip(records, records[1:])
+                         if request.get('request', {}).get('property') == 'DebugComboHistory' and 'result' in reply]
+            assert histories == [row['combo_history_before'], row['combo_history_after']]
         assert case['passed'] and case['returncode'] == 0
         assert row['core_sha256'] == matrix['core_sha256']
         assert row.get('action', 'secondary_attack') == action
@@ -86,24 +102,32 @@ def main():
     assert matrix['passed'] and all(matrix[k] for k in
         ('state_restored', 'geometry_restored', 'cine_restored', 'process_preserved'))
     rejected = []
-    for label in ('still active', 'natural end', 'no native attack'):
+    controls = ['still active', 'natural end', 'no native attack']
+    if action == 'secondary_combo':
+        controls += ['no second stage', 'unobserved second input']
+    for label in controls:
         row, before, after, attacks = copy.deepcopy(first)
         if label == 'still active':
             row['stopped']['active'] = True
         elif label == 'natural end':
             row['stopped']['seconds'] = row['stopped']['duration']
-        else:
+        elif label == 'no native attack':
             attacks = []
+        elif label == 'no second stage':
+            attacks = [a for a in attacks if 'Axe_B2' not in a['ability']['class']]
+        else:
+            row['second_input']['key_observed'] = False
         try:
             verify_case(row, before, after, attacks)
         except AssertionError:
             rejected.append(label)
-    assert len(rejected) == 3
+    assert len(rejected) == len(controls)
     verified = dict(passed=True, action=action, cases=len(results), shell=matrix['original']['shell'],
                     results=results, rejected_controls=rejected,
                     scope=f'{action} interrupts Iris Out and Come Closer on ten outfits; '
-                          'no combo, damage, visual-contact or other-action acceptance.')
-    (root / 'verified.json').write_text(json.dumps(verified, indent=2) + '\n')
+                          'no damage, visual-contact or other-action acceptance.')
+    if not args.check_only:
+        (root / 'verified.json').write_text(json.dumps(verified, indent=2) + '\n')
     print(json.dumps({k: v for k, v in verified.items() if k != 'results'}))
 
 
