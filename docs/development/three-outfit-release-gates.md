@@ -73,8 +73,11 @@ Accepted observations apply to their recorded test scope, not every variant.
   verify Default/Use CSS selection, body-input copying and cleanup for Faithful
   and Stray primary. Focused follow-ups also verify both forms' six Peony ghost
   families and the current material parameters, morphs and hidden sections.
-  Secondary Stray, cloth/contact, additional customization combinations and
-  other outfit doubles remain open.
+  [CW's two Stray clones](../research/2026-10-15-outfit-doubles.md) now pass
+  Default and Use CSS; the completed CSS check restores full settings, CINE,
+  idle and player/view. Six older Eve variants pass Faithful copy binding and
+  cleanup. Other secondary-clone cases, cloth/contact, additional customization
+  combinations and remaining outfit/form combinations remain open.
 - Finish Genessa's two-variant CSS/CINE visual and gameplay coverage and preserve Eve/CW.
   Both variants now pass [numeric facial-track and explicit-stop checks](../research/2026-10-14-genessa-live-face-tracks.md).
   [Actual Iris Out CINE takes](../research/2026-10-14-cine-natural-end.md) also

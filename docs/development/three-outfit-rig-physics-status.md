@@ -7,9 +7,13 @@ form, resources, settings, appearance and camera. A confirmed temporary override
 is queued for investigation, including autosave behavior, not implemented.
 [Diagnosis and exact scope](genessa-form-save-switch.md).
 All six older Eve outfits pass Faithful copy binding/cleanup. CW selected with
-Default Stray mode passes both native clones; Use CSS stops before input after
-focus loss. Full saved state and Iris Out restore while preserving the newer
-view. [Evidence and remaining checks](../research/2026-10-15-outfit-doubles.md).
+Default Stray mode passes both native clones. The subsequent Use CSS run on
+`4a4402a210f4d1e8` also passes for both clones, with two groups cleaned up and
+full saved state, CINE, Iris Out and exact player/view restored. Prior interrupted
+captures remain failed. [Evidence and remaining checks](../research/2026-10-15-outfit-doubles.md).
+The [override research](../research/2026-10-15-genessa-override.md) confirms a native
+SaveGame-tagged form field and pre-save writer. Actual save scheduling/loading
+and a reversible override still need work; no save or upgrade mutation occurred.
 
 **October 15, Peony double customization verified in both forms:** Faithful
 and Stray primary each match six ghost-material families, 58 explicit source
@@ -17,8 +21,8 @@ parameters, two nonzero morphs and seven hidden sections. The focused captures
 pass after retaining a failed overlong read. Settings, CINE and player/view
 restore. [Evidence and remaining scope](../research/2026-10-15-peony-doubles.md#current-customization-follow-up).
 The original save's secondary eligibility getter returned false. The later
-upgraded save enables both clones; full CSS secondary-copy and visual/contact
-coverage remain.
+upgraded save enables both clones and CW now passes Default and Use CSS.
+Other outfits' secondary-copy and visual/contact coverage remain.
 
 **October 15, Peony normal doubles checked in four form/mode cases:** Faithful
 and Stray primary select the native mesh in Default and Peony V2 in Use CSS.

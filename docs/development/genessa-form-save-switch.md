@@ -46,6 +46,11 @@ The user also requests an optional confirmed override. This is queued in the
 goal, not implemented. Determine native form/autosave persistence and reversible
 upgrade behavior before offering a no-save-impact guarantee. Normal game rules
 remain the default, and Cancel must make no changes.
+The [override investigation](../research/2026-10-15-genessa-override.md) now
+confirms that the configured session-save class has a SaveGame-tagged form
+field and writes it from the live Darkform tag during pre-save. Current cached
+values differ from the actual Stray state; native save scheduling and load
+behavior still need verification. No save or upgrade mutation was performed.
 
 The temporary outfit state was separately restored through existing CSS mirror
 and wear controls. `restore-via-mirror.json` verifies full saved-state equality

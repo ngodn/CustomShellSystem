@@ -2,7 +2,9 @@
 
 - [Genessa native revival restriction](../development/genessa-form-save-switch.md): active Alteration blocks Faithful on the upgraded save. Immediate explanatory message installed and verified without changing form, resources, saved settings or view. Optional confirmed override queued; autosave behavior and broader cross-save checks remain open.
 
-- [Doubles across outfits](2026-10-15-outfit-doubles.md): all six older Eve outfits pass Faithful mesh binding/cleanup. Default Stray verifies both native clones with CW selected. Interrupted CSS secondary-copy captures remain failed; saved state and idle are restored without overwriting the newer view.
+- [Doubles across outfits](2026-10-15-outfit-doubles.md): all six older Eve outfits pass Faithful mesh binding/cleanup. CW passes both Stray clones in Default and Use CSS, with full restoration in the completed CSS follow-up. Earlier interrupted captures remain failed; visual cloth/contact and remaining outfit/form combinations stay open.
+
+- [Temporary Genessa override](2026-10-15-genessa-override.md): the native session-save class writes a SaveGame-tagged form field from the Darkform tag. The ability owns its blocker handle and revival has broader gameplay effects. Save scheduling/loading and reversible override behavior still need validation; no override or save mutation is installed.
 
 - [Peony normal doubles in both forms](2026-10-15-peony-doubles.md): four Default/Use CSS cases verify mesh selection and group cleanup. Focused captures additionally match six ghost families, 58 explicit source parameters, two morphs and seven hidden sections in both forms. Failed long reads/restoration guards and subsequent guarded recovery remain recorded. Secondary clone requires an eligible Mirage upgrade; visuals/contact and other outfits remain open.
 

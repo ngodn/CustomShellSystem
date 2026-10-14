@@ -68,6 +68,15 @@ No progression, save data or game assets were changed by these captures.
 
 ## Restoration and CW secondary-clone follow-up
 
+The follow-up `cw-css-revival-core/stray-css` passes on installed core
+`4a4402a210f4d1e8`. Both primary and secondary receive the captured CW mesh:
+54 active actor observations and 432 finite visual bone transforms pass the
+independent verifier. Two CSS groups are prepared and removed, with zero
+remaining active/cached groups and no fallback/error. Child and parent pass;
+full saved state, CINE, appearance, original Iris Out idle selection and
+player/view geometry restore. This closes the interrupted CSS-copy cleanup
+case below, not visual cloth/contact or other outfit/form coverage.
+
 `restore-via-mirror.json` verifies full saved-state restoration and unchanged
 player/view geometry. Existing CSS mirroring and normal wear controls restore
 both saved form choices and remembered appearances without a native form switch.

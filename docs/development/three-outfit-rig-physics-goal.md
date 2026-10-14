@@ -6,6 +6,10 @@ now reports this immediately; the live blocked request preserves form, resources
 appearance, saved settings and view. The requested optional confirmation-based
 override is queued below, with autosave impact to investigate before promising
 no save changes. [Diagnosis and verification](genessa-form-save-switch.md).
+The configured native session-save class does serialize the current Darkform
+tag. A nonpersistent CSS option alone cannot meet that promise; save scheduling,
+loading and scoped restoration require investigation. No save or ability state
+was modified by the [override research](../research/2026-10-15-genessa-override.md).
 
 **October 15, latest requested shot confirmed:** Peony fires Naylshotte with a
 100-to-72 Resolve drop; stowing hides its permanent Burn effect. Current view,
@@ -15,9 +19,10 @@ idle/outfit interaction in the remaining gameplay checks. See the
 [shot record](../research/2026-10-15-sidearm-aim.md#user-requested-repeat-shot).
 The wider Faithful doubles checks now pass all six older Eve outfits, including
 Casual Knitwear and Midsummer Alice. Both interrupted parent receipts remain.
-The upgraded save confirms both Stray clones in Default mode with CW selected;
-Use CSS still needs a complete uninterrupted capture. Temporary appearance and
-idle state are restored while preserving the newer camera view. See
+The upgraded save confirms both Stray clones in Default mode with CW selected.
+Use CSS also passes on core `4a4402a210f4d1e8`: both clones copy CW's mesh,
+two groups clean up, and the parent restores settings, CINE, Iris Out and exact
+player/view geometry. These checks do not establish visual cloth/contact. See
 [the outfit doubles evidence](../research/2026-10-15-outfit-doubles.md).
 
 **October 15, Peony double customization verified in both forms:** Faithful
@@ -26,8 +31,8 @@ parameters, two nonzero morphs and seven hidden sections. The focused captures
 pass after retaining a failed overlong read. Settings, CINE and player/view
 restore. [Evidence and remaining scope](../research/2026-10-15-peony-doubles.md#current-customization-follow-up).
 The original save's secondary eligibility getter returned false. The later
-upgraded save returns true and the Default-mode two-clone check passes; full CSS
-secondary-copy and visual/contact coverage remain.
+upgraded save returns true and CW's Default/Use CSS two-clone checks pass.
+Secondary-copy coverage for other outfits and visual/contact checks remain.
 
 **October 15, Peony normal doubles checked in four form/mode cases:** Faithful
 and Stray primary select the native mesh in Default and Peony V2 in Use CSS.
