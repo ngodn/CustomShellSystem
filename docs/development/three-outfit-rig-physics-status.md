@@ -1,5 +1,16 @@
 # Three-outfit implementation status
 
+**October 15, all six older Eve Stray pairs verified:** Black Pearl, Planet
+Diving Suit, Skin Suit, Bikini, Casual Knitwear and Midsummer Alice now pass both
+clones, mesh matching, finite sampled poses and complete two-group cleanup.
+All six restore Peony, full saved CSS state, CINE and player/view. Two diagnostic
+restoration failures were retained and corrected: unavailable saved idle choices
+are preserved, and CSSX request clients now serialize their shared channel.
+Four new concurrency/failure tests and 15 existing tooling tests pass. Core
+content and cooked assets are unchanged. Stray mesh-copy coverage now includes
+all ten appearances; remaining visual/material and Faithful UG/CW checks stay
+open. [Evidence](../research/2026-10-15-outfit-doubles.md#six-older-eve-secondary-clone-checks).
+
 **October 15, three further secondary-clone cases pass:** Peony and both UG
 variants each pass a normal Stray Use CSS summon, matching source meshes on
 both clones and cleaning up two CSS groups. CW, full CSS state, saved idle,

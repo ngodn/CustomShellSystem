@@ -138,6 +138,57 @@ interrupted restoration remains a separate case.
 
 This closes secondary mesh-copy and cleanup coverage for Peony and both UG
 variants, alongside the earlier CW pass. Visual cloth/contact, secondary ghost
-material parameter coverage, other customization combinations, six older Eve
-secondary cases and the missing Faithful UG/CW cases remain open. No native
+material parameter coverage, other customization combinations and the missing Faithful UG/CW cases remain
+open. The six older Eve secondary cases are closed by the follow-up below. No native
 form override or save-file edit was used.
+
+
+## Six older Eve secondary-clone checks
+
+All six older Eve variants now pass both Stray clones through normal ability
+input on core SHA-256 `4a4402a210f4d1e8c706726348237908be80472ef7df129b886ee657e48a5857`.
+Evidence is under `doubles-secondary-20261015/older-eve/`:
+
+| Variant | Case folder | Actor observations | Finite visual bone transforms |
+| --- | --- | --- | --- |
+| Black Pearl | `eve-black_pearl` | 48 | 384 |
+| Planet Diving Suit | `eve-prototype` | 46 | 368 |
+| Skin Suit | `eve-skin_suit` | 46 | 368 |
+| Bikini | `serialized/eve-bikini` | 48 | 384 |
+| Casual Knitwear | `serialized/eve-casual_sweater` | 46 | 368 |
+| Midsummer Alice | `serialized/eve-midsummer_alice` | 46 | 368 |
+
+`verify.py` independently rechecks the raw samples, parent and child receipts,
+full state equality and geometry restoration. `six-outfit-verification.json`
+passes all six. Each summon observes primary and secondary with the expected
+copied mesh, finite sampled transforms, unchanged health, normal input release,
+and two created/removed CSS groups returning to zero without error or fallback.
+Each parent restores the starting Peony selection, all saved settings and idle
+preferences, CINE and player/view geometry. The batch also restores the previous
+focused window. These are binding and lifecycle checks, not visual cloth/contact
+or secondary ghost-parameter acceptance.
+
+Two fixture failures remain recorded:
+
+- The first Bikini child summon passes, but its parent cannot restore the stale
+  saved idle `eve_idle_712`, which the current catalog no longer advertises.
+  `recovery/result.json` verifies exact restoration using a stationary guarded
+  reload of the identical core bytes. The mapped filename ends in
+  `state-recovery.dll`; its content hash is unchanged. No game save is edited.
+  The fixture now preserves unavailable saved choices and still rejects any
+  actually playing montage before input.
+- The continuation's Bikini summon and state/geometry/CINE restoration pass,
+  but its final appearance query times out while a separate inspection runs.
+  The CSSX client used one request/response file without coordinating callers.
+  `continuation/restoration-followup.json` independently confirms full state
+  and appearance restoration. The original parent stays failed. A bounded
+  advisory lock now serializes the entire client exchange, including temporary
+  file creation, across processes. Four isolated tests cover two concurrent
+  clients, lock timeout without a write, and release after response/write failure.
+  Fifteen existing tooling tests also pass. The final serialized Bikini parent
+  and both remaining outfits pass end to end.
+
+No game core code or cooked assets changed. This completes Stray mesh-copy and
+cleanup coverage for all ten release appearances. Faithful UG/CW, visual
+cloth/contact, secondary ghost parameters and additional customization remain
+separate open checks.

@@ -112,6 +112,8 @@ def main():
             raise TimeoutError('Form did not settle')
 
         old_idle = before['animation_choices'][original['outfit']][original['variant']]['idle']
+        available_idle = old_idle == 'original' or any(row['id'] == old_idle for row in original['idles'])
+        report['saved_idle_available'] = available_idle
         idle_changed = False
         if original['idle_override']:
             raise RuntimeError('An external idle override is active')
@@ -119,7 +121,9 @@ def main():
         baseline = report['geometry_before'] = geometry()
         checkpoints = report['geometry_checkpoints'] = [baseline]
         try:
-            if old_idle != 'original':
+            # Preserve stale choices that the current catalog cannot restore.
+            # The stationary guard below rejects an actually playing montage.
+            if old_idle != 'original' and available_idle:
                 idle_changed = True
                 command('animation_choice', outfit=original['outfit'], variant=original['variant'], slot='idle', value='original')
                 expected['animation_choices'][original['outfit']][original['variant']]['idle'] = 'original'

@@ -17,6 +17,8 @@ from css import wait_json
 CASES = {'peony': ('eins0fx.seduxtress', 'peony'),
          'ug-eve': ('eins0fx.unholygenessa', 'eve'),
          'ug-genessa': ('eins0fx.unholygenessa', 'genessa')}
+CASES.update({f'eve-{variant}': ('eins0fx.seduxtress', variant)
+              for variant in OUTFITS['eins0fx.seduxtress'] if variant != 'peony'})
 
 
 def main():

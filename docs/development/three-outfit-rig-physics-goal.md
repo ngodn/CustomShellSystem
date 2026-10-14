@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, all six older Eve Stray pairs verified:** Black Pearl, Planet
+Diving Suit, Skin Suit, Bikini, Casual Knitwear and Midsummer Alice now pass both
+clones, mesh matching, finite sampled poses and complete two-group cleanup.
+All six restore Peony, full saved CSS state, CINE and player/view. Two diagnostic
+restoration failures were retained and corrected: unavailable saved idle choices
+are preserved, and CSSX request clients now serialize their shared channel.
+Four new concurrency/failure tests and 15 existing tooling tests pass. Core
+content and cooked assets are unchanged. Stray mesh-copy coverage now includes
+all ten appearances; remaining visual/material and Faithful UG/CW checks stay
+open. [Evidence](../research/2026-10-15-outfit-doubles.md#six-older-eve-secondary-clone-checks).
+
 **October 15, Peony and both UG secondary clones verified:** three normal
 Stray Use CSS summons pass on `4a4402a210f4d1e8`, each observing primary and
 secondary with matching source meshes and complete two-group cleanup. Each

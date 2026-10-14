@@ -16,6 +16,7 @@ game runs (the loader watches core/ and switches on the game thread).
 """
 from __future__ import annotations
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -231,9 +232,25 @@ def request(game: Path, value: dict, timeout: float = 20) -> dict:
     mod = mod_root(game)
     if not (mod / 'dev/enabled.txt').exists():
         raise RuntimeError('The dev channel is off: create Mods/CSSX/dev/enabled.txt and restart the game')
-    rid = str(time.time_ns())
-    atomic(mod / 'runtime/request.json', {**value, 'id': rid})   # 'extension' names the target; 'id' is the request id
-    return wait_json(mod / 'runtime/response.json', lambda j: j.get('id') == rid, timeout)
+    deadline = time.monotonic() + timeout
+    runtime = mod / 'runtime'
+    runtime.mkdir(parents=True, exist_ok=True)
+    # One request and response slot serve all clients. Keep the lock inode in
+    # place so another process cannot lock a replacement while we hold it.
+    with (runtime / 'request.lock').open('a') as lock:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f'No request slot available in {runtime}')
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                time.sleep(min(0.05, remaining))
+        rid = str(time.time_ns())
+        atomic(runtime / 'request.json', {**value, 'id': rid})
+        return wait_json(runtime / 'response.json', lambda j: j.get('id') == rid,
+                         max(0, deadline - time.monotonic()))
 
 
 def main() -> None:
