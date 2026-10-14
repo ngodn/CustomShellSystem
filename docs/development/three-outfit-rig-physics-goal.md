@@ -1,5 +1,13 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, storage maintenance:** removed 1,530,592,127 bytes of generated
+DDC from five terminal Genessa cooks after recording the removal list and
+checking open files. Source, cooked outputs and evidence outside those caches
+retain their metadata (5,582 files). Root remains 101G free; theark increases
+from 14G to 15G (`df -h`). Exact inventory and result are in
+`work/three-outfit-rig-physics/cook-cache-cleanup-20261014`. No installed changes.
+Game remains closed, so pending gameplay checks are not marked passed.
+
 **October 14, sidearm effect ownership:** seven shipped weapon/VFX packages
 identify the persistent Naylshotte Burn system and its `SpawnedPermanent`
 component lifecycle. CSS hides the actor and meshes but rechecks only the

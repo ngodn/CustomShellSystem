@@ -1,11 +1,14 @@
 # Three-outfit implementation status
 
-**October 14, skirt baseline and naming:** CW now displays `Commander White`
+**October 14, skirt contact and naming:** CW now displays `Commander White`
 without the Development label in its installed manifest/catalog; asset payloads
 remain the Belt20 trial. A separate 241-frame native editor cloth capture of
 that mesh confirms active simulation and records individual particle steps up
-to 12.16 cm away from loop boundaries. Visible-surface/contact interpretation
-is still needed before a skirt repair. No new solver settings or assets were
+to 12.16 cm away from loop boundaries. Native contact capture43 subsequently
+confirms the worst particle crosses the same leg collider. The single
+two-substep comparison44 retains an 11.6 cm neighboring jump and nearly doubles
+editor step cost, so it is rejected. Practical game acceptance remains pending.
+No new solver settings or assets were
 installed. See CW `work/display-name41`, `work/skirt-baseline42` and the
 [motion record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md).
 
