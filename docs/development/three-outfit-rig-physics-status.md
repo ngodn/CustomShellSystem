@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, supporting Eve rig provenance verified:** original and migrated
+sources, successful reload/cook receipts and eight supporting payloads match for
+hair, hand and both feet graphs. The current writer reproduces both preserved
+secondary-graph payloads exactly, with unchanged/inverse header checks passing.
+[Evidence](../research/2026-10-14-eve-motion-preservation.md#supporting-cook-sources-and-compiled-graph-replay).
+Only two duplicate replay files were removed (113,796 logical bytes). No game
+changes. Peony remains selected; the repaired older-outfit visual check and
+full lifecycle/performance/stable-release gates remain open.
+
 **October 14, first live capture after launch:** the game is running with
 Peony selected. Her mesh, post-process owner and one body rig resolve correctly;
 public motion inputs and accepted tighter limits match. The accepted CW core is

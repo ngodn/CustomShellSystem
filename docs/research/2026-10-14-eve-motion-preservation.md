@@ -91,3 +91,39 @@ No appearance, camera, movement or settings changes were sent. No screenshot
 was captured. This establishes Peony's active bindings after launch, not the
 repaired older outfits' appearance, sunlight-noise acceptance or full gameplay
 regression. Black Pearl/Planet selection and visual checking remain pending.
+
+## Supporting cook sources and compiled graph replay
+
+`build/eve-supporting-rig-source-check1/verified.json` now connects the four
+supporting cooks to their retained sources. For `CR_Hair`, `CR_Hand`,
+`Fit/ABP_BikiniFeet2` and `Fit/ABP_KnitFeet1`, the audit verifies:
+
+- Original source hashes and migrated editor hashes match the recorded inputs.
+- The namespace reload and cook succeeded; the cook command mounted that editor
+  content read-only, and each package occurs in its explicit cook list.
+- All eight retained cooked files match the original package proof and the
+  current shading candidate's source files.
+
+For `ABP_Secondary`, the original cooked header and export data remain available.
+The current writer, whose source matches the retained build checkout, replayed
+the original 309-entry namespace map. Its unchanged and inverse header checks
+passed. Both generated files exactly match the accepted preserved graph and the
+current candidate. No compiled export data was edited or graph recompiled.
+The audit pins 47 inputs and rechecks them before recording success.
+
+Recipe: `tools/diagnostics/verify_eve_supporting_rig_sources.py`. It requires a
+new output directory; the completed run retains its command, request, writer
+report, input hashes, exit code 0 and verification. This extends the retained
+source/cook proof; it is not a fresh UE cook, a full toolchain rebuild or a new
+live test.
+
+The [prewritten cleanup list](../development/cleanup-2026-10-14-eve-supporting-rig-replay.md)
+covered only the two verified duplicate replay files. Both were removed,
+113,796 logical bytes, along with the empty stage directory. Original sources,
+cooks, accepted payloads and rollback remain. `df -h` before and after reports
+root 92G available and theark 67G available; rounded readings do not establish
+physical space reclaimed.
+
+The user's ready signal was followed by another stable owner capture and
+`ready.jpg`. Both still show Peony, in shade. `ready-check.json` records this
+selection mismatch. The repaired older-outfit visual test remains pending.

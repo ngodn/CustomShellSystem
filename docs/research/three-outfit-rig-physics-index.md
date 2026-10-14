@@ -1,6 +1,6 @@
 # Three-outfit rig and physics research index
 
-- [Eve motion preserved in the installed shading candidate](2026-10-14-eve-motion-preservation.md): six packages, retained tighter source/cook and prior preset inputs verified. New live checks remain.
+- [Eve motion preserved in the installed shading candidate](2026-10-14-eve-motion-preservation.md): six packages, retained tighter source/cook, four supporting cook chains and exact compiled graph replay verified. Peony live bindings pass; older-outfit visual checks remain.
 
 - October 14: [combined Eve candidate installed](2026-10-14-eve-surface-tangents.md#installed-candidate)
   with the game closed, exact installed/rollback readback and unchanged

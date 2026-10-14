@@ -1946,5 +1946,45 @@
         "sha256": "8d244f56c3389721f3e7de38c794076a8e3eb97fd3561546855ef5912298e976"
       }
     ]
+  },
+  "supporting_rig_sources": {
+    "passed": true,
+    "retained_cooked_packages": 4,
+    "compiled_graph_replayed": true,
+    "no_game_changes": true,
+    "receipts": [
+      {
+        "path": "build/eve-supporting-rig-source-check1/cleanup-completed.json",
+        "sha256": "300ed1c6b3ecc54ccf6ba19e77b77d52c8135e624939ab2839919fa3eb3dc10b"
+      },
+      {
+        "path": "build/eve-supporting-rig-source-check1/cleanup-plan.json",
+        "sha256": "44c03e21badff1a985004609c52239b0464f5f67a5da5bbc5442ddf0a93c4d56"
+      },
+      {
+        "path": "build/eve-supporting-rig-source-check1/command.json",
+        "sha256": "6132e892309244b4c5c35d415066732077a24fc337c2b6ea1aa280d82735a5f1"
+      },
+      {
+        "path": "build/eve-supporting-rig-source-check1/exit.json",
+        "sha256": "1e3f6691f455051e8adb15d961e4bf3c7a17e83dd88b2afdd13315cc288250bb"
+      },
+      {
+        "path": "build/eve-supporting-rig-source-check1/inputs.json",
+        "sha256": "bb58698d25a9b53351af1fd60575a0d98f15c847d59ac5cdfc3d32c9892c1e95"
+      },
+      {
+        "path": "build/eve-supporting-rig-source-check1/relocation.json",
+        "sha256": "2d663c34e8d402265d43a84ad79bbdd47cd8ff0da78253c1b0261ec7b2c5641c"
+      },
+      {
+        "path": "build/eve-supporting-rig-source-check1/request.json",
+        "sha256": "3879cdc2f05ff3f80c62f84b3d27b5928b1ffe5f7ee4a86986051b543c8cfe2c"
+      },
+      {
+        "path": "build/eve-supporting-rig-source-check1/verified.json",
+        "sha256": "8b1efb4bc4d0dae32eea22009902c2028c3d6976589847922c478fb6dc65c04b"
+      }
+    ]
   }
 }
