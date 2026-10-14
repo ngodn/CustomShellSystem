@@ -1,8 +1,13 @@
 # Three-outfit rig and physics research index
 
+- October 14: [editable source checks and Alice recovery](2026-10-14-eve-editable-source-recovery.md)
+  account for all 21 parts across Bikini, Knitwear and Alice. Two Alice source
+  mismatches are repaired in separate import-derived libraries; installed
+  appearance is unchanged. Full rig/assembly and gameplay gates remain separate.
+
 - October 14: the user accepts the installed CW walking-only correction:
-  "Walking looks right now". Preserve the accepted correction and finalize
-  private paths before public packaging. The current ten-pair
+  "Walking looks right now". Permanent paths are now installed with exact
+  accepted compressed motion; runtime path resolution remains pending. The current ten-pair
   [facial preservation audit](2026-10-14-facial-preservation.md) also passes its
   stated geometry/morph/decoded-cloth scope; gameplay coverage remains separate.
 

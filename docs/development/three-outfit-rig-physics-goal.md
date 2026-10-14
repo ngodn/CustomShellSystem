@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, three Eve editable-source chains checked:** all 21 parts of
+Bikini, Knitwear and Alice now reproduce their accepted imports for geometry,
+weights, morphs and surface corner data. Alice's suit triangulation/normals and
+ribbon weights failed against the old libraries; two import-derived editable
+parts now pass fresh reload/export comparisons, with original sources and
+failures preserved. The manifest ties all parts to the unchanged current Eve
+container through the earlier cooked comparisons. No game files changed.
+See [source recovery](../research/2026-10-14-eve-editable-source-recovery.md).
+This does not close source rig/material assembly, remaining cooked surface
+fields, gameplay or performance gates. The game remains closed at this checkpoint.
+
 **October 14, accepted walk finalized and installed:** CW's nine permanent-path
 source assets are saved under `Animations/Locomotion/Walk`. Fresh reload preserves
 all raw animation data, 395 reference transforms and 36 sample bindings; all

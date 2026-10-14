@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 14, editable source recovery:** all 21 parts across Bikini, Knitwear
+and Alice match their accepted imports for the checked geometry, weights,
+morphs, UVs, normals and colors. Alice's old suit/ribbon sources fail two distinct
+checks; import-derived replacements pass without changing installed assets.
+The [source manifest](eve-source-parts-20261014.json) pins complete part coverage
+and links existing cooked comparisons. See
+[findings and limits](../research/2026-10-14-eve-editable-source-recovery.md).
+
 **October 14, CW walking accepted:** the user answered "Walking looks right
 now" to the installed walking-only trial's boots-on/off check. The reported
 obvious walking tilt is accepted as corrected for that check. Preserve accepted
