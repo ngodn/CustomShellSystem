@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW permanent walking paths resolve live:** the already-loaded
+final BlendSpace has 36 matching samples referencing all eight accepted final
+animation paths. The facial performance adapter and one Belt20 rig are active;
+shape inputs agree. Peony and the entire saved CSS state restore exactly.
+[Evidence](../research/2026-10-14-cw-release-live-bindings.md).
+No movement or CINE control was sent. Terrain/lifecycle/performance gates remain.
+
 **October 14, repaired Black Pearl and Planet live bindings pass:** both facial
 meshes resolve the shared animation adapter and accepted tighter body rig in
 CINE. Temporary clothing/variant changes restored Peony and the entire saved

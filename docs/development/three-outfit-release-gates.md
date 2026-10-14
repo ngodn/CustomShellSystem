@@ -30,7 +30,7 @@ historical rehearsal and is not the stable release tag.
 | Genessa face and visibility after outfit changes | Owner-restoration/visibility fix installed; cross-character Iris Out and interruption accepted | Both Genessa variants, CSS/CINE, both forms and doubles matrix |
 | Genessa rear cloth | World correction accepted; preview clipping explicitly accepted for now | Other poses/variants and cost, without reopening accepted preview limitation |
 | CW hair | User accepts installed strand trial and tested face/eyes/interruption | CINE, doubles, full lifecycle and measured cost |
-| CW inward/sideways walking feet | User accepts the walking-only correction after the boots-on/off prompt; jog/sprint already accepted. Permanent paths now installed with exact accepted compressed animation data and passing combined catalog/profile checks | Runtime resolution of renamed paths on next startup; terrain/lifecycle and performance regression checks; preserve native IK and rollback |
+| CW inward/sideways walking feet | User accepts the walking-only correction after the boots-on/off prompt; jog/sprint already accepted. Permanent paths now installed with exact accepted compressed animation data and passing combined catalog/profile checks | Final paths now resolve live (36 matching samples/eight clips); terrain/lifecycle and performance regression checks remain; preserve native IK and rollback |
 | CW belt physics and janky skirt | User accepts both while walking/turning. Live Belt20 execution and nine shape-input routing cases pass, with exact saved-state restoration | Extreme-shape visual checks, lifecycle and matched cost; preserve accepted physics and stop solver tuning |
 | CW dev/Development display qualifiers | Clean Commander White manifest/catalog name and description installed; packaging recipes updated; assets and IDs unchanged | Final stable version/archive filenames and release text; historical releases remain immutable |
 | More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children | Live recovery/facial behavior above 128 and repeated-switch leak/lifetime checks |
@@ -87,8 +87,9 @@ installation plan pass. The [source/package chain](../research/2026-10-14-eve-so
 accounts for the repaired editor meshes and 273 older material/texture packages.
 The combined candidate is installed with rollback and exact post-install
 readback. The user has since opened the game; Peony's live bindings and tighter
-motion limits pass a read-only capture. Black Pearl/Planet visual checking is
-pending. Preserve accepted Peony/CW motion and the separate MISC workaround.
+motion limits pass a read-only capture. Black Pearl/Planet adapter and rig reads
+pass with exact state restoration; their shaded stills do not establish sunlight
+or continuous-motion acceptance. Preserve accepted Peony/CW motion and the separate MISC workaround.
 Runtime checks and the full stable-release gates above remain open.
 
 All 46 parts across the six original Eve outfits now have passing editable-source
@@ -114,7 +115,8 @@ editor replays, standalone cooked readback and combined catalog checks are in CW
 `work/foot-walk-orientation3`. Existing jog/sprint and accepted belt/skirt assets
 are unchanged. The permanent-path follow-up is now installed from CW
 `work/walk-final-paths1`, with exact accepted compressed data and passing combined
-package checks. Runtime resolution on next startup remains pending. Native rig reference replacement
+package checks. [Live path resolution](../research/2026-10-14-cw-release-live-bindings.md)
+now passes for the final BlendSpace and all eight directional clips. Native rig reference replacement
 did not establish an improvement; phase matching shows the active rig preserves
 foot orientation while adjusting position. Keep native grounding. The narrower
 ankle alignment improves mean reference bank in walk/jog/sprint but not every

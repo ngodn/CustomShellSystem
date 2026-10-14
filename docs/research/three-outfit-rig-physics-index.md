@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [CW permanent paths live](2026-10-14-cw-release-live-bindings.md): 36 samples, eight final clips and active facial/Belt20 ownership pass; exact saved-state restoration. No new walking, terrain or performance acceptance.
+
 - [Repaired Eve live variant captures](2026-10-14-eve-live-variant-capture.md): Black Pearl/Planet facial owners, body inputs and exact saved-state restoration pass in CINE. Shaded stills do not close the sunlight or continuous-motion gates.
 
 - [Current coordinated upgrade audit](2026-10-14-coordinated-upgrade-audit.md): four current/mixed legacy package combinations pass imports, provider-content and facial catalog checks. Save/CINE/live checks remain.
