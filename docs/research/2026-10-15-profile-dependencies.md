@@ -84,6 +84,10 @@ was produced, and no unrelated files were removed.
 
 ## Remaining profile investigation
 
+Follow-up: [the mirror-profile correction](2026-10-15-profile-forms.md) now
+reproduces and repairs the selection mismatch below, with a single-save live
+Faithful/Stray regression. The separate cross-save form report remains open.
+
 The profile command selects by literal current-shell ID. Normal appearance lookup
 can instead resolve a living shell's saved slot while Harbinger mirroring is on.
 Review profile lookup and deferred-apply slot ownership together before changing

@@ -31,8 +31,7 @@ int main(int argc,char** argv) {
         auto reject=[&](const std::string& reason) {
             std::string error;
             try {
-                css::profile_selection(preset,catalog,shell);
-                css::restore_profile_settings(state,preset);
+                css::restore_profile_snapshot(state,preset,catalog,shell);
             } catch(const std::runtime_error& e) { error=e.what(); }
             check(error.find(reason)!=std::string::npos,"Unavailable profile was not rejected before settings changed");
             check(state.json()==before,"Unavailable profile changed current settings or saved choices");
@@ -51,17 +50,77 @@ int main(int argc,char** argv) {
         catalog.outfits[0].shells={"CharacterId.Player.Shell.Tiel"};
         reject("Profile outfit does not support the current shell");
         catalog.outfits[0].shells={shell};
-        const auto* selected=css::profile_selection(preset,catalog,shell);
-        check(selected && selected->outfit=="test.profile" && selected->variant=="regular",
+        const auto selected=css::profile_selection(preset,catalog,state,shell);
+        check(selected.choice && selected.choice->outfit=="test.profile" && selected.choice->variant=="regular",
               "Reinstalled profile did not resolve without resaving");
         check(state.json()==before,"Preflight changed saved state");
         check(css::restore_profile_settings(state,preset) && state.misc_rules.at("seal").mode=="hidden",
               "Available profile no longer restores its settings");
-        check(!css::profile_selection(preset,catalog,"CharacterId.Player.Shell.Eredrim"),
+        check(!css::profile_selection(preset,catalog,state,"CharacterId.Player.Shell.Eredrim").choice,
               "A profile without a shell selection invented an outfit");
         preset.selections["CharacterId.Player.Shell.Eredrim"]={"absent.other","missing",{}};
-        check(css::profile_selection(preset,catalog,shell)!=nullptr,
+        check(css::profile_selection(preset,catalog,state,shell).choice.has_value(),
               "An unavailable selection for another shell blocked the current shell");
+    }
+    {
+        const std::string living="CharacterId.Player.Shell.Genessa";
+        const std::string stray="CharacterId.Player.Darkform.CorruptedGenessa";
+        css::Catalog catalog;
+        css::Outfit outfit;
+        outfit.id="test.mirror";
+        outfit.same_skeleton=true;
+        for(const auto* id:{"saved","separate","current"}) {
+            css::Variant variant; variant.id=id; outfit.variants.push_back(variant);
+        }
+        catalog.outfits.push_back(outfit);
+        css::State state;
+        state.darkform_mirror_cleaned=true;
+        state.last_living_shell=living;
+        state.selections[living]={outfit.id,"current",{}};
+        state.selections[stray]={outfit.id,"separate",{}};
+        css::Preset profile;
+        profile.selections=state.selections;
+        profile.selections[living].variant="saved";
+        const auto before=state.json();
+        const auto selected=css::profile_selection(profile,catalog,state,stray);
+        check(selected.choice && selected.choice->variant=="saved" && selected.slot==living,
+              "Mirrored profile loaded the separate Darkform choice instead of the saved living choice");
+        check(state.json()==before,"Resolving a mirrored profile changed saved state");
+        state.harbinger_mirror=false;
+        const auto separate=css::profile_selection(profile,catalog,state,stray);
+        check(separate.choice && separate.choice->variant=="separate" && separate.slot==stray,
+              "Profile ignored disabled mirroring");
+        state.harbinger_mirror=true;
+        state.last_living_shell.clear();
+        check(css::profile_selection(profile,catalog,state,stray).slot==living,
+              "Profile did not infer the living source after a severed restart");
+        profile.selections.erase(stray);
+        check(css::profile_selection(profile,catalog,state,stray).choice.has_value(),
+              "Profile without a separate Darkform slot lost its mirrored outfit");
+        profile.selections.clear();
+        const auto native=css::profile_selection(profile,catalog,state,stray);
+        check(!native.choice,"Default profile invented a mirrored outfit");
+        css::restore_profile_snapshot(state,profile,catalog,stray);
+        check(state.selections.empty(),"Default profile left an old mirrored or separate choice to reapply");
+        profile.selections[living]={outfit.id,"saved",{}};
+        profile.selections[stray]={outfit.id,"separate",{}};
+        profile.selections["CharacterId.Player.Shell.Tiel"]={"absent.other","old",{}};
+        profile.misc_rules["sidearm"]={"hidden"};
+        profile.has_misc_rules=true;
+        const auto loaded=css::restore_profile_snapshot(state,profile,catalog,stray);
+        check(loaded.slot==living && loaded.choice && loaded.choice->variant=="saved",
+              "Restoring the snapshot lost the mirrored choice");
+        check(state.selections.at(stray).variant=="separate" &&
+              state.selections.at("CharacterId.Player.Shell.Tiel").outfit=="absent.other",
+              "Restoring a profile overwrote its independent or unavailable other-shell choice");
+        check(state.misc_rules.at("sidearm").mode=="hidden","Snapshot lost global settings");
+        const auto restored=state.json();
+        css::restore_profile_snapshot(state,profile,catalog,stray);
+        check(state.json()==restored,"Repeated mirrored profile restore changed state");
+        const auto restarted=css::State::parse(restored);
+        check(css::appearance_selection_key(restarted,catalog,stray)==living &&
+              restarted.selections.at(stray).variant=="separate",
+              "Restart lost the mirror source or independent form choice");
     }
     {
         css::State defaults;

@@ -723,11 +723,11 @@ struct Core {
         else if (action == "load_look" || action == "load_profile") {
             auto name = command.at("name").get<std::string>();
             const auto& preset = state.presets.at(name);
-            const auto* selected=profile_selection(preset,catalog,appearance.shell);
-            if (!selected) { restore_pending = true; forget_current = true; }
-            else { selected_outfit = selected->outfit; selected_variant = selected->variant; pending_custom=selected->custom; apply_pending = true; }
             const auto previous_misc=state.misc_rules;
-            if(restore_profile_settings(state,preset)) dirty=true;
+            const auto selected=restore_profile_snapshot(state,preset,catalog,appearance.shell);
+            selected_outfit.clear(); selected_variant.clear(); pending_custom.reset(); custom_only=false;
+            restore_pending=!selected.choice; apply_pending=selected.choice.has_value(); forget_current=false;
+            dirty=true;
             if(state.misc_rules!=previous_misc) appearance.set_misc_rules(state.misc_rules);
             ui_refresh = true; report("Profile loaded: " + name);
         }
@@ -1335,7 +1335,8 @@ struct Core {
                 const auto shell = appearance.shell;
                 Selection requested;
                 bool mirror_sourced=false;   // look came from the mirror's source slot, not this shell's own
-                if (!selected_outfit.empty()) {
+                const bool explicit_selection=!selected_outfit.empty();
+                if (explicit_selection) {
                     requested = {std::move(selected_outfit), std::move(selected_variant), {}};
                     const std::string custom_key = requested.outfit + "/" + requested.variant;
                     if(state.remembered_custom.contains(custom_key)) requested.custom=state.remembered_custom.at(custom_key);
@@ -1427,7 +1428,7 @@ struct Core {
                             // "keeps its own" could never fall back to the default once the mirror
                             // had fired. Only save a look the shell picked for itself.
                             if(!mirror_sourced) state.selections[shell] = requested;
-                            if(state.harbinger_mirror && shell.starts_with(DARKFORM_PREFIX) && !last_living_shell.empty()) {
+                            if(explicit_selection && state.harbinger_mirror && shell.starts_with(DARKFORM_PREFIX) && !last_living_shell.empty()) {
                                 state.selections[last_living_shell] = requested;
                             }
                             const std::string custom_key = requested.outfit + "/" + requested.variant;

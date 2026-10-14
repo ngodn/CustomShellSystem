@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, mirrored profile restoration installed:** the failing Darkform
+selection regression is repaired. Profiles restore their saved selection table
+and use normal mirror reconciliation, preserving independent form choices.
+Twenty-six host suites and archived-profile checks pass. The second live fixture
+passes repeated Stray loads, return to Faithful, exact settings/CINE restoration
+and guarded restoration of displacement during the form round trip. The first
+fixture's position failure remains recorded. [Evidence and scope](../research/2026-10-15-profile-forms.md).
+The cross-save form report, doubles and broader gameplay/release matrix remain open.
+The subsequent visibility regression finds actor-only hidden-flag drift on three
+items after the form checks. Meshes remain hidden, but enforcement does not repair
+an owner actor whose hidden flag was cleared. Repair and retest this lifecycle
+gap next; a connection to the Tarstone report is not yet proven.
+
 **October 15, unavailable-profile preflight installed:** missing outfits, removed
 variants and shell incompatibility now reject before changing profile settings.
 The failing regression passes, along with 26 host suites, 12 archived profiles,

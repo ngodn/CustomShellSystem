@@ -82,9 +82,14 @@ void save_profile_snapshot(State& state,const std::string& name) {
         throw std::runtime_error("All 64 profiles are used. Replace or delete a saved profile.");
     state.presets[name]=Preset{state.selections,state.walk_animation,state.animation_choices,state.misc_rules,state.doubles,true};
 }
-const Selection* profile_selection(const Preset& preset,const Catalog& catalog,const std::string& shell) {
-    const auto selected=preset.selections.find(shell);
-    if(selected==preset.selections.end()) return nullptr;
+ProfileSelection profile_selection(const Preset& preset,const Catalog& catalog,const State& state,const std::string& shell) {
+    State saved;
+    saved.selections=preset.selections;
+    saved.harbinger_mirror=state.harbinger_mirror;
+    saved.last_living_shell=state.last_living_shell;
+    ProfileSelection result{appearance_selection_key(saved,catalog,shell),{}};
+    const auto selected=preset.selections.find(result.slot);
+    if(selected==preset.selections.end()) return result;
     const auto& choice=selected->second;
     if(std::none_of(catalog.outfits.begin(),catalog.outfits.end(),[&](const auto& outfit) {return outfit.id==choice.outfit;}))
         throw std::runtime_error("Profile outfit is unavailable: "+choice.outfit+
@@ -94,7 +99,14 @@ const Selection* profile_selection(const Preset& preset,const Catalog& catalog,c
             ". Install a version that includes this variant, or choose another profile.");
     if(!catalog.compatible(choice.outfit,shell))
         throw std::runtime_error("Profile outfit does not support the current shell: "+choice.outfit+".");
-    return &choice;
+    result.choice=choice;
+    return result;
+}
+ProfileSelection restore_profile_snapshot(State& state,const Preset& preset,const Catalog& catalog,const std::string& shell) {
+    auto selected=profile_selection(preset,catalog,state,shell);
+    restore_profile_settings(state,preset);
+    state.selections=preset.selections;
+    return selected;
 }
 bool restore_profile_settings(State& state,const Preset& preset) {
     bool changed=false;

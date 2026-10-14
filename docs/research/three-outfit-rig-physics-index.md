@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Profiles across mirrored Genessa forms](2026-10-15-profile-forms.md): profile loads use the saved living choice, preserve the independent Darkform choice and restore the full selection snapshot. Offline regressions and repeated live Stray loads pass. The fixture now restores displacement during the form round trip; the cross-save report remains open.
+
 - [Unavailable profile preflight](2026-10-15-profile-dependencies.md): missing outfit, variant and compatibility rejection passes before global settings change. New core installed; repeated world profile loads preserve visibility/settings/view. Actual missing-provider/reinstall lifecycle and mirrored slot ownership remain open.
 
 - [Paired body-solver timing](2026-10-15-body-cost.md): 48 editor cases and 28,800 measured updates at 30/60/120 Hz pass enable/bypass, step-count and finite-output checks. Existing six-case input regression passes. Timing variation prevents a precise runtime cost claim; no game settings or assets changed.

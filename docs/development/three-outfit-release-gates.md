@@ -22,7 +22,9 @@ historical rehearsal and is not the stable release tag.
 | Peony pockets, robotic ornaments, neckline | Included in the accepted V2 design, with requested gloves/collar/heels/ponytail retained | Preserve accepted appearance |
 | Peony palettes, removable pieces, flowing trim, profiles | User accepts four palettes, flow in CSS/world and restored profiles | Both-form and broader lifecycle coverage |
 | Profile saved at Default visibility retains later overrides | Empty MISC snapshot correction installed; offline regression and actual world/preview profile loads pass. Exact saved settings and post-menu world visibility restore | Broader profile/lifecycle coverage; preserve missing legacy fields. Intermediate inactive-world-actor differences inside the menu are documented |
-| Loading an unavailable outfit profile partly changes settings | Catalog preflight installed; missing outfit, variant and incompatible-shell rejection pass offline without changing saved state. Normal repeated world loads pass on the new core | Actual missing-provider/reinstall lifecycle, mirrored profile-slot ownership and runtime asset failures remain outside this check |
+| Loading an unavailable outfit profile partly changes settings | Catalog preflight installed; missing outfit, variant and incompatible-shell rejection pass offline without changing saved state. Normal repeated world loads pass on the new core | Actual missing-provider/reinstall lifecycle and runtime asset failures remain outside this check |
+| Profile loading uses a separate Darkform choice while mirroring | Selection snapshot restoration and normal mirror reconciliation installed. Offline tests and repeated live Stray loads preserve Peony and the separate CW choice; Faithful/settings/view restore | Single-save coverage only; independent-form activation, other outfits and cross-save report remain distinct |
+| Hidden item actor flag drifts after form checks | Live visibility fixture finds three actor flags visible while their meshes remain hidden; resetting settings repairs the actor flags. Per-frame enforcement checks only the component flag | Repair actor-only drift and retest form/visibility lifecycle; attached-effect visibility and Tarstone causation remain unproven |
 | Peony excessive jiggle despite Firm/Natural | Restoration correction and tighter limits installed; user accepts walking/Iris Out motion, live limit readback passes | Other six Eve variants and lifecycle/performance regression |
 | Peony harsh lighting | User subsequently reports the unchanged build looks fine | No lighting fix established; monitor recurrence separately from sunlight report |
 | Older Eve tangent basis | All six regular/facial pairs now pass source, cook, cloth, customization and combined package preservation checks at permanent paths; source and native-material inputs are verified | Candidate installed offline with rollback and unchanged core/settings. Runtime shading/cloth/facial and performance regression remain; not a proven sunlight-noise fix |
@@ -95,7 +97,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   [Unavailable-profile preflight](../research/2026-10-15-profile-dependencies.md)
   now prevents catalog rejection from partially restoring global settings.
   Offline rejection/reinstall cases and live normal profile loads pass; real
-  installation transitions and mirrored profile-slot ownership remain open.
+  installation transitions remain open. [Mirrored profile restoration](../research/2026-10-15-profile-forms.md)
+  now passes repeated Stray loads and a Faithful return with independent saved
+  choices preserved. This single-save test does not close the cross-save report
+  or the full lifecycle matrix.
 - Prepare coordinated stable artifacts only after applicable gates pass or the
   user explicitly accepts a remaining limitation. Verify final versions,
   dependency fingerprints, source/tag/build provenance, checksums and notes.
