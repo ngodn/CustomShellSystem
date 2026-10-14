@@ -1,5 +1,15 @@
 # Three-outfit implementation status
 
+**October 14, CW gameplay acceptance:** the user confirms the installed belt
+and skirt both look fine while walking and turning. Preserve their current
+physics. Iris Out footage and live rig readbacks are in `cw-belt-live1`.
+Nine shape cases (neutral, six individual maxima, combined maximum, restored
+neutral) match mesh, post-process and belt inputs. An immediate save-file
+equality check failed; the subsequent independent readback confirms complete
+state restoration. Both results remain in `cw-belt-live1/shapes`. This closes
+normal-motion acceptance and live input routing, not extreme-shape visual
+contact, matched performance or the full lifecycle/regression gates.
+
 **October 14, skirt contact and naming:** CW now displays `Commander White`
 without the Development label in its installed manifest/catalog; asset payloads
 remain the Belt20 trial. A separate 241-frame native editor cloth capture of

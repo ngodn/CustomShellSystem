@@ -1,5 +1,12 @@
 # Three-outfit rig and physics research index
 
+- October 14: user accepts current CW belt/skirt walking and turning. Live
+  Belt20 execution, Iris Out footage and nine successful shape-input cases
+  are retained in `cw-belt-live1`. Exact saved-state recovery is verified
+  after an initially premature equality check. Preserve the installed
+  physics; no further skirt solver tuning is justified by the retained
+  offline particle jumps alone. See the current implementation status.
+
 - October 14: CW `work/belt-playback35/REPRODUCE.md`, scene start/release
   preservation, successful private eight-root cook/readback, and rejected
   Studies-path catalog integration. Final asset-path migration reuses cook33;

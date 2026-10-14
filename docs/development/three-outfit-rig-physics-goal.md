@@ -1,5 +1,53 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW live shape routing:** neutral, each of six individual
+maximum controls, their combined maximum and restored neutral all match
+across mesh morph weights, post-process inputs and Belt20 bridge inputs.
+The rig is enabled, initialized and scale-supported in each of nine cases.
+The initial driver's immediate saved-state check fails; a later independent
+check confirms exact state and live neutral restoration. Raw failure and
+follow-up receipt are retained under `cw-belt-live1/shapes`; the driver now
+waits for the state write. This establishes live routing/recovery, not visual
+clearance at every shape or matched performance.
+
+**October 14, CW practical movement accepted:** after walking and turning
+with the belt, then enabling the skirt and repeating, the user reports
+"Both look fine in motion." This accepts the current installed belt/skirt
+under the practical normal-motion threshold. Preserve the candidate and stop
+skirt solver tuning. The earlier automated walking attempt remains untested;
+the acceptance evidence is the user's direct game check. Shape extremes,
+matched performance, facial/lifecycle regression and the other stable-release
+gates remain separate requirements.
+
+**October 14, CW live Belt20 check:** the user reopened the game with CW.
+The live mesh is SK_Facial20 and its scene adapter is
+ABP_FacialPerformanceBelt20. Hair, body and belt ControlRig nodes are enabled
+at full alpha. Belt20 is initialized with supported scale; three sequential
+readbacks advance TotalSteps from 43,612 to 44,688 with ResetCount unchanged
+at 314. These property reads are not an atomic contact snapshot. One reports
+four unresolved bridge entries, so this does not establish clipping-free
+collision. A 12-second Iris Out recording and 24 valid final-pose snapshots
+over 6.018 seconds are retained under
+`work/three-outfit-rig-physics/cw-belt-live1`.
+
+The user's coat and skirt are hidden, and all six shape inputs are zero.
+No skirt gameplay acceptance follows from this capture. The walking attempt
+stopped before input because the game was no longer visible to the recorder;
+the subsequent visibility wait expired. No movement was sent. The first
+driver's camera guard also interrupted its preference restoration; an explicit
+follow-up restored Iris Out and verified the complete saved state. The retry
+driver now restores that preference independently of spatial guards. Current
+player is unchanged and no walk trial is active. Belt/skirt walking, body
+shape checks and the full stable-release gates remain pending. No installed
+files or physics settings changed.
+
+**October 14, Tarstone live observation:** Naylshotte has Burn/OnCrit tags
+and an active PS_Nailshot_Burn component owned by the hidden weapon. Actor
+and both meshes remain hidden in three captures and five observations after
+Iris Out releases; the effect reports not recently rendered. The visible
+residue is not reproduced. Keep the bug open and avoid diagnosing it from
+the component-active flag alone. See `sidearm-tarstone-visibility.md`.
+
 **October 14, storage maintenance:** removed 1,530,592,127 bytes of generated
 DDC from five terminal Genessa cooks after recording the removal list and
 checking open files. Source, cooked outputs and evidence outside those caches
