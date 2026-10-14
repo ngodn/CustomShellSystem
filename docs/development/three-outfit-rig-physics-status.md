@@ -1,5 +1,10 @@
 # Three-outfit implementation status
 
+**October 14, CW walking still fails:** the user accepts jog and sprint but
+still sees obvious foot tilt while walking. The four ankle/toe AnimationRelative
+modes are installed, but have not resolved the walking report. Preserve the
+accepted gaits and belt/skirt physics while investigating walking specifically.
+
 **October 14, CW gameplay acceptance:** the user confirms the installed belt
 and skirt both look fine while walking and turning. Preserve their current
 physics. Iris Out footage and live rig readbacks are in `cw-belt-live1`.
@@ -2028,7 +2033,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
 | Hair | Genessa unused-solver candidate is installed; matched cost remains. CW separate-strand trial is installed and the user reports it looks fine. Both normal/facial regular and scene graphs pass paired component lifecycle checks. Two source-visible left-bang head-turn intersections improve but remain. CINE/doubles, full lifecycle and measured gameplay cost remain; see [CW study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md) |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
-| CW walking feet | User confirms tilt with boots shown and hidden. Twelve moving gameplay poses captured in `walking-feet-live4`; four reconstructed bare-foot poses reviewed from front/side. The gameplay leg rotations differ from the standalone gait captures, so native blend/foot-correction values are the next comparison. The private AnimationRelative trial remains unadopted; no foot repair is installed. See [foot investigation](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/walking-foot-report.md) |
+| CW walking feet | October 14 user check: jog and sprint are fine, walking still visibly tilts. Four ankle/toe AnimationRelative modes are installed; full-leg retargeting and native IK bypass were rejected. Prior boots-on/off report remains relevant. Preserve accepted gaits and pursue a walking-specific correction. See [foot investigation](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/walking-foot-report.md) |
 | Trebuchaxe report | Low priority, queued and unverified |
 
 Next: investigate the reported CW walking-foot tilt, then complete CW

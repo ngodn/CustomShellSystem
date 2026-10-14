@@ -1,5 +1,18 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, CW gait feedback:** the user reports "jog and sprint are fine.
+walk still obvious tilt." Walking remains an unresolved visible defect with
+the installed ankle trial. Preserve accepted jog/sprint and belt/skirt physics;
+investigate a walking-specific correction. Lower aggregate banking measurements
+are not walking acceptance. Boots-on/off remains part of the original report.
+
+The subsequent retained-pose component-orientation screen is mixed: maximum
+bank decreases but mean and median increase. No candidate is installed from
+that screen. Evidence and reproduction are in CW `docs/walking-foot-report.md`
+and `work/foot-walk-orientation3/screen.json`. Next isolate the visible walking
+orientation error before choosing a correction; do not repeat global IK bypass
+or full-leg retargeting, both already rejected.
+
 **October 14, CW live shape routing:** neutral, each of six individual
 maximum controls, their combined maximum and restored neutral all match
 across mesh morph weights, post-process inputs and Belt20 bridge inputs.
