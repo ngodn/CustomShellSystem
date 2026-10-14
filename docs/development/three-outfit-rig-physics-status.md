@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, Knitwear private cloth pair passes offline:**
+normal/facial sources, one repaired zero tangent each, cloth/configs and
+22/137 morphs survive reload/cook/readback. All 38,792 garment triangles remain;
+the 1,679-point simulation is unchanged. The pair has matching render and cloth
+mapping digests. See [Knitwear checks](../research/2026-10-14-eve-surface-tangents.md#knitwear-cloth-repair).
+No installation. Knitwear final paths, Alice, combined integration and all
+full-goal live/performance/release gates remain. Root/theark read 94G/5.3G
+immediately after duplicate cook cleanup; old cache paths still resolve.
+
 **October 14, Planet permanent paths pass offline:**
 normal/facial final assets preserve the verified private cloth pair through
 fresh reload, Windows cook and independent readback. The reader uses 24 direct

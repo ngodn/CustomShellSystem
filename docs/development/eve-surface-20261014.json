@@ -1068,5 +1068,157 @@
       }
     ],
     "scope": "Permanent Planet normal/facial paths verified through editor reload, cook/IoStore and exact decoded comparison with the accepted private pair. Full integration, Knitwear/Alice and runtime/performance/release remain."
+  },
+  "knit_cloth_pair": {
+    "passed_offline_private_pair": true,
+    "installed": false,
+    "permanent_paths_complete": false,
+    "render_vertices_per_mesh": 150466,
+    "render_triangles_per_mesh": 216613,
+    "regular_facial_morphs": [
+      22,
+      137
+    ],
+    "simulation_vertices": 1679,
+    "simulation_triangles": 2999,
+    "mapped_render_vertices": 20324,
+    "cloth_render_triangles": 38792,
+    "known_collapsed_uv_fallbacks_per_mesh": 284,
+    "unexpected_nonorthogonal_vertices": 0,
+    "receipts": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/candidate.mesh.receipt.json",
+        "sha256": "0625b9d77bccd48d18d2ab375d6bc47b998d20531829442afcd3d8c4f5d58ac7"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/verified.json",
+        "sha256": "a740a484e4e4ef5a2239b436852931f248d64c0b79acdaa62ba6613f70e471f2"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/pack/verified.json",
+        "sha256": "52cbbf1e80b2a0298acdfdbbc31a79871e1f0d80f203693e4857364d0f0fe5e8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/pack/tangent-fallbacks.json",
+        "sha256": "45d0351320194d512152c7ee1c7902bd00107d3a6c8d5ad342a551a797de78a4"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/binding-plan.json",
+        "sha256": "1e61065bae9cd2c52f6d53e1640fa1509dd91e09effa39e99ec8f84b291c4762"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/bindings-reload.json",
+        "sha256": "586976f73e142d364ae93b6eff44ec23eda5b5aad4a4838f64b3fd864e4061d9"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/candidate-cleanup-plan.json",
+        "sha256": "70b1e913b1208587bc9cf2d83956b320faf1cc147369e0f8478f72d0b801d58d"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/candidate-cleanup-completed.json",
+        "sha256": "15c7f7a04f13f709b2361a6cf4d32d63c416f0a627dcafb2e71c0ee2cc34597c"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/knit-normal-1-verified.json",
+        "sha256": "f82b0403847c5452ea260b8d7dfdfc3f69925513d1ce2c9a6452a29a237ace90"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/tangent-bake/knit-facial-1-verified.json",
+        "sha256": "7f17585be2859b16c502b9f74eb912c439569efed86a5c743bdc5d97e8d5089a"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-normal-verified.json",
+        "sha256": "d9601dda8491c8f2bedda0ab9f5ebf68cb4a0eef4ffef5bfbb4f7341737eec9a"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-facial-verified.json",
+        "sha256": "7442c7b05c4334551cb312930d5c82904324541f55fcee28c8ad75399bef4e5c"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-cook/exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-pack/roundtrip.json",
+        "sha256": "b6e911f8c176b90ecbd3344d9d18e2f6536f9d6e36ad39a397c994f5d1696643"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-pack/readbacks-verified.json",
+        "sha256": "96ec0da5270996b15ee4305e47e522b68c40fe132b9015d34a46ea60a497a21e"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-pack/bindings-verified.json",
+        "sha256": "bdaea6be38e51a604af485bddc05642d3ac51fb8d55b519862affb6cfd54df1f"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-pack/normal/basis.json",
+        "sha256": "c6aad67e7d545dc3b8838019107ee458af31ec5e36f3ab41c2e0dcf15477f897"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-pack/facial/basis.json",
+        "sha256": "6cc78e9f01bed5d46676f17771ee802c555b5bb69059e48119c9c5ad30ddf7f0"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-pack/normal/fallback.json",
+        "sha256": "b6b289909a21c2b3382b18ec1938ba9c1395dca596b538eb8e39e1c050842d68"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-pack/facial/fallback.json",
+        "sha256": "5781084669b11d5c146fdccf11ed6293df1fb51ab5cc5668ececa7f566377caf"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-cleanup-plan.json",
+        "sha256": "b1854998e69c5e0f84663be7da19f4bf4edf78f1d9b635d2afedfc53a60b826e"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/knit-cleanup-completed.json",
+        "sha256": "c8d94cb4d994159ecfeac29be2240cc65c8a97595ad57fb9b2e5ca0955ac0c50"
+      }
+    ],
+    "sources": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/editor/Content/CSSAuthoring/EveSurface20261014/SK_KnitNormalCloth1.uasset",
+        "sha256": "e71b058e5ebb614f091da763e3eba04baa9f77ac20ddca81b82c98d877fac986"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-transfer/editor/Content/CSSAuthoring/EveSurface20261014/SK_KnitFaceCloth1.uasset",
+        "sha256": "0bb070103232ff766cc8597e87b780d7423b9133ea6846af888ce6bb4cd4bb44"
+      }
+    ],
+    "cleanup_recipes": [
+      {
+        "path": "tools/diagnostics/cleanup_eve_ordered_candidate.py",
+        "sha256": "990c3d1975a59892513f7380bf41b880ccd3e56d7fc62d8c49fb5c8e28d52d2c"
+      },
+      {
+        "path": "tools/diagnostics/cleanup_eve_cloth_pair.py",
+        "sha256": "e9f45ab1e4bdadd8f8165d09c8b70a97bf8432d8fb8919029cec6a873cdff2b7"
+      }
+    ],
+    "scope": "Private Knitwear normal/facial source, tangent, cloth/config and paired mapping checks pass through cook/readback. Final paths, Alice, combined package and all runtime/performance/release gates remain."
+  },
+  "cook_cache_deduplication": {
+    "completed": true,
+    "canonical_cache": "work/three-outfit-rig-physics/eve-surface-20261014/knit-ordered/cook/out/ddc",
+    "keep_canonical_while_links_exist": true,
+    "receipts": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cache-dedup-audit.json",
+        "sha256": "3777790725166419c83d9d592a35c169436c281d8cd0ca66df7de70b73372689"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cache-dedup-plan.json",
+        "sha256": "3175e4d1b07f8da610d8b8748b24b40d6bdb4f9ff1fc2b8c933528f5607f906c"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/cache-dedup-completed.json",
+        "sha256": "7e2abcacbe58bd03a2b16049257cd5e6426b7b78a224f356c23d797e33597514"
+      }
+    ],
+    "prelist": {
+      "path": "docs/development/cleanup-2026-10-14-eve-cook-caches.md",
+      "sha256": "1b32065d0b63c3750dd32df9b9ca521c2b650364419e535cf32cef8bd766b1e5"
+    },
+    "scope": "Six exact file-by-file cache subsets replaced by checked absolute links. Nonidentical and unassessed folders untouched."
   }
 }

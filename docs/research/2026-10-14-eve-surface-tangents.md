@@ -537,6 +537,87 @@ No installation or live check. The 294 known collapsed-UV fallbacks per mesh
 remain. Knitwear/Alice repairs, combined Eve packaging and the full goal's
 runtime, performance and release requirements are still open.
 
+## Knitwear cloth repair
+
+Knitwear's reordered import and fresh reload preserve all 216,613 triangles,
+379 bind bones and 22 body morphs. Its first Windows cook, IoStore roundtrip
+and independent source comparisons pass for geometry, weights, morphs and
+surface fields. The repaired corner sharing produces 150,466 render vertices.
+The initial tangent report retains one zero-length tangent, 284 known collapsed-
+UV fallbacks and no unexpected nonorthogonal vertices; it is not a complete
+shading pass.
+
+The existing material/rig bindings and 115 facial expressions have been applied
+to separate regular/facial intermediates and verified after fresh reload.
+Both tangent bakes now fix exactly one zero corner and reload with no zero or
+nonunit tangents. The regular/facial cloth transfers pass creation and separate
+reload, preserving the accepted 1,679 physical vertices, 2,999 simulation
+triangles, reflected settings, transition arrays and tether data. The comparator
+rejects a deliberately changed physical vertex.
+
+The paired Windows cook, IoStore roundtrip and independent geometry, surface,
+weights, morph and tangent comparisons pass. Every previously valid packed
+basis stays unchanged; each repaired zero corner matches the UV-gradient
+expectation within 0.005335, with matching handedness. Both meshes retain
+284 known collapsed-UV fallbacks and zero unexpected nonorthogonal vertices.
+
+`cloth-transfer/knit-pack/bindings-verified.json` confirms exact decoded cloth/
+config preservation except the new GUID, and matching material slots, bounds,
+bind references and mesh properties except explicit tangent storage. The
+regular/facial render and cloth-mapping digests match. The assigned garment
+retains 38,792 render triangles and now has 20,324 mapped render vertices.
+Regular/facial morph counts remain 22/137. These checks do not prove runtime
+collision or row-for-row mapping equality with the differently indexed old
+mesh. Permanent paths, full Eve integration and gameplay remain unverified.
+
+First-cook cleanup follows the
+[prelisted removal groups](../development/cleanup-2026-10-14-eve-knit-cloth.md).
+It removed 1,465,397,199 logical bytes of duplicates and disposable prefix,
+retaining source assets, package payloads and the failed tangent classification.
+Immediate `df -h` changed from root/theark 94G/6.0G to 94G/6.7G available.
+No game files or saved settings changed.
+
+The [paired cleanup](../development/cleanup-2026-10-14-eve-knit-pair.md) then
+removed 2,520,604,139 duplicate/disposable logical bytes after verifying both
+retained sources and every shipping payload. Immediate root/theark free space
+changed from 94G/4.6G to 94G/5.3G. Receipts, sources, DDC and readbacks remain.
+
+## Shared retained cook cache
+
+The [cache cleanup list](../development/cleanup-2026-10-14-eve-cook-caches.md)
+covered six completed caches, all exact file-by-file subsets of the retained
+`knit-ordered/cook/out/ddc`. Each old directory was renamed aside, replaced by
+an absolute symlink, and checked through its original path before removing
+the duplicate. The canonical cache must remain while these links exist.
+Knitwear's later paired cook successfully read its cache through the original
+Skin Suit/Bikini path.
+
+`cache-dedup-audit.json`, `cache-dedup-plan.json` and
+`cache-dedup-completed.json` retain the selection, every file hash and results.
+2,133,428,593 duplicate logical bytes were removed; immediate `df -h` remained
+root/theark 94G/6.6G, so this is not a claim of equivalent physical space gained.
+All 230 existing checkpoint pins still matched afterward. Black Pearl, Bikini
+and the first Planet caches were not identical subsets and were left intact.
+Everything outside the explicit list was unassessed and untouched.
+
+## Combined Eve packaging notes
+
+The final six-pair integration must replace only the twelve repaired normal/
+facial mesh packages in the current accepted Eve container. Preserve Peony,
+rigs, animations, materials, textures, saved-look IDs and controls. Verify all
+unchanged export/bulk payloads and the final twelve mesh readbacks, then refresh
+Eve container fingerprints in the current shared facial-adapter metadata.
+The existing `tools/eve-fit/assemble_body_limit_trial.py` demonstrates that
+metadata update and its catalog/import checks, but its rig-only replacement set
+and historical baseline are not the new assembly recipe.
+
+`tools/eve-fit/release_peony.py` still requires the historical beta.12 tag and
+shared version. Do not use it as the stable-release path. The active goal
+requires CSS/shared 1.0.0 and Eve 1.5.0, alongside the other two outfit releases.
+Use the current shared metadata that includes accepted CW walking support;
+reusing the older Peony baseline would risk discarding later changes. Final
+packaging remains pending Knitwear/Alice and full-goal release gates.
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six

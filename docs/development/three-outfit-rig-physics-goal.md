@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, Knitwear private cloth pair verified offline:**
+the regular/facial pair now passes source, tangent, cloth transfer, fresh
+reload, Windows cook and independent readback. Original simulation/settings,
+38,792 garment triangles, bindings and 22/137 morphs are preserved. The pair
+shares matching render/mapping digests. See [Knitwear evidence](../research/2026-10-14-eve-surface-tangents.md#knitwear-cloth-repair).
+The 284 known collapsed-UV fallbacks remain. No installation or launch request.
+Next: Knitwear permanent paths, Alice, combined Eve packaging and the full
+runtime/performance/release gates. Prelisted duplicate cleanup immediately
+reports root/theark 94G/5.3G free. Six identical old cook caches now retain their
+paths through links to the canonical Knitwear cache; keep that cache.
+
 **October 14, Planet Diving permanent paths verified offline:**
 both regular/facial meshes now use their existing release paths. Creation,
 fresh reload, Windows cook and independent IoStore readback preserve the
