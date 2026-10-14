@@ -234,6 +234,36 @@ and copy branch when it remains zero. The runtime object still reads
 skip session persistence, and no interception or save mutation was attempted.
 
 
+
+### Focused native decompilation after the full import timeout
+
+The retained REA CLI job ended with `provider_timeout` after 3,600,000 ms during
+`search_strings`; `native-save1/trace.json` contains that failure and no snapshot
+was produced. Its temporary process/project are gone. Progress logs were retained
+before cleanup. Do not restart that whole-executable analysis unchanged.
+
+The supported Ghidra headless `-noanalysis` route now completes six focused
+queries in `native-save-focused/`, using the same executable hash. The Java
+script explicitly seeds the previously identified routine ranges and records
+pseudocode, errors and identity for each. All six decompiler calls complete.
+The temporary project is removed; only recipes, logs and small JSON outputs
+remain. This uses Ghidra 12.1.2 and the existing Java 26 installation, with a
+4 GiB heap and a five-minute process deadline. No running game access occurs.
+[Headless options](https://github.com/NationalSecurityAgency/ghidra/blob/master/Ghidra/RuntimeScripts/support/analyzeHeadlessREADME.md),
+[decompiler API](https://ghidra.re/ghidra_docs/api/ghidra/app/decompiler/DecompInterface.html).
+
+`review.json` cross-checks the common writer's zero-initialized session flag,
+conditional pre-save/copy, dispatch flag checks and resume validity predicates
+against the independent objdump evidence. Pseudocode can follow branches and
+tail calls beyond the initially requested disassembly interval: notably,
+`SaveSessionForward` incorporates the common writer, and `UpdateFrom` extends
+beyond its initial unwind fragment. The interval is not a guarantee that every
+reported statement lies inside it. Types and names remain inferred, unresolved
+calls remain, and decompiler completion is not a verified serialization boundary.
+Actual session scheduling, save/load behavior and the optional override still
+need validation. No override or persistence hook is installed.
+
+
 ## Implementation constraints
 
 Normal native rules remain the default. Selecting an override must first show

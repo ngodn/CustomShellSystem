@@ -41,7 +41,9 @@ Further cooked readback identifies the loader: the player controller consumes
 the saved form flag only when the game mode permits session resume. Resume also
 gates saved Resolve. Its current live getter returns false; other loads remain
 unverified. Native save scheduling and a persistence-preserving override are
-still under investigation, using the retained `native-save1` analysis job.
+still under investigation. The retained `native-save1` whole-executable job
+timed out; a focused no-autoanalysis fallback completed six native decompilations
+and corroborated the static branch findings without touching the game.
 Independent static disassembly now links SaveSession, SaveToDisk and AutoSave
 to a common routine. Live reflection confirms GetSessionSave returns the runtime
 session object, and exposes an outdated SaveToDisk signature in the older native
