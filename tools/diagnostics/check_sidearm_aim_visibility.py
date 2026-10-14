@@ -8,7 +8,7 @@ import sys
 import time
 
 from capture_eve_surface_variant import ROOT, GAME, describe, processes, sha
-from check_peony_live_presets import engine, request
+from check_peony_live_presets import customize, engine, request
 sys.path.insert(0, str(ROOT / 'tools'))
 from css import atomic
 import css_capture
@@ -28,6 +28,8 @@ def main():
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--fire-once', action='store_true',
                         help='Send one focused left click while aiming and record its normal Resolve cost')
+    parser.add_argument('--interrupt-performance', choices=('css.eve.dance.irisout', 'css.eve.dance.comecloser'),
+                        help='Start this facial clip and require actual aiming to interrupt it')
     parser.add_argument('--input-mode', choices=('console', 'keyboard'), default='keyboard',
                         help='Keyboard requires the focused game; console is an unverified diagnostic alternative')
     args = parser.parse_args()
@@ -49,8 +51,11 @@ def main():
         raise RuntimeError('Expected core is not installed and mapped')
     before = json.loads((MOD / 'state/state.json').read_text())
     original = describe()
+    performance = lambda **fields: customize({'action': 'performance', **fields})
     if before['misc_rules'].get('sidearm') != {'mode': 'in_use'} or original['busy'] or original['expression']['performance']:
         raise RuntimeError('Need settled appearance and Only when in use sidearm visibility')
+    if performance(op='status')['active']:
+        raise RuntimeError('An existing performance owns the player')
     player = engine({'op': 'player'})
 
     def get(target, prop):
@@ -177,6 +182,7 @@ def main():
                   initial=initial, geometry_before=baseline, infusion_before=initial_infusion,
                   input_mode=args.input_mode, input='Ctrl aim down/up', firing_input=False,
                   resources_before=initial_resources, fire_requested=args.fire_once,
+                  interrupt_performance=args.interrupt_performance,
                   movement_input=False, camera_input=False)
     atomic(out / 'result.json', report)
 
@@ -195,8 +201,26 @@ def main():
         return {'command': command}
 
     pressed = False
+    performance_token = None
     try:
         guard()
+        if args.interrupt_performance:
+            report['performance_started'] = performance(op='start', id=args.interrupt_performance, seconds=.5, rate=1.)
+            performance_token = report['performance_started']['token']
+            deadline = time.monotonic() + 8
+            while True:
+                clip = performance(op='status')
+                expression = describe()['expression']
+                if not clip['active'] or clip['token'] != performance_token:
+                    raise RuntimeError('Requested performance lost ownership before aim')
+                if clip['weight'] == 1 and expression['performance']:
+                    break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('Facial performance did not become active')
+                time.sleep(.1)
+            report['performance_before_aim'] = clip
+            report['expression_before_aim'] = expression
+            atomic(out / 'result.json', report)
         pressed = True
         report['press_reply'] = aim_input(True)
         deadline = time.monotonic() + 5
@@ -212,6 +236,23 @@ def main():
         if not report['aim_key_observed'] or 'stowed' in aimed['socket'].lower() or aimed['actor_hidden'] or aimed['mesh_hidden']:
             raise RuntimeError('Aim did not draw and reveal the sidearm')
         report['aim_check_passed'] = True
+        if args.interrupt_performance:
+            deadline = time.monotonic() + 5
+            while True:
+                clip = performance(op='status')
+                expression = describe()['expression']
+                if clip['token'] != performance_token:
+                    raise RuntimeError('Performance ownership changed during interruption')
+                if not clip['active'] and not expression['performance']:
+                    break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('Aiming left the facial performance active')
+                time.sleep(.1)
+            report['performance_after_aim'] = clip
+            report['expression_after_aim'] = expression
+            if not clip['reason'] or clip['seconds'] >= clip['duration']:
+                raise RuntimeError('No early gameplay interruption was recorded')
+            report['interruption_check_passed'] = True
         if args.fire_once:
             guard(aiming=True)
             if resources() != initial_resources or not focused_x11_game():
@@ -254,6 +295,10 @@ def main():
         try:
             if pressed:
                 report['release_reply'] = aim_input(False)
+            if performance_token is not None:
+                clip = performance(op='status')
+                if clip['token'] == performance_token and clip['active']:
+                    report['cleanup_stop'] = performance(op='stop', token=performance_token)
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
                 stowed = snapshot()
@@ -284,7 +329,8 @@ def main():
             report['cine_restored'] = request(GAME, {'op': 'model', 'extension': 'eins0fx.cine'})['result'] == cine['result']
             report['keys_released'] = not any(keys().values())
             report['process_after'] = processes()
-            report['passed'] = bool(report.get('aim_check_passed') and (not args.fire_once or report.get('fire_check_passed')) and 'stowed' in stowed['socket'].lower() and
+            report['passed'] = bool(report.get('aim_check_passed') and (not args.fire_once or report.get('fire_check_passed')) and
+                (not args.interrupt_performance or report.get('interruption_check_passed')) and 'stowed' in stowed['socket'].lower() and
                 stowed['actor_hidden'] and stowed['mesh_hidden'] and not stowed['effect_rendered'] and
                 report['geometry_restored'] and report['state_restored'] and report['infusion_preserved'] and
                 report['cine_restored'] and report['keys_released'] and processes() == pids)

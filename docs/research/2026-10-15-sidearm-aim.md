@@ -53,6 +53,16 @@ so these are diagnostic images. They do not prove projectile impact or damage.
 The late last-ability sample remains Aiming Hold and is not claimed as evidence
 of the firing ability identity.
 
+## User-requested repeat shot
+
+`work/three-outfit-rig-physics/sidearm-user-shot-20261015/` repeats one normal
+shot at the user's explicit request after the broader interruption checks began.
+The corrected fixture exits zero: mouse press observed, 28-point Resolve drop,
+visible drawn Burn, hidden stowed Burn, unchanged infusion and full settings,
+CINE and player/view restoration. No resource write is sent. This is a complete
+passing execution of the corrected fixture, in addition to the separately
+verified earlier run. It does not establish projectile impact or damage.
+
 ## Input and measurement corrections
 
 The new-save directories without a suffix and with suffixes `-2` through `-5`

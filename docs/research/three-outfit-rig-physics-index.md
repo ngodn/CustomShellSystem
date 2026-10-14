@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Facial playback interrupted by aiming](2026-10-15-outfit-aim-interruption.md): twenty cases across all ten release variants pass actual aim, early facial-playback release, drawn/stowed Burn visibility and restoration. Two failed preflights and an RPC-envelope comparison correction are retained. Other actions, Stray/doubles, contact and cost remain separate.
+
 - [Native Genessa CINE](2026-10-15-native-cine.md): actual Iris Out natural completion and explicit exit release the correct native montage and restore Peony, saved settings and player/view. Other clips, facial support, contact and gameplay remain separate.
 
 - [Native idle library live bindings](2026-10-15-native-idle-library.md): all 60 choices resolve on original Genessa; 240 carrier samples match and 1,080 bone-position reads are finite. Peony, saved settings, CINE and player/view restore. Visual/contact, CINE and gameplay checks remain distinct.

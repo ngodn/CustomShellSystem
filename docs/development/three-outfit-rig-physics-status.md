@@ -1,5 +1,15 @@
 # Three-outfit implementation status
 
+**October 15, twenty actual aim-interruption cases pass:** Iris Out and Come
+Closer release facial playback across all seven Eve outfits, both Unholy Genessa
+variants and Commander White. Drawn/stowed Burn visibility, infusion, health,
+Resolve and input cleanup pass. Peony, saved settings and the CINE model restore;
+player/view restoration passes with only actor-rotation roundoff tolerance.
+[Evidence, failed preflights and scope](../research/2026-10-15-outfit-aim-interruption.md).
+This covers aiming in Faithful form, not the remaining attack/dodge/interaction,
+Stray/doubles, contact or performance gates. The user-requested repeat normal shot
+also passes the corrected firing fixture.
+
 **October 15, Naylshotte actual draw/fire/stow verified:** Ctrl aiming exposes
 Naylshotte and its permanent Burn effect; a primary shot produces a 28-point
 Resolve drop; stowing hides both weapon and attached effect. Infusion, saved

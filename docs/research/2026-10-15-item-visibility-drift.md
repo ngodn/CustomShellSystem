@@ -2,8 +2,8 @@
 
 Follow-up: [Burn visibility controls](2026-10-15-sidearm-effect-visibility.md)
 now reproduce the lingering orange effect with mesh-only hiding and remove it
-through the repaired owner path, preserving infusion. Natural aim/fire/stow
-and the original gameplay trigger still require checking. The record below
+through the repaired owner path, preserving infusion. [Actual aim/fire/stow](2026-10-15-sidearm-aim.md)
+now also passes; the original gameplay trigger still requires checking. The record below
 describes the earlier actor-flag fixture and its narrower scope.
 
 The installed development core repairs actor-only visibility drift for items
