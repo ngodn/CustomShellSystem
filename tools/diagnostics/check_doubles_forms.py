@@ -31,7 +31,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
+    parser.add_argument('--cases', nargs='+', choices=('faithful-default','faithful-css','stray-default','stray-css'),
+                        default=['faithful-default','faithful-css','stray-default','stray-css'])
+    parser.add_argument('--customization', action='store_true', help='Capture Peony customization instead of full physics details')
+    parser.add_argument('--details', action='store_true', help='Read full physics details; short-lived objects may expire during the read')
     args = parser.parse_args()
+    if args.details and args.customization:
+        parser.error('Choose one detail scope per summon')
     out = args.output.resolve()
     original, pids = describe(), processes()
     before = json.loads((MOD / 'state/state.json').read_text())
@@ -109,7 +115,8 @@ def main():
                 command('harbinger_mirror', value=True)
                 expected['harbinger_mirror'] = True
                 wait_json(MOD / 'state/state.json', lambda s: s == expected)
-            for form, mode in (('faithful','default'), ('faithful','css'), ('stray','default'), ('stray','css')):
+            for case in dict.fromkeys(args.cases):
+                form, mode = case.split('-')
                 guard()
                 if p.send('player')['shell'] != SHELLS[form]:
                     command('genessa_form', mode=form)
@@ -122,8 +129,8 @@ def main():
                 folder = out / (form+'-'+mode)
                 argv = [sys.executable, str(ROOT / 'tools/diagnostics/check_doubles_summon.py'),
                         '--output', str(folder), '--core-sha256', args.core_sha256]
-                if mode == 'css':
-                    argv.append('--details')
+                if mode == 'css' and (args.customization or args.details):
+                    argv.append('--customization' if args.customization else '--details')
                 with (out / (form+'-'+mode+'.log')).open('x') as output:
                     result = subprocess.run(argv, stdout=output, stderr=subprocess.STDOUT)
                 row = dict(form=form, mode=mode, evidence=str(folder), returncode=result.returncode)
@@ -170,7 +177,7 @@ def main():
                 report['state_restored'] = after == before
                 report['cine_restored'] = request(GAME, {'op':'model','extension':'eins0fx.cine'})['result'] == cine['result']
                 report['appearance_restored'] = all(describe()[k] == original[k] for k in ('shell','outfit','variant','customize','idle_override'))
-                report['passed'] = bool(len(report['cases']) == 4 and all(r['returncode'] == 0 for r in report['cases'])
+                report['passed'] = bool(len(report['cases']) == len(set(args.cases)) and all(r['returncode'] == 0 for r in report['cases'])
                     and all(report[k] for k in ('geometry_restored','state_restored','cine_restored','appearance_restored')) and 'error' not in report)
             except Exception as error:
                 report['restore_error'] = repr(error)

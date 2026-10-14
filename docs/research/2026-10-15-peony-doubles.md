@@ -4,6 +4,14 @@ The four normal-input cases pass mesh selection and CSS group cleanup on the
 installed `d7cb0635d112f5fa` development core, PID 1944353. This is partial
 coverage of the doubles gate, not acceptance of the full physics or visual matrix.
 
+**Follow-up: current customization now matches in both forms.** The focused
+Faithful and Stray-primary captures each verify all six Peony ghost families,
+58 explicitly set source parameters, both nonzero body morphs and seven hidden
+sections. This closes the missing Faithful ghost-binding observation below.
+The secondary clone requires Mirage level 2; the live eligibility getter returns
+false in the current Faithful state. No progression was changed. Details follow
+in [the customization capture](#current-customization-follow-up).
+
 Evidence: `work/three-outfit-rig-physics/doubles-current-20261015/`.
 The preceding requested Naylshotte shot is separately recorded in
 [the sidearm report](2026-10-15-sidearm-aim.md).
@@ -97,3 +105,74 @@ all customization combinations and full restoration proof.
 Next coverage includes that secondary clone, Faithful ghost materials, live
 morph/visibility/palette comparisons, and the other scoped outfits. No game
 binary or cooked asset changed. Full release and performance gates remain open.
+
+## Current customization follow-up
+
+Evidence: `work/three-outfit-rig-physics/doubles-customization-20261015/`.
+
+The first `faithful-details` run fails on an expired component during its long
+sequential property read. The request/reply log retains the failure; input,
+saved settings and camera view are preserved. Its early screenshot catches the
+double against the bright opening, but is not a useful cloth/contact acceptance
+image. Nothing was changed to extend the native double's lifetime.
+
+The focused `--customization` capture reads material bindings, morphs and hidden
+sections first, then one representative of each Peony shader family. Every
+completed family is written immediately so a later expiry cannot erase earlier
+observations. `faithful-customization` passes, followed by the single
+`stray-customization/stray-css` case. Full `--details` is now opt-in in the form
+runner because it can outlast short-lived components.
+
+| Observation | Faithful | Stray primary |
+| --- | ---: | ---: |
+| Expected Peony companion parents | 6 | 6 |
+| Explicit source scalar/vector/texture parameters copied exactly | 58 | 58 |
+| Nonzero body morphs copied exactly | 2 | 2 |
+| Hidden sections matching source LOD0 | 7 | 7 |
+| Active/cached CSS groups after expiry | 0 / 0 | 0 / 0 |
+
+The current morphs are `PBMBreastsSize=0.36000001430511475` and
+`PBMGlutesSize=1`. Hidden slots are 38, 39, 40, 42, 43, 44 and 45. Material
+observations include `FlowSpeed=0.2500000298023224`, `GlowStrength=17.25` and
+`StockingOpacity=0.699999988079071`. Values are compared against the actual
+player sources, not an independently assumed preset. Clone materials have
+different object identities from player materials, correct companion parents,
+the appropriate `CSS_AstralCorrupted` value, live time enabled and bounded fade
+opacity. Reads span the lifetime/fade; they are not one simultaneous frame.
+
+The Stray wrapper exits 0 and verifies full saved state, appearance, CINE model
+and player/view restoration. `final-restoration.json` separately restores the
+facing from before this turn's first Faithful press, after exact-current-state
+and stationary-input guards. Position and camera view match, rotation differs
+by at most the established 1e-8-degree roundoff tolerance, and health is 88.
+The successful single-case wrapper does not rewrite the earlier four-case
+parent's failed restoration receipt.
+
+Verification commands:
+
+```sh
+python3 tools/diagnostics/verify_doubles_summon.py \
+  work/three-outfit-rig-physics/doubles-customization-20261015/faithful-customization \
+  --customization-form faithful
+python3 tools/diagnostics/verify_doubles_summon.py \
+  work/three-outfit-rig-physics/doubles-customization-20261015/stray-customization/stray-css \
+  --customization-form stray
+```
+
+Negative controls reject changed morphs, hidden-section flags, texture values
+and companion parents. Parameter keys include name, association and index;
+expression GUIDs are not value identity. The comparison checks explicit source
+overrides against the clone's copied values, not every inherited shader default
+or visual equivalence to the lit player shader.
+
+The preserved `HasSecondaryClone` bytecode reads
+`UpgradeStat.Shell.Genessa.Mirage.Level` and requires its integer value to be at
+least 2. The live signature is a return-only getter, and the current owned
+ability returns false. Only primary clones were observed in the actual Stray
+summons. An upgraded save was requested for later secondary-clone coverage;
+current progression and save files remain untouched.
+
+Remaining doubles work includes that secondary clone, other outfits, more
+customization combinations and useful moving visual/contact coverage. These
+captures test the current Black and white floral look only. No core or cooked
+package changed.

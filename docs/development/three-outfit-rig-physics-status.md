@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 15, Peony double customization verified in both forms:** Faithful
+and Stray primary each match six ghost-material families, 58 explicit source
+parameters, two nonzero morphs and seven hidden sections. The focused captures
+pass after retaining a failed overlong read. Settings, CINE and player/view
+restore. [Evidence and remaining scope](../research/2026-10-15-peony-doubles.md#current-customization-follow-up).
+Secondary Stray needs an eligible Mirage upgrade/save; its live eligibility
+getter currently returns false. Other outfits and visual/contact coverage remain.
+
 **October 15, Peony normal doubles checked in four form/mode cases:** Faithful
 and Stray primary select the native mesh in Default and Peony V2 in Use CSS.
 CSS group cleanup, body-input copying and Stray ghost-template bindings pass.

@@ -5,6 +5,47 @@ import math
 from pathlib import Path
 
 
+def verify_customization(result, form):
+    assert result['passed'] and not result.get('error') and not result.get('cleanup_error')
+    source = result['source']['components'][0]
+    actual = result['customization']
+    assert actual['component'] != source['component']
+    assert len(actual['materials']) == len(source['materials']) == 46
+    assert actual['morphs'] == source['morphs']
+    hidden = [[i for i,value in enumerate(lod['HiddenMaterials']) if value] for lod in actual['lod_info']]
+    assert hidden == source['hidden_by_lod']
+    originals = {row['slot']: row for row in result['customization_source']}
+    assert len(originals) == len(actual['families']) == 6
+    assert {row['slot'] for row in actual['families']} == set(originals)
+    compared = 0
+
+    def parameters(rows):
+        values = {json.dumps(row['ParameterInfo'], sort_keys=True): row['ParameterValue'] for row in rows}
+        assert len(values) == len(rows)
+        return values
+
+    for row in actual['families']:
+        expected = originals[row['slot']]
+        assert row['material'] == actual['materials'][row['slot']]
+        assert row['material'] != expected['material']
+        assert row['parent']['name'].split(' ',1)[1] == expected['companion']
+        for kind, original in expected['uniforms'].items():
+            values = parameters(row['uniforms'][kind])
+            for key, value in parameters(original).items():
+                assert key in values and values[key] == value
+                compared += 1
+        scalars = parameters(row['uniforms']['ScalarParameterValues'])
+        def scalar(name):
+            return scalars[json.dumps(dict(Name=name, Association=2, Index=-1), sort_keys=True)]
+        assert scalar('CSS_AstralCorrupted') == (1 if form == 'stray' else 0)
+        assert scalar('CSS_AstralUseFixedTime') == 0
+        assert math.isfinite(scalar('CSS_AstralOpacity')) and 0 <= scalar('CSS_AstralOpacity') <= 1
+    return dict(form=form, material_families=6, source_parameters_equal=compared,
+                morphs_equal=len(source['morphs']), hidden_sections_equal=sum(map(len,hidden)),
+                private_materials=True, ghost_form_controls=True,
+                scope='Current selected customization, sequential reads across the double lifetime. Not all palettes, morph combinations or visual motion acceptance.')
+
+
 def verify(folder, form, mode):
     result = json.loads((folder / 'result.json').read_text())
     before = json.loads((folder / 'state-before.json').read_text())
@@ -63,7 +104,13 @@ def verify(folder, form, mode):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)
+    parser.add_argument('--customization-form', choices=('faithful','stray'),
+                        help='Verify one captured customization case instead of the four-case matrix')
     args = parser.parse_args()
+    if args.customization_form:
+        result = json.loads((args.directory / 'result.json').read_text())
+        print(json.dumps(verify_customization(result, args.customization_form), indent=2))
+        return
     rows = [verify(args.directory / (form+'-'+mode), form, mode)
             for form in ('faithful','stray') for mode in ('default','css')]
     output = dict(cases=rows, summon_checks_passed=True,

@@ -20,7 +20,10 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--details', action='store_true', help='Read the first active visual materials and physics inputs')
+    parser.add_argument('--customization', action='store_true', help='Compare current Peony morphs, hidden sections and six material families')
     args = parser.parse_args()
+    if args.details and args.customization:
+        parser.error('Choose one capture scope per short-lived summon')
     out = args.output.resolve()
     pids = processes()
     if out.exists() or len(pids) != 1 or not out.is_relative_to((ROOT / 'work').resolve()):
@@ -80,6 +83,29 @@ def main():
                     collision=call(component, 'GetCollisionEnabled')))
             return rows
 
+        uniform_fields = ('ScalarParameterValues', 'VectorParameterValues', 'TextureParameterValues')
+
+        def uniforms(material):
+            return {name: get(material, name) for name in uniform_fields}
+
+        def customization(actor):
+            source = report['source']['components'][0]
+            visual = next(row for row in actor['poses'] if row['mesh']['name'] == source['mesh']['name'])
+            component = visual['component']
+            materials = get(component, 'OverrideMaterials')
+            result = dict(component=component, materials=materials, lod_info=get(component, 'LODInfo'),
+                morphs={name: p.call(component, 'GetMorphTarget', MorphTargetName=name) for name in source['morphs']},
+                families=[])
+            # Serialize each completed read before a later object can expire.
+            report['customization'] = result
+            atomic(out / 'result.json', report)
+            for row in report['customization_source']:
+                material = materials[row['slot']]
+                captured = dict(slot=row['slot'], material=material, parent=get(material, 'Parent'), uniforms=uniforms(material))
+                result['families'].append(captured)
+                atomic(out / 'result.json', report)
+            return result
+
         def guard():
             if processes() != pids or p.send('player') != player:
                 raise RuntimeError('Player or game changed')
@@ -117,6 +143,24 @@ def main():
             report['resources_before'] = {n: get(health_set, n) for n in ('Health', 'Resolve')}
             report['geometry_before'] = geometry()
             report['source'] = p.send('astral.source')
+            if args.customization:
+                source = report['source']['components'][0]
+                if '/PeonyV2/' not in source['mesh']['name']:
+                    raise RuntimeError('Customization fixture requires Peony V2')
+                p.send('describe', target=source['component'], function='GetMorphTarget')
+                adapters = p.send('astral.adapters.probe')
+                atomic(out / 'adapters.json', adapters)
+                by_source = {row['source']: row['companion'] for row in adapters['materials']}
+                captured, companions = [], set()
+                for slot, material in enumerate(source['materials']):
+                    companion = by_source[material['name'].split(' ',1)[1]]
+                    if '/M_PeonyV2_' not in companion or companion in companions:
+                        continue
+                    companions.add(companion)
+                    captured.append(dict(slot=slot, material=material, companion=companion, uniforms=uniforms(material)))
+                if len(captured) != 6:
+                    raise RuntimeError('Expected all six Peony material families')
+                report['customization_source'] = captured
             initial = p.send('astral.observe', poses=True)
             if initial['status'] != 'observed' or any(a['active'] for a in initial['actors']):
                 raise RuntimeError('Need no active doubles before the press')
@@ -150,6 +194,10 @@ def main():
                         report['screenshot'] = str(css_capture.shot('summon'))
                         report['details'] = details(active[0])
                         report['observed_after_details'] = p.send('astral.observe', poses=True)
+                        atomic(out / 'result.json', report)
+                    if args.customization and 'customization' not in report:
+                        customization(active[0])
+                        report['observed_after_customization'] = p.send('astral.observe', poses=True)
                         atomic(out / 'result.json', report)
                 elif report['active_samples']:
                     inactive_since = inactive_since or time.monotonic()
