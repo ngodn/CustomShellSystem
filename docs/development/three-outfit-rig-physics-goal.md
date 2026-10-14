@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, private CW walking candidate:** a copied forward-walk sequence
+changes only raw foot rotations and preserves the imported retarget reference
+through a procedural save. Normal/facial 241-frame engine captures preserve
+translations and scale; other compressed rotations differ by at most 0.00511
+degrees. Fresh-process data and playback comparisons pass. The first ordinary
+save cleared all 395 reference transforms and was rejected; this does not
+diagnose the installed walk. No game assets changed. See CW
+`docs/walking-foot-report.md` and `work/foot-walk-orientation3`. Actual compressed
+surface review, directional blend integration, cook/package verification and
+gameplay acceptance remain. Preserve accepted jog/sprint and belt/skirt behavior.
+
 **October 14, CW gait feedback:** the user reports "jog and sprint are fine.
 walk still obvious tilt." Walking remains an unresolved visible defect with
 the installed ankle trial. Preserve accepted jog/sprint and belt/skirt physics;
