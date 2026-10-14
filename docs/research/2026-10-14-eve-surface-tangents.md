@@ -225,6 +225,33 @@ Regenerating cloth with the original factory defaults is not equivalent.
 Local references: UE 5.6.1 `ClothingAsset.cpp:139` and project
 `CSSBindClothCommandlet.cpp:167`. This transfer is not implemented or verified yet.
 
+The installed normal/facial cloth baseline is now hash-pinned in
+`cloth-preservation-baseline.json`. Physical data and explicitly serialized
+Chaos configuration properties match within each pair:
+
+| Outfit | Simulation vertices / triangles | Render section / material |
+| --- | --- | --- |
+| Planet Diving, PFit14 | 18 / 16 | 24 / 26 |
+| Knitwear, KCloth4 | 1,679 / 2,999 | 16 / 16 |
+| Midsummer Alice, ACloth3 | 624 / 1,224 | 26 / 26 |
+
+Each has one cloth asset at mesh LOD0. These are existing cooked section indices,
+not safe assumptions for the rebuilt mesh. The baseline pins physical data,
+LOD data, explicit solver properties, physics reference and section identity.
+It does not establish editor-default equivalence or successful transfer.
+
+UE 5.6.1 already provides `UClothingAssetFactory::CreateFromExistingCloth`
+(`ClothingAssetFactory.cpp:193`): duplicate under the target mesh, assign a new
+GUID, empty `LodMap`, refresh bone mapping and invalidate cached data. Clearing
+the old LOD map matters because `BindToSkeletalMesh` rejects an already mapped
+asset LOD. The native skeletal mesh editor then persists section user data after
+binding (`SkeletalMeshEditor.cpp:981`). Prefer this existing copy path over
+recreating simulated geometry. Verify simulation inputs and solver properties
+after cache rebuilding, then save/reload and cook before treating it as preserved.
+The [upstream API entry](https://dev.epicgames.com/documentation/unreal-engine/API/Editor/ClothingSystemEditor/UClothingAssetFactory/CreateFromExistingCloth)
+documents the method; the implementation details above were checked against the
+local 5.6.1 source, not the site's newer default version.
+
 This is an asset import issue distinct from proving the cause of Vistani's
 moving sunlight noise. It does not justify enabling a global graphics workaround
 by default. The existing MISC workaround and its pending checks remain separate.

@@ -311,5 +311,9 @@
         "sha256": "8736af0abe0436abc1a5c622f1d50062e891ce272ce9147339205131ec8d4f92"
       }
     ]
+  },
+  "cloth_preservation_baseline": {
+    "path": "work/three-outfit-rig-physics/eve-surface-20261014/cloth-preservation-baseline.json",
+    "sha256": "d2dcf4e04ccdee1670ee89585294e2e88eaa69aa6e548fd8c543e637d832d97b"
   }
 }
