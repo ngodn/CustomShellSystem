@@ -727,5 +727,91 @@
       }
     ],
     "scope": "Skin Suit/Bikini regular and facial private meshes only. Final paths, three cloth-bearing repairs, combined packaging and full live/performance/release gates remain."
+  },
+  "permanent_skin_suit_bikini": {
+    "passed": true,
+    "installed": false,
+    "exact_private_cooked_preservation": true,
+    "reader_fixture_direct_eve_packages": 27,
+    "diagnostic_dependencies": false,
+    "receipts": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/plan.json",
+        "sha256": "b5497e870bb74d422836fc8d601be6cd3804a5f1163e0768a5f3cab622f3d3d0"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/create.json",
+        "sha256": "c70f5f31b9dbc37452491175a35290c2767658166c6cc17130f5d94304af8118"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/reload.json",
+        "sha256": "10f0a4c3850c74d67894c66598f8439c5c9f3338bde5a9f2ca3d4c5ff66b8052"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/create-exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/reload-exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/cook/exit.json",
+        "sha256": "d7e926c568834619a9dc4b97bf8c1f1b4074d8146d99752fa4d3e571fae649b8"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/pack/verified.json",
+        "sha256": "4e6e7de04fea0dc358880aa6d4bb18460741b971b8670655366635c3cb46e91b"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/pack/meshes.json",
+        "sha256": "be7f3b0672c219582b07c82040e4865bcfad1c26b3a5aa41ae79e0345a094ff3"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/cleanup-completed.json",
+        "sha256": "daa7a96348c7579f0a4a07650d9db56c6eeddb6dd6b83683ecb13825231903f3"
+      }
+    ],
+    "editor_sources": [
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/editor/Content/CSS/eins0fx/EveSB/Fit/SK_SFit16.uasset",
+        "sha256": "cea720a3fc58c08291ab75eaaf0fd6d810b897e1e039d0dec46051ba3ff93bec"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/editor/Content/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_SFit16.uasset",
+        "sha256": "6f6d34a32507ad328d81f4973fa3d85b2022b64620e3a6a165dfdeedcd086ce3"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/editor/Content/CSS/eins0fx/EveSB/Fit/SK_BFit1.uasset",
+        "sha256": "287b9bb628b52e97bfc7acd6e40c4dbc447f76bfe460d7f2fb89524b13c536cd"
+      },
+      {
+        "path": "work/three-outfit-rig-physics/eve-surface-20261014/eve-tangent-final/editor/Content/CSS/eins0fx/EveSB/Faces/SK_Face_Jali3V1_BFit1.uasset",
+        "sha256": "cfa6d0864fbc0f635309af9f750a8915039d9fbb03d63d372a8d97850caab3fe"
+      }
+    ],
+    "recipes": [
+      {
+        "path": "tools/diagnostics/run_eve_surface_final.py",
+        "sha256": "9fb11a0f855d88df482084ec3c256a80bf0374ac175a035eac269baccdda2bc9"
+      },
+      {
+        "path": "tools/diagnostics/finalize_eve_surface_editor.py",
+        "sha256": "5be40127ec1a29ee0704bd99676229f4e7399ca82078bda803ef915549431dca"
+      },
+      {
+        "path": "tools/diagnostics/cook_eve_surface_final.py",
+        "sha256": "2581473f77bca5156e660093ba2e4c5aca2692a340885ec8273d71a52852eebf"
+      },
+      {
+        "path": "tools/diagnostics/check_eve_surface_final.py",
+        "sha256": "aa354017247bbd7036a17e6d926a3e0d6195e2a45207fd00f53940401b7af160"
+      },
+      {
+        "path": "tools/diagnostics/cleanup_eve_surface_final.py",
+        "sha256": "8bcfacf784927917229cca3f002157531a6a384b21f000bf9dbb29fe8bd47770"
+      }
+    ],
+    "scope": "Four permanent mesh sources and cooked payloads verified. Full Eve package integration, three cloth-bearing outfit repairs and full goal runtime/performance/release gates remain."
   }
 }

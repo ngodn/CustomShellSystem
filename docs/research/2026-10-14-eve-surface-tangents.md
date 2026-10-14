@@ -393,6 +393,49 @@ repairs and gameplay/performance/release checks remain. No installation or
 launch request. The prewritten removal list is
 [tangent bake cleanup](../development/cleanup-2026-10-14-eve-tangent-bake.md).
 
+## Permanent Skin Suit and Bikini paths
+
+The four repaired source meshes are now saved and cooked at their existing
+release paths under `/Game/CSS/eins0fx/EveSB`:
+
+- `Fit/SK_SFit16` and `Faces/SK_Face_Jali3V1_SFit16`.
+- `Fit/SK_BFit1` and `Faces/SK_Face_Jali3V1_BFit1`.
+
+The final-path project is `eve-surface-20261014/eve-tangent-final`.
+Creation and a separate editor reload pass exact mesh-description/built-section
+comparison against the verified private sources, with no added morphs excluded.
+There are 28 direct dependencies across the four meshes; none is a diagnostic
+package. The input assets use read-only absolute symlinks, with source hashes
+checked before and after each operation.
+
+Windows cooking, IoStore conversion/roundtrip and independent decoded comparison
+pass (`pack/verified.json`). Every final mesh matches its private cooked source
+for all recorded render fields, packed tangent basis, reference transforms,
+morphs, normalized properties, material slots, imported bounds and empty Nanite
+data. Counts remain 122,596 Skin Suit vertices or 142,353 Bikini vertices, with
+22 regular and 137 facial morphs. No previously repaired value was regenerated
+into a different result by the path change.
+
+The reader mount deliberately excludes the original Eve containers. It contains
+the candidate, base-game/shared dependencies and a fixture of exactly 27 direct
+Eve material/rig packages. This prevents an old mesh provider from masking a
+missing replacement. That fixture is for readback only, not a release package.
+
+Recipes: `run_eve_surface_final.py`, `finalize_eve_surface_editor.py`,
+`cook_eve_surface_final.py`, `check_eve_surface_final.py` and
+`cleanup_eve_surface_final.py` under `tools/diagnostics`. The existing Black
+Pearl recipes and their pinned evidence are unchanged.
+
+No installation or live check. Full Eve container integration, the three
+cloth-bearing outfit repairs and the goal's remaining runtime/performance/
+release gates are still open. The 284 known collapsed-UV fallbacks per mesh
+remain recorded; this does not close the separate sunlight-noise report.
+
+After the [prelisted cleanup](../development/cleanup-2026-10-14-eve-final-paths.md),
+2,131,005,002 duplicate/disposable logical bytes were removed. Final sources,
+recipes, packages and readbacks remain. Immediate `df -h` readings changed from
+root/theark 94G/7.9G to 94G/8.8G; logical bytes are not a physical-space measure.
+
 ## Receipts and disk use
 
 The [checkpoint manifest](../development/eve-surface-20261014.json) pins six
