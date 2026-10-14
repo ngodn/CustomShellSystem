@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, accepted walk finalization in progress:** CW's nine permanent-path
+source assets are saved under `Animations/Locomotion/Walk`. Fresh reload preserves
+all raw animation data, 395 reference transforms and 36 sample bindings; all
+fourteen recorded directional captures match the accepted trial exactly after
+path mapping. The Windows cook is still running at this checkpoint, under CW
+`work/walk-final-paths1/cook`; package/readback and combined assembly are next.
+Poll the existing cook before continuing, do not restart it from this note.
+The installed accepted trial is unchanged. See CW's walking report.
+
 **October 14, CW walking accepted:** in response to the installed walking-only
 trial's boots-on/off check, the user says "Walking looks right now". Close the
 reported obvious walking tilt at this tested scope. Jog/sprint and belt/skirt
