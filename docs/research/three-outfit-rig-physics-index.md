@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Peony stationary timing reference](2026-10-14-peony-stationary-cost.md): three captures and 3,133 records pass archive checks with unchanged boundary contexts/settings. Tail variation, missing trace channels and unmatched comparison keep the performance gate open.
+
 - [Repeated outfit/facial lifecycle](2026-10-14-outfit-switch-lifecycle.md): 30 cases across all ten appearances retain identical component/attachment handles and restore meshes, owners, settings and camera. Live counts above 128, wider lifecycle and performance remain open.
 
 - [CINE natural completion repair](2026-10-14-cine-natural-end.md): reproduced and fixed false interruption during face restoration. Full Iris Out takes pass on both Genessa variants; camera and saved states restore exactly. Limited close-ups retain unresolved shadow patches.

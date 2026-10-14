@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, stationary Peony timing reference recorded:** three 15-second
+captures contain 3,133 verified records with equal appearance/view boundaries
+and unchanged saved settings, process and core. Interval medians are
+12.23-13.12 ms; measured CSS tick medians are 0.153-0.174 ms. Tail variation is
+substantial. The game exposes no channels through its trace-library interface.
+[Evidence and measurement limits](../research/2026-10-14-peony-stationary-cost.md).
+This is not a matched regression pass or isolated rig/cloth/GPU timing.
+Movement, transitions, frame-rate coverage and full stable-release gates remain.
+
 **October 14, repeated outfit/facial lifecycle check passes:** all ten scoped
 appearances complete three rounds (30 cases, 90 snapshots), retaining the same
 93 owned components and 56 direct mesh attachments. Facial mesh/adapter

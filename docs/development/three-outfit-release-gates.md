@@ -73,6 +73,11 @@ Accepted observations apply to their recorded test scope, not every variant.
   The [30-case stationary outfit/facial check](../research/2026-10-14-outfit-switch-lifecycle.md)
   passes with exact component identities and state restoration; broader lifecycle
   and frame-time measurements remain separate.
+  A [three-capture Peony timing reference](../research/2026-10-14-peony-stationary-cost.md)
+  now has 3,133 verified records and unchanged boundary contexts/settings.
+  It has substantial tail variation, no matched comparator and no isolated
+  rig/cloth or GPU timings. The game's trace interface exposes no channels.
+  Performance acceptance, movement/transition and frame-rate coverage remain open.
 - Finish shared migration's live CSS/CINE and clean/upgrade coverage. The four
   [current-container compatibility cases](../research/2026-10-14-coordinated-upgrade-audit.md)
   now pass with current/mixed legacy Genessa and CW. They do not test save

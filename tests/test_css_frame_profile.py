@@ -23,8 +23,19 @@ class FrameProfileReportTests(unittest.TestCase):
         self.assertEqual(result['frames'], 30)
         self.assertAlmostEqual(result['metrics']['astral_ms']['mean'], .145)
         self.assertEqual(result['metrics']['astral_ms']['p95'], .28)
+        self.assertEqual(result['metrics']['astral_ms']['p99'], .29)
         self.assertEqual(result['engine_tick_rate_hz'], 50)
         self.assertIsNone(result['cssx_loaded'])
+
+    def test_tail_latency_is_distinct_from_maximum(self):
+        self.report['rows'] = [dict(engine_ms=20., interval_ms=20., core_ms=2.,
+                                   phase_ms=[0.] * 8 + [i / 100.], failed=False)
+                               for i in range(100)]
+        self.report['rows'][-1]['core_ms'] = 50.
+        result = summarize(self.report)['metrics']
+        self.assertEqual(result['core_ms']['p99'], 2.)
+        self.assertEqual(result['core_ms']['max'], 50.)
+        self.assertEqual(result['astral_ms']['p99'], .98)
 
     def test_old_cssx_reports_remain_readable(self):
         self.report['phases'] = ['recovery', 'cssx_tick', 'hud_prepare', 'cssx_render', 'inventory']

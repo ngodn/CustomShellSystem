@@ -43,12 +43,16 @@ def summarize(report):
     for name, values in columns.items():
         ordered = sorted(values)
         metrics[name] = {'mean': statistics.fmean(values), 'p50': statistics.median(values),
-                         'p95': ordered[math.ceil(.95*len(ordered))-1], 'max': max(values)}
+                         'p95': ordered[math.ceil(.95*len(ordered))-1],
+                         'p99': ordered[math.ceil(.99*len(ordered))-1], 'max': max(values)}
     return {'frames': len(rows), 'stop_reason': report['stop_reason'],
             'cssx_loaded': report.get('cssx_loaded'),
             'engine_tick_rate_hz': 1000 / metrics['interval_ms']['mean'],
             'metrics': metrics,
-            'scope': 'Engine tick cadence and measured CSS phases. Not GPU or display presentation timing. '
+            'scope': 'Engine tick cadence and elapsed CSS phases, including possible thread preemption. '
+                     'engine_ms is the supplied engine delta, not engine CPU duration. '
+                     'interval_ms precedes the current row\'s core execution. '
+                     'No exclusive CPU, rig/cloth worker, GPU or display presentation timing. '
                      'CSSX hooks called elsewhere in the frame are outside these phase timers.'}
 
 
