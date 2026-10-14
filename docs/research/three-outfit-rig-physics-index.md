@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Peony normal doubles in both forms](2026-10-15-peony-doubles.md): four Default/Use CSS cases verify mesh selection and group cleanup; CSS body inputs match and Stray uses all six Peony ghost templates. Separate guarded position recovery follows the retained parent displacement failure. Secondary clone, visuals/contact and other outfits remain open.
+
 - [Facial playback interrupted by aiming](2026-10-15-outfit-aim-interruption.md): twenty cases across all ten release variants pass actual aim, early facial-playback release, drawn/stowed Burn visibility and restoration. Two failed preflights and an RPC-envelope comparison correction are retained. Other actions, Stray/doubles, contact and cost remain separate.
 
 - [Native Genessa CINE](2026-10-15-native-cine.md): actual Iris Out natural completion and explicit exit release the correct native montage and restore Peony, saved settings and player/view. Other clips, facial support, contact and gameplay remain separate.

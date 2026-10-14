@@ -55,6 +55,16 @@ of the firing ability identity.
 
 ## User-requested repeat shot
 
+A further requested shot is recorded in
+`work/three-outfit-rig-physics/sidearm-user-shot-20261015-2/`.
+The focused keyboard/mouse fixture exits 0: the game observes the fire button,
+Resolve drops from 100 to 72, and the attached Burn effect renders while drawn
+but stops rendering after stowing. Infusion remains active. Health stays 88;
+saved settings, player/view geometry and the current CINE model restore, with
+all sampled keys released. The installed core remains `d7cb0635d112f5fa`.
+This repeats the draw/fire/stow check, without extending the damage or Barrage
+coverage.
+
 `work/three-outfit-rig-physics/sidearm-user-shot-20261015/` repeats one normal
 shot at the user's explicit request after the broader interruption checks began.
 The corrected fixture exits zero: mouse press observed, 28-point Resolve drop,

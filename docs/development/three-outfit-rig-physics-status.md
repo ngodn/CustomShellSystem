@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 15, Peony normal doubles checked in four form/mode cases:** Faithful
+and Stray primary select the native mesh in Default and Peony V2 in Use CSS.
+CSS group cleanup, body-input copying and Stray ghost-template bindings pass.
+The parent position guard stops after cumulative ability displacement; separate
+guarded recovery restores the original position, facing and saved state.
+[Evidence and limits](../research/2026-10-15-peony-doubles.md).
+Secondary Stray, Faithful ghost materials, visual cloth/contact, customization
+combinations and the other outfits remain open. No game assets or core changed.
+
 **October 15, twenty actual aim-interruption cases pass:** Iris Out and Come
 Closer release facial playback across all seven Eve outfits, both Unholy Genessa
 variants and Commander White. Drawn/stowed Burn visibility, infusion, health,

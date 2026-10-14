@@ -69,6 +69,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   now pass for Iris Out and Come Closer across the ten release variants in
   Faithful form, with preserved settings, infusion and view. Attack/combo,
   dodge, interaction, other forms and the rest of this matrix remain open.
+  [Peony's four normal summon cases](../research/2026-10-15-peony-doubles.md)
+  verify Default/Use CSS selection, body-input copying and cleanup for Faithful
+  and Stray primary. Secondary Stray, Faithful ghost bindings, cloth/contact,
+  customization combinations and other outfit doubles remain open.
 - Finish Genessa's two-variant CSS/CINE visual and gameplay coverage and preserve Eve/CW.
   Both variants now pass [numeric facial-track and explicit-stop checks](../research/2026-10-14-genessa-live-face-tracks.md).
   [Actual Iris Out CINE takes](../research/2026-10-14-cine-natural-end.md) also
