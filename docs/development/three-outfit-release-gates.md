@@ -1,6 +1,6 @@
 # Stable release and bug audit
 
-Updated 2026-10-12 after the user's release-scope correction.
+Updated 2026-10-14. Retains the user's October 12 release-scope correction.
 
 **Not release-ready.** Targets remain CSS v1.0.0, Eve v1.5.0, Unholy Genessa
 v0.3.0 and Commander White v0.1.0, with a separate compatible shared-assets ZIP.
@@ -30,12 +30,12 @@ historical rehearsal and is not the stable release tag.
 | Genessa rear cloth | World correction accepted; preview clipping explicitly accepted for now | Other poses/variants and cost, without reopening accepted preview limitation |
 | CW hair | User accepts installed strand trial and tested face/eyes/interruption | CINE, doubles, full lifecycle and measured cost |
 | CW inward/sideways walking feet | Four-bone reference-alignment trial installed; booted/bare short walks restore state; six editor gait cases improve mean bank but some phases worsen; sparse world-contact measurements retained | Full-cycle gameplay, terrain and visual acceptance; preserve native IK and original rollback |
-| CW belt physics and janky skirt | Belt's 18 undriven chain bones isolated; native-chain prototype rejected for instability; skirt baseline recorded | Reuse bounded chain motion, diagnose skirt motion, verify contact/recovery/cost |
-| CW dev/Development display qualifiers | Requested cleanup, final stable metadata not delivered | Audit names/descriptions/archive filenames; retain IDs and asset paths |
+| CW belt physics and janky skirt | Belt20 and matching normal/facial scene adapters installed with rollback; offline poses, body-shape contacts, cooked assets and catalog checks recorded; image approval provisional | Live belt contact/recovery/cost; separate skirt baseline and motion diagnosis |
+| CW dev/Development display qualifiers | Clean Commander White manifest/catalog name and description installed; packaging recipes updated; assets and IDs unchanged | Final stable version/archive filenames and release text; historical releases remain immutable |
 | More than 128 attachments | Fixed caps removed in source; production snapshot fixtures pass through 4,097 children | Live recovery/facial behavior above 128 and repeated-switch leak/lifetime checks |
 | Vistani moving sunlight reflection noise | Default-off MISC source-angle workaround installed; live 4 to 0.5357 to 4 restoration, actual UI clicks and persistence pass; cold-load ownership failure fixed and tested; sharper shadows visible; user acceptance pending | Verify maps, continuous motion and cost before public delivery; no CVar mutation; do not describe workaround as a proven engine correction |
-| Local core reload temporarily loses shared animation/facial availability | Reproduced during CW checks; subsequent rescan experiment crashed in an animation subsystem; cold recovery passes, root cause unconfirmed | Diagnose class data/lifetime before further reload stress; retain crash evidence; loader activation alone does not pass this gate |
-| Genessa Stray to Faithful after another save | Reported, not reproduced or diagnosed | Save/world/player-state investigation and valid-transition regression |
+| Local core reload temporarily loses shared animation/facial availability | Reproduced during CW checks; later rescan experiment crashed in an animation subsystem; cold recovery passes; three controlled reload cycles with class inventories did not reproduce it | Root cause remains unconfirmed; preserve instrumented reproducer and crash evidence; the existing dump lacks the failing class memory |
+| Genessa Stray to Faithful after another save | Reported, not reproduced; offline native flow mapped and passive capture prepared | Actual two-save capture, same-save/fresh-launch comparison and valid-transition regression |
 | Naylshotte hidden Tarstone effect | Reported with Barrage/Emberseed, not diagnosed | Identify effect owner and correct hiding/restoration without changing infusion |
 | Trebuchaxe hovering axe | Reported, not diagnosed | Identify object and test visibility/Tarstone transitions |
 | Zhirelle/Merrick and matching-skeleton NPCs | Explicit low-priority follow-up, not implemented | Asset/skeleton compatibility investigation and validated selector support |

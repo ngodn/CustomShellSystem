@@ -1,5 +1,19 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 14, skirt baseline:** the final CW mesh/graph now has a 241-frame
+native cloth capture at 60 Hz using its unchanged saved solver and collider.
+It confirms 4,893 particles with active simulation. Individual particle steps
+reach 12.16 cm outside clip loop boundaries, while the root remains stationary.
+This is a lead for the reported jerk, not a rendered-surface diagnosis or fix.
+Locate the worst particles and compare their body/contact trajectories before
+changing solver settings. CW `work/skirt-baseline42` retains the capture,
+recipes, source hashes and setup failures. Authoring assets are unchanged;
+the existing cook project/DDC were reused and nothing new was installed.
+See CW `docs/belt-and-skirt-motion.md`. Game remains closed; full live and
+stable-release gates remain active. The prior crash record already exhausted
+what its small dump can establish; another offline stack inspection is not
+a next step without new evidence.
+
 **October 14, CW display-name cleanup:** the installed package and outfit
 catalog now use `Commander White`, and the package description no longer
 calls it a development build. Only those three metadata fields changed;

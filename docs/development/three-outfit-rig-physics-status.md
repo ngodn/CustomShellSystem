@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 14, skirt baseline and naming:** CW now displays `Commander White`
+without the Development label in its installed manifest/catalog; asset payloads
+remain the Belt20 trial. A separate 241-frame native editor cloth capture of
+that mesh confirms active simulation and records individual particle steps up
+to 12.16 cm away from loop boundaries. Visible-surface/contact interpretation
+is still needed before a skirt repair. No new solver settings or assets were
+installed. See CW `work/display-name41`, `work/skirt-baseline42` and the
+[motion record](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/belt-and-skirt-motion.md).
+
 **October 14, CW belt integration:** Belt20's six fresh scene captures preserve
 non-belt poses and release back to gait. Its eight private cooked roots pass
 surface, morph, material/cloth, ankle-mode and rig-binding readback. The first
