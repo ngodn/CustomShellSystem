@@ -1,5 +1,14 @@
 # Three-outfit implementation status
 
+**October 15, twenty Stray attack interruptions pass:** actual Axatana secondary
+attacks interrupt Iris Out and Come Closer on all ten release variants. Raw
+ability records and three negative controls independently verify the results.
+State, health, position/view, CINE and focus restore per case; the parent restores
+Peony, its original idle and all outfit memories. No core or assets changed.
+The initial primary-attack fixture and native weapon-form recovery remain
+recorded. Combo, dodge, interaction and other-form checks stay open.
+[Evidence](../research/2026-10-15-outfit-attack-interruption.md).
+
 **October 15, Trebuchaxe visibility repair installed:** `5f04a31900c8e323` preserves
 the native hidden preview instead of showing every nested weapon mesh. Thirteen
 live draw/stow/mode/drift phases pass with full settings, resources, view and

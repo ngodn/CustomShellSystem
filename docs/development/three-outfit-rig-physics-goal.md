@@ -1,5 +1,16 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, twenty actual attack interruptions pass:** Axatana secondary
+attacks interrupt Iris Out and Come Closer across all ten release variants in
+Stray form. Raw ability records verify 40 active-attack observations, and the
+independent verifier rejects active, natural-end and missing-attack controls.
+Each case restores state, health, position/view, CINE and focus; the parent
+restores Peony, the original idle and all outfit memories. The initial diagnostic
+mistook Axatana's native form change for an equipment failure; the failed receipt
+and verified recovery remain recorded. No core or assets changed. Combos, dodge,
+interaction, damage and Faithful attack coverage remain open.
+[Evidence](../research/2026-10-15-outfit-attack-interruption.md).
+
 **October 15, Trebuchaxe hovering preview repaired:** CSS revealed the native
 hidden `SM_Projectile_Preview` whenever it showed every owned weapon mesh.
 The installed core `5f04a31900c8e323` preserves nested visibility while hiding

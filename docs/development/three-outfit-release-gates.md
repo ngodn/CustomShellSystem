@@ -67,8 +67,12 @@ Accepted observations apply to their recorded test scope, not every variant.
   both-form doubles, customization, attachments/gameplay and existing UI fixes.
   [Twenty actual aim interruptions](../research/2026-10-15-outfit-aim-interruption.md)
   now pass for Iris Out and Come Closer across the ten release variants in
-  Faithful form, with preserved settings, infusion and view. Attack/combo,
-  dodge, interaction, other forms and the rest of this matrix remain open.
+  Faithful form, with preserved settings, infusion and view.
+  [Twenty actual secondary-attack interruptions](../research/2026-10-15-outfit-attack-interruption.md)
+  now pass both clips on all ten variants in Stray form, with raw native
+  ability activation and full state/view restoration independently verified.
+  Combo, dodge, interaction, damage, other-form cases and the rest of this
+  matrix remain open.
   [Peony's four normal summon cases](../research/2026-10-15-peony-doubles.md)
   verify Default/Use CSS selection, body-input copying and cleanup for Faithful
   and Stray primary. Focused follow-ups also verify both forms' six Peony ghost
