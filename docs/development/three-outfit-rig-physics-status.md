@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 15, Naylshotte Burn visibility mechanism verified:** controlled
+mesh-only hiding leaves the orange Burn effect visible; the installed owner
+visibility repair removes it while preserving the active infusion. Front/rear
+six-phase runs pass 36 rendering observations, and settings, CINE, appearance,
+weapon flags and exact player/view transforms restore.
+[Evidence and scope](../research/2026-10-15-sidearm-effect-visibility.md).
+The original gameplay trigger, aim/fire/stow and effect replacement remain open.
+
 **October 15, hidden item actor drift repaired and installed:** the old core
 fails controlled actor-only visibility changes on Naylshotte, Infinite Seal and
 Genessa's catalyst. The candidate repairs all three, preserves Default mode and

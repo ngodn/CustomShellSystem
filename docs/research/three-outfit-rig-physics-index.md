@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Naylshotte Burn visibility controls](2026-10-15-sidearm-effect-visibility.md): mesh-only hiding reproduces lingering orange Burn; hiding the owner removes it while preserving infusion. Twelve phases and 36 rendering observations pass with exact restoration. Natural aim/fire/stow and effect replacement remain open.
+
 - [Hidden item actor drift](2026-10-15-item-visibility-drift.md): three actor-only visibility failures reproduced and repaired; Default control, form/profile sequence and exact world-flag restoration pass. Six timing captures retain an unresolved sequential timing increase; visible Tarstone residue is not claimed fixed.
 
 - [Profiles across mirrored Genessa forms](2026-10-15-profile-forms.md): profile loads use the saved living choice, preserve the independent Darkform choice and restore the full selection snapshot. Offline regressions and repeated live Stray loads pass. The fixture now restores displacement during the form round trip; the cross-save report remains open.

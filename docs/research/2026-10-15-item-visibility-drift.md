@@ -1,5 +1,11 @@
 # Hidden item actors after form changes
 
+Follow-up: [Burn visibility controls](2026-10-15-sidearm-effect-visibility.md)
+now reproduce the lingering orange effect with mesh-only hiding and remove it
+through the repaired owner path, preserving infusion. Natural aim/fire/stow
+and the original gameplay trigger still require checking. The record below
+describes the earlier actor-flag fixture and its narrower scope.
+
 The installed development core repairs actor-only visibility drift for items
 that MISC currently wants hidden. Default mode still leaves visibility to the
 game. Controlled live fault injection and the original form/profile sequence

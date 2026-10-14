@@ -24,7 +24,7 @@ historical rehearsal and is not the stable release tag.
 | Profile saved at Default visibility retains later overrides | Empty MISC snapshot correction installed; offline regression and actual world/preview profile loads pass. Exact saved settings and post-menu world visibility restore | Broader profile/lifecycle coverage; preserve missing legacy fields. Intermediate inactive-world-actor differences inside the menu are documented |
 | Loading an unavailable outfit profile partly changes settings | Catalog preflight installed; missing outfit, variant and incompatible-shell rejection pass offline without changing saved state. Normal repeated world loads pass on the new core | Actual missing-provider/reinstall lifecycle and runtime asset failures remain outside this check |
 | Profile loading uses a separate Darkform choice while mirroring | Selection snapshot restoration and normal mirror reconciliation installed. Offline tests and repeated live Stray loads preserve Peony and the separate CW choice; Faithful/settings/view restore | Single-save coverage only; independent-form activation, other outfits and cross-save report remain distinct |
-| Hidden item actor flag drifts after form checks | Enforcement repair installed. Three live actor-only faults, Default control, form/profile round trip and exact world-flag restoration pass | Attached-effect visibility, aim/fire and Tarstone causation remain unproven; sequential timings do not close performance acceptance |
+| Hidden item actor flag drifts after form checks | Enforcement repair installed. Three live actor-only faults, Default control, form/profile round trip and exact world-flag restoration pass. Attached Burn rendering also follows repaired owner visibility in controlled checks | Natural aim/fire and original Tarstone triggering sequence remain unproven; sequential timings do not close performance acceptance |
 | Peony excessive jiggle despite Firm/Natural | Restoration correction and tighter limits installed; user accepts walking/Iris Out motion, live limit readback passes | Other six Eve variants and lifecycle/performance regression |
 | Peony harsh lighting | User subsequently reports the unchanged build looks fine | No lighting fix established; monitor recurrence separately from sunlight report |
 | Older Eve tangent basis | All six regular/facial pairs now pass source, cook, cloth, customization and combined package preservation checks at permanent paths; source and native-material inputs are verified | Candidate installed offline with rollback and unchanged core/settings. Runtime shading/cloth/facial and performance regression remain; not a proven sunlight-noise fix |
@@ -41,7 +41,7 @@ historical rehearsal and is not the stable release tag.
 | Vistani moving sunlight reflection noise | Default-off MISC source-angle workaround installed; live 4 to 0.5357 to 4 restoration, actual UI clicks and persistence pass; cold-load ownership failure fixed and tested; sharper shadows visible; user acceptance pending | Verify maps, continuous motion and cost before public delivery; no CVar mutation; do not describe workaround as a proven engine correction |
 | Local core reload temporarily loses shared animation/facial availability | Reproduced during CW checks; later rescan experiment crashed in an animation subsystem; cold recovery passes; three controlled reload cycles with class inventories did not reproduce it | Root cause remains unconfirmed; preserve instrumented reproducer and crash evidence; the existing dump lacks the failing class memory |
 | Genessa Stray to Faithful after another save | Reported, not reproduced; offline native flow mapped and passive capture prepared | Actual two-save capture, same-save/fresh-launch comparison and valid-transition regression |
-| Naylshotte hidden Tarstone effect | Reported with Barrage/Emberseed; permanent Burn system identified. Live capture finds an active effect owned by the hidden weapon, not recently rendered; visible residue is not reproduced | Aim/fire/stow and effect-replacement capture must identify visible residue before a repair; preserve infusion |
+| Naylshotte hidden Tarstone effect | Controlled mesh-only hiding now reproduces visible orange Burn; the installed owner-visibility repair removes it while preserving the active infusion. Front/rear rendering controls and exact restoration pass | Natural aim/fire/stow, original triggering sequence and effect replacement remain untested; do not generalize to all Tarstone effects |
 | Trebuchaxe hovering axe | Reported, not diagnosed | Identify object and test visibility/Tarstone transitions |
 | Zhirelle/Merrick and matching-skeleton NPCs | Explicit low-priority follow-up, not implemented | Asset/skeleton compatibility investigation and validated selector support |
 | Native shell shades for appearance overrides | Explicit low-priority follow-up, not implemented | Supported shade selection, persistence and unlock-preserving validation |
@@ -103,7 +103,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   or the full lifecycle matrix.
   The [hidden-item actor repair](../research/2026-10-15-item-visibility-drift.md)
   also closes the observed actor-flag drift after that sequence. It does not
-  prove the separately reported visible Tarstone effect fixed. Its short
+  close the original Tarstone gameplay report. Follow-up [Burn rendering controls](../research/2026-10-15-sidearm-effect-visibility.md)
+  reproduce a visible lingering effect under mesh-only hiding and remove it
+  through the owner path without disabling infusion. Actual aim/fire/stow and
+  effect replacement still need checking. Its short
   sequential timing comparison remains part of the open performance review.
 - Prepare coordinated stable artifacts only after applicable gates pass or the
   user explicitly accepts a remaining limitation. Verify final versions,
