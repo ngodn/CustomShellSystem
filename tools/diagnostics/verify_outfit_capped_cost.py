@@ -20,12 +20,17 @@ def main():
     parser.add_argument('directory', type=Path)
     parser.add_argument('--prior', type=Path, action='append', default=[],
                         help='Retain verified completed cases from a fully restored earlier sequence')
+    parser.add_argument('--observations', action='store_true',
+                        help='Verify complete coverage while retaining reset events and failed attempts')
     args = parser.parse_args()
     root = args.directory.resolve()
     matrix = read(root / 'result.json')
     assert matrix.get('only') is None
     assert matrix.get('requested_caps', [30., 60., 999.]) == [30., 60., 999.]
-    assert matrix['passed'] and matrix['cases_passed']
+    if args.observations:
+        assert matrix['record_resets'] and matrix['observations_complete'] and matrix['cases_complete']
+    else:
+        assert matrix['passed'] and matrix['cases_passed']
     assert not matrix.get('error') and not matrix.get('restore_error')
     sources = [root, *[p.resolve() for p in args.prior]]
     assert len(sources) == len(set(sources))
@@ -45,9 +50,12 @@ def main():
             assert 'returncode' in case, 'Earlier sequence is not terminal'
             if case.get('passed') and case['returncode'] == 0:
                 completed.append((case, source))
+            elif (args.observations and run.get('record_resets') and
+                  case.get('observations_complete') and case['returncode'] == 2):
+                completed.append((case, source))
             else:
                 failures.append(dict(source=str(source), case=case, error=run.get('error')))
-        if not run['passed']:
+        if not run['passed'] and not (args.observations and run.get('observations_complete')):
             assert run.get('error') and any(not c.get('passed') for c in run['cases'])
         hashes[str(source)] = {name: hashlib.sha256((source / name).read_bytes()).hexdigest()
                               for name in ('result.json', 'state-before.json', 'state-after.json',
@@ -55,11 +63,10 @@ def main():
     expected = {(o, v) for o, variants in OUTFITS.items() for v in variants}
     actual = [(r['outfit'], r['variant']) for r, source in completed]
     assert len(actual) == len(expected) and set(actual) == expected
-    summaries = []
+    summaries, reset_events = [], []
     frames = 0
     controls = set()
     for case, source in completed:
-        assert case['passed'] and case['returncode'] == 0
         folder = Path(case['evidence'])
         assert folder.parent == source
         report = read(folder / 'result.json')
@@ -70,9 +77,22 @@ def main():
         assert report['original']['idle_override'] == 'eve'
         assert geometry_restored(matrix['geometry_before'], report['geometry_before'])
         command = [sys.executable, str(Path(__file__).with_name('verify_capped_cost.py')), str(folder)]
+        observation_case = args.observations and report.get('record_resets')
+        if observation_case:
+            command.append('--observations')
+        else:
+            assert case['passed'] and case['returncode'] == 0
         run = subprocess.run(command, check=True, capture_output=True, text=True)
-        verified = read(folder / 'verified.json')
-        assert json.loads(run.stdout)['passed'] and verified['passed']
+        verified = read(folder / ('observations-verified.json' if observation_case else 'verified.json'))
+        stdout = json.loads(run.stdout)
+        if observation_case:
+            assert stdout['observation_integrity_verified'] and verified['observation_integrity_verified']
+            assert case['passed'] == verified['passed']
+            assert case['returncode'] == (0 if verified['passed'] else 2)
+            reset_events.extend(dict(outfit=case['outfit'], variant=case['variant'], source=str(source), **event)
+                                for event in verified['reset_events'])
+        else:
+            assert stdout['passed'] and verified['passed']
         controls.update(verified['rejected_controls'])
         frames += verified['frames']
         for cap_case in report['cases']:
@@ -92,7 +112,8 @@ def main():
                 if 'TotalSteps' in old['values']:
                     counters.append(dict(class_path=old['object']['class'], enabled=old['values'].get('Enabled'),
                                          steps=new['values']['TotalSteps'] - old['values']['TotalSteps'],
-                                         reset_count=new['values'].get('ResetCount')))
+                                         reset_count=new['values'].get('ResetCount'),
+                                         reset_delta=new['values'].get('ResetCount', 0) - old['values'].get('ResetCount', 0)))
             summaries.append(dict(outfit=case['outfit'], variant=case['variant'], cap=cap,
                                   observed_hz=[row['engine_tick_rate_hz'] for row in selected],
                                   median_run_statistics=timings, rig_counters=counters))
@@ -102,6 +123,11 @@ def main():
                   hashes=hashes, prior_failed_attempts=failures, all_attempts_passed=not failures,
                   scope='Stationary timing and boundary rig reads at native caps; no matched baseline, GPU or cloth-cost claim.')
     target = root / ('combined-verified.json' if args.prior else 'verified.json')
+    if args.observations:
+        result.update(passed=not failures and not reset_events, observation_integrity_verified=True,
+                      reset_free_current_cases=not reset_events, reset_events=reset_events,
+                      all_attempts_passed=not failures and not reset_events)
+        target = root / 'combined-observations-verified.json'
     target.write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps({k: v for k, v in result.items() if k not in ('summaries', 'hashes', 'prior_failed_attempts')}))
 

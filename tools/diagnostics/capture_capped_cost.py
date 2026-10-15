@@ -21,10 +21,14 @@ def main():
     parser.add_argument('--outfit', default='eins0fx.seduxtress')
     parser.add_argument('--variant', default='peony')
     parser.add_argument('--all-rigs', action='store_true')
+    parser.add_argument('--record-resets', action='store_true',
+                        help='Continue collecting after reset events, without marking them as passing')
     parser.add_argument('--caps', type=float, nargs='+', choices=(30., 60., 999.), default=[30., 60., 999.])
     args = parser.parse_args()
     if len(set(args.caps)) != len(args.caps):
         parser.error('Frame caps must not repeat')
+    if args.record_resets and not args.all_rigs:
+        parser.error('--record-resets requires --all-rigs')
     out = args.output.resolve()
     pids = processes()
     if out.exists() or len(pids) != 1:
@@ -35,7 +39,7 @@ def main():
     sample_rigs = sample_secondary_rigs if args.all_rigs else sample
     out.mkdir(parents=True)
     for name in ('capture_capped_cost.py', 'capture_stationary_cost.py', 'read_frame_cap_flags.py',
-                 'sample_secondary_rigs.py'):
+                 'sample_secondary_rigs.py', 'verify_capped_cost.py'):
         shutil.copyfile(ROOT / 'tools/diagnostics' / name, out / name)
     flags = FrameCapFlags(pids[0])
     before = json.loads((MOD / 'state/state.json').read_text())
@@ -115,6 +119,7 @@ def main():
                   settings_file=str(settings_path), settings_sha256=settings_sha, cases=[],
                   gameplay_input=False, raw_memory_writes=False,
                   requested_caps=args.caps,
+                  record_resets=args.record_resets,
                   rig_observer='secondary_rigs' if args.all_rigs else 'eve_body')
     atomic(out / 'state-before.json', before)
     atomic(out / 'result.json', report)
@@ -147,12 +152,15 @@ def main():
                 raise RuntimeError('Capture failed or body rig contains nonfinite values')
             if args.all_rigs:
                 from verify_capped_cost import verify_secondary_rigs
-                verify_secondary_rigs(row['rig_before'], row['rig_after'])
+                row['reset_events'] = verify_secondary_rigs(
+                    row['rig_before'], row['rig_after'], record_resets=args.record_resets)
             elif row['rig_after']['rig']['TotalSteps'] <= row['rig_before']['rig']['TotalSteps']:
                 raise RuntimeError('Body rig stopped updating')
-            row['passed'] = True
+            row['observations_complete'] = True
+            row['passed'] = not row.get('reset_events')
             atomic(out / 'result.json', report)
-            print(int(cap), 'cap: three captures and live rig updates pass', flush=True)
+            print(int(cap), 'cap: three captures complete; reset events:',
+                  len(row.get('reset_events', [])), flush=True)
         report['captures_complete'] = True
     except Exception as error:
         report['error'] = repr(error)
@@ -178,12 +186,15 @@ def main():
                 w['address'] == prior_window['address'] for w in window('clients')):
             focus(prior_window['address'])
         report['focus_restored'] = window('activewindow').get('address') == prior_window['address']
-        report['passed'] = bool(report.get('captures_complete') and not report.get('error') and
+        report['observations_complete'] = bool(report.get('captures_complete') and not report.get('error') and
             not report.get('restore_error') and all(report.get(k) for k in
                 ('state_restored', 'cine_restored', 'settings_file_unchanged', 'cap_restored',
                  'flags_restored', 'graphics_restored', 'geometry_restored', 'focus_restored')))
+        report['passed'] = report['observations_complete'] and all(row.get('passed') for row in report['cases'])
         atomic(out / 'result.json', report); log.close()
     if not report['passed']:
+        if args.record_resets and report['observations_complete']:
+            raise SystemExit(2)
         raise SystemExit(1)
 
 

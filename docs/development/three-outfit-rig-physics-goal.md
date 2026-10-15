@@ -1,11 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
-**October 15, broader cap capture partial:** Black Pearl and Planet each pass
-nine verified captures. Skin Suit's original-cap run records ten hair/body
-resets and stops the first matrix, with complete restoration. A focused repeat
-passes with no additional resets; the earlier event and timing spikes remain
-unresolved. The continuation from Skin Suit through the remaining variants is
-running, without relaxing the reset check or changing accepted assets.
+**October 15, broader cap capture partial:** Black Pearl, Planet, Skin Suit
+and Bikini each have nine verified captures. Earlier Skin Suit and later
+Knitwear attempts record hair/body resets and stop their matrices. Both restore
+fully. Long frames exceed the authored recovery threshold, but boundary reads
+do not explain every reset. The remaining six-variant collection is running with reset events retained
+as unresolved observations instead of discarding later timing coverage. No accepted
+core, assets or solver thresholds changed.
 [Method and evidence](../research/2026-10-15-outfit-frame-caps.md).
 
 **October 15, twenty Stray combo interruptions pass:** actual two-hit Axatana

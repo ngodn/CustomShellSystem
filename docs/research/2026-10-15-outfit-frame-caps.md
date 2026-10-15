@@ -3,8 +3,10 @@
 The first matrix stopped at Skin Suit's original-cap reset check and restored
 all owned state. Black Pearl and Planet each pass nine independently verified
 captures. A focused Skin Suit repeat passes three original-cap captures, but the
-first reset event remains unresolved. A continuation from Skin Suit through the
-remaining variants is running; complete matrix acceptance is still open.
+first reset event remains unresolved. The continuation also stopped, at Knitwear
+after two hair/body resets at cap 60. Skin Suit and Bikini pass all nine captures
+each in that continuation. Both sequences restored fully; complete matrix
+acceptance is still open.
 
 Evidence: `work/three-outfit-rig-physics/frame-cap-20261015/outfits/`.
 Parent log: `work/three-outfit-rig-physics/frame-cap-20261015/outfits.log`.
@@ -44,15 +46,32 @@ epochs, owner transform and scale remain unchanged. Measured rates are 53.15 to
 state/CINE/geometry/process restoration passes. This repeat does not erase the
 earlier event or establish its cause.
 
-`outfits-remaining/` is the current continuation, using `--start-at` Skin Suit.
-Black Pearl and Planet are not repeated. Skin Suit is repeated at all three
-caps because its first full result failed; remaining variants follow in the
-same process. The diagnostic still rejects any additional reset. Each run
-retains its own recipe and result; a partial sequence is not a ten-case pass.
-The resumed Skin Suit case now passes all nine captures and 4,123 independently
-verified records, with no additional resets. The other seven variants are still
-being captured. Both Skin Suit repeats retain the original failure as a separate
-finding, without changing the accepted solver.
+`outfits-remaining/` is terminal and failed. Skin Suit passes nine captures and
+4,123 records; Bikini passes nine captures and 4,125 records. Knitwear passes
+cap 30, then records two additional resets on both hair and body at cap 60.
+Its first cap-60 recording includes a supplied engine delta of 67.0674 ms,
+above the authored long-frame threshold. Sampled reset epochs, scale and owner
+transform remain unchanged. Boundary snapshots cannot explain every reset.
+The failure, raw statistics and independent restoration check are retained in
+`failure-analysis.json`, `terminal-receipt.json` and `restoration-verified.json`.
+
+The diagnostic now offers explicit `--record-resets` collection. This records
+increasing reset counters without stopping the remaining observations, while
+still rejecting changed owners/limits, stalled counters and non-finite state.
+A complete restored collection with resets exits 2 and remains `passed=false`.
+The separate `--observations` verifier checks raw data, settings restoration and
+recorded reset deltas; its receipt states `observation_integrity_verified`, not
+unqualified stability acceptance. Strict verification still rejects resets.
+Existing failures are retained, and no production solver threshold changed.
+
+`outfits-observations/` is running from Knitwear through the remaining six
+variants, using `--record-resets`. Its process/session receipt is in that folder;
+no result is claimed before terminal restoration and independent verification.
+Eight corrupted reset-observation cases are rejected in
+`observation-mode-controls.json`, including omitted events, incorrect deltas,
+false pass status, decreasing counters, stalled updates, changed owners/limits
+and non-finite state. The original Knitwear failure remains rejected in strict
+mode. The existing Bikini archive still passes strict offline verification.
 
 ## Measurement
 

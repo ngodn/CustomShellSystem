@@ -120,11 +120,12 @@ Accepted observations apply to their recorded test scope, not every variant.
   and advancing finite body state. Actual cadence is about 30 and 53 to 55 Hz;
   sustained 60/higher-rate, other-outfit and matched comparisons remain open.
   The [broader outfit cap check](../research/2026-10-15-outfit-frame-caps.md)
-  verifies nine captures each for Black Pearl and Planet. Skin Suit records
-  ten hair/body resets during its original-cap condition and stops the first
-  matrix with complete restoration. A focused repeat passes without new resets;
-  the first event remains unresolved, and the remaining-variant continuation
-  is running. No solver tuning or reset-check waiver was applied.
+  verifies nine captures each for Black Pearl, Planet, Skin Suit and Bikini.
+  Earlier Skin Suit and later Knitwear attempts record resets and stop their
+  matrices, with complete restoration. Long-frame recovery is a hypothesis;
+  every reset is not yet explained. Observation-mode collection is running and preserves
+  reset events as unresolved without stopping later timing coverage. Strict
+  stability verification and accepted solver thresholds remain unchanged.
   The [paired editor body-cost fixture](../research/2026-10-15-body-cost.md)
   now verifies 48 enabled/bypassed cases and 28,800 measured updates at
   30/60/120 Hz. It estimates incremental body work with substantial variance;

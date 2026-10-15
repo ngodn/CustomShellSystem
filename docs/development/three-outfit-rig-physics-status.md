@@ -1,10 +1,12 @@
 # Three-outfit implementation status
 
-**October 15, outfit frame-cap matrix partial:** Black Pearl and Planet pass
-all nine captures each. Skin Suit records ten additional hair/body resets at
-the original cap; the first matrix fails and restores completely. A focused
-repeat passes without new resets, but does not explain the earlier event.
-A continuation from Skin Suit is running with the same reset criterion.
+**October 15, broader cap capture partial:** Black Pearl, Planet, Skin Suit
+and Bikini each have nine verified captures. Earlier Skin Suit and later
+Knitwear attempts record hair/body resets and stop their matrices. Both restore
+fully. Long frames exceed the authored recovery threshold, but boundary reads
+do not explain every reset. The remaining six-variant collection is running with reset events retained
+as unresolved observations instead of discarding later timing coverage. No accepted
+core, assets or solver thresholds changed.
 [Method and evidence](../research/2026-10-15-outfit-frame-caps.md).
 
 **October 15, twenty Stray combo interruptions pass:** all ten release variants

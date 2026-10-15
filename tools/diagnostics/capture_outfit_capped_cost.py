@@ -21,6 +21,7 @@ def main():
     selection.add_argument('--only', choices=choices)
     selection.add_argument('--start-at', choices=choices, help='Start at a variant after separately verified earlier cases')
     parser.add_argument('--caps', type=float, nargs='+', choices=(30., 60., 999.), default=[30., 60., 999.])
+    parser.add_argument('--record-resets', action='store_true')
     args = parser.parse_args()
     out = args.output.resolve()
     original, pids = describe(), processes()
@@ -69,7 +70,7 @@ def main():
     atomic(out / 'cine-before.json', cine)
     report = dict(passed=False, original=original, player=player, geometry_before=baseline,
                   core=core, core_sha256=core_sha256, cases=[], requested_caps=args.caps,
-                  only=args.only, start_at=args.start_at)
+                  only=args.only, start_at=args.start_at, record_resets=args.record_resets)
     atomic(out / 'result.json', report)
     try:
         customize({'action': 'idle', 'value': 'eve'})
@@ -94,6 +95,8 @@ def main():
                 command = [sys.executable, str(ROOT / 'tools/diagnostics/capture_capped_cost.py'),
                            '--output', str(folder), '--outfit', outfit, '--variant', variant, '--all-rigs',
                            '--caps', *[str(cap) for cap in args.caps]]
+                if args.record_resets:
+                    command.append('--record-resets')
                 row = dict(outfit=outfit, variant=variant, evidence=str(folder), command=command)
                 report['cases'].append(row)
                 atomic(out / 'result.json', report)
@@ -101,13 +104,20 @@ def main():
                     result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
                 row['returncode'] = result.returncode
                 if (folder / 'result.json').exists():
-                    row['passed'] = json.loads((folder / 'result.json').read_text())['passed']
+                    child = json.loads((folder / 'result.json').read_text())
+                    row['passed'] = child['passed']
+                    row['observations_complete'] = child.get('observations_complete', False)
                 atomic(out / 'result.json', report)
-                result.check_returncode()
-                if not row.get('passed'):
+                if args.record_resets and result.returncode in (0, 2) and row.get('observations_complete'):
+                    subprocess.run([sys.executable, str(ROOT / 'tools/diagnostics/verify_capped_cost.py'),
+                                    str(folder), '--observations'], check=True)
+                else:
+                    result.check_returncode()
+                if not row.get('passed') and not (args.record_resets and row.get('observations_complete')):
                     raise RuntimeError('Child did not verify captures and restoration')
-                print(outfit, variant, args.caps, 'caps pass', flush=True)
-        report['cases_passed'] = True
+                print(outfit, variant, args.caps, 'collected; reset-free:', row['passed'], flush=True)
+        report['cases_passed'] = bool(report['cases']) and all(row.get('passed') for row in report['cases'])
+        report['cases_complete'] = bool(report['cases']) and all(row.get('observations_complete') for row in report['cases'])
     except Exception as error:
         report['error'] = repr(error)
     finally:
@@ -131,12 +141,15 @@ def main():
             atomic(out / 'cine-after.json', cine_after)
             report['cine_restored'] = cine_after == cine
             report['process_preserved'] = processes() == pids
-            report['passed'] = bool(report.get('cases_passed') and not report.get('error') and all(
+            report['observations_complete'] = bool(report.get('cases_complete') and not report.get('error') and all(
                 report.get(k) for k in ('state_restored', 'geometry_restored', 'cine_restored', 'process_preserved')))
+            report['passed'] = report['observations_complete'] and report.get('cases_passed', False)
         except Exception as error:
             report['restore_error'] = repr(error)
         atomic(out / 'result.json', report)
     if not report['passed']:
+        if args.record_resets and report.get('observations_complete'):
+            raise SystemExit(2)
         raise SystemExit(1)
 
 
