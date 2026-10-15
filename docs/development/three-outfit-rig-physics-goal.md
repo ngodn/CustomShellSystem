@@ -1,5 +1,11 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Genessa material/rig sources verified:** all 33 preserved instances
+replay byte-for-byte. The seven authored parents, 48 textures and 13 original
+rig/mesh source-to-cook chains match their retained records. All 224 material
+payloads remain unchanged in the installed lineage. No game changes; duplicate
+replay outputs removed. [Evidence and limits](../research/2026-10-15-genessa-material-rig-sources.md).
+
 **October 15, Genessa installed package lineage verified:** 1,769 retained files
 match, connecting namespace inputs, the four-mesh cloth overlay and the later
 two-graph hair update to the current installed trio. The final overlay preserves

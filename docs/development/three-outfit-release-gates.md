@@ -68,8 +68,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   The [installed Genessa package lineage](../research/2026-10-15-genessa-package-lineage.md)
   now verifies 1,769 retained files through the namespace, cloth and final hair
   stages, with exact installed trio hashes and 261 preserved non-graph payloads.
-  Whole-outfit source reproduction, fresh rebuild and remaining rig/material
-  authoring provenance remain open; retained assembly identities now pass.
+  Genessa's [original material and rig source chains](../research/2026-10-15-genessa-material-rig-sources.md)
+  also pass: 55 authored material/texture sources, 13 original rig/mesh sources,
+  and exact replay of all 33 preserved material instances. Whole-outfit source
+  reproduction, fresh rebuild and remaining full-goal source coverage stay open.
 - Finish the remaining runtime checks and other non-deferred defects. Preserve accepted
   belt/skirt motion, Genessa cloth and Peony motion/design; complete their separate
   regression and performance requirements without reopening accepted minor flaws.

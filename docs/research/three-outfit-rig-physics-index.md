@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Genessa material and rig sources](2026-10-15-genessa-material-rig-sources.md): all 33 preserved instances replay exactly; 55 authored material/texture and 13 original rig/mesh source-to-cook chains match. All 224 material payloads remain unchanged in the installed lineage. Original release containers match the published ZIP; duplicate replay outputs removed.
+
 - [Genessa package lineage](2026-10-15-genessa-package-lineage.md): 1,769 retained files connect namespace inputs, the cloth overlay and final hair update to the installed trio. All 261 non-graph payloads survive the last overlay; archived graph and 22 metadata comparisons pass. No fresh cook or rebuild is claimed.
 
 - [Genessa facial source replay](2026-10-15-genessa-facial-source-replay.md): five Blender authoring stages regenerate accepted facial data, allowing only verified preview provenance changes. Both final W3 packets are byte-exact; twelve corruption controls, the 39-input audit and installed facial geometry/morph checks pass. Whole-outfit source and assembly remain separate.
