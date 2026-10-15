@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, matched visibility-repair timing complete:** nine captures bracket
+the predecessor with the repaired core. All 162 owner-drift repairs pass across
+4,873 frames; MISC timings are similar, without an FPS-gain claim. The repaired
+core, original idle, settings, flags, resources, view, CINE and focus restore.
+The first fixture's body-weapon flag failure and verified recovery remain.
+[Measurements and limits](../research/2026-10-15-visibility-repair-cost.md).
+
 **October 15, Genessa material/rig sources verified:** all 33 preserved instances
 replay byte-for-byte. The seven authored parents, 48 textures and 13 original
 rig/mesh source-to-cook chains match their retained records. All 224 material

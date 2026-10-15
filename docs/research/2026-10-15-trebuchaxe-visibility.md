@@ -59,6 +59,13 @@ idle largely omits that changed work. A meaningful comparison needs matched
 visibility transitions and event timing, with the original nested flags restored
 after the old core's teardown. No baseline reload or performance claim was made.
 
+The later [matched repair comparison](2026-10-15-visibility-repair-cost.md)
+now completes nine candidate/baseline/candidate captures, with 162 successful
+owner-drift repairs and 4,873 raw frames. MISC timings are similar across builds;
+no FPS gain is claimed. The repaired core, native nested flags, original idle
+and full user state restore. Broader draw/fire, cloth/GPU and lifecycle cost
+remain outside that focused comparison.
+
 `fixed-visibility/result.json` passes 13 observed phases: three draw/stow cycles,
 Default, Hidden and Only when in use while drawn or stowed, and an induced
 owner-only visibility drift. The preview remains hidden and never renders. The

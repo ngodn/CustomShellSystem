@@ -124,6 +124,12 @@ Accepted observations apply to their recorded test scope, not every variant.
   Other native clips, targets, facial support and gameplay remain separate.
 - Complete matched performance measurements, repeated-switch lifetime checks
   and investigation of any new hitch, crash or regression.
+  The [matched visibility-repair comparison](../research/2026-10-15-visibility-repair-cost.md)
+  completes nine candidate/baseline/candidate episodes, 162 owner-drift repairs
+  and 4,873 frames. MISC timings are similar; whole-game FPS, exclusive event
+  cost, cloth/GPU and broader transition performance are not established by it.
+  The repaired core and all original user state restore, including live idle
+  playback. Its failed body-weapon fixture and recovery remain recorded.
   The [30-case stationary outfit/facial check](../research/2026-10-14-outfit-switch-lifecycle.md)
   passes with exact component identities and state restoration; broader lifecycle
   and frame-time measurements remain separate.
