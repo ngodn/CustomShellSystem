@@ -105,6 +105,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   and expire, native input blocks clear, and settings/resources/view restore.
   Independent raw-log verification rejects seven corrupted records; final live
   restoration is confirmed without changing the accepted core or assets.
+  [Twenty parry interruptions](../research/2026-10-15-outfit-parry-interruption.md)
+  now pass both clips on all ten variants in Stray, with forty raw native parry
+  observations, six rejected controls and complete restoration. This covers
+  parry initiation, not incoming-hit deflection, riposte or damage response.
   Moving/directional dodge, interaction, damage, other-form cases and
   the rest of this matrix remain open.
   [Peony's four normal summon cases](../research/2026-10-15-peony-doubles.md)

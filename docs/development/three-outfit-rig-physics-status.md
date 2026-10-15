@@ -1,5 +1,12 @@
 # Three-outfit implementation status
 
+**October 15, twenty parry interruptions pass:** both facial clips release on
+native Q parry across all ten release appearances in Stray. Forty raw native
+observations and six negative controls verify the result. Peony, original idle,
+settings, resources, player/view, CINE and input restore. No core/assets changed.
+Incoming-hit deflection, riposte and damage remain separate.
+[Evidence](../research/2026-10-15-outfit-parry-interruption.md).
+
 **October 15, current shared dependencies pass:** eight production catalog
 cases verify missing, outdated, duplicate and retained standalone providers.
 Valid cases retain all ten facial matches; invalid cases report the expected

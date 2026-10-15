@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Twenty parry interruptions](2026-10-15-outfit-parry-interruption.md): both facial clips release on native Q parry across all ten variants in Stray. Forty raw native observations, six rejected controls and final read-only restoration pass. Incoming-hit/riposte/damage coverage is separate.
+
 - [Current shared dependencies](2026-10-15-current-shared-dependencies.md): eight production catalog cases pass missing, outdated, duplicate and retired-provider handling. Valid cases retain all ten facial matches; invalid cases report the expected guidance. No divergent export overlaps or game changes.
 
 - [CW repair lineage](2026-10-15-cw-repair-lineage.md): 578 retained files verify accepted hair, ankle, belt and walking integration through the actual installed trio. Nine final walking assets match the accepted decoded trial and 445 other payloads remain unchanged. No new cook or game changes.

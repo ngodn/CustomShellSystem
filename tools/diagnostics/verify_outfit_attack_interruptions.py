@@ -10,6 +10,8 @@ from check_sidearm_aim_visibility import geometry_restored
 
 
 def action_matches(name, action):
+    if action == 'parry':
+        return '/Parry/GA_Parry_Action_Single.' in name
     if action == 'shell_ability':
         return '/CorruptedGenessa/Abilities/GA_AstralClones_Action.' in name
     return ('/Dash/GA_Dash_CorruptedGenessa.' in name if action == 'dodge' else
@@ -38,6 +40,9 @@ def verify_case(row, before, after, active_attacks):
     assert before == after and geometry_restored(row['geometry_before'], row['geometry_after'])
     assert row['passed'] and all(row[k] for k in ('action_passed', 'geometry_restored',
         'state_restored', 'cine_restored', 'health_unchanged', 'keys_released', 'focus_restored'))
+    if row.get('action') == 'parry':
+        assert row['resolve_restored'] and row['resolve_before'] == row['resolve_after']
+        assert not row['actions_after_cleanup'] and not row['input_blocks_after_cleanup']
     if row.get('action') == 'shell_ability':
         assert row['secondary_eligible'] and row['resolve_restored']
         assert not row['actions_after_cleanup'] and not row['input_blocks_after_cleanup']
@@ -97,7 +102,7 @@ def main():
     read = lambda p: json.loads(p.read_text())
     matrix = read(root / 'result.json')
     action = matrix.get('action', 'secondary_attack')
-    assert action in ('secondary_attack', 'secondary_combo', 'dodge', 'shell_ability')
+    assert action in ('secondary_attack', 'secondary_combo', 'dodge', 'shell_ability', 'parry')
     expected = {(o, v, c) for o, variants in OUTFITS.items() for v in variants for c in ('irisout', 'comecloser')}
     actual = [(r['outfit'], r['variant'], r['clip']) for r in matrix['cases']]
     assert len(actual) == len(expected) and set(actual) == expected
@@ -137,6 +142,8 @@ def main():
         controls += ['no second stage', 'unobserved second input']
     if action == 'shell_ability':
         controls += ['clone still active', 'missing secondary clone', 'input still blocked', 'resources changed']
+    if action == 'parry':
+        controls += ['parry still active', 'input still blocked', 'resources changed']
     for label in controls:
         row, before, after, attacks = copy.deepcopy(first)
         if label == 'still active':
@@ -158,6 +165,8 @@ def main():
             row['summon_after'] = copy.deepcopy(row['summon_samples'][-1])
         elif label == 'input still blocked':
             row['input_blocks_after_cleanup'] = [1]
+        elif label == 'parry still active':
+            row['actions_after_cleanup'] = [attacks[0]['ability']]
         else:
             row['resolve_after']['CurrentValue'] -= 1
         try:

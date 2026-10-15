@@ -32,11 +32,11 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--clip', default='css.eve.dance.irisout')
-    parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge', 'shell_ability'), default='secondary_attack')
+    parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge', 'shell_ability', 'parry'), default='secondary_attack')
     parser.add_argument('--ground-proof', type=Path, help='Required checked corridor for the stationary Stray dodge or combo')
     parser.add_argument('--start-evidence', type=Path, help='Verified previously occupied staircase point for the combo')
     args = parser.parse_args()
-    if args.action in ('secondary_combo', 'shell_ability'):
+    if args.action in ('secondary_combo', 'shell_ability', 'parry'):
         cssx.wait_json = fast_wait
     out = args.output.resolve()
     if out.exists():
@@ -96,16 +96,21 @@ def main():
     dodge = args.action == 'dodge'
     combo = args.action == 'secondary_combo'
     summon = args.action == 'shell_ability'
-    input_action, input_key = (('IA_Shell_Ability', 'F') if summon else
+    parry = args.action == 'parry'
+    input_action, input_key = (('IA_Parry_Press', 'Q') if parry else
+                              ('IA_Shell_Ability', 'F') if summon else
                               ('IA_Dodge', 'SpaceBar') if dodge else ('IA_Attack_Secondary', 'RightMouseButton'))
     if not any(r['Action']['name'].endswith('.' + input_action) and
                r['Key']['KeyName'] == input_key for r in mappings):
         raise RuntimeError('Action is not mapped to the expected key')
-    down, up = ((['keydown', 'f'], ['keyup', 'f']) if summon else
+    down, up = ((['keydown', 'q'], ['keyup', 'q']) if parry else
+                (['keydown', 'f'], ['keyup', 'f']) if summon else
                 (['keydown', 'space'], ['keyup', 'space']) if dodge else (['mousedown', '3'], ['mouseup', '3']))
 
     def action_matches(ability):
         name = ability['class']
+        if parry:
+            return '/Parry/GA_Parry_Action_Single.' in name
         if summon:
             return '/CorruptedGenessa/Abilities/GA_AstralClones_Action.' in name
         return ('/Dash/GA_Dash_CorruptedGenessa.' in name if dodge else
@@ -122,7 +127,12 @@ def main():
 
     def keys():
         return send({'op': 'input.keys', 'target': player['controller'],
-                     'keys': ['W', 'A', 'S', 'D', 'F', 'SpaceBar', 'LeftControl', 'LeftMouseButton', 'RightMouseButton']})
+                     'keys': ['W', 'A', 'S', 'D', 'F', 'Q', 'SpaceBar', 'LeftControl', 'LeftMouseButton', 'RightMouseButton']})
+
+    if parry:
+        report['resolve_before'] = get(health_set, 'Resolve')
+        if active_actions():
+            raise RuntimeError('Another parry is already active')
 
     baseline = geometry()
     expected_control = baseline['control_rotation']
@@ -432,6 +442,11 @@ def main():
             report['cine_restored'] = request(GAME, {'op': 'model', 'extension': 'eins0fx.cine'})['result'] == cine
             report['health_unchanged'] = get(health_set, 'Health') == health_before
             report['keys_released'] = not any(keys().values())
+            if parry:
+                report['resolve_after'] = get(health_set, 'Resolve')
+                report['resolve_restored'] = report['resolve_after'] == report['resolve_before']
+                report['actions_after_cleanup'] = active_actions()
+                report['input_blocks_after_cleanup'] = get(input_component, 'ActiveBlocks')
         except Exception as error:
             report['restore_error'] = repr(error)
         if window('activewindow').get('address') == game_window['address'] and any(
@@ -444,6 +459,9 @@ def main():
                                    'health_unchanged', 'keys_released', 'focus_restored')))
         if summon:
             report['passed'] = report['passed'] and bool(report.get('summon_after') and report.get('resolve_restored'))
+        if parry:
+            report['passed'] = report['passed'] and bool(report.get('resolve_restored')) and not (
+                report.get('actions_after_cleanup') or report.get('input_blocks_after_cleanup'))
         atomic(out / 'result.json', report)
         log.close()
     print(json.dumps({k: v for k, v in report.items() if isinstance(v, (str, bool))}))
