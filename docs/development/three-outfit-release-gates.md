@@ -172,6 +172,12 @@ Accepted observations apply to their recorded test scope, not every variant.
   [current-container compatibility cases](../research/2026-10-14-coordinated-upgrade-audit.md)
   now pass with current/mixed legacy Genessa and CW. They do not test save
   migration or deliver the new stable Genessa/CW versions.
+  [Eight current shared-dependency cases](../research/2026-10-15-current-shared-dependencies.md)
+  also pass production catalog checks for missing, outdated, duplicate and
+  retained standalone providers, with actionable messages and all ten facial
+  matches in valid cases. Export inventories contain no divergent overlaps.
+  This closes those offline current-package cases, not physical installation
+  or runtime/save migration.
   The [profile Default visibility correction](../research/2026-10-14-profile-default-restore.md)
   now passes offline settings restoration with three archived user states and
   actual world/preview profile loads on the installed core. It does not close

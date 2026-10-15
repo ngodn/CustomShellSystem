@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Current shared dependencies](2026-10-15-current-shared-dependencies.md): eight production catalog cases pass missing, outdated, duplicate and retired-provider handling. Valid cases retain all ten facial matches; invalid cases report the expected guidance. No divergent export overlaps or game changes.
+
 - [CW repair lineage](2026-10-15-cw-repair-lineage.md): 578 retained files verify accepted hair, ankle, belt and walking integration through the actual installed trio. Nine final walking assets match the accepted decoded trial and 445 other payloads remain unchanged. No new cook or game changes.
 
 - [Genessa W3 editable baseline](2026-10-15-genessa-w3-sources.md): 2,220 retained files verify original creation inputs, the byte-exact wing comparison replay and both later source consumers through current package lineage. No new cook or game changes; historical Blender reconstruction is not an added release gate.

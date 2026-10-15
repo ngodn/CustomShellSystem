@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, current shared dependencies pass:** eight production catalog
+cases verify missing, outdated, duplicate and retained standalone providers.
+Valid cases retain all ten facial matches; invalid cases report the expected
+install/update/remove guidance. No divergent export overlaps or game changes.
+Physical installation and runtime/save migration remain separate.
+[Evidence](../research/2026-10-15-current-shared-dependencies.md).
+
 **October 15, CW repair lineage verified:** 578 retained files connect accepted
 hair, ankle, belt and walking updates to the installed trio. All nine permanent
 walking assets match the accepted decoded trial; 445 other payloads survive
