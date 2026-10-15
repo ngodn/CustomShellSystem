@@ -287,14 +287,35 @@ std::pair<FBoolProperty*,void*> control_rig_reference(UObject* anim) {
 }
 
 }
-void EngineBridge::restore_rig_trial() {
-    if(!rig_trial_deadline_) return;
+bool EngineBridge::restore_rig_trial(void* engine,Appearance& appearance) {
+    if(!rig_trial_deadline_) return true;
     if(auto* anim=rig_trial_anim_.Get()) {
         if(rig_trial_reference_) {
             auto* mesh=rig_trial_mesh_.Get();
             if(mesh && read<UObject*>(mesh,L"AnimScriptInstance")==anim) {
-                recreate_native_instance(mesh,anim);
-                rig_trial_result_="restored by recreation";
+                auto* pawn=rig_trial_pawn_.Get();
+                auto* current=appearance.player(engine);
+                if(!pawn || (current && current!=pawn) || read<UObject*>(pawn,L"Mesh")!=mesh) {
+                    // Release our flag without resetting animation on a retired player's component.
+                    auto [flag,data]=control_rig_reference(anim);
+                    if(flag->GetPropertyValue(data)==bool(rig_trial_written_))
+                        flag->SetPropertyValue(data,bool(rig_trial_original_));
+                    rig_trial_result_="owner retired; reference flag released without recreation";
+                } else {
+                    if(!current || appearance.performance.active() || appearance.performance.cleanup_pending() ||
+                       PerformancePlayer::waiting_for_menu(pawn)) {
+                        rig_trial_result_="restoration pending: player or playback is not idle";
+                        return false;
+                    }
+                    Call montage(anim,L"IsAnyMontagePlaying",1);montage.run();
+                    const auto speed=read<double>(anim,L"Speed");
+                    if(!std::isfinite(speed) || std::abs(speed)>.01 || montage.get<bool>()) {
+                        rig_trial_result_="restoration pending: movement or montage is active";
+                        return false;
+                    }
+                    recreate_native_instance(mesh,anim);
+                    rig_trial_result_="restored by recreation";
+                }
             } else rig_trial_result_="component changed";
         } else {
             auto [property,data]=control_rig_alpha(anim);
@@ -306,14 +327,18 @@ void EngineBridge::restore_rig_trial() {
             } else rig_trial_result_="relinquished after another write";
         }
     } else rig_trial_result_="owner expired";
-    rig_trial_anim_={};rig_trial_mesh_={};rig_trial_deadline_=0;
+    rig_trial_anim_={};rig_trial_mesh_={};rig_trial_pawn_={};rig_trial_deadline_=0;
+    return true;
 }
-void EngineBridge::finish_rig_trial(bool force) {
-    if(rig_trial_deadline_ && (force || GetTickCount64()>=rig_trial_deadline_)) restore_rig_trial();
+void EngineBridge::finish_rig_trial(void* engine,Appearance& appearance,bool force) {
+    if(rig_trial_deadline_ && (force || GetTickCount64()>=rig_trial_deadline_)) {
+        const bool restored=restore_rig_trial(engine,appearance);
+        if(force && !restored) throw std::runtime_error("Rig trial cleanup is waiting for an idle player; CSS cannot unload yet");
+    }
 }
 Json EngineBridge::control_rig_trial(void* engine,Appearance& appearance,const Json& query) {
     const auto action=query.at("action").get<std::string>();
-    if(action=="restore") restore_rig_trial();
+    if(action=="restore") restore_rig_trial(engine,appearance);
     else if(action=="begin") {
         if(rig_trial_deadline_) throw std::runtime_error("Restore the active rig trial first");
         auto* pawn=appearance.player(engine);
@@ -335,7 +360,7 @@ Json EngineBridge::control_rig_trial(void* engine,Appearance& appearance,const J
             auto [flag,data]=control_rig_reference(anim);
             if(flag->GetPropertyValue(data)) throw std::runtime_error("Reference-pose flag is already enabled");
             // A fresh instance restores the private construction flags and initial transforms too.
-            rig_trial_reference_=true;rig_trial_mesh_=mesh;rig_trial_anim_=anim;
+            rig_trial_reference_=true;rig_trial_mesh_=mesh;rig_trial_anim_=anim;rig_trial_pawn_=pawn;
             rig_trial_deadline_=GetTickCount64()+seconds*1000;rig_trial_result_="active";
             rig_trial_original_=0;rig_trial_written_=1;
             flag->SetPropertyValue(data,true);

@@ -315,11 +315,12 @@ class EngineBridge {
 #ifdef CSS_INVENTORY_DEV
     WeakObject rig_trial_anim_;
     WeakObject rig_trial_mesh_;
+    WeakObject rig_trial_pawn_;
     bool rig_trial_reference_=false;
     float rig_trial_original_=0, rig_trial_written_=0;
     uint64_t rig_trial_deadline_=0;
     std::string rig_trial_result_;
-    void restore_rig_trial();
+    bool restore_rig_trial(void*,Appearance&);
     Json control_rig_trial(void*,Appearance&,const Json&);
     WeakObject walk_trial_pawn_;
     WeakObject walk_trial_controller_;
@@ -348,7 +349,7 @@ class EngineBridge {
 public:
     Json request(void* engine,Appearance&,const Json&);
 #ifdef CSS_INVENTORY_DEV
-    void finish_rig_trial(bool force=false);
+    void finish_rig_trial(void*,Appearance&,bool force=false);
     void finish_walk_trial(bool force=false);
 #endif
 };
