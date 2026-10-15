@@ -66,6 +66,7 @@ def main():
     summaries, reset_events = [], []
     frames = 0
     controls = set()
+    graphics_context = None
     for case, source in completed:
         folder = Path(case['evidence'])
         assert folder.parent == source
@@ -76,6 +77,11 @@ def main():
         assert report['original']['shell'] == matrix['original']['shell']
         assert report['original']['idle_override'] == 'eve'
         assert geometry_restored(matrix['geometry_before'], report['geometry_before'])
+        context = {key: report[key] for key in ('original_cap', 'settings_sha256',
+                                                'flags_before', 'cvars_before')}
+        if graphics_context is None:
+            graphics_context = context
+        assert context == graphics_context, 'Graphics context changed between outfits'
         command = [sys.executable, str(Path(__file__).with_name('verify_capped_cost.py')), str(folder)]
         observation_case = args.observations and report.get('record_resets')
         if observation_case:
@@ -121,6 +127,7 @@ def main():
     result = dict(passed=True, outfits=len(completed), captures=len(summaries) * 3,
                   frames=frames, rejected_controls=sorted(controls), summaries=summaries,
                   hashes=hashes, prior_failed_attempts=failures, all_attempts_passed=not failures,
+                  graphics_context=graphics_context,
                   scope='Stationary timing and boundary rig reads at native caps; no matched baseline, GPU or cloth-cost claim.')
     target = root / ('combined-verified.json' if args.prior else 'verified.json')
     if args.observations:

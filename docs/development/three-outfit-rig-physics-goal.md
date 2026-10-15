@@ -1,13 +1,17 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
-**October 15, broader cap capture partial:** Black Pearl, Planet, Skin Suit
-and Bikini each have nine verified captures. Earlier Skin Suit and later
-Knitwear attempts record hair/body resets and stop their matrices. Both restore
-fully. Long frames exceed the authored recovery threshold, but boundary reads
-do not explain every reset. The remaining six-variant collection is running with reset events retained
-as unresolved observations instead of discarding later timing coverage. No accepted
-core, assets or solver thresholds changed.
-[Method and evidence](../research/2026-10-15-outfit-frame-caps.md).
+**October 15, ten-outfit stationary timing coverage complete:** the combined
+observation check verifies 90 captures and 40,763 raw timing records at native
+caps 30, 60 and original 999. Alice records two hair and two body resets during
+a condition containing two long frames. Earlier Skin Suit and Knitwear failed
+attempts remain recorded; the overall stability result is not marked passed.
+All active measured counters advance with finite sampled state and unchanged
+limits. CW's strand/body/Belt20 counters are covered; UG hair is disabled in the
+sampled setups. Separate cloth/GPU cost, matched comparisons and sustained
+60 Hz remain open. A final read-only check verifies original Peony/idle, saved
+settings, CINE, view, graphics/cap ownership and loaded core restored. No accepted
+assets or production core changed, and no capture process remains running.
+[Method, measurements and limitations](../research/2026-10-15-outfit-frame-caps.md).
 
 **October 15, twenty Stray combo interruptions pass:** actual two-hit Axatana
 axe chains interrupt Iris Out and Come Closer across all ten release variants.

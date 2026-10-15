@@ -1,12 +1,10 @@
 # Native frame-cap captures across release outfits
 
-The first matrix stopped at Skin Suit's original-cap reset check and restored
-all owned state. Black Pearl and Planet each pass nine independently verified
-captures. A focused Skin Suit repeat passes three original-cap captures, but the
-first reset event remains unresolved. The continuation also stopped, at Knitwear
-after two hair/body resets at cap 60. Skin Suit and Bikini pass all nine captures
-each in that continuation. Both sequences restored fully; complete matrix
-acceptance is still open.
+Stationary observation coverage is complete for all ten release variants: 90
+captures and 40,763 raw timing records independently verify. This is not an
+unqualified stability pass. Alice records two hair and two body resets in its
+cap-60 condition, and the two earlier failed attempts remain in the combined
+receipt. Full settings, appearance, view, graphics and core restoration pass.
 
 Evidence: `work/three-outfit-rig-physics/frame-cap-20261015/outfits/`.
 Parent log: `work/three-outfit-rig-physics/frame-cap-20261015/outfits.log`.
@@ -30,6 +28,12 @@ The retained hair and body generators include resets for deltas above eight
 recovery as a hypothesis, not a proven cause for all ten resets: the counters
 were sampled only at boundaries, and the timed files omit the intervening
 setup/readback periods. No solver thresholds or accepted assets were changed.
+A retained V10 editor fixture independently shows the intended hitch path: an
+injected 200 ms frame increments the reset count once, runs zero substeps, then
+resumes two substeps on the next normal frame. Protected non-hair bones remain
+unchanged. `historical-hitch-context.json` pins that file and the adjacent samples.
+This is historical behavior, not a new replay, installed-asset identity proof or
+an explanation of every live event.
 `failure-analysis.json` retains source hashes, frame indices, both counter
 changes and independently verified parent restoration.
 
@@ -64,14 +68,58 @@ recorded reset deltas; its receipt states `observation_integrity_verified`, not
 unqualified stability acceptance. Strict verification still rejects resets.
 Existing failures are retained, and no production solver threshold changed.
 
-`outfits-observations/` is running from Knitwear through the remaining six
-variants, using `--record-resets`. Its process/session receipt is in that folder;
-no result is claimed before terminal restoration and independent verification.
+`outfits-observations/` is terminal, exit 2: all six remaining variants were
+collected and restored, with Alice's reset observations retained. Combined with
+`outfits/` and `outfits-remaining/`, its `combined-observations-verified.json`
+checks exactly ten unique variants, all three caps, identical graphics context,
+raw statistics and source/parent restoration. It reports
+`observation_integrity_verified=true`, `passed=false` and
+`all_attempts_passed=false`. Strict matrix verification rejects this collection.
+
+`restoration-verified.json` independently reads the live game after completion:
+original Peony and idle, saved state, CINE, inactive facial performance, position,
+view, cap 999, console priority, graphics file and loaded core all match. No
+production core or assets were changed. The final receipt records PID 1944353;
+the capture process is finished. Root remains at 96G free and theark at 49G free
+in rounded `df -h` output. No full project copy was created.
+
 Eight corrupted reset-observation cases are rejected in
 `observation-mode-controls.json`, including omitted events, incorrect deltas,
 false pass status, decreasing counters, stalled updates, changed owners/limits
 and non-finite state. The original Knitwear failure remains rejected in strict
 mode. The existing Bikini archive still passes strict offline verification.
+
+## Completed observations
+
+Measured engine tick rates in Hz, range across three recordings per condition.
+
+| Outfit | Cap 30 | Cap 60 | Original cap 999 | Additional resets |
+| --- | --- | --- | --- | --- |
+| Black Pearl | 29.94 to 29.95 | 52.18 to 52.50 | 52.48 to 53.29 | 0 |
+| Planet | 29.91 to 29.94 | 53.16 to 53.46 | 53.29 to 55.20 | 0 |
+| Skin Suit | 29.93 to 29.95 | 52.73 to 53.69 | 53.68 to 54.33 | 0 |
+| Bikini | 29.93 to 29.96 | 53.17 to 53.52 | 53.81 to 53.98 | 0 |
+| Knitwear | 29.93 to 29.95 | 52.42 to 53.73 | 51.88 to 54.86 | 0 |
+| Alice | 29.93 to 29.94 | 40.66 to 56.28 | 54.75 to 56.42 | Hair +2, body +2 at 60 |
+| Peony | 29.92 to 29.95 | 52.10 to 52.92 | 52.80 to 53.72 | 0 |
+| Unholy Genessa, Eve | 29.91 to 29.94 | 49.91 to 50.11 | 49.90 to 50.81 | 0 |
+| Unholy Genessa, original | 29.92 to 29.94 | 50.65 to 51.12 | 50.89 to 51.93 | 0 |
+| Commander White | 29.94 to 29.95 | 53.27 to 54.46 | 53.18 to 53.95 | 0 |
+
+Alice's cap-60 recordings contain two supplied engine deltas above the Eve
+rigs' authored 66.6677 ms threshold, with a maximum of 74.1036 ms. The equal
+reset/long-frame counts support the recovery hypothesis but are not synchronized
+per-frame proof. Original Skin Suit and Knitwear failures remain separate.
+
+Enabled primary rigs advance with finite sampled state and unchanged limits.
+Unholy Genessa's hair rig is disabled in both sampled setups; only its active
+body counter supplies update evidence. CW's active strand, body and Belt20 rigs
+all advance without resets. The hand rigs lack these counters, and separate
+cloth simulation is not measured.
+
+Median CSS core tick cost ranges from 0.206 to 0.305 ms across these conditions.
+That excludes animation-worker and GPU costs. This scene does not sustain 60 Hz
+in the recorded higher-cap runs, and there is no matched baseline comparison.
 
 ## Measurement
 

@@ -1,6 +1,6 @@
 # Three-outfit rig and physics research index
 
-- [Outfit frame-cap capture](2026-10-15-outfit-frame-caps.md): Black Pearl, Planet, Skin Suit and Bikini pass nine captures each. Two earlier matrices stop on reset checks and restore fully. Long-frame recovery remains a hypothesis. Explicit observation-mode collection retains reset events without declaring stability; the remaining six variants are being captured.
+- [Outfit frame-cap observations](2026-10-15-outfit-frame-caps.md): 90 captures and 40,763 records cover all ten variants, with matched graphics context and independently verified live restoration. Alice reset observations and two earlier failed attempts remain retained; this is complete stationary coverage, not full stability, sustained-60-Hz or matched-cost acceptance.
 
 - [Twenty outfit combo interruptions](2026-10-15-outfit-combo-interruption.md): native two-hit Axatana axe chains interrupt both facial clips on all ten release variants in Stray, with 863 raw active-ability observations, five negative controls and complete restoration.
 
