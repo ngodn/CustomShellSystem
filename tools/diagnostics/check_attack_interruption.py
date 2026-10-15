@@ -1,4 +1,4 @@
-"""Interrupt facial playback with a native attack, combo or dodge, then restore state."""
+"""Interrupt facial playback with a mapped native action, then restore state."""
 import argparse
 import json
 import math
@@ -10,6 +10,7 @@ import time
 from capture_eve_surface_variant import ROOT, describe, processes, sha, atomic
 from check_peony_live_presets import engine, customize, request, GAME
 from check_sidearm_aim_visibility import MOD, geometry_restored
+from css_live_snapshot import Probe
 import cssx
 
 
@@ -31,11 +32,11 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--clip', default='css.eve.dance.irisout')
-    parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge'), default='secondary_attack')
+    parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge', 'shell_ability'), default='secondary_attack')
     parser.add_argument('--ground-proof', type=Path, help='Required checked corridor for the stationary Stray dodge or combo')
     parser.add_argument('--start-evidence', type=Path, help='Verified previously occupied staircase point for the combo')
     args = parser.parse_args()
-    if args.action == 'secondary_combo':
+    if args.action in ('secondary_combo', 'shell_ability'):
         cssx.wait_json = fast_wait
     out = args.output.resolve()
     if out.exists():
@@ -94,14 +95,19 @@ def main():
     mappings = get(player_input, 'EnhancedActionMappings')
     dodge = args.action == 'dodge'
     combo = args.action == 'secondary_combo'
-    input_action, input_key = ('IA_Dodge', 'SpaceBar') if dodge else ('IA_Attack_Secondary', 'RightMouseButton')
+    summon = args.action == 'shell_ability'
+    input_action, input_key = (('IA_Shell_Ability', 'F') if summon else
+                              ('IA_Dodge', 'SpaceBar') if dodge else ('IA_Attack_Secondary', 'RightMouseButton'))
     if not any(r['Action']['name'].endswith('.' + input_action) and
                r['Key']['KeyName'] == input_key for r in mappings):
         raise RuntimeError('Action is not mapped to the expected key')
-    down, up = (['keydown', 'space'], ['keyup', 'space']) if dodge else (['mousedown', '3'], ['mouseup', '3'])
+    down, up = ((['keydown', 'f'], ['keyup', 'f']) if summon else
+                (['keydown', 'space'], ['keyup', 'space']) if dodge else (['mousedown', '3'], ['mouseup', '3']))
 
     def action_matches(ability):
         name = ability['class']
+        if summon:
+            return '/CorruptedGenessa/Abilities/GA_AstralClones_Action.' in name
         return ('/Dash/GA_Dash_CorruptedGenessa.' in name if dodge else
                 '/Axatana/' in name and '/GA_Player_Attack_' in name)
 
@@ -121,7 +127,7 @@ def main():
     baseline = geometry()
     expected_control = baseline['control_rotation']
     test_yaw = None
-    if dodge or combo:
+    if dodge or combo or summon:
         if args.ground_proof is None or player['shell'] != 'CharacterId.Player.Darkform.CorruptedGenessa':
             raise RuntimeError('This action requires the checked Stray corridor')
         proof = json.loads(args.ground_proof.read_text())
@@ -148,7 +154,32 @@ def main():
         if report['dash_parameters'] != {'DashDistance': 425., 'StrafeDashDistance': 465.,
                                         'DashTravelTime': .3499999940395355}:
             raise RuntimeError('Native dash parameters differ from the prepared corridor')
-    if dodge or combo:
+    if summon:
+        specs = [v for v in get(asc, 'ActivatableAbilities')['Items'] if action_matches(v['Ability'])]
+        if len(specs) != 1 or len(specs[0]['NonReplicatedInstances']) != 1 or specs[0]['ActiveCount']:
+            raise RuntimeError('Need one inactive native Stray summon instance')
+        ability = specs[0]['NonReplicatedInstances'][0]
+        report['secondary_eligible'] = call(ability, 'HasSecondaryClone')
+        if not report['secondary_eligible']:
+            raise RuntimeError('This fixture expects the upgraded two-clone save')
+        report['resolve_before'] = get(health_set, 'Resolve')
+        report['summon_samples'] = []
+        observer = Probe(log)
+
+        def observe_summon():
+            observed = observer.send('astral.observe', poses=False)
+            status = json.loads((MOD / 'runtime/status.json').read_text())['astral']
+            if observed['status'] != 'observed':
+                raise RuntimeError('Astral observer is unavailable')
+            return dict(observed=observed, status=status, monotonic=time.monotonic())
+
+        report['summon_before'] = observe_summon()
+        initial = report['summon_before']
+        if any(a['active'] for a in initial['observed']['actors']) or initial['status']['active'] or initial['status']['cached']:
+            raise RuntimeError('Existing doubles are still active or cached')
+        if before['doubles']['stray'] not in ('default', 'css'):
+            raise RuntimeError('Unexpected Stray doubles mode')
+    if dodge or combo or summon:
         report['ground_proof'] = str(args.ground_proof.resolve())
         report['ground_sha256'] = sha(args.ground_proof)
     if combo:
@@ -183,12 +214,12 @@ def main():
         if g['control_rotation'] != expected_control or g['view_target'] != baseline['view_target']:
             raise RuntimeError('Camera changed')
         distance = math.dist(list(g['position'].values()), list(baseline['position'].values()))
-        if distance > (800 if dodge or combo else 200):
+        if distance > (800 if dodge or combo or summon else 200):
             raise RuntimeError('Action travelled beyond the prepared restoration range')
         if any(keys().values()):
             raise RuntimeError('Unexpected held input')
-        if dodge and any(call(player['controller'], 'GetMoveInput').values()):
-            raise RuntimeError('Stationary dodge requires zero movement input')
+        if (dodge or summon) and any(call(player['controller'], 'GetMoveInput').values()):
+            raise RuntimeError('Stationary action requires zero movement input')
         if require_stationary:
             anim = call(body, 'GetAnimInstance')
             if get(anim, 'Speed') > .05 or call(anim, 'IsAnyMontagePlaying'):
@@ -210,7 +241,7 @@ def main():
             raise RuntimeError('Pointer is outside the game')
         if get(input_component, 'ActiveBlocks'):
             raise RuntimeError('Gameplay input is blocked')
-        if dodge:
+        if dodge or summon:
             camera_changed = True
             call(player['controller'], 'SetControlRotation', NewRotation={**expected_control, 'Yaw': test_yaw})
             expected_control = call(player['controller'], 'GetControlRotation')
@@ -324,6 +355,18 @@ def main():
         action_objects = report['actions_after_release'] + [a for v in report['samples'] for a in v['active_actions']]
         if not action_objects:
             raise RuntimeError('No expected native action was observed')
+        if summon:
+            deadline = time.monotonic() + 12
+            while True:
+                observed = observe_summon()
+                report['summon_samples'].append(observed)
+                atomic(out / 'result.json', report)
+                if any(a['active'] for a in observed['observed']['actors']):
+                    break
+                if time.monotonic() > deadline:
+                    raise RuntimeError('No summoned clone observed after interruption')
+                guard()
+                time.sleep(.2)
         time.sleep(3)
         report['after_action'] = guard(require_stationary=True)
         if combo:
@@ -340,6 +383,31 @@ def main():
             current = perf(op='status')
             if token is not None and current['active'] and current['token'] == token:
                 report['forced_stop'] = perf(op='stop', token=token)
+            if summon and report['action_input']:
+                deadline, inactive_since = time.monotonic() + 65, None
+                while True:
+                    guard()
+                    observed = observe_summon()
+                    report['summon_samples'].append(observed)
+                    atomic(out / 'result.json', report)
+                    active = any(a['active'] for a in observed['observed']['actors'])
+                    status = observed['status']
+                    if not active and status['active'] == status['cached'] == 0 and not status['error']:
+                        inactive_since = inactive_since or time.monotonic()
+                        if time.monotonic() - inactive_since >= 3:
+                            break
+                    else:
+                        inactive_since = None
+                    if time.monotonic() > deadline:
+                        raise RuntimeError('Summoned clones did not expire and clean up')
+                    time.sleep(.3)
+                report['summon_after'] = observed
+                report['resolve_after'] = get(health_set, 'Resolve')
+                report['resolve_restored'] = report['resolve_after'] == report['resolve_before']
+                report['actions_after_cleanup'] = active_actions()
+                report['input_blocks_after_cleanup'] = get(input_component, 'ActiveBlocks')
+                if report['actions_after_cleanup'] or report['input_blocks_after_cleanup']:
+                    raise RuntimeError('Summon still owns the ability or blocks gameplay input')
             time.sleep(.5)
             if combo:
                 deadline = time.monotonic() + 8
@@ -374,6 +442,8 @@ def main():
                                not report.get('error') and not report.get('restore_error') and all(
             report.get(k) for k in ('geometry_restored', 'state_restored', 'cine_restored',
                                    'health_unchanged', 'keys_released', 'focus_restored')))
+        if summon:
+            report['passed'] = report['passed'] and bool(report.get('summon_after') and report.get('resolve_restored'))
         atomic(out / 'result.json', report)
         log.close()
     print(json.dumps({k: v for k, v in report.items() if isinstance(v, (str, bool))}))

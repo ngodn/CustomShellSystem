@@ -1,5 +1,13 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Genessa ability interruption preflight passes:** Peony's Iris Out
+releases playback on the mapped F action. Both upgraded-save Stray clones appear
+and expire, with native ability/input blocks cleared and full settings/resources,
+position/view and focus restoration. Seven negative controls are rejected. The
+same check is running across both clips and all ten release variants. No accepted
+assets or production core changed.
+[Evidence and scope](../research/2026-10-15-shell-ability-interruption.md).
+
 **October 15, ten-outfit stationary timing coverage complete:** the combined
 observation check verifies 90 captures and 40,763 raw timing records at native
 caps 30, 60 and original 999. Alice records two hair and two body resets during

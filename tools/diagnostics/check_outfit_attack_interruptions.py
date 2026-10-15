@@ -17,7 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
-    parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge'), default='secondary_attack')
+    parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge', 'shell_ability'), default='secondary_attack')
     parser.add_argument('--ground-proof', type=Path)
     parser.add_argument('--start-evidence', type=Path)
     args = parser.parse_args()

@@ -9,6 +9,13 @@ from check_outfit_switch_lifecycle import OUTFITS
 from check_sidearm_aim_visibility import geometry_restored
 
 
+def action_matches(name, action):
+    if action == 'shell_ability':
+        return '/CorruptedGenessa/Abilities/GA_AstralClones_Action.' in name
+    return ('/Dash/GA_Dash_CorruptedGenessa.' in name if action == 'dodge' else
+            '/Axatana/' in name and '/GA_Player_Attack_' in name)
+
+
 def verify_case(row, before, after, active_attacks):
     playing, stopped = row['playing'], row['stopped']
     assert row['started']['token'] == playing['token'] == stopped['token']
@@ -22,8 +29,7 @@ def verify_case(row, before, after, active_attacks):
     for observed in active_attacks:
         name = observed['ability']['class']
         assert observed['count'] > 0
-        assert ('/Dash/GA_Dash_CorruptedGenessa.' in name if row.get('action') == 'dodge' else
-                '/Axatana/' in name and '/GA_Player_Attack_' in name)
+        assert action_matches(name, row.get('action', 'secondary_attack'))
     assert row.get('action_input', row.get('attack_input'))
     assert row.get('action_key_observed', row.get('attack_key_observed'))
     assert not row['movement_input'] and not row['camera_input']
@@ -32,6 +38,21 @@ def verify_case(row, before, after, active_attacks):
     assert before == after and geometry_restored(row['geometry_before'], row['geometry_after'])
     assert row['passed'] and all(row[k] for k in ('action_passed', 'geometry_restored',
         'state_restored', 'cine_restored', 'health_unchanged', 'keys_released', 'focus_restored'))
+    if row.get('action') == 'shell_ability':
+        assert row['secondary_eligible'] and row['resolve_restored']
+        assert not row['actions_after_cleanup'] and not row['input_blocks_after_cleanup']
+        assert row['resolve_before'] == row['resolve_after']
+        initial, final = row['summon_before'], row['summon_after']
+        assert not any(a['active'] for a in initial['observed']['actors'])
+        assert not any(a['active'] for a in final['observed']['actors'])
+        assert final == row['summon_samples'][-1]
+        actors = {a['id'] for sample in row['summon_samples'] for a in sample['observed']['actors'] if a['active']}
+        assert actors == {'AstralClonePrimary', 'AstralCloneSecondary'}
+        start, end = initial['status'], final['status']
+        assert start['active'] == start['cached'] == end['active'] == end['cached'] == 0
+        assert not end['error'] and end['fallbacks'] == start['fallbacks']
+        groups = 2 if before['doubles']['stray'] == 'css' else 0
+        assert end['prepared'] - start['prepared'] == end['removed'] - start['removed'] == groups
     if row.get('action') == 'secondary_combo':
         assert not row['timeline_only'] and row['second_input']['key_observed']
         assert row['combo_count_after'] == 0
@@ -53,11 +74,18 @@ def recorded_attacks(path, action='secondary_attack'):
             continue
         for spec in reply['result']['Items']:
             name = spec['Ability']['class']
-            matched = ('/Dash/GA_Dash_CorruptedGenessa.' in name if action == 'dodge' else
-                       '/Axatana/' in name and '/GA_Player_Attack_' in name)
+            matched = action_matches(name, action)
             if spec['ActiveCount'] > 0 and matched:
                 attacks.append(dict(ability=spec['Ability'], count=spec['ActiveCount']))
     return attacks
+
+
+def verify_summon_log(path, row):
+    records = [json.loads(line) for line in path.read_text().splitlines()]
+    observations = [reply['result'] for request, reply in zip(records, records[1:])
+                    if request.get('request', {}).get('op') == 'astral.observe' and 'result' in reply]
+    assert observations == [row['summon_before']['observed'],
+                            *[sample['observed'] for sample in row['summon_samples']]]
 
 
 def main():
@@ -69,7 +97,7 @@ def main():
     read = lambda p: json.loads(p.read_text())
     matrix = read(root / 'result.json')
     action = matrix.get('action', 'secondary_attack')
-    assert action in ('secondary_attack', 'secondary_combo', 'dodge')
+    assert action in ('secondary_attack', 'secondary_combo', 'dodge', 'shell_ability')
     expected = {(o, v, c) for o, variants in OUTFITS.items() for v in variants for c in ('irisout', 'comecloser')}
     actual = [(r['outfit'], r['variant'], r['clip']) for r in matrix['cases']]
     assert len(actual) == len(expected) and set(actual) == expected
@@ -78,6 +106,8 @@ def main():
         folder = Path(case['evidence'])
         row, before, after = (read(folder / n) for n in ('result.json', 'state-before.json', 'state-after.json'))
         attacks = recorded_attacks(folder / 'requests.jsonl', action)
+        if action == 'shell_ability':
+            verify_summon_log(folder / 'requests.jsonl', row)
         if action == 'secondary_combo':
             records = [json.loads(line) for line in (folder / 'requests.jsonl').read_text().splitlines()]
             histories = [reply['result'] for request, reply in zip(records, records[1:])
@@ -105,6 +135,8 @@ def main():
     controls = ['still active', 'natural end', 'no native attack']
     if action == 'secondary_combo':
         controls += ['no second stage', 'unobserved second input']
+    if action == 'shell_ability':
+        controls += ['clone still active', 'missing secondary clone', 'input still blocked', 'resources changed']
     for label in controls:
         row, before, after, attacks = copy.deepcopy(first)
         if label == 'still active':
@@ -115,8 +147,17 @@ def main():
             attacks = []
         elif label == 'no second stage':
             attacks = [a for a in attacks if 'Axe_B2' not in a['ability']['class']]
-        else:
+        elif label == 'unobserved second input':
             row['second_input']['key_observed'] = False
+        elif label == 'clone still active':
+            row['summon_after']['status']['active'] = 1
+        elif label == 'missing secondary clone':
+            for sample in row['summon_samples']:
+                sample['observed']['actors'] = [a for a in sample['observed']['actors'] if a['id'] != 'AstralCloneSecondary']
+        elif label == 'input still blocked':
+            row['input_blocks_after_cleanup'] = [1]
+        else:
+            row['resolve_after']['CurrentValue'] -= 1
         try:
             verify_case(row, before, after, attacks)
         except AssertionError:
