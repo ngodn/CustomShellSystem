@@ -1,0 +1,33 @@
+{
+  "tag": "v1.0.0",
+  "source_commit": "aecf6e44490d2d4bfbf6a7f485c7fd69918a00e6",
+  "runtime_source_unchanged_from_accepted_candidate": true,
+  "packages": [
+    {
+      "path": "v1.0.0/MSII-CSS-v1.0.0.zip",
+      "bytes": 3121337,
+      "sha256": "d53a2e9951c64312e66b66d12786c83d5e1ebf61c3c4fda2e04010881ce71b3a"
+    },
+    {
+      "path": "v1.0.0/CSS_SharedAssets_P-v1.0.0.zip",
+      "bytes": 48069935,
+      "sha256": "87466b0115ad381f4e39cb6e457a829dde48068f04fe422d6d662cf0aa735375"
+    },
+    {
+      "path": "eve-v1.5.0/CSS_EveStellarBlade_eins0fx_P-v1.5.0.zip",
+      "bytes": 631596096,
+      "sha256": "e810b764360f505ba4263ae714c68062bb93c161f8c9a415efd16660b5e09212"
+    },
+    {
+      "path": "unholygenessa-v0.3.0/CSS_UnholyGenessa_eins0fx_P-v0.3.0.zip",
+      "bytes": 102200779,
+      "sha256": "6f260a75e24b85ce49573d642ba9f1797a383bb89018397a9a293417cf43fdf2"
+    },
+    {
+      "path": "commanderwhite-v0.1.0/CSS_CommanderWhite_eins0fx_P-v0.1.0.zip",
+      "bytes": 602995540,
+      "sha256": "06a11fc666791f4832ae3695e5404932cca11880dddeeb2534b85dd7dbabdd7c"
+    }
+  ],
+  "nexus_uploaded": false
+}

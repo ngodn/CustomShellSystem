@@ -25,14 +25,9 @@ have no screenshots. Commander White adds belt physics, facial controls and
 52 additional idles. Images are uploaded separately to the `media/css-v1.0.0` Git branch; code,
 release tags and Nexus publication are not part of that upload.
 
-All five local candidate archives are now under `dist`, including the CSS
-runtime and matching shared metadata. Remaining release gates and the final
-tagged build are still open. CSS describes the installed Sunlight shadows option as an
-optional workaround, with Default (game) retained and sharper shadows disclosed.
-The actual MISC screenshot shows both choices. This is not a universal engine
-fix or a performance claim. Zhirelle and the documented difficult boss
-adaptations are deferred to v1.0.1. Do not infer additional deferrals from
-omission in a draft.
+All five stable release archives are under `dist`. The user accepted release on
+October 16 and ended further validation. The release index is `dist/DELIVERY.md`;
+remaining research is recorded in `docs/development/v1.0.1-follow-up.md`.
 
 Media receipts live under
 `work/three-outfit-rig-physics/changelog-media-20261015/`.

@@ -1,5 +1,14 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**Final delivery, October 16:** all five stable archives and four BBCode
+changelogs are ready in `dist/DELIVERY.md`. CSS was rebuilt from annotated tag
+`v1.0.0` (`aecf6e4`); accepted runtime source is unchanged, and all five archive
+checksums pass. No additional gameplay testing was performed. Nexus upload has
+not been performed. The accepted release preparation is complete; deferred
+research is in [v1.0.1 follow-up](v1.0.1-follow-up.md). Final hashes are in
+[v1.0.0-final-delivery.json](v1.0.0-final-delivery.json).
+
+
 ## October 16: release accepted by the user
 
 The user explicitly ended further validation and requested release now. Ship the
