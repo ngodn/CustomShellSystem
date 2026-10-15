@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Genessa facial inputs reproduce exactly:** both accepted facial
+packets match the retained recipe output byte-for-byte. Thirty-nine retained
+inputs match, including original W3 meshes and the editor module. The installed
+facial geometry/morph comparison passes again for both variants. No game state,
+core or assets changed. Full assembly and Blender-source provenance remain open.
+[Evidence](../research/2026-10-15-genessa-facial-source-replay.md).
+
 **October 15, twenty Genessa ability interruptions pass:** Iris Out and Come
 Closer release playback on mapped F across all ten release variants in Stray.
 Forty raw native activation observations and both clones per case are verified;

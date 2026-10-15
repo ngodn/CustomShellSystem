@@ -60,6 +60,10 @@ Accepted observations apply to their recorded test scope, not every variant.
 
 - Account for all nine original repair variants plus accepted Peony, including
   normal/facial sources, final cooked assets and required morph/pose checks.
+  [Genessa's two facial packets](../research/2026-10-15-genessa-facial-source-replay.md)
+  now reproduce byte-for-byte from retained inputs. Original W3/editor-module
+  hashes and current installed facial geometry/morph comparisons pass. Full
+  assembly, Blender-source and remaining rig/material provenance remain open.
 - Finish the remaining runtime checks and other non-deferred defects. Preserve accepted
   belt/skirt motion, Genessa cloth and Peony motion/design; complete their separate
   regression and performance requirements without reopening accepted minor flaws.
