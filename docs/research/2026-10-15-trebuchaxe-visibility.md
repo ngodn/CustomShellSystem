@@ -52,6 +52,13 @@ ammo, resources or transforms were modified by installation.
 
 ## Installed visibility checks
 
+The October 15 performance review did not run an idle-only old/new core comparison.
+`MiscVisibility::evaluate` calls the changed `set_item_hidden` path when an item
+enters/leaves the hidden set or its actor/component flag drifts. A steady stowed
+idle largely omits that changed work. A meaningful comparison needs matched
+visibility transitions and event timing, with the original nested flags restored
+after the old core's teardown. No baseline reload or performance claim was made.
+
 `fixed-visibility/result.json` passes 13 observed phases: three draw/stow cycles,
 Default, Hidden and Only when in use while drawn or stowed, and an induced
 owner-only visibility drift. The preview remains hidden and never renders. The
