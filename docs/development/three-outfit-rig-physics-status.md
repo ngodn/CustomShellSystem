@@ -1,5 +1,12 @@
 # Three-outfit implementation status
 
+**October 15, CW repair lineage verified:** 578 retained files connect accepted
+hair, ankle, belt and walking updates to the installed trio. All nine permanent
+walking assets match the accepted decoded trial; 445 other payloads survive
+unchanged. Source/cook inputs match, with no game or asset changes. Original
+base sources and remaining runtime/release gates stay separate.
+[Evidence](../research/2026-10-15-cw-repair-lineage.md).
+
 **October 15, Genessa editable baseline linked:** both W3 sources match their
 creation receipts, namespace migration and facial integration. The original
 full-data wing comparison reruns byte-exactly; 2,220 retained files verify through

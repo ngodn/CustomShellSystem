@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [CW repair lineage](2026-10-15-cw-repair-lineage.md): 578 retained files verify accepted hair, ankle, belt and walking integration through the actual installed trio. Nine final walking assets match the accepted decoded trial and 445 other payloads remain unchanged. No new cook or game changes.
+
 - [Genessa W3 editable baseline](2026-10-15-genessa-w3-sources.md): 2,220 retained files verify original creation inputs, the byte-exact wing comparison replay and both later source consumers through current package lineage. No new cook or game changes; historical Blender reconstruction is not an added release gate.
 
 - [Visibility-repair cost](2026-10-15-visibility-repair-cost.md): nine candidate/baseline/candidate captures, 162 actual owner-drift repairs and 4,873 raw frames pass independent verification and full restoration. MISC timings are similar; no FPS gain, isolated event cost or broader performance acceptance is claimed.

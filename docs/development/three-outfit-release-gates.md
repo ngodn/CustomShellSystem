@@ -78,6 +78,11 @@ Accepted observations apply to their recorded test scope, not every variant.
   the outfit from its earliest Blender scene or repeating an unchanged cook is
   not an extra gate. Remaining full-goal source coverage and final coordinated
   artifact provenance still apply.
+  [CW's accepted repair lineage](../research/2026-10-15-cw-repair-lineage.md)
+  now verifies 578 retained files through hair, ankle, belt and walking stages.
+  The installed permanent walk preserves all 445 other payloads, and all nine
+  renamed assets match the accepted decoded trial. Original base-asset source
+  coverage remains distinct from these verified repair layers.
 - Finish the remaining runtime checks and other non-deferred defects. Preserve accepted
   belt/skirt motion, Genessa cloth and Peony motion/design; complete their separate
   regression and performance requirements without reopening accepted minor flaws.
