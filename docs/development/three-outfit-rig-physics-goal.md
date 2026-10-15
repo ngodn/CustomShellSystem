@@ -1,5 +1,11 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, native playback controls pass:** original Genessa in Stray passes
+looping, pose hold, pause/resume and native Iris Out interruption by mapped parry.
+Raw montage/ability records verify the result; Peony and 15 final restoration
+conditions pass. A corrected short-pose fixture failure is retained. No core or
+asset changes. [Evidence and limits](../research/2026-10-15-native-playback-controls.md).
+
 **October 15, ten-outfit menu recovery passes:** the visible CSS preview matches
 world meshes, body settings, morphs and section visibility. Active measured rigs
 update in the preview and resume in the world across all ten appearances in Stray.

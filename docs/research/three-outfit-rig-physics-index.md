@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Native playback controls](2026-10-15-native-playback-controls.md): original Genessa in Stray passes looping, pose holding, pause/resume and native Iris Out interruption by mapped parry. Raw montage/ability checks and all 15 final restoration conditions pass. The short-pose fixture correction is retained; other targets, contact and broader gameplay remain separate.
+
 - [CSS-menu recovery](2026-10-15-menu-recovery.md): ten appearances pass preview body/morph/visibility parity and measured primary-rig recovery in Stray, with raw-response verification and full final restoration. Two fixture failures remain recorded; continuous visuals and broader lifecycle are separate.
 - [Stable runtime review](2026-10-15-stable-runtime-review.md): independent reviews found and fixed missing mirrored-profile preflight and developer trial cleanup issues. Host/Python/archived-profile checks and both Windows builds pass; development-core activation and repeated normal live profile loads now pass with full restoration.
 

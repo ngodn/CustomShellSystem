@@ -145,7 +145,10 @@ Accepted observations apply to their recorded test scope, not every variant.
   substitute for visual/contact, gait, full-clip or gameplay-interruption checks.
   [Native Iris Out CINE](../research/2026-10-15-native-cine.md) now passes a full
   take and explicit exit, with the correct montage released and state restored.
-  Other native clips, targets, facial support and gameplay remain separate.
+  [Native playback controls](../research/2026-10-15-native-playback-controls.md)
+  also pass representative loop, pose hold, pause/resume and actual parry
+  interruption on original Genessa in Stray. Other native clips/targets, contact,
+  facial support and broader gameplay remain separate.
 - Complete matched performance measurements, repeated-switch lifetime checks
   and investigation of any new hitch, crash or regression.
   The [matched visibility-repair comparison](../research/2026-10-15-visibility-repair-cost.md)

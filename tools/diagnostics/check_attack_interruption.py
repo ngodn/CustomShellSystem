@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--clip', default='css.eve.dance.irisout')
+    parser.add_argument('--native-body', action='store_true', help='Require native human montage playback, without a facial mapping')
     parser.add_argument('--action', choices=('secondary_attack', 'secondary_combo', 'dodge', 'shell_ability', 'parry'), default='secondary_attack')
     parser.add_argument('--ground-proof', type=Path, help='Required checked corridor for the stationary Stray dodge or combo')
     parser.add_argument('--start-evidence', type=Path, help='Verified previously occupied staircase point for the combo')
@@ -81,6 +82,13 @@ def main():
 
     player = send({'op': 'player'})
     body = get(player['pawn'], 'Mesh')
+    if args.native_body:
+        asset = call(body, 'GetSkeletalMeshAsset')
+        skeleton = get(asset, 'Skeleton')
+        if not skeleton['name'].endswith('/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton'):
+            raise RuntimeError('Native body fixture requires the game human skeleton')
+        report['native_asset'] = asset
+        report['native_skeleton'] = skeleton
     health = get(player['pawn'], 'HealthComponent')
     health_set = get(health, 'HealthSet')
     health_before = get(health_set, 'Health')
@@ -278,12 +286,20 @@ def main():
         deadline = time.monotonic() + 12
         while True:
             playing = perf(op='status')
-            if playing['active'] and playing['weight'] == 1 and describe()['expression']['performance']:
+            if playing['active'] and playing['weight'] == 1 and (args.native_body or describe()['expression']['performance']):
                 break
             if time.monotonic() > deadline:
                 raise TimeoutError('Facial performance did not start')
             time.sleep(.1)
         report['playing'] = playing
+        if args.native_body:
+            animation = call(body, 'GetAnimInstance')
+            montage = call(animation, 'GetCurrentActiveMontage')
+            if not montage:
+                raise RuntimeError('Native body playback has no active montage')
+            report['native_tracks'] = get(montage, 'SlotAnimTracks')
+            if '/NativeHuman/' not in json.dumps(report['native_tracks']):
+                raise RuntimeError('Montage does not contain a native-human alternative')
         guard()
         if window('activewindow').get('address') != game_window['address']:
             raise RuntimeError('Game lost focus')
@@ -447,6 +463,10 @@ def main():
                 report['resolve_restored'] = report['resolve_after'] == report['resolve_before']
                 report['actions_after_cleanup'] = active_actions()
                 report['input_blocks_after_cleanup'] = get(input_component, 'ActiveBlocks')
+            if args.native_body:
+                report['native_montage_after'] = call(call(body, 'GetAnimInstance'), 'GetCurrentActiveMontage')
+                if report['native_montage_after'] is not None:
+                    raise RuntimeError('Native montage remained after action cleanup')
         except Exception as error:
             report['restore_error'] = repr(error)
         if window('activewindow').get('address') == game_window['address'] and any(
