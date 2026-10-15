@@ -1419,8 +1419,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const bool fresh=context!=panel_context_;
         if(auto* scroll=panel_scroll_.Get(); scroll && (fresh || panel_focus!=panel_revealed_)) {
             pending_reveals_[1]={};   // a newer subject or choice replaces one still waiting
-            if(fresh) invoke(scroll,L"ScrollToStart");
-            if(panel_focus && fresh) pending_reveals_[1]={panel_scroll_,WeakObject(panel_focus),2,2};
+            const bool shell_list=section_==0 && row_==2 && !native_picker_;
+            if(fresh) {
+                invoke(scroll,L"SetScrollBarVisibility",L"NewScrollBarVisibility",uint8_t(shell_list?0:1));
+                invoke(scroll,L"ScrollToStart");
+            }
+            if(panel_focus && fresh) pending_reveals_[1]={panel_scroll_,WeakObject(panel_focus),uint8_t(shell_list?0:2),2};
             else if(panel_focus) reveal(scroll,panel_focus,true,0);
         }
         panel_context_=std::move(context); panel_revealed_=panel_focus;

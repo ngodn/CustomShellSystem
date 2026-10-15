@@ -60,10 +60,28 @@ wrote `panel_focus`; the second call targeted Original shade instead of Harros.
 The new chooser did not remove this older embedded list, so the initial fix was
 incomplete.
 
-The follow-up removes the embedded shade rows and their extra note. The shell
-list owns its scroll target; shade selection stays in Choose shade. The current
-shade remains identified by the details subtitle. Both core builds pass.
-Candidate and activation receipts: `work/three-outfit-rig-physics/shade-list-20261015/`.
-The first activation attempt stopped at its initial geometry/resource guard,
-before any idle, selector or DLL mutation. A stationary installation window is
-pending; the earlier core remains installed until that check passes.
+The first follow-up removes the embedded shade rows and their extra note. Its
+Harros screenshot then exposed a second issue: automatic centering still cut off
+Tiel at the top, and the scrollbar was hidden. The final correction uses
+IntoView rather than Center for a newly opened shell list, and makes its
+scrollbar visible. Other panels retain their existing scroll behavior.
+
+Final receipts: `work/three-outfit-rig-physics/shade-list-scroll-20261015/`.
+Both core builds pass. Installed development SHA256:
+`cd942c57df307581f31312c17436014154c596389f966ff9a203165f1528875b`.
+Guarded activation passes exact settings, equipment flags, geometry, resources
+and CINE restoration. `ui/result.json` verifies ten base-shell choices, no
+embedded shade variants, Choose shade still present, and exact restoration.
+The screenshot was inspected: Tiel is fully visible, Harros highlighted, and
+the scrollbar indicates the remaining entries. The list contains ten base
+shells; the earlier eight-shell count referred to shells with added shades.
+
+Earlier receipts remain in `shade-list-20261015/`. One preflight stopped on
+movement, and two stopped because Iris Out facial playback remained active.
+No DLL mutation occurred in those failed preflights. After the user's explicit
+idle-window response, the normal performance stop and temporary Original idle
+allowed safe activation. The first capture's incorrect eight-base-shell
+assertion failed with full restoration; the corrected ten-shell capture passed.
+`restoration.json` in the final directory confirms the user's CW appearance,
+Iris Out selection, exact pre-window settings and closed menu. No gameplay or
+camera input was sent by the Harros captures.
