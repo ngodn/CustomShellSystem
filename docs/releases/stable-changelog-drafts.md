@@ -8,22 +8,57 @@ upload-ready release declaration:
 - [Unholy Genessa v0.3.0](unholy-genessa-v0.3.0.bbcode).
 - [Commander White v0.1.0](commander-white-v0.1.0.bbcode).
 
+The delivery copies are colocated with their packages under `dist`, following
+the existing layout. These tracked files remain the editable sources:
+
+- `dist/v1.0.0/css-v1.0.0-changelog.bbcode` (CSS and Shared Assets).
+- `dist/eve-v1.5.0/eve-v1.5.0-changelog.bbcode`.
+- `dist/unholygenessa-v0.3.0/unholygenessa-v0.3.0-changelog.bbcode`.
+- `dist/commanderwhite-v0.1.0/commanderwhite-v0.1.0-changelog.bbcode`.
+
+The withdrawn October 12 Eve/beta.12 rehearsal has moved to
+`dist/withdrawn/eve-v1.5.0-beta12-rehearsal`. It is not the current Eve delivery.
+Future delivery updates must refresh the matching `dist` BBCode too.
+
 New features appear first with actual game screenshots. Fixes and improvements
 have no screenshots. Commander White currently contains fixes and improvements
 only. Images are uploaded separately to the `media/css-v1.0.0` Git branch; code,
 release tags and Nexus publication are not part of that upload.
 
 The shared-assets final metadata, archives and remaining release gates still
-need completion. The sunlight workaround remains recorded in the release audit
-and is omitted from the public-facing draft until its delivery decision is
-settled. Zhirelle and the documented difficult boss adaptations are deferred to
-v1.0.1. Do not infer additional deferrals from omission in a draft.
+need completion. CSS now describes the installed Sunlight shadows option as an
+optional workaround, with Default (game) retained and sharper shadows disclosed.
+The actual MISC screenshot shows both choices. This is not a universal engine
+fix or a performance claim. Zhirelle and the documented difficult boss
+adaptations are deferred to v1.0.1. Do not infer additional deferrals from
+omission in a draft.
 
 Media receipts live under
 `work/three-outfit-rig-physics/changelog-media-20261015/`.
 The corrected expression/shade screenshots and installed UI evidence live under
 `work/three-outfit-rig-physics/shade-picker-20261015/`.
 
-Current media commit: `e06a567a9201fc688203fef2ceddf3412957c217`.
-The expression and shade images show the corrected installed UI. The upload
-receipt is `changelog-media-20261015/upload-shade-ui.json`.
+Latest media commit: `a62224b36ed5c33fcc55d0907a52ab6cb0cd6400`.
+The existing image URLs remain pinned to their earlier immutable commit. The
+sunlight image uses the new commit; its downloaded raw bytes match the capture.
+Receipts are `changelog-media-20261015/upload-shade-ui.json` and
+`changelog-media-20261015/upload-sunlight.json`. The sunlight capture preserves
+the current CW appearance and exact saved settings, and closes the menu. It
+does not toggle lighting, change outfits, reload code or send gameplay input.
+
+## Current Eve delivery
+
+`dist/eve-v1.5.0/CSS_EveStellarBlade_eins0fx_P-v1.5.0.zip` replaces the old
+rehearsal bundle (631,596,096 bytes). SHA256:
+`e810b764360f505ba4263ae714c68062bb93c161f8c9a415efd16660b5e09212`.
+The current seven-outfit cooked containers match the accepted installation.
+Only the manifest and catalog version fields change from 1.4.0 to 1.5.0.
+Package validation, ZIP integrity and extracted-payload comparisons pass.
+`verification.json`, the checksum, README, credits and current BBCode are
+colocated in that folder. Game files were not changed.
+
+The exact recipe, relocation record and retained versioned manifest are under
+`work/three-outfit-rig-physics/stable-dist-20261015`. Disposable staging copies
+were removed after verification. The initial cross-device hard-link failure
+is retained in the log; the completed recipe uses a cross-device copy fallback.
+CSS/shared/Genessa/CW final archives and the overall goal remain unfinished.
