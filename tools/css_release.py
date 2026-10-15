@@ -89,9 +89,19 @@ def release_revision(version: str) -> str:
     return revision
 
 
+def candidate_revision(version: str) -> str:
+    if not re.fullmatch(VERSION_PATTERN, version):
+        raise ValueError('Invalid VERSION')
+    inputs = ('native', 'VERSION', 'packaging', 'assets', 'tools/css_release.py', 'tools/css_paths.py')
+    if git('diff', 'HEAD', '--', *inputs) or git('ls-files', '--others', '--exclude-standard', '--', *inputs):
+        raise ValueError('Candidate build inputs must match the committed source')
+    return git('rev-parse', 'HEAD')
+
+
 def build(args: argparse.Namespace) -> Path:
     version = (ROOT / 'VERSION').read_text().strip()
-    revision = release_revision(version)
+    candidate = getattr(args, 'candidate', False)
+    revision = candidate_revision(version) if candidate else release_revision(version)
     build_dir = ROOT / 'build/release-windows'
     subprocess.run(['cmake', '-S', str(ROOT / 'native'), '-B', str(build_dir), '-G', 'Ninja',
                     '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_TOOLCHAIN_FILE=' + str(ROOT / 'native/toolchain-clang-cl.cmake'),
@@ -117,6 +127,8 @@ def build(args: argparse.Namespace) -> Path:
                 'ue4ss_header_revision': UE4SS_RUNTIME['header_revision'],
                 'ue4ss_import_library_sha256': digest(args.import_library.read_bytes()),
                 'files': {p: digest(data) for p, data in sorted(files.items())}}
+    if candidate:
+        manifest['release_status'] = 'local_candidate'
     shared_path = ROOT / 'packaging/shared-assets.json'
     if not shared_path.exists():
         shared_path = ROOT / 'packaging/astral-shared-assets.json'
@@ -157,6 +169,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='action', required=True)
     release = sub.add_parser('build')
+    release.add_argument('--candidate', action='store_true',
+                         help='Stage a local archive from committed build inputs before the final release tag')
     release.add_argument('--sdk', type=Path, default=ROOT / 'reference/ue4ss-sdk-d7e7826d')
     release.add_argument('--import-library', type=Path, default=ROOT / UE4SS_RUNTIME['import_library'])
     release.add_argument('--output', type=Path, default=ROOT / 'dist/releases')

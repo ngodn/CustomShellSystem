@@ -122,6 +122,21 @@ class ReleaseSourceTests(unittest.TestCase):
         self.run_git('tag', '-a', 'v1.0.0', '-m', 'Stable fixture')
         self.assertEqual(css_release.release_revision('1.0.0'), self.run_git('rev-parse', 'HEAD'))
 
+    def test_candidate_before_tag_preserves_release_gate(self):
+        self.assertEqual(css_release.candidate_revision('1.0.0'), self.run_git('rev-parse', 'HEAD'))
+        with self.assertRaises(subprocess.CalledProcessError):
+            css_release.release_revision('1.0.0')
+
+    def test_candidate_rejects_modified_or_new_build_inputs(self):
+        (self.root / 'VERSION').write_text('1.0.1\n')
+        with self.assertRaisesRegex(ValueError, 'committed source'):
+            css_release.candidate_revision('1.0.0')
+        self.run_git('restore', 'VERSION')
+        (self.root / 'packaging').mkdir()
+        (self.root / 'packaging/README.txt').write_text('untracked payload')
+        with self.assertRaisesRegex(ValueError, 'committed source'):
+            css_release.candidate_revision('1.0.0')
+
     def test_lightweight_tag_rejected(self):
         self.run_git('tag', 'v1.0.0')
         with self.assertRaisesRegex(ValueError, 'annotated'):
