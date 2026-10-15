@@ -1,5 +1,11 @@
 # CW reload and catalog-rescan crash
 
+**Current disposition, October 15:** the user explicitly accepts leaving this
+unreproduced developer-test incident unresolved. It no longer blocks release;
+do not run more reproduction tests unless it recurs. Earlier instructions below
+to keep the release gate open are historical and superseded. The cause remains
+unconfirmed, and no proven fix or harmlessness is claimed.
+
 The October 13 continuation makes progress from the previous turn's completed
 menu verification and recovered animation playback. It does not establish a
 repair for the intermittent asset failures or CW's feet.

@@ -75,15 +75,23 @@ def verify(archive: Path) -> dict:
         return manifest
 
 
-def build(args: argparse.Namespace) -> Path:
-    version = (ROOT / 'VERSION').read_text().strip()
+def release_revision(version: str) -> str:
     if not re.fullmatch(VERSION_PATTERN, version):
         raise ValueError('Invalid VERSION')
+    tag = f'refs/tags/v{version}'
+    if git('cat-file', '-t', tag) != 'tag':
+        raise ValueError('Release requires an annotated version tag')
     revision = git('rev-parse', 'HEAD')
-    if git('rev-parse', f'v{version}^{{commit}}') != revision:
+    if git('rev-parse', f'{tag}^{{commit}}') != revision:
         raise ValueError('Build from the version tag, not another revision')
     if git('status', '--porcelain', '--untracked-files=normal'):
         raise ValueError('Release source tree must be clean')
+    return revision
+
+
+def build(args: argparse.Namespace) -> Path:
+    version = (ROOT / 'VERSION').read_text().strip()
+    revision = release_revision(version)
     build_dir = ROOT / 'build/release-windows'
     subprocess.run(['cmake', '-S', str(ROOT / 'native'), '-B', str(build_dir), '-G', 'Ninja',
                     '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_TOOLCHAIN_FILE=' + str(ROOT / 'native/toolchain-clang-cl.cmake'),

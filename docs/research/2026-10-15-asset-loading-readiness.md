@@ -1,6 +1,8 @@
 # Asset readiness at the CSS load boundary
 
-The retained reload/rescan crash remains unresolved. This source review found
+The retained reload/rescan crash remains unresolved and is now explicitly
+accepted by the user as a nonblocking historical developer-test incident.
+This source review found
 a separate concrete gap in the same loading path: CSS returned cached or found
 objects without checking whether native loading or destruction was in progress.
 The new candidate rejects those objects before consumers inspect or bind them.
@@ -48,7 +50,8 @@ pass. Exact commands/results and candidate hashes are retained under
 The earlier crash dump still lacks the failing class memory. Epic's
 [UE-215992](https://issues.unrealengine.com/issue/UE-215992) concerns editor/PIE
 child blueprints and excludes standalone, so it is not evidence that this game
-shares that bug. The existing instrumented reproducer and crash gate remain.
+shares that bug. Preserve the existing instrumented reproducer as evidence;
+the user's later acceptance removes this incident's release gate.
 The normal loading/playback check below now passes with this candidate.
 The retained crash trigger remains unresolved; these checks do not close it.
 

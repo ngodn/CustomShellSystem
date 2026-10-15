@@ -2,12 +2,15 @@
 import json
 from pathlib import Path
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
+import css_release
 from css_release import PREFIX, digest, payload_names, verify
 
 
@@ -96,6 +99,45 @@ class ReleaseTests(unittest.TestCase):
         self.write()
         with self.assertRaisesRegex(ValueError, 'Core selection'):
             verify(self.archive)
+
+
+class ReleaseSourceTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.run_git('init', '-q')
+        self.run_git('config', 'user.name', 'Release fixture')
+        self.run_git('config', 'user.email', 'fixture@example.invalid')
+        (self.root / 'VERSION').write_text('1.0.0\n')
+        self.run_git('add', 'VERSION')
+        self.run_git('commit', '-qm', 'Fixture baseline')
+        self.addCleanup(patch.stopall)
+        patch.object(css_release, 'ROOT', self.root).start()
+
+    def run_git(self, *args):
+        return subprocess.check_output(['git', '-C', str(self.root), *args], text=True).strip()
+
+    def test_annotated_tag_at_clean_head(self):
+        self.run_git('tag', '-a', 'v1.0.0', '-m', 'Stable fixture')
+        self.assertEqual(css_release.release_revision('1.0.0'), self.run_git('rev-parse', 'HEAD'))
+
+    def test_lightweight_tag_rejected(self):
+        self.run_git('tag', 'v1.0.0')
+        with self.assertRaisesRegex(ValueError, 'annotated'):
+            css_release.release_revision('1.0.0')
+
+    def test_commit_after_tag_rejected(self):
+        self.run_git('tag', '-a', 'v1.0.0', '-m', 'Stable fixture')
+        self.run_git('commit', '--allow-empty', '-qm', 'Later change')
+        with self.assertRaisesRegex(ValueError, 'version tag'):
+            css_release.release_revision('1.0.0')
+
+    def test_dirty_tree_rejected(self):
+        self.run_git('tag', '-a', 'v1.0.0', '-m', 'Stable fixture')
+        (self.root / 'VERSION').write_text('1.0.1\n')
+        with self.assertRaisesRegex(ValueError, 'clean'):
+            css_release.release_revision('1.0.0')
 
 
 if __name__ == '__main__':
