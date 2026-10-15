@@ -20,7 +20,9 @@ checkpoints below. Do not restart accepted checks from historical queue entries.
   Preserve the accepted sources and finish coordinated runtime delivery.
 - Remaining original requirements are listed in the release audit. Resolve
   them against existing evidence first; research limitations do not create
-  new test requirements. The failed clean-install preparation is not a pass.
+  new test requirements. The failed clean-install preparation is retained;
+  the later [fresh shipping-runtime test](research/2026-10-15-clean-shipping-runtime.md)
+  passes startup, provider discovery, facial playback and exact restoration.
 
 The running game is left alone during this offline source/documentation work.
 
