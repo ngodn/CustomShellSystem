@@ -107,5 +107,8 @@ mirrored selection resolver could skip a missing living-shell provider before
 this preflight. Commit `ac62655` fixes it, with remembered/inferred Stray source,
 fallback, disabled-mirror and reinstall host regressions. The development
 candidate is now installed through guarded activation; repeated normal live
-profile loads and exact restoration pass. Actual missing-provider uninstall/
-reinstall remains untested. Direct-shell acceptance above remains historical.
+profile loads and exact restoration pass. The subsequent
+[actual missing-provider cycle](2026-10-15-shared-provider-lifecycle.md) now
+passes cold removal/reinstall, profile rejection without state changes and
+automatic CW recovery on the current Stray save. Clean installation and other
+migration cases remain separate. Direct-shell acceptance above remains historical.
