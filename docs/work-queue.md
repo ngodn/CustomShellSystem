@@ -1,5 +1,48 @@
 # Current work queue
 
+## October 15: current release status
+
+The [goal](development/three-outfit-rig-physics-goal.md) and
+[release audit](development/three-outfit-release-gates.md) supersede the older
+checkpoints below. Do not restart accepted checks from historical queue entries.
+
+- The user accepts leaving the isolated October 13 developer reload/rescan
+  crash unresolved. It is nonblocking. Retain the evidence and investigate
+  again only if it recurs; no confirmed cause or crash fix is claimed.
+- Peony fit, motion, palettes, flowing trim and profile restoration, CW belt,
+  skirt and walking, and Genessa world cloth have user acceptance. Recorded
+  facial, doubles, sidearm and UI results remain valid at their tested scope.
+- Zhirelle and the individually documented difficult bosses move to v1.0.1.
+  Slipstream, minor clipping polish and the original After Brute Battle
+  end-loop issue remain deferred. Older instructions below do not reopen them.
+- Current Eve 1.5.0, Unholy Genessa 0.3.0, Commander White 0.1.0 and Shared
+  Assets 1.0.0 candidates are in `dist`. CSS targets stable 1.0.0, not beta.12.
+  Preserve the accepted sources and finish coordinated runtime delivery.
+- Remaining original requirements are listed in the release audit. Resolve
+  them against existing evidence first; research limitations do not create
+  new test requirements. The failed clean-install preparation is not a pass.
+
+The running game is left alone during this offline source/documentation work.
+
+## October 7: facial idle follow-up regressions
+
+Installed the CW E9 optical-material candidate and CSS core 45d2015ae1e118bd.
+Independent comparison preserves all 206 morphs and 67 other material slots.
+The doubles diagnostic gate now honors saved Use CSS choices on startup.
+Commits: 6d74a49 and f41f4eb. Installation hashes and unchanged saves/settings
+verified in work/cine-animation-port/cw-optical-fix-v4/installation/deployment.json.
+Await user checks of CW Iris Out eyes and Faithful/Stray Use CSS summons.
+Keep After Brute Battle end-of-loop crash investigation active.
+
+## Completed storage cleanup, 7 October 2026
+
+Owner approved removing the VaM installation/Wine environment and AssetRipper
+temporary extraction data under `CustomShellSystem/work/v1.0.0-body`.
+Removed only `vam/` and `assetripper/temp/`; 6,483 remaining files verified
+unchanged. Net free space increased by 36.1 GiB; the folder is now 958 MiB.
+Record: ignored `work/vam-cleanup-20261006T165343Z.json` (UTC timestamp).
+Adult/body work is deferred until the owner requests it again.
+
 ## Latest user correction: four native locomotion choices only
 
 For appearances using the default game human skeleton, implement only
@@ -1133,3 +1176,59 @@ Completed capture-tool limitation: the development-only Steam action returns bef
 ### Eve Holiday cloth integration investigation (2026-09-26)
 
 Eve authoring has a separate panel-cloth structural prototype, but its single-active-morph limit does not satisfy independent combined body sliders. Two private AnimDynamics skirt candidates were also rejected, most recently for 18.30 cm jog displacement and visually confirmed hip clipping. Next adapt the existing constrained ControlRig approach to cloth-specific anchors and collisions. F11 fitting is preserved. No CSS core edits, game changes or integration requests yet. Before runtime integration, coordinate component ownership, outfit switching, preview, morph/color controls and cleanup with the agent working on CSS UI/performance. Details: `docs/development/eve-outfit-goal.md`.
+
+## Queued October 15: optional Genessa revival override
+
+Investigate a temporary, explicitly confirmed Faithful override when Alteration
+blocks native revival. Preserve the upgrade and progression; keep normal game
+rules as the default and provide Confirm/Cancel. Verify autosave and form-state
+persistence before claiming no save impact. Finish the active clone cleanup and
+native-blocker message check first. Details and acceptance remain in the
+[three-outfit goal](development/three-outfit-rig-physics-goal.md#deferred-follow-up-genessa-form-after-switching-save-games).
+
+## Current priority, October 7: restore gameplay interruption
+
+User confirmed Commander White eyes and Faithful/Stray custom doubles work.
+User explicitly deferred the After Brute Battle crash investigation ("forget the crash").
+Current blocker: new idle animations fail to yield to aiming, attacks, doubles,
+and MISC Genessa Form; controls can remain broken after selecting Default Idle.
+Inspect live input/ability state and repair cosmetic animation ownership without
+resetting gameplay montages. Do not disable CSS or alter saves. Evidence:
+work/cine-animation-port/gameplay-cancel-regression-1. Keep full existing animation
+scope, but restore gameplay controls first. No claim of live fix before validation.
+
+## Low priority, October 8: Trebuchaxe sidearm visibility
+
+Queue the reported hovering axe with **Only when in use**, including the charged-shot pose and Tarred Fragment / Monarch's Vestige / Squall Stone loadout. Reproduction, cause and fix remain pending. Handle after the primary rig, facial and animation work. Full report and acceptance criteria: [three-outfit goal](development/three-outfit-rig-physics-goal.md#low-priority-follow-up-trebuchaxe-sidearm-visibility).
+
+## Queued, October 8: Genessa rear-panel menu/world mismatch
+
+The user supplied two new rear-view images: glowing fitted panels cover the
+glutes in the player/CSS menu, while much of that coverage disappears in the
+world. These are different poses, so the images alone do not establish clipping,
+visibility state, material state or a CSS synchronization fault. Compare the
+same variant, pose, body settings, part visibility and simulation state first.
+Determine whether the repair belongs to CSS or the outfit, then fix that layer
+and verify menu/world transitions, body sliders and secondary motion. Preserve
+the accepted design, glow and sheer controls. This reinforces the existing
+Genessa fitted-ornament requirement in the
+[three-outfit goal](development/three-outfit-rig-physics-goal.md#phase-3-collision-and-secondary-motion).
+The user requested this when convenient, not as an interruption of the current
+shared-pack integration and validation.
+
+## October 15 scope correction: Zhirelle deferred to CSS v1.0.1
+
+The user explicitly requested skipping Zhirelle for now and deferring her to
+CSS v1.0.1. Stop current Zhirelle trials and retain sources and findings.
+Merrick and native shell shades remain in the current v1.0.0 release scope.
+This supersedes the earlier requirement to finish both NPC targets now.
+See the [active goal](development/three-outfit-rig-physics-goal.md) and
+[NPC findings](research/2026-10-15-npc-appearances-and-shades.md).
+
+## October 15: complete bugs and straightforward boss adaptations before release
+
+Finish the active goal and bug fixes before release preparation. Include bosses
+that can use a straightforward adaptation like Merrick; inspect and validate
+each before exposing it. Defer bosses requiring substantial repairs like
+Zhirelle to CSS v1.0.1, recording the reason individually. This expands the
+previous NPC scope. No public release while current-scope work is unfinished.

@@ -22,6 +22,7 @@ parser.add_argument('--materials', default='3,23,24,27')
 parser.add_argument('--stride', type=int, default=4)
 parser.add_argument('--frames', help='Comma-separated capture indices for still review instead of a video')
 parser.add_argument('--follow-pelvis', action='store_true', help='Follow horizontal scene travel without changing the pose')
+parser.add_argument('--frame-body', action='store_true', help='Frame the whole selected surface instead of the lower legs')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 root = Path(__file__).resolve().parents[4]
 if not args.output.resolve().is_relative_to((root / 'CustomShellSystem/work').resolve()) or args.output.exists():
@@ -87,9 +88,12 @@ del motion
 order = snapshots[0]['BoneNames']
 if any(not s['bIsValid'] or s['BoneNames'] != order for s in snapshots):
     raise ValueError('Invalid captured pose')
+order_indices = {name.casefold(): i for i, name in enumerate(order)}
+if len(order_indices) != len(order):
+    raise ValueError('Duplicate Unreal bone names in captured pose')
 tracks = []
 for bone in audit['bones']:
-    index = order.index(bone['name'])
+    index = order_indices[bone['name'].casefold()]
     keys = []
     for s in snapshots:
         t = s['LocalTransforms'][index]
@@ -147,6 +151,13 @@ try:
             positions[rows] += (p + rotate(q, local * scale)) * weights[:, None]
         mesh.vertices.foreach_set('co', (positions * (.01, -.01, .01)).astype(np.float32).ravel())
         mesh.update()
+        if args.frame_body:
+            bounds = positions * (.01, -.01, .01)
+            center = Vector(((bounds.min(axis=0) + bounds.max(axis=0)) / 2).tolist())
+            extent = float(np.max(np.ptp(bounds, axis=0)))
+            camera.location = center + Vector((extent, -2 * extent, extent * .25))
+            camera.rotation_euler = (center - camera.location).to_track_quat('-Z', 'Y').to_euler()
+            camera.data.ortho_scale = extent * 1.5
         scene.render.filepath = str(frame_path)
         bpy.ops.render.render(write_still=True)
         if video:
@@ -162,5 +173,5 @@ if any(sha(Path(path)) != digest for path, digest in inputs.items()):
     raise ValueError('Protected render input changed')
 (args.output / 'report.json').write_text(json.dumps(dict(complete=True, inputs=inputs,
     frames=selected, video_fps=fps if video else None, materials=sorted(materials), vertices=len(ids), faces=len(faces),
-    blender_version=bpy.app.version_string, bind_error_cm=bind_error, follow_pelvis=args.follow_pelvis,
+    blender_version=bpy.app.version_string, bind_error_cm=bind_error, follow_pelvis=args.follow_pelvis, frame_body=args.frame_body,
     scope='Neutral cooked linear skinning with every influence and rebuilt normals. Selected material surfaces only; no textures, morphs, cloth or post-process. Technical contact review, not full outfit or gameplay acceptance.'), indent=2) + '\n')

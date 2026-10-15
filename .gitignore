@@ -1,6 +1,6 @@
 # Local dependencies, extracted assets, packages and development evidence.
 /build/
-/work/
+/work
 /backups/
 /local-packs/
 reference/

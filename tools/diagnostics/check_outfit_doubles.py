@@ -19,7 +19,9 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--core-sha256', required=True)
     parser.add_argument('--resume-from', type=Path)
+    parser.add_argument('--outfits', nargs='+', choices=tuple(OUTFITS), default=list(OUTFITS))
     args = parser.parse_args()
+    selected = {k: OUTFITS[k] for k in dict.fromkeys(args.outfits)}
     out = args.output.resolve()
     original, pids = describe(), processes()
     player = engine({'op': 'player'})
@@ -43,7 +45,7 @@ def main():
     completed = {(r['outfit'],r['variant']) for r in imported}
     memories = before['remembered_custom']
     restore_variants = {}
-    for outfit, variants in OUTFITS.items():
+    for outfit, variants in selected.items():
         if any(outfit+'/'+v not in memories for v in variants):
             raise RuntimeError('Missing original variant memory')
         restore_variants[outfit] = next((v for v in variants if memories[outfit+'/'+v] == memories[outfit]), None)
@@ -86,11 +88,12 @@ def main():
     atomic(out/'state-before.json',before)
     atomic(out/'cine-before.json',cine)
     report = dict(passed=False, original=original, player=player, geometry_before=baseline,
-                  core_sha256=args.core_sha256, cases=imported, excluded_previously_checked=['eins0fx.seduxtress/peony'])
+                  core_sha256=args.core_sha256, cases=imported, requested_outfits=list(selected),
+                  excluded_previously_checked=['eins0fx.seduxtress/peony'])
     try:
         customize({'action':'idle','value':'eve'})
         idle = 'eve'
-        for outfit, variants in OUTFITS.items():
+        for outfit, variants in selected.items():
             for variant in variants:
                 if (outfit,variant) in completed or (outfit,variant) == ('eins0fx.seduxtress','peony'):
                     continue
@@ -114,7 +117,9 @@ def main():
                 row['passed'] = True
                 atomic(out/'result.json',report)
                 print(outfit,variant,'pass',flush=True)
-        report['cases_passed'] = len(report['cases']) == 9 and all(row.get('passed') for row in report['cases'])
+        wanted = {(o,v) for o,vs in selected.items() for v in vs
+                  if (o,v) != ('eins0fx.seduxtress','peony')}
+        report['cases_passed'] = {(r['outfit'],r['variant']) for r in report['cases']} == wanted and all(row.get('passed') for row in report['cases'])
     except Exception as error:
         report['error'] = repr(error)
     finally:
