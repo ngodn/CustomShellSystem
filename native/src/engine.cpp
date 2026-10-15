@@ -661,6 +661,7 @@ UObject* Appearance::player(void* engine) {
     return pawn;
 }
 void Appearance::restore_menu() {
+    restore_visual_scale(true);
     menu_morph_deformer_.release();
     restore_facial_binding(facial_preview_);
     menu_overlay_controls_.release();
@@ -721,6 +722,8 @@ void Appearance::sync_menu() {
     }
     menu_applied_=desired;
     if(before!=desired) set_mesh(target,desired);
+    apply_visual_scale(target,visual_scale_,true);
+    sync_weapon_scales(true);
     auto values=overrides(source), previous=overrides(target);
     for(int i=0;i<std::max(values.Num(),previous.Num());++i) {
         UObject* value{}; UObject* current{};
@@ -1205,7 +1208,15 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
             target=candidate; loading_roots.take(face_roots);
         } catch(const std::exception& error) {facial_failures_.emplace(facial.mesh,error.what());}
     }
-    if(!target) {target=load(mesh_path);loading_roots.keep(target);}
+    if(!target) {
+        try {target=load(mesh_path);}
+        catch(const std::exception&) {
+            if(mesh_path.starts_with("/Game/CSS/eins0fx/Bosses/"))
+                throw std::runtime_error("Boss appearance could not load. Install or update CSS Shared Assets and restart the game.");
+            throw;
+        }
+        loading_roots.keep(target);
+    }
     WeakObject live_target(target);
     std::map<int,WeakObject> loaded_materials;
     for(const auto& [slot,path]:materials) {
@@ -1260,6 +1271,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
             // stacks on this one. (Forgetting the baseline without restoring leaked 3 cm per
             // Black Pearl wear onto every other variant.)
             restore_ground_offset();
+            restore_visual_scale(false);
             timed_set_mesh(component,target);
             applied_hidden_.clear();   // a fresh mesh shows every section; see note below
             if(materials_match() || reuse_materials()) {
@@ -1273,7 +1285,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         // reconcile_sections() (in customize()) re-hide from scratch instead of short-circuiting
         // on a stale want==applied_hidden_. This is why a launchpad/gate that swapped the pawn
         // to Harbinger and back used to drop the outfit's cut sections. Event-only, no frame cost.
-        if(before!=target && !returning_to_outfit) { restore_ground_offset(); timed_set_mesh(component, target); applied_hidden_.clear(); }
+        if(before!=target && !returning_to_outfit) { restore_ground_offset(); restore_visual_scale(false); timed_set_mesh(component, target); applied_hidden_.clear(); }
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
         auto defaults=material_snapshot(component,target).at("defaults");
@@ -1291,6 +1303,94 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     catch (...) { restore(); throw; }
     current_mesh = narrow(target->GetPathName());
     return true;
+}
+void Appearance::restore_visual_scale(bool menu) {
+    restore_weapon_scales(menu);
+    auto& owner=menu?menu_scale_component_:scale_component_;
+    auto& state=menu?menu_scale_:scale_;
+    if(auto* component=owner.Get()) {
+        auto next=state;
+        if(auto restored=next.restore(read<std::array<double,3>>(component,L"RelativeScale3D"))) {
+            Call set(component,L"SetRelativeScale3D",1);set.set(L"NewScale3D",*restored);set.run();
+            if(!MeshScale::same(*restored,read<std::array<double,3>>(component,L"RelativeScale3D")))
+                throw std::runtime_error("Appearance scale restoration failed");
+        }
+    }
+    owner.Reset();state={};
+}
+void Appearance::apply_visual_scale(UObject* component,double factor,bool menu) {
+    if(!MeshScale::valid(factor)) throw std::runtime_error("Invalid appearance scale");
+    auto& owner=menu?menu_scale_component_:scale_component_;
+    auto& state=menu?menu_scale_:scale_;
+    if(owner.Get()!=component || factor==1) restore_visual_scale(menu);
+    if(!component || factor==1) return;
+    auto current=read<std::array<double,3>>(component,L"RelativeScale3D");
+    auto desired=state.set(current,factor);
+    owner=component;
+    if(MeshScale::same(current,desired)) return;
+    Call set(component,L"SetRelativeScale3D",1);set.set(L"NewScale3D",desired);set.run();
+    if(!MeshScale::same(desired,read<std::array<double,3>>(component,L"RelativeScale3D")))
+        throw std::runtime_error("Appearance scale read-back failed");
+}
+static void set_weapon_scale(UObject* component,const std::array<double,3>& desired) {
+    if(MeshScale::same(desired,read<std::array<double,3>>(component,L"RelativeScale3D"))) return;
+    Call set(component,L"SetRelativeScale3D",1);set.set(L"NewScale3D",desired);set.run();
+    if(!MeshScale::same(desired,read<std::array<double,3>>(component,L"RelativeScale3D")))
+        throw std::runtime_error("Weapon scale read-back failed");
+}
+static bool inherits_body_scale(UObject* child,UObject* body) {
+    for(int depth=0;child && depth<16;++depth) {
+        if(child==body) return true;
+        auto* absolute=field(child,L"bAbsoluteScale",sizeof(bool));
+        if(!absolute->IsA<FBoolProperty>()) throw std::runtime_error("Absolute scale flag layout mismatch");
+        if(static_cast<FBoolProperty*>(absolute)->GetPropertyValueInContainer(child)) return false;
+        child=attach_parent(child);
+    }
+    return false;
+}
+void Appearance::restore_weapon_scales(bool menu) {
+    auto& entries=menu?menu_scaled_weapons_:scaled_weapons_;
+    for(auto& entry:entries) if(auto* component=entry.component.Get()) {
+        auto next=entry.scale;
+        if(auto original=next.restore(read<std::array<double,3>>(component,L"RelativeScale3D")))
+            set_weapon_scale(component,*original);
+        entry.scale=next;
+    }
+    entries.clear();
+}
+void Appearance::tick_weapon_scales(bool menu) {
+    auto* body=(menu?menu_scale_component_:scale_component_).Get();
+    auto& entries=menu?menu_scaled_weapons_:scaled_weapons_;
+    for(auto it=entries.begin();it!=entries.end();) {
+        auto* component=it->component.Get();
+        if(!component) {it=entries.erase(it);continue;}
+        auto current=read<std::array<double,3>>(component,L"RelativeScale3D");
+        auto next=it->scale;
+        if(!body || visual_scale_==1 || !inherits_body_scale(component,body)) {
+            if(auto original=next.restore(current)) set_weapon_scale(component,*original);
+            it=entries.erase(it);continue;
+        }
+        auto desired=next.compensate(current,visual_scale_);
+        set_weapon_scale(component,desired);it->scale=next;++it;
+    }
+}
+void Appearance::sync_weapon_scales(bool menu) {
+    auto* body=(menu?menu_scale_component_:scale_component_).Get();
+    if(!body || visual_scale_==1) {restore_weapon_scales(menu);return;}
+    auto& entries=menu?menu_scaled_weapons_:scaled_weapons_;
+    Call owner(body,L"GetOwner",1);owner.run();
+    for(const auto& [weapon,slot]:misc_weapon_slots(owner.get<UObject*>(),true)) {
+        auto* component=read<UObject*>(weapon,L"RootComponent");
+        if(!component || !inherits_body_scale(component,body)) continue;
+        if(std::none_of(entries.begin(),entries.end(),[&](const auto& e){return e.component.Get()==component;}))
+            entries.push_back({WeakObject(component),{}});
+    }
+    tick_weapon_scales(menu);
+}
+void Appearance::set_visual_scale(double factor) {
+    apply_visual_scale(component_.Get(),factor,false);
+    visual_scale_=factor;
+    sync_weapon_scales(false);
 }
 void Appearance::restore_ground_offset() {
     if(auto* component=ground_component_.Get()) {
@@ -1350,6 +1450,7 @@ bool Appearance::restore() {
     ++appearance_revision;
     restore_expression();
     menu_overlay_controls_.release(); overlay_controls_.release();
+    restore_visual_scale(false);visual_scale_=1;
     restore_ground_offset();
     restore_springs();
     restore_dynamics();
@@ -2704,6 +2805,7 @@ bool Appearance::transition_active() const {
     return is_quest_or_teleport_active(observed_controller_.Get()) || is_traversal_ability_active(observed_pawn_.Get());
 }
 
+#include "genessa_revival.inl"
 #include "performance_player.inl"
 
 }

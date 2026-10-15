@@ -484,9 +484,17 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 ?Json{{"action","select"},{"outfit",originals->id},{"variant",originals->variants[i].id}}:Json{};
         };
         const auto count=originals?originals->variants.size():0;
+        std::vector<size_t> original_bases;
+        size_t original_base_index=0;
+        for(size_t i=0;i<count;++i) if(originals->variants[i].shade_tag.empty()) {
+            if(original_worn && originals->variants[i].original_shell==originals->variants[original_index].original_shell)
+                original_base_index=original_bases.size();
+            original_bases.push_back(i);
+        }
+        const auto base_count=original_bases.size();
         row_look.badge=original_worn;
-        row(2,"Use Original Shell",wear_original(original_index),count?wear_original((original_index+count-1)%count):Json{},
-            count?wear_original(original_worn?(original_index+1)%count:0):Json{});
+        row(2,"Use Original Shell",wear_original(original_index),base_count?wear_original(original_bases[(original_base_index+base_count-1)%base_count]):Json{},
+            base_count?wear_original(original_bases[original_worn?(original_base_index+1)%base_count:0]):Json{});
         // The game's enemies, people and Harbinger forms, one flat list across the shipped
         // css.npc.* outfits so Left/Right walks all of them.
         struct NpcChoice { const Outfit* outfit; size_t variant; };
@@ -625,8 +633,21 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(!originals) note("Official shell appearances are unavailable in this session.");
             else {
                 std::vector<Choice> choices;
-                for(size_t i=0;i<count;++i) choices.push_back({originals->variants[i].id,originals->variants[i].name,wear_original(i)});
-                choice_rows(choices,original_worn?originals->variants[original_index].id:"");
+                for(const auto i:original_bases) choices.push_back({originals->variants[i].id,originals->variants[i].name,wear_original(i)});
+                choice_rows(choices,original_worn?originals->variants[original_index].original_shell:"");
+                if(original_worn) {
+                    divider("Shade");choices.clear();
+                    const auto& selected=originals->variants[original_index];
+                    for(size_t i=0;i<count;++i) {
+                        const auto& shade=originals->variants[i];
+                        if(shade.original_shell!=selected.original_shell) continue;
+                        bool available=false;
+                        try {available=original_shade_available(pc,shade);} catch(...) {}
+                        choices.push_back({shade.id,shade.original_shade+(available?"":" (locked)"),available?wear_original(i):Json{}});
+                    }
+                    choice_rows(choices,selected.id);
+                    note("Shades use this save's unlocks. Your equipped shell and progression stay the same.");
+                }
                 direction_hint(true,"Choose a shell");
                 action_button("accept","Wear",rows_[2].accept,3,!rows_[2].accept.is_null());
             }
@@ -1211,6 +1232,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const int position_row=4+int(shell_items.size());
         const bool has_doubles=astral_shell(appearance.shell);
         const int sunlight_row=position_row+(has_doubles?4:1);
+        const Json confirm_revival{{"action","ui_confirm"},
+            {"title","Override Genessa revival?"},
+            {"message","Switch to Faithful once, even when Alteration blocks revival? Purchased upgrades and progression are kept. Native revival can restore health, and the game can save the resulting form and health normally. Later transitions follow the game. Cancel changes nothing."},
+            {"target",{{"action","genessa_form"},{"mode","faithful"},{"override",true}}}};
         row_=std::clamp(row_,0,sunlight_row);
         auto mode_word=[&](const MiscRule& rule) {
             if(rule.mode=="hidden") row_look.value="Hidden";
@@ -1250,7 +1275,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const bool stray=appearance.shell=="CharacterId.Player.Darkform.CorruptedGenessa";
             row_look.value=stray?"Stray":"Faithful";
             const Json switch_form{{"action","genessa_form"},{"mode",stray?"faithful":"stray"}};
-            row(position_row+3,"Genessa Form",switch_form,switch_form,switch_form);
+            row(position_row+3,"Genessa Form",switch_form,switch_form,switch_form,confirm_revival);
         }
         section("Lighting");
         const bool reduced_sun=state.sunlight_shadows=="reduced";
@@ -1299,9 +1324,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             choice_rows({
                 {"default","Default (game)",{{"action","genessa_form"},{"mode","default"}}},
                 {"faithful","Faithful",{{"action","genessa_form"},{"mode","faithful"}}},
+                {"faithful_override","Faithful (override)",confirm_revival},
                 {"stray","Stray",{{"action","genessa_form"},{"mode","stray"}}},
             },stray?"stray":"faithful");
             direction_hint(true,"Choose current form");
+            action_button("secondary","Override Faithful",confirm_revival,2);
         } else {
             const bool faithful=row_==position_row+1;
             const char* kind=faithful?"faithful":"stray";
@@ -1488,6 +1515,11 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         return {};
     }
     if(name=="ui_confirm") {
+        confirm_form_pawn_=nullptr;
+        if(action.at("target").value("action",std::string{})=="genessa_form") {
+            confirm_form_pawn_=inventory_object(controller_.Get(),L"Pawn");
+            if(!confirm_form_pawn_.Get()) throw std::runtime_error("No player for Genessa form confirmation");
+        }
         confirm_action_={
             {"action",action.at("target")},
             {"title",action.value("title",std::string("Confirm action"))},
@@ -1495,10 +1527,14 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         };
         dirty_=true; return {};
     }
-    if(name=="ui_confirm_cancel") { confirm_action_=nullptr; dirty_=true; return {}; }
+    if(name=="ui_confirm_cancel") { confirm_action_=nullptr; confirm_form_pawn_=nullptr; dirty_=true; return {}; }
     if(name=="ui_confirm_proceed") {
         auto target=confirm_action_.value("action",Json{});
         confirm_action_=nullptr; dirty_=true;
+        auto* confirmed_pawn=confirm_form_pawn_.Get();confirm_form_pawn_=nullptr;
+        if(target.value("action",std::string{})=="genessa_form" &&
+            (!confirmed_pawn || confirmed_pawn!=inventory_object(controller_.Get(),L"Pawn")))
+            throw std::runtime_error("Genessa form switch cancelled: player changed during confirmation");
         return dispatch(target,state);
     }
     if(name=="ui_browse_shells" && catalog_) {

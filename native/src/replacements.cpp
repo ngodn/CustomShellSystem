@@ -205,6 +205,8 @@ void rebuild_replacement_outfits(Catalog& catalog) {
     std::vector<Look> looks;
     for(const auto& outfit:outfits) if(npc_outfit(outfit.id) || outfit.id==original_shells_id)
         for(const auto& variant:outfit.variants)
+            // Replacement meshes own their materials; native shade overrides do not describe them.
+            if(variant.shade_tag.empty())
             if(const auto* folder=replacement_folder(catalog.replacement_folders,variant.mesh)) looks.push_back({folder,&variant});
     std::set<std::string> ids;
     std::vector<Outfit> built;

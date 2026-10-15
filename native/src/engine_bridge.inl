@@ -1,5 +1,8 @@
 // Included after engine.cpp's reflected frame and lifetime helpers.
 namespace css {
+unsigned EngineBridge::revive_genessa(GenessaRevival& revival,const Json& pawn,const CssHookHost* host) {
+    return revival.revive(resolve(pawn),host);
+}
 namespace {
 FProperty* bridge_property(UStruct* type,const std::wstring& name) {
     // UE4SS's GetPropertyByNameInChain compares only FName's base index.

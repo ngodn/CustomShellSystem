@@ -3,6 +3,7 @@
 #include "packages.hpp"
 #include "replacements.hpp"
 #include "ground_offset.hpp"
+#include "mesh_scale.hpp"
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -126,7 +127,7 @@ bool valid_asset(const std::string& s) {
     if (dot == s.npos || dot <= s.rfind('/') || dot + 1 == s.size()) return false;
     return std::all_of(s.begin(), s.end(), [](unsigned char c) {
         return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-               (c >= '0' && c <= '9') || c == '_' || c == '/' || c == '.';
+               (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '/' || c == '.';
     });
 }
 Json read_json(const fs::path& path) {
@@ -313,7 +314,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             }
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
-                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}, 0, {}, {}, {}};
+                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}, 0, {}, {}, {}, {}, {}, {}};
                 if(v.contains("ground_offset_cm")) {
                     if(!v.at("ground_offset_cm").is_number()) throw std::runtime_error("Invalid ground offset");
                     variant.ground_offset_cm=v.at("ground_offset_cm").get<double>();
@@ -321,6 +322,11 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
                         throw std::runtime_error("Ground offset outside range");
                 }
                 variant.fit_shell=v.value("fit_shell",std::string{});
+                if(v.contains("mesh_scale")) {
+                    if(!v.at("mesh_scale").is_number()) throw std::runtime_error("Invalid appearance scale");
+                    variant.mesh_scale=v.at("mesh_scale").get<double>();
+                    if(!MeshScale::valid(variant.mesh_scale)) throw std::runtime_error("Appearance scale outside range");
+                }
                 if(!variant.fit_shell.empty() && !valid_id(variant.fit_shell)) throw std::runtime_error("Invalid fit shell tag");
                 if(has_customize(v)) variant.controls=ControlSet::parse(customize_block(v));
                 if(v.contains("ground_offset_toggle")) {

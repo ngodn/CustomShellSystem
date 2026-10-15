@@ -12,6 +12,22 @@ inline constexpr std::string_view authored_cw_hair_skeleton =
     "/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
 inline constexpr std::string_view authored_cw_belt_skeleton =
     "/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Waist1.SKEL_Waist1";
+inline constexpr std::string_view native_merrick_skeleton =
+    "/Game/Sparta/Characters/NPCs/Shopkeeper/Art/Mesh/MH/SK_Shopkeeper_MH_LOD0_Skeleton.SK_Shopkeeper_MH_LOD0_Skeleton";
+
+// Isolated boss rigs retain native bind lengths with player translation modes.
+// Trial evidence and limits: docs/research/2026-10-15-boss-appearances.md.
+inline constexpr std::string_view native_boss_skeletons[] = {
+    "/Game/CSS/eins0fx/Bosses/ms1_tarsus/Rig____________/MS1_Tarsus_Skeleton.MS1_Tarsus_Skeleton",
+    "/Game/CSS/eins0fx/Bosses/dwarf/Rig___________/SKEL_Dwarf_Skeleton.SKEL_Dwarf_Skeleton",
+    "/Game/CSS/eins0fx/Bosses/swordman/Rig___________/SK_Swordman_Skeleton.SK_Swordman_Skeleton",
+    "/Game/CSS/eins0fx/Bosses/mothknight/Rig___________/SK_MothKnight_Skeleton.SK_MothKnight_Skeleton",
+};
+inline bool is_native_boss_skeleton(std::string_view path) {
+    for (const auto candidate : native_boss_skeletons)
+        if (path == candidate) return true;
+    return false;
+}
 
 inline bool is_audited_base_skeleton(std::string_view path) {
     // The namespace cook preserves every decoded Skeleton field. See
@@ -55,7 +71,8 @@ inline bool compatible_standard_skeletons(std::string_view before, std::string_v
     const auto audited = [&](std::string_view path) {
         return path == human || path == base || path == b2 || is_audited_base_skeleton(path) ||
             is_audited_wing_skeleton(path) || path == authored_cw_hair_skeleton ||
-            path == authored_cw_belt_skeleton;
+            path == authored_cw_belt_skeleton || path == native_merrick_skeleton ||
+            is_native_boss_skeleton(path);
     };
     return before != target && audited(before) && audited(target);
 }

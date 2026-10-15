@@ -408,6 +408,8 @@ void AttachmentOffsets::push(UObject* component) {
     }
 }
 void Appearance::sync_seals() {
+    tick_weapon_scales(false);
+    tick_weapon_scales(true);
     offsets_.push(active()?component_.Get():nullptr);
 }
 #ifdef CSS_INVENTORY_DEV
@@ -570,4 +572,6 @@ void Appearance::sync_attachments() {
     offsets_.update(active()?component_.Get():nullptr);
     auto* menu=menu_component_.Get();
     menu_attachments_.update(menu && mesh_asset(menu)==menu_applied_.Get()?menu:nullptr,menu_original_);
+    sync_weapon_scales(false);
+    sync_weapon_scales(true);
 }

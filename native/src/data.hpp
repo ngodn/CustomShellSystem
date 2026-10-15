@@ -104,6 +104,9 @@ struct Variant {
     // outfit's fit_shell, then its first listed shell (fit_shell_for).
     std::string fit_shell;
     std::optional<GroundOffsetToggle> ground_offset_toggle;
+    // Runtime-discovered official shades. Empty for authored catalog variants.
+    std::string original_shell, original_shade, shade_tag;
+    double mesh_scale=1;
 };
 struct Outfit {
     std::string id, name, author, description, category;

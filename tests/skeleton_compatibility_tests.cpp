@@ -15,6 +15,18 @@ int main() {
     const std::string authored_wings = "/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2";
     const std::string cw = "/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
     auto check = [](bool value, const char* why) { if (!value) throw std::runtime_error(why); };
+    for (const auto boss : css::native_boss_skeletons) {
+        check(compatible_standard_skeletons(human, boss), "Native boss appearance rejected");
+        check(compatible_standard_skeletons(boss, authored), "Restoration from native boss rejected");
+        check(!css::compatible_animation_skeletons(authored, boss), "CSS facial animation admitted on boss");
+        check(!compatible_standard_skeletons(human, std::string(boss) + "_Invalid"), "Boss lookalike accepted");
+    }
+    for (const auto path : {
+            "/Game/Sparta/Characters/Bosses/Dwarf/Art/Mesh/SKEL_Dwarf_Skeleton.SKEL_Dwarf_Skeleton",
+            "/Game/Sparta/Characters/Bosses/ParasiteGolem/Art/Mesh/SK_parasiteGolem_Skeleton.SK_parasiteGolem_Skeleton",
+            "/Game/Sparta/Characters/Bosses/LadyOfTheWoods/Art/Mesh/SK_LadyOfTheWood_Skeleton.SK_LadyOfTheWood_Skeleton"}) {
+        check(!compatible_standard_skeletons(human, path), "Unadapted native boss accepted");
+    }
     check(compatible_standard_skeletons(human, base), "Audited human-to-base pair rejected");
     check(compatible_standard_skeletons(base, human), "Restoring human from base rejected");
     for (const auto& previous : {human, base}) {
@@ -133,5 +145,17 @@ int main() {
         check(!css::compatible_animation_skeletons(other, belt), "Unaudited animation source accepted for belt");
         check(!css::compatible_animation_skeletons(belt, other), "Belt animation accepted on unaudited target");
     }
+    const std::string merrick(css::native_merrick_skeleton);
+    for (const auto& previous : {human, base, b2, standard, authored, wings, authored_wings, cw, belt}) {
+        check(compatible_standard_skeletons(previous, merrick), "Merrick appearance rejected");
+        check(compatible_standard_skeletons(merrick, previous), "Restoring from Merrick rejected");
+    }
+    for (const auto& other : std::vector<std::string>{"", merrick + "_Invalid",
+            "/Game/Sparta/Characters/NPCs/ShellKeeper/Art/Mesh/SK_ShellKeeper_Skeleton.SK_ShellKeeper_Skeleton"}) {
+        check(!compatible_standard_skeletons(other, merrick), "Unmapped NPC accepted for Merrick");
+        check(!compatible_standard_skeletons(merrick, other), "Unmapped NPC accepted from Merrick");
+    }
+    check(!css::compatible_animation_skeletons(authored, merrick), "CSS facial animation accepted on Merrick");
+    check(!compatible_standard_skeletons(merrick, merrick), "Identical Merrick skeleton treated as remap");
     std::cout << "Skeleton allowlist and lookalike rejection passed\n";
 }

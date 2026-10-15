@@ -95,7 +95,7 @@ static bool misc_action_active(UObject* pawn) {
 //   Weapon.Slot.Primary/Secondary -> stowed_weapons (the primary weapon)
 //   Weapon.Slot.Body.*     -> fists/kicks, skipped
 struct MiscSlot { std::string category; bool shell_item=false; };
-static std::map<UObject*,MiscSlot> misc_weapon_slots(UObject* pawn) {
+static std::map<UObject*,MiscSlot> misc_weapon_slots(UObject* pawn,bool include_body=false) {
     std::map<UObject*,MiscSlot> out;
     if(!pawn) return out;
     UObject* wc=nullptr;
@@ -122,7 +122,7 @@ static std::map<UObject*,MiscSlot> misc_weapon_slots(UObject* pawn) {
             if(!weapon) continue;
             auto in=[&](const char* n){ return tag.find(n)!=std::string::npos; };
             MiscSlot slot;
-            if(in("body")||in("fist")||in("leg")||in("kick")) continue;
+            if(in("body")||in("fist")||in("leg")||in("kick")) { if(!include_body) continue; }
             // Weapon.Slot.Shell.* is a shell's own tool; Weapon.Slot.Charges is a shell's charge
             // item (Gragu's Revered Heart). Both are shell-specific, so both get their own row.
             else if(in("shell")||in("charges")) { slot.category="accessories"; slot.shell_item=true; }

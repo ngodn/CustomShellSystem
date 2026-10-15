@@ -35,12 +35,14 @@ struct Core {
     std::string sunlight_error;
     Json sunlight_query(const Json& query) { return engine_bridge.request(current_engine,appearance,query); }
     AstralDoubles astral;
+    GenessaRevival genessa_revival;
     std::string astral_error;
     struct GenessaFormRequest {
         std::string target;
         Json pawn;
         uint64_t expires=0, next_check=0;
         bool sent=false;
+        bool override_block=false;
     };
     std::optional<GenessaFormRequest> genessa_form_request;
     InventoryUI inventory;
@@ -471,6 +473,7 @@ struct Core {
                 for(const auto& outfit:catalog.outfits) if(outfit.id==selection.outfit) {
                     if(state.keep_default_attachments) appearance.set_attachment_offsets({},false);
                     else appearance.set_attachment_offsets(variant->attachments,true,fit_shell_for(outfit,*variant));
+                    appearance.set_visual_scale(variant->mesh_scale);
                     appearance.set_ground_offset(selection.custom.ground_offset_cm.value_or(
                         authored_ground_offset(outfit,*variant,selection.custom)));
                     appearance.sync_items(outfit,selection.variant);
@@ -569,7 +572,10 @@ struct Core {
             if(appearance.shell.empty()) throw std::runtime_error("No player shell yet");
             const auto outfit=command.at("outfit").get<std::string>();
             const auto variant=command.at("variant").get<std::string>();
-            if(!catalog.find(outfit,variant)) throw std::runtime_error("Outfit or variant is not installed");
+            const auto* requested_variant=catalog.find(outfit,variant);
+            if(!requested_variant) throw std::runtime_error("Outfit or variant is not installed");
+            if(!original_shade_available(appearance.player(current_engine),*requested_variant))
+                throw std::runtime_error("This shade is not unlocked in the current save.");
             if(!catalog.compatible(outfit,appearance.shell)) throw std::runtime_error("This outfit does not support the current shell: "+appearance.shell);
             std::optional<Customization> custom;
             if(command.contains("customize")) {
@@ -803,6 +809,7 @@ struct Core {
                 if(!state.enabled || !astral_shell(player.at("shell").get<std::string>()) || player.at("pawn").is_null())
                     throw std::runtime_error("Form switching requires Genessa as the gameplay shell");
                 genessa_form_request=GenessaFormRequest{mode,player.at("pawn"),GetTickCount64()+120000};
+                genessa_form_request->override_block=mode=="faithful" && command.value("override",false);
                 stop_automatic_idle("Genessa form switch requested");
                 if(appearance.performance.active()) appearance.performance.interrupt("Genessa form switch requested");
                 appearance.walk.release();
@@ -976,7 +983,10 @@ struct Core {
         else if (action == "select") {
             const auto outfit = command.at("outfit").get<std::string>();
             const auto variant = command.at("variant").get<std::string>();
-            if (!catalog.find(outfit, variant)) throw std::runtime_error("Outfit or variant is not installed");
+            const auto* requested_variant=catalog.find(outfit,variant);
+            if(!requested_variant) throw std::runtime_error("Outfit or variant is not installed");
+            if(!original_shade_available(appearance.player(current_engine),*requested_variant))
+                throw std::runtime_error("This shade is not unlocked in the current save.");
             selected_outfit = outfit; selected_variant = variant; apply_pending = true;
             pending_custom.reset(); custom_only=false;
         }
@@ -1117,9 +1127,10 @@ struct Core {
             const auto health=query({{"op","get"},{"target",pending.pawn},{"property","HealthComponent"}});
             if(health.is_null() || call(health,"IsDeadOrDying").at("ReturnValue").get<bool>())
                 throw std::runtime_error("Genessa form switch cancelled: player is not alive");
-            if(pending.target=="faithful" && call(pending.pawn,"HasMatchingGameplayTag",
-                {{"TagToCheck",{{"TagName","State.ReviveBlock"}}}}).at("ReturnValue").get<bool>())
-                throw std::runtime_error("The game is blocking shell revival. Genessa's Alteration upgrade can prevent switching to Faithful.");
+            const bool blocked=pending.target=="faithful" && call(pending.pawn,"HasMatchingGameplayTag",
+                {{"TagToCheck",{{"TagName","State.ReviveBlock"}}}}).at("ReturnValue").get<bool>();
+            if(blocked && !pending.override_block)
+                throw std::runtime_error("The game is blocking shell revival. Genessa's Alteration upgrade can prevent switching to Faithful. Use Faithful (override) to review a one-time exception.");
             if(!appearance.ready_to_apply()) return;
             if(appearance.performance.cleanup_pending()) return;
             // Send once through the native ability path. Never retry a gameplay event.
@@ -1130,6 +1141,14 @@ struct Core {
                     {"EventTag",{{"TagName","Event.Shell.Severed"}}},
                     {"Payload",{{"EventTag",{{"TagName","Event.Shell.Severed"}}},
                         {"Instigator",pending.pawn},{"Target",pending.pawn}}}});
+            } else if(blocked && pending.override_block) {
+                HMODULE loader=nullptr;
+                if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                    reinterpret_cast<LPCWSTR>(host.log),&loader))
+                    throw std::runtime_error("Cannot locate the CSS loader for Faithful override");
+                const auto get=reinterpret_cast<CssGetHookHost>(GetProcAddress(loader,"css_get_hook_host"));
+                const auto bypasses=engine_bridge.revive_genessa(genessa_revival,pending.pawn,get?get():nullptr);
+                host.log(("Genessa confirmed revival: "+std::to_string(bypasses)+" predicate overrides; hook released").c_str());
             } else {
                 const auto library=query({{"op","find"},{"path","/Game/Sparta/Core/Player/BPFL_Player.Default__BPFL_Player_C"}});
                 call(library,"ForceReviveShell",{{"Silent",true},{"__WorldContext",pending.pawn}});
@@ -1364,6 +1383,11 @@ struct Core {
                 if (!requested.outfit.empty()) {
                     if(pending_custom) { requested.custom=*pending_custom; pending_custom.reset(); }
                     auto* variant = catalog.find(requested.outfit, requested.variant);
+                    if(variant && !original_shade_available(appearance.player(engine),*variant)) {
+                        requested.variant=variant->original_shell;
+                        variant=catalog.find(requested.outfit,requested.variant);
+                        report("This save has not unlocked the selected shade. Using the shell's original appearance.");
+                    }
                     if (!variant || !catalog.compatible(requested.outfit, shell)) {
                         // A stale saved look whose package or variant is no longer installed.
                         // Show this shell's default quietly and settle, instead of failing and
@@ -1393,6 +1417,7 @@ struct Core {
                             if (state.keep_default_attachments) appearance.set_attachment_offsets({}, false);
                             else appearance.set_attachment_offsets(variant->attachments, true, fit_shell);
                             for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) {
+                                appearance.set_visual_scale(variant->mesh_scale);
                                 appearance.set_ground_offset(requested.custom.ground_offset_cm.value_or(
                                     authored_ground_offset(outfit,*variant,requested.custom)));
                                 lap("ground");
@@ -1605,6 +1630,8 @@ bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
         core.pending_performance.clear();
+        core.genessa_form_request.reset();
+        core.genessa_revival.release();
 #ifdef CSS_INVENTORY_DEV
         core.engine_bridge.finish_walk_trial(true);
         core.engine_bridge.finish_rig_trial(core.current_engine,core.appearance,true);

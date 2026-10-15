@@ -23,6 +23,8 @@
 #include "inventory_light_keys.hpp"
 #include "profile_input.hpp"
 #include "ground_offset.hpp"
+#include "mesh_scale.hpp"
+#include "hook_api.hpp"
 #include "animation_override.hpp"
 #include "extension_search.hpp"   // OptionSearch, reused by CSS's own native outfit search
 #include <memory>
@@ -35,6 +37,7 @@
 namespace css {
 fs::path engine_content_directory();
 Outfit discover_original_shells(std::vector<std::string>& skipped,std::map<std::string,std::string>& character_data);
+bool original_shade_available(RC::Unreal::UObject* pawn,const Variant& variant);
 // UE4SS's serial-allocation fallback uses a legacy soft-reference layout.
 // Initialize new serials through a reflected frame before constructing a weak handle.
 class WeakObject : public RC::Unreal::FWeakObjectPtr {
@@ -42,6 +45,18 @@ public:
     WeakObject() = default;
     WeakObject(RC::Unreal::UObject* object);
     WeakObject& operator=(RC::Unreal::UObject* object);
+};
+class GenessaRevival {
+    const CssHookHost* host_=nullptr;
+    uint64_t hook_=0;
+    WeakObject pawn_, ability_class_;
+    RC::Unreal::FProperty* result_=nullptr;
+    bool armed_=false;
+    unsigned bypasses_=0;
+    static void predicate(void*,void*,void*,void*) noexcept;
+public:
+    unsigned revive(RC::Unreal::UObject*,const CssHookHost*);
+    void release();
 };
 class MorphDeformerBinding {
     WeakObject component_, mesh_, instance_;
@@ -348,6 +363,7 @@ class EngineBridge {
     void encode(RC::Unreal::FProperty*,void*,const Json&,unsigned);
 public:
     Json request(void* engine,Appearance&,const Json&);
+    unsigned revive_genessa(GenessaRevival&,const Json& pawn,const CssHookHost*);
 #ifdef CSS_INVENTORY_DEV
     void finish_rig_trial(void*,Appearance&,bool force=false);
     void finish_walk_trial(bool force=false);
@@ -374,6 +390,7 @@ class InventoryUI {
     float camera_fov_before_=0;
     std::array<double,3> camera_actor_location_before_{};
     Json confirm_action_;
+    WeakObject confirm_form_pawn_;
     bool native_picker_=false;
     std::string native_picker_title_, native_picker_kind_, native_picker_target_;
     std::string physics_modal_control_;
@@ -745,6 +762,16 @@ class Appearance {
     WeakObject ground_component_;
     GroundOffset ground_offset_;
     void restore_ground_offset();
+    WeakObject scale_component_, menu_scale_component_;
+    MeshScale scale_, menu_scale_;
+    struct ScaledWeapon { WeakObject component; MeshScale scale; };
+    std::vector<ScaledWeapon> scaled_weapons_, menu_scaled_weapons_;
+    double visual_scale_=1;
+    void restore_weapon_scales(bool menu);
+    void sync_weapon_scales(bool menu);
+    void tick_weapon_scales(bool menu);
+    void restore_visual_scale(bool menu);
+    void apply_visual_scale(RC::Unreal::UObject* component,double factor,bool menu);
     void timed_set_mesh(RC::Unreal::UObject* component, RC::Unreal::UObject* mesh);
     WeakObject observed_pawn_, observed_component_, observed_controller_;
     SharedAnimationResolver shared_animations_;
@@ -904,6 +931,7 @@ public:
     bool restore();
     void release_caches() { mask_cache_.clear(); mask_roots_.release(); mask_cache_outfit_.clear(); }
     void set_ground_offset(double offset);
+    void set_visual_scale(double factor);
     bool active() const;
     bool repair_materials_needed() const;
     bool customization_reset() const;        // a transition reset CSS's applied customization in place

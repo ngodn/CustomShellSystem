@@ -4,6 +4,7 @@
 #include <fstream>
 #include <thread>
 #include "ground_offset.hpp"
+#include "mesh_scale.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <functional>
@@ -144,6 +145,7 @@ int main() {
         expect(!valid_id("../escape"), "Traversal accepted");
         expect(!valid_id(".."), "Dot traversal accepted");
         expect(valid_asset("/Game/CSS/Mesh.Mesh"), "Valid asset rejected");
+        expect(valid_asset("/Game/Sparta/Characters/Shells/Eredrim/Art/Materials/Alt-Skin_01/MI_Eredrim_Coat_Dye01.MI_Eredrim_Coat_Dye01"), "Native alternate shade path rejected");
         expect(!valid_asset("/Game/CSS/../Mesh.Mesh"), "Asset traversal accepted");
         State state;
         expect(!state.invert_orbit_x && state.invert_orbit_y, "Default orbit must invert vertical only");
@@ -206,6 +208,39 @@ int main() {
         expect(loaded.find("test", "a") != nullptr, "Variant missing");
         expect(loaded.find("test", "missing") == nullptr, "Missing variant accepted");
         expect(loaded.find("test","a")->ground_offset_cm==0,"Legacy package acquired a ground offset");
+        expect(loaded.find("test","a")->mesh_scale==1,"Legacy package acquired a mesh scale");
+        {
+            MeshScale scale;
+            const std::array<double,3> baseline{1,2,1};
+            const auto small=scale.set(baseline,.4);
+            expect(MeshScale::same(small,{.4,.8,.4}),"Scale did not preserve authored proportions");
+            expect(scale.set(small,.4)==small,"Repeated application accumulated scale");
+            expect(scale.set(small,.5)==std::array<double,3>{.5,1,.5},"Changing outfits stacked scale");
+            expect(scale.restore({.5,1,.5})==baseline,"Original scale was not restored");
+            scale.set(baseline,.4);
+            expect(!scale.restore({2,2,2}),"Restoration overwrote an external scale change");
+            MeshScale weapon;
+            const auto corrected=weapon.compensate(baseline,.1);
+            expect(corrected==std::array<double,3>{10,20,10},"Small body shrank its weapons");
+            expect(weapon.compensate(corrected,.1)==corrected,"Weapon correction accumulated");
+            const auto changed=weapon.compensate(corrected,.4);
+            expect(changed==std::array<double,3>{2.5,5,2.5},"Boss switch stacked weapon correction");
+            expect(weapon.compensate(baseline,.4)==changed,"Native reattachment lost weapon correction");
+            expect(weapon.restore(changed)==baseline,"Weapon scale was not restored");
+            weapon.compensate(baseline,.4);
+            expect(!weapon.restore({3,3,3}),"Weapon restore overwrote another scale owner");
+            rejects([&]{weapon.compensate(baseline,0);});
+            auto scaled=catalog;
+            scaled["outfits"][0]["variants"][0]["mesh_scale"]=.4;
+            atomic_json(catalog_file,scaled,false);
+            expect(Catalog::load(catalog_dir).find("test","a")->mesh_scale==.4,"Authored scale was lost");
+            for(const auto& value:std::vector<Json>{0.,-.1,4.01,"0.4",nullptr}) {
+                scaled["outfits"][0]["variants"][0]["mesh_scale"]=value;
+                atomic_json(catalog_file,scaled,false);
+                rejects([&]{Catalog::load(catalog_dir);});
+            }
+            atomic_json(catalog_file,catalog,false);
+        }
         {
             auto spoof=catalog;spoof["outfits"][0]["id"]=original_shells_id;
             atomic_json(catalog_file,spoof,false);

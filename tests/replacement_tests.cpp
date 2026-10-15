@@ -154,6 +154,10 @@ int main(int argc,char** argv) {
         expect(catalog.display_order("",{}).empty(),"Mod outfits leaked into the Custom Shells order");
         // The official shells arrive later: a rebuild adds Gamma without duplicating the rest.
         auto originals=roster(original_shells_id,{{"gamma",gamma+"Art/Mesh/SK_G.SK_G"}});
+        auto shade=originals.variants.front();
+        shade.id="gamma.shade.obsidian";shade.shade_tag="Sparta.Item.Skin.Shell.Shared.Obsidian";
+        shade.materials[0]="/Game/Shades/Obsidian.Obsidian";
+        originals.variants.push_back(shade);
         catalog.outfits.push_back(originals);
         rebuild_replacement_outfits(catalog);
         expect(!find("css.mod.skeleton_p") && find("css.mod.betaskel_p") && find("css.mod.betaskel_p")->variants.size()==1,"Conflict-only mod got an outfit, or a conflicting folder mod lost its look");

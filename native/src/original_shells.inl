@@ -63,6 +63,81 @@ static std::string original_character_id(UObject* data) {
     if(!valid_id(tag) || tag=="None") throw std::runtime_error("Shell character data has no CharacterId");
     return tag;
 }
+bool original_shade_available(UObject* pawn,const Variant& variant) {
+    if(variant.shade_tag.empty()) return true;
+    if(!pawn || variant.fit_shell.empty()) return false;
+    auto* library=load("/Game/Sparta/Core/Player/BPFL_Player_Equipment.Default__BPFL_Player_Equipment_C");
+    AssetLoadRoots roots;roots.keep(library);
+    Call unlocked(library,L"IsSkinUnlocked",4);
+    unlocked.set(L"EquipmentID",FName(wide(variant.fit_shell).c_str()));
+    unlocked.set(L"SkinID",FName(wide(variant.shade_tag).c_str()));
+    unlocked.set(L"__WorldContext",pawn);unlocked.run();
+    return unlocked.get<bool>();
+}
+static std::vector<Variant> original_shades(UObject* data,const Variant& base,
+        const std::string& definition_path,AssetLoadRoots& roots,std::vector<std::string>& skipped) {
+    std::vector<Variant> result;
+    if(!data || base.fit_shell.empty()) return result;
+    auto* p=data->GetPropertyByNameInChain(L"SkinMaterialsMap");
+    if(!p || !p->IsA<FMapProperty>()) return result;
+    auto* property=static_cast<FMapProperty*>(p);
+    auto* key=property->GetKeyProp();auto* value=property->GetValueProp();
+    if(!key->IsA<FStructProperty>() || key->GetSize()!=sizeof(FName) ||
+       narrow(static_cast<FStructProperty*>(key)->GetStruct()->GetName())!="GameplayTag" ||
+       !value->IsA<FStructProperty>()) throw std::runtime_error("Unexpected shade map types");
+    auto* type=static_cast<FStructProperty*>(value)->GetStruct().Get();
+    auto* defaults=type->GetPropertyByNameInChain(L"Default");
+    if(!defaults || !defaults->IsA<FArrayProperty>() || defaults->GetOffset_Internal()<0 ||
+       defaults->GetOffset_Internal()+defaults->GetSize()>value->GetSize())
+        throw std::runtime_error("Unexpected shade material array");
+    auto* array=static_cast<FArrayProperty*>(defaults);
+    if(!array->GetInner()->IsA<FObjectProperty>() || array->GetInner()->GetSize()!=sizeof(UObject*))
+        throw std::runtime_error("Unexpected shade material type");
+    const auto& layout=property->GetMapLayout();
+    if(layout.ValueOffset<key->GetSize() || layout.SetLayout.Size<=0 || layout.SetLayout.Size>4096 ||
+       layout.ValueOffset>layout.SetLayout.Size-value->GetSize()) throw std::runtime_error("Unexpected shade map layout");
+    auto* map=reinterpret_cast<FScriptMap*>(reinterpret_cast<std::byte*>(data)+p->GetOffset_Internal());
+    const auto end=map->GetMaxIndex();
+    if(map->Num()<0 || end<map->Num() || end>64) throw std::runtime_error("Shade count exceeds bound");
+    for(int i=0;i<end;++i) {
+        if(!map->IsValidIndex(i)) continue;
+        auto* pair=static_cast<std::byte*>(map->GetData(i,layout));
+        const auto tag=narrow(reinterpret_cast<FName*>(pair)->ToString());
+        try {
+            std::string suffix,label;
+            if(tag=="Sparta.Item.Skin.Shell.Shared.Alternative") {suffix="AltSkin";label="Alternative";}
+            else if(tag=="Sparta.Item.Skin.Shell.Shared.Obsidian") {suffix="Obsidian";label="Obsidian";}
+            else {skipped.push_back(base.name+" unsupported shade: "+tag);continue;}
+            Variant shade=base;shade.shade_tag=tag;shade.id=base.id+".shade."+suffix;
+            std::transform(shade.id.begin(),shade.id.end(),shade.id.begin(),[](unsigned char c){return std::tolower(c);});
+            FScriptArrayHelper materials(array,pair+layout.ValueOffset+defaults->GetOffset_Internal());
+            if(materials.Num()<1 || materials.Num()>128) throw std::runtime_error("Shade material count exceeds bound");
+            for(int slot=0;slot<materials.Num();++slot) {
+                UObject* material{};std::memcpy(&material,materials.GetRawPtr(slot),sizeof(material));
+                if(!material) continue; // Native null slots retain the mesh's own material.
+                const auto path=narrow(material->GetPathName());
+                if(!valid_asset(path) || !material->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInterface"))))
+                    throw std::runtime_error("Invalid shade material");
+                shade.materials[slot]=path;
+            }
+            if(shade.materials.empty()) continue;
+            const auto slash=definition_path.rfind('/'),dot=definition_path.find('.',slash);
+            if(slash!=std::string::npos && dot!=std::string::npos) {
+                const auto stem=definition_path.substr(slash+1,dot-slash-1)+"_"+suffix;
+                try {
+                    auto* definition=original_default(load(definition_path.substr(0,slash)+"/Skins/"+stem+"."+stem+"_C"),roots);
+                    Call display(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_TextToString",2);
+                    original_property(display,L"InText",definition,L"DisplayName");display.run();
+                    if(auto localized=original_string(display);!localized.empty()) label=localized;
+                } catch(const std::exception& error) {skipped.push_back(base.name+" shade label: "+error.what());}
+            }
+            shade.original_shade=label;shade.name=base.name+" / "+label;
+            shade.items[0].materials=shade.materials;shade.items[0].name=shade.name;
+            result.push_back(std::move(shade));
+        } catch(const std::exception& error) {skipped.push_back(base.name+" shade "+tag+": "+error.what());}
+    }
+    return result;
+}
 Outfit discover_original_shells(std::vector<std::string>& skipped,std::map<std::string,std::string>& character_data) {
     auto* settings=find(L"/Script/Sparta.Default__SpartaGameSettings");
     auto* library=find(L"/Script/Engine.Default__KismetSystemLibrary");
@@ -112,8 +187,9 @@ Outfit discover_original_shells(std::vector<std::string>& skipped,std::map<std::
             Variant variant;variant.mesh=original_string(mesh);
             if(!valid_asset(variant.mesh)) throw std::runtime_error("Default shell mesh is unavailable");
             // Optional: without it the look still wears, its gear just keeps the worn shell's fit.
+            UObject* data=nullptr;
             try {
-                if(auto* data=read<UObject*>(shell,L"CharacterData")) {
+                if((data=read<UObject*>(shell,L"CharacterData"))) {
                     variant.fit_shell=original_character_id(data);
                     character_data[variant.fit_shell]=narrow(data->GetPathName());
                 }
@@ -128,8 +204,13 @@ Outfit discover_original_shells(std::vector<std::string>& skipped,std::map<std::
             Call display(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_TextToString",2);
             original_property(display,L"InText",definition,L"DisplayName");display.run();variant.name=original_string(display);
             if(variant.name.empty()) variant.name=label;
+            variant.original_shell=variant.id;variant.original_shade="Original";
             Item body;body.id="body";body.name=variant.name;body.mesh=variant.mesh;
-            variant.items.push_back(std::move(body));outfit.variants.push_back(std::move(variant));
+            variant.items.push_back(std::move(body));outfit.variants.push_back(variant);
+            try {
+                for(auto& shade:original_shades(data,variant,definition_path,roots,skipped))
+                    outfit.variants.push_back(std::move(shade));
+            } catch(const std::exception& error) {skipped.push_back(label+" shades: "+error.what());}
         } catch(const std::exception& error) {
             skipped.push_back((label.empty()?"#"+std::to_string(i):label)+": "+error.what());
         }
