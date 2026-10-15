@@ -1,5 +1,14 @@
 # Three-outfit rig and physics research index
 
+- [Existing upgrade evidence](2026-10-16-upgrade-evidence.md): the executed six-to-four provider replacement and eighteen retained original files verify. Later compatibility and runtime results are linked without claiming an exact replay of the missing pre-migration state snapshot. Do not repeat the physical replacement.
+- [Fresh shipping runtime](2026-10-15-clean-shipping-runtime.md): the staged ZIP passes default-state startup, provider discovery and Peony facial playback. Original developer runtime, settings and Merrick restore; the disposable cache is removed.
+
+- [Shared provider removal/reinstall](2026-10-15-shared-provider-lifecycle.md): actual cold starts preserve saved choices and reject an unavailable profile without side effects. Restoring the trio recovers CW, customization, profile loading and Iris Out. Exact original CSS state and package hashes restore; clean installation and other migration cases remain separate.
+
+- [Remaining Faithful doubles](2026-10-15-outfit-doubles.md#remaining-faithful-cases-completed): both UG variants and CW pass copy binding and cleanup. Original form/appearance/settings/view/upgrades restore; a separately verified native refund restores the measured Resolve cost. This completes binding/cleanup coverage for all ten Faithful appearances, not cloth/contact acceptance.
+
+- [Peony retained source chain](2026-10-15-peony-source-chain.md): 610 files connect the accepted assembly/editor/cook sources to 294 installed Peony payloads and twelve shared doubles material exports. Historical game-container links are separated; no new assets or gameplay tests.
+
 - [Native playback controls](2026-10-15-native-playback-controls.md): original Genessa in Stray passes looping, pose holding, pause/resume and native Iris Out interruption by mapped parry. Raw montage/ability checks and all 15 final restoration conditions pass. The short-pose fixture correction is retained; other targets, contact and broader gameplay remain separate.
 
 - [CSS-menu recovery](2026-10-15-menu-recovery.md): ten appearances pass preview body/morph/visibility parity and measured primary-rig recovery in Stray, with raw-response verification and full final restoration. Two fixture failures remain recorded; continuous visuals and broader lifecycle are separate.
@@ -875,3 +884,5 @@ have a smoothed private candidate that passes the eight sampled bind-shape
 contact checks. Its native body/corrective morph readback, cloth preservation
 and all 115 facial expressions pass. Rejected placement and
 arm-pose probes are recorded so they are not repeated as shipping solutions.
+
+- [Asset readiness at the CSS load boundary](2026-10-15-asset-loading-readiness.md): unchecked-return guard installed through the stationary reload with unchanged saved state; 27 host suites and both core builds pass. Original reload/rescan crash remains open.

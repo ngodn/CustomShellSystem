@@ -7,6 +7,13 @@ not a detached mesh or a transform that needs correcting.
 
 ## Evidence
 
+The later [sidearm re-equip regression](2026-10-15-sidearm-equip-regression.md)
+verifies a newly spawned Trebuchaxe after restart and a two-save round trip.
+All seven draw/stow/visibility-mode phases preserve the native hidden projectile
+preview. Crossbow, Parasite Gun, Cursed Child and Ballistazooka also pass those
+phases. This extends fresh-equip and other-sidearm coverage; it does not add new
+Trebuchaxe firing, Tarstone or damage evidence.
+
 All receipts and recipes are under
 `work/three-outfit-rig-physics/trebuchaxe-20261015/`.
 
@@ -114,3 +121,41 @@ not establish an idle-related firing defect.
 Other sidearms, Tarstone combinations, uncharged firing, damage and a fresh
 launch remain separate acceptance checks. The charged-shot pass does not close
 that wider matrix.
+
+## Fresh equip and other sidearms
+
+The subsequent normal restart/save-load check verifies a newly equipped
+Trebuchaxe across seven visibility phases. The same sequence now passes for
+all eight native sidearms, 56 phases total, with final restoration independently
+verified. See [sidearm regression](2026-10-15-sidearm-equip-regression.md).
+This supersedes the earlier pending fresh-launch and other-sidearm mode checks;
+Tarstone combinations, uncharged firing and damage remain separate.
+
+## Early-release shot
+
+`work/three-outfit-rig-physics/trebuchaxe-20261015/early-release/fresh-ability/`
+records a new Trebuchaxe equip on the October 15 build. A normal 200 ms primary
+click releases at an observed ChargeTime of 0.1856584 seconds, below the native
+one-second minimum and two-second maximum. The game completes its minimum-charge
+path after release: HasMinCharge becomes true temporarily, HasMaxCharge never
+becomes true, and the shot costs 30 Resolve. This is an early-release shot, not
+instant firing at 0.19 seconds.
+
+The separate real axe projectile moves and renders, including after the sidearm
+is stowed. The native `SM_Projectile_Preview` remains hidden and unrendered across
+all sampled charge states and the final stowed check. The 160-sample observer
+uses the same bounded, explicitly cancelled game-thread sampler as the Barrage
+check, with the reflected actor-array binding already verified.
+
+The original Naylshotte, Bleed infusion, all Tarstone builds/progression, CSS
+settings, unlocks, Health/Resolve, position, camera and released inputs restore.
+The native Resolve method refunds only the owned 30-point firing cost. Temporary
+observer script and request restore byte-for-byte. `verify.py` independently
+checks the retained capture and writes `verification.json`; no further input is
+needed to rerun it. No production core or assets changed. No enemy was hit, so
+damage remains unverified.
+
+The parent `early-release/result.json` retains a failed preflight: a newly
+equipped weapon has no ActiveAbility before its first activation. No shot was
+sent and restoration passed. The successful fixture reads the class default for
+its charge range and records instance charge data only after native activation.

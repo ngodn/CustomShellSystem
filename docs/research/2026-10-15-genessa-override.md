@@ -1,10 +1,90 @@
 # Temporary Genessa override: native restrictions and persistence
 
-The requested confirmed Faithful override is not implemented. The native
-blocker message is installed and verified separately. A temporary CSS preference
-alone cannot establish that a real form change has no game-save impact.
+The confirmed Faithful override is installed and passes the focused live round
+trip. Current core: `css_core-development-9739dc6e42b8b530-genessa-override.dll`.
 
-## Current evidence
+## Selected save policy
+
+The user asked which interpretation to choose. The recommendation is to preserve
+purchased upgrades and progression while allowing form and health to save
+normally. The confirmation explains native healing and saving, with Confirm and
+Cancel. This supersedes the earlier investigation into preserving saved form
+and health. No save interception is needed for this design.
+
+`GenessaRevival` uses the permanent loader hook service for a post callback on
+the exact `GA_ShellReviveBase_C:K2_CanActivateAbility` function. The exception is
+limited to the Genessa revival class, the requested pawn, and the synchronous
+native `ForceReviveShell` call. It changes a false predicate result to true;
+it does not remove Alteration, its blocker effect or its stored handles. The
+hook is disarmed and released on success and exceptions; core unload also
+requires successful release. Ordinary requests retain the native restriction.
+Both the confirmation and queued request reject a changed player.
+
+The C++23 Windows core builds successfully. Live metadata confirms four
+predicate parameters and a one-byte boolean return. Evidence is under
+`work/three-outfit-rig-physics/genessa-revival-block-20261015/override-trial1/`:
+
+- `roundtrip.json` and its raw request log: Cancel keeps form, health, Resolve,
+  upgrade specifications and Alteration handles unchanged. Confirm stays queued
+  until the menu closes, then reaches Faithful. All upgrade specifications and
+  the original blocker handle (71) remain unchanged. Native health changes from
+  72 to 102, then returns to 72 after the normal Stray request; Resolve stays 100.
+- `hook-receipt.txt`: one predicate override during the confirmed native call,
+  followed by hook release. An ordinary Faithful request after returning to
+  Stray is blocked again. No permanent override preference is saved.
+- `confirmation.jpg`: the actual native dialog shows the complete explanation
+  and Confirm/Cancel controls. Mouse confirmation/cancellation pass.
+- `keyboard.json`: F opens the same confirmation and Escape cancels it.
+  The existing secondary-action binding also exposes it to controllers; a
+  physical controller press was not tested.
+- `deployment.json` and `final-activation/deployment.json`: both stationary
+  reloads restore appearance, customization and CSS settings. The final build
+  adds only the keyboard/controller shortcut; the revival implementation is
+  identical to the round-trip build. `source-hashes.json` pins that final source.
+
+The first click attempts were rejected while VS Code had focus. After focusing
+the existing game window, the first activation click only focused the UI; the
+next click opened the dialog. The final checks close the menu, cancel pending
+form requests, leave Genessa in Stray and restore the previous desktop focus.
+No movement input was sent. Native severing moved the pawn during its transition,
+so this test does not claim unchanged position. Root and theark free space remain
+95 GiB and 48 GiB respectively at `df -h` precision.
+
+Normal native save semantics are intentional; the option does not claim to
+leave saved form or health untouched.
+
+## Two-save and fresh-launch regression
+
+The permanent-boss development core retains this implementation. Following its
+normal restart, an ordinary Faithful request on slot 1 still reports the native
+Alteration blocker. The native shade profile test records that fresh-launch
+check in `work/npc-appearances/shade-profile1/result.json`.
+
+`work/three-outfit-rig-physics/genessa-cross-save-20261015/` records the subsequent
+normal menu sequence: slot 1 Stray, exit to main menu, load slot 2, then return
+through the same menus to slot 1. No save-subsystem slot setter, save-file edit
+or upgrade mutation was used.
+
+- Slot 2 loads in Faithful, with no revival blocker. Ordinary CSS Stray and
+  Faithful requests both complete. Its upgrade ability list remains unchanged,
+  its Faithful Peony appearance returns, and CSS state is unchanged.
+- Returning to slot 1 restores Stray and the Alteration blocker. An ordinary
+  Faithful request is rejected with the correct explanation. The original
+  Obsidian Eredrim selection, effective materials and exact CSS state return.
+- Requests are reset to Auto/Default after each check. `slot2-roundtrip.json`
+  and `restoration.json` both pass, with raw requests retained alongside them.
+
+These two saves show no stale form state after loading. The observed refusal
+on slot 1 follows the native restriction, which the confirmed one-time override
+handles. The earlier Confirm/Cancel test covers the blocked save; this sequence
+also checks that its exception does not leak into later saves or ordinary
+requests. Reloading uses the game's saved spawn and native form/health rules,
+so it does not promise unchanged world position or save-file bytes.
+
+The sections below retain the earlier read-only investigation. Their statements
+that no implementation existed describe that historical stage.
+
+## Historical read-only evidence
 
 Evidence lives in
 `work/three-outfit-rig-physics/genessa-revival-block-20261015/`.
@@ -303,8 +383,7 @@ as a lifecycle operation, not an interchangeable boolean toggle. The game's
 extracted graph is the authority for Alteration's actual ownership.
 [Epic Gameplay Effects documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/gameplay-effects-for-the-gameplay-ability-system-in-unreal-engine).
 
-Required follow-up: verify native save scheduling and loading; prototype bounded
-activation with readback and restoration; test Confirm/Cancel and ordinary form
-requests; test return-to-native behavior, save/load, world/player replacement,
-death, CSS disable and core teardown. Do not advertise no save impact until
-those checks support it.
+The prototype and Confirm/Cancel/return-to-native checks listed above are now
+complete. The selected policy supersedes investigation of a save-interception
+boundary. Remaining cross-save/fresh-launch checks belong to the existing
+Genessa form regression. Do not advertise this as having no save impact.

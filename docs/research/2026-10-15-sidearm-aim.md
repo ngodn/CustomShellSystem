@@ -175,3 +175,28 @@ empty and no action injection was installed.
 Effect replacement, Barrage projectiles, damage and other sidearms still need
 separate checks. Preserve this draw/fire/stow result without claiming the entire
 Tarstone report or full release goal is complete.
+## Reloaded save: Naylshotte Bleed regression
+
+`work/three-outfit-rig-physics/sidearm-bleed-reload-20261015/result.json`
+passes the existing draw/stow diagnostic on the permanent-boss development
+core after a normal restart and the slot 1/2/1 menu-loading sequence. The current
+weapon has `Weapon.Effect.Bleed` and `Weapon.Elemental.OnCrit`, rather than the
+earlier Burn loadout. This is a second effect case, not a Burn replacement test.
+
+Actual Ctrl input draws the sidearm, reveals its owner/mesh and renders the
+attached effect. Releasing Ctrl stows it, hides owner/mesh and stops the effect
+from rendering. Infusion identity, asset, active state and tags remain intact.
+The two screenshots agree with the rendering observations. Health stays 72,
+Resolve stays 100, and geometry, CSS settings and CINE state restore. No shot,
+movement or camera input was sent. Desktop focus was restored after the check.
+
+The original natural drift trigger, active infusion replacement, Barrage and
+damage remain separate from this passing reload/draw/stow case.
+
+## Native Burn/Bleed replacement
+
+The [native Tarstone swap check](2026-10-15-sidearm-tarstone-swap.md) now passes
+new Burn and restored Bleed while stowed, drawn and restowed. The six phases
+verify replacement components and exact native loadout/infusion restoration.
+This supersedes the pending active-effect replacement item above. Barrage,
+damage and the original natural drift trigger remain open.

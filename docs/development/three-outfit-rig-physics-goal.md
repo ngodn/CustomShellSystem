@@ -1,5 +1,242 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 16, existing upgrade evidence reconciled:** the actual October 8
+six-container to four-container replacement is already recorded. Its plan and
+eighteen retained original files verify; installation preserved 59 protected
+files. Later catalog, provider lifecycle, CINE and fresh shipping results
+provide their respective post-upgrade coverage. No old packs were reinstalled
+or gameplay checks repeated. The exact pre-migration state JSON was not found,
+so later profile tests are not relabelled as replaying it.
+[Evidence and scope](../research/2026-10-16-upgrade-evidence.md).
+
+**October 15, fresh shipping runtime verified:** the exact staged CSS 1.0.0 ZIP
+now passes a fresh runtime-folder installation with default state, all four
+asset providers discovered and advancing Peony facial playback. The original
+runtime, exact CSS settings, Merrick and idle selection restore in process
+743885. CSSX observes the shipping core without substituting a developer build.
+The disposable test folder/cache is removed after verification. This closes
+fresh CSS-runtime startup against the accepted containers; mounted legacy
+provider upgrades remain separate. [Evidence](../research/2026-10-15-clean-shipping-runtime.md).
+
+**October 15, runtime delivery candidate staged:**
+`dist/v1.0.0/MSII-CSS-v1.0.0.zip` now joins the four asset archives. SHA256:
+`c2c084b72b8ac4cacd6b355c93c328af60de014e654d32bb4a05c02be215c719`.
+The committed-input candidate recipe builds shipping configuration and labels
+the manifest `local_candidate`; it does not bypass the final annotated-tag
+requirement. Fourteen release tests pass. The packaged core matches the reviewed
+shipping build, all runtime payload checks pass, the shared dependency trio
+matches the Shared Assets ZIP, and all five archive checksums pass. Exact paths
+are in `dist/coordinated-v1.0.0.json`; runtime evidence is in
+`dist/v1.0.0/RELEASE-STATUS.json`. Nothing was installed or published. The fresh
+settings test was not started, and the running game was untouched. Remaining
+original requirements stay open; the isolated reload incident stays nonblocking.
+
+**October 15, boss recipe preservation:** the previously untracked editor
+helper and NPC authoring tools are now included with unchanged copies of the
+four executed boss authoring/package recipes under `tools/authoring/bosses`.
+Each copy matches its retained source hash; the C++ helper matches the actual
+UE authoring project. The README distinguishes the five-rig trial from the four
+accepted release bosses and identifies the deferred Zhirelle/Orrem work. This
+closes the missing version-controlled recipe gap without recooking or touching
+the game. Native inputs, accepted assets and rollback stay in their retained
+locations. The failed installation preflight was an actual multi-degree camera
+change, so its guard is retained and the game remains untouched this turn.
+
+**October 15, clean-runtime attempt stopped and recovered:** the preparation
+guard detected movement before any installation mutation. The agent mistakenly
+issued the normal quit step despite the failed preparation, then relaunched the
+unchanged original runtime and continued the existing save. Merrick and exact
+saved CSS state restore in process 723674. No runtime folder or mounted package
+was moved. The recipe now requires a successful preparation receipt before any
+quit stage. Evidence: `work/three-outfit-rig-physics/clean-runtime-install-20261015/`.
+This is a failed preparation with recovery, not clean-install acceptance. Leave
+the running game alone while completing independent offline work.
+
+The release builder now enforces the original annotated-tag requirement. Its
+previous checks accepted a lightweight tag at HEAD. A real temporary-repository
+regression fails before the correction and passes afterward; all twelve release
+tests pass, including annotated/clean, wrong-commit and dirty-tree controls.
+No release tag or public artifact was created by that test.
+
+**October 15, user accepts the historical developer-test crash:** after the
+clarification that the October 13 reload/rescan crash has not reproduced in
+subsequent checks and is not an established current gameplay failure, the user
+explicitly accepts leaving it unresolved. Remove this incident as a release
+blocker and stop further reproduction work unless it recurs. Preserve the crash
+evidence and do not claim a proven fix or a proven harmless cause. This decision
+supersedes earlier instructions to keep that incident's release gate open;
+other agreed requirements and reported defects remain in scope.
+
+**October 15, installed loader regression:** CW's normal-to-facial load, one
+catalog rescan and continued Iris Out playback now pass on the asset-readiness
+core. Three class inventories retain sparse data and clear retirement/loading
+flags; Merrick, camera, position and exact saved settings restore. The earlier
+fixture's four-shared-slot assumption was stale because CW's accepted walk is
+outfit-local. Failed attempts and restoration receipts are retained. This does
+not resolve the intermittent crash. The runtime README now removes prerelease
+wording, explains the confirmed Faithful override and sunlight choice, and the
+release notes explicitly identify beta.12 as a withdrawn, unpublished rehearsal.
+
+**October 15, asset-loading candidate:** source review found that cached/found
+assets could be returned before native loading finished. The production loader
+now rejects pending or retiring objects and preserves retryable facial/animation
+loads. The old-function regression fails, the candidate passes, both Windows
+cores build and all 27 host suites pass. The user-requested development-core
+installation now passes loader/map verification in the same process, preserving
+Merrick and exact saved settings. It does not close the original reload/rescan crash. [Evidence](../research/2026-10-15-asset-loading-readiness.md).
+
+**October 15, current local packages:** Eve 1.5.0, Genessa 0.3.0, CW 0.1.0
+and combined Shared Assets 1.0.0 candidates are under their existing dist
+folders, with checksums and verification receipts. The shared package and nested
+animation-library versions agree. All four load together in the 1,545-check
+catalog fixture. Disposable staging was removed; recipes and accepted sources
+remain. CSS BBCode now features Merrick, and all four notes state 52 additional
+idles relative to public releases. The CSS runtime ZIP and full goal remain open.
+
+**October 15, delivery location correction:** the user requires the existing
+`CustomShellSystem/dist` layout and explicitly requests replacing the old Eve
+1.5.0 rehearsal with the current package. All four current BBCode delivery
+copies now live in their matching version folders. The withdrawn October 12
+Eve/beta.12 bundle moved intact to
+`dist/withdrawn/eve-v1.5.0-beta12-rehearsal`; historical references to the old
+bundle resolve there. The current Eve package uses the installed seven-outfit
+cooked data and only changes its manifest/catalog release versions to 1.5.0.
+The replacement ZIP now passes package, archive integrity and extracted-byte
+verification: 631,596,096 bytes, SHA256
+`e810b764360f505ba4263ae714c68062bb93c161f8c9a415efd16660b5e09212`.
+README, credits, checksum, verification and latest BBCode are colocated. This
+is the updated local deliverable, not publication of the unfinished coordinated
+release. Disposable duplicate staging was removed after verification. The unrelated crash review remains queued
+while this requested delivery correction is completed.
+
+
+**October 15, finish deliverables without repeating accepted checks:** the CSS
+BBCode draft now includes Sunlight shadows under Added, with Default (game),
+Reduced noise and the sharper-shadow tradeoff. The actual MISC screenshot is
+uploaded to the authorized media branch at `a62224b36ed5c33fcc55d0907a52ab6cb0cd6400`;
+raw-download bytes match. The capture leaves CW and exact saved settings intact
+and closes the menu. No lighting option, outfit, code or game save was changed.
+The release audit now closes accepted reported repairs at their verified scope
+instead of assigning generic broader coverage to each. Original remaining
+requirements stay active. No new runtime test matrix was created.
+
+
+**October 15, verification scope correction:** the user challenges continued
+testing as token waste. Stop expanding acceptance into new diagnostic matrices.
+Reuse completed evidence and user-accepted results. A documented coverage limit
+is not automatically another release blocker. Tie further work to an unresolved
+reported defect or an explicit unmet requirement, with a concrete stopping point.
+The fresh-state/cache experiment stopped after read-only preparation: no game
+restart, directory move or settings change occurred. This does not mark the
+remaining original requirements complete or authorize dropping them.
+
+**October 15, actual missing-provider cycle passes:** normal game exits and two
+cold starts verify removing and restoring the current Shared Assets trio. With
+it absent, the game uses native Stray Genessa; all three dependent outfits are
+rejected with install guidance, and an unavailable profile leaves saved state
+unchanged. Reinstall recovers CW automatically and restores profile loading.
+The temporary profile is deleted, original CSS state and container hashes match,
+Iris Out advances, and CINE controls are available. The game remains running.
+Clean-install, legacy-upgrade and broader lifecycle requirements remain distinct.
+[Evidence](../research/2026-10-15-shared-provider-lifecycle.md).
+
+**October 15, sunlight transition follow-up:** an offline regression reproduced
+Reduced noise overwriting lighting when first enabled during an active weather
+blend. Initial acquisition now waits for the lighting timeline to stop, as
+existing recovery already did. The targeted lifecycle test passes, including
+restoration of the completed game value. Both core builds pass. The guarded
+stationary reload now installs `faaf5794308ae8f4`, preserving the shell-list fix,
+CW, Iris Out, equipment flags, resources, view and exact saved settings. Live
+Default/Reduced/Default verifies 4/0.535700023/4 degrees with no error. The user's
+Default selection is restored. Visual sunlight acceptance and the stable
+release remain open. [Evidence](../research/2026-10-13-sunlight-load-recovery.md).
+
+**October 15, shell-list follow-up:** the Harros screenshot exposes the old
+embedded shade list stealing the shell list's scroll target. Remove that
+duplicate section and keep Choose shade. The first installed correction removed
+that section but its screenshot still showed the first row clipped by automatic
+centering. The final correction opens at the top when the selected shell is
+already visible, scrolls only as needed, and shows the shell-list scrollbar.
+Both builds and guarded activation pass. The Harros screenshot now shows Tiel
+fully, Harros highlighted, one shell list and Choose shade. All ten base-shell
+choices remain present. CW, Iris Out and exact saved settings are restored.
+Evidence: `work/three-outfit-rig-physics/shade-list-scroll-20261015/`.
+
+**October 15, corrected menu requirement:** show facial expressions directly
+in Customize, without a Choose expression button. Add Choose shade to Use
+Original Shell so a controller can open a shade list and select or cancel.
+Keep native shade unlock restrictions. Both corrected core builds pass and the
+development core is installed. The direct 22-entry expression list, left/right
+cycling and Original restoration work. Shade chooser open/navigation/cancel,
+Original selection and return to Obsidian work. Native controller bindings are
+present; input automation used keyboard equivalents, not a physical gamepad.
+Exact saved settings and appearance restore. The capture scripts retained a
+failed exact-position check after small position changes when closing the menu;
+do not describe these captures as complete geometry-restoration passes.
+This replaces the mistaken interpretation that the expression picker should
+remain. [Evidence](../research/2026-10-15-shade-expression-ui.md).
+
+**October 15, Faithful override save policy:** recommend preserving purchased
+upgrades and progression while allowing native form and health saving. The
+user asked which interpretation is safest; this is the selected implementation
+direction, rather than intercepting saves. Add an explicit Confirm/Cancel dialog
+for a one-time revival exception, explain possible healing and normal saving,
+and leave later transitions under native rules. The bounded predicate override
+is installed and passes the live Confirm/Cancel and Stray/Faithful round trip.
+Alteration's upgrade state and blocker handle remain unchanged. Ordinary
+revival is blocked again after returning to Stray. Mouse confirmation and the
+F/Escape shortcut pass; current appearance and CSS settings recover after reload.
+No save interception or Alteration effect removal is part of this change.
+The subsequent fresh launch and slot 1 to slot 2 to slot 1 regression pass:
+ordinary transitions work on the unblocked save, and the original save retains
+Alteration's restriction with the correct explanation. Original appearance,
+shade materials and exact CSS state restore. No stale form state was observed.
+[Evidence](../research/2026-10-15-genessa-override.md).
+
+**October 15, boss sizing confirmed:** the user chose roughly player-sized
+appearances. Tarsus, Droeg, the Nameless Captive and Sir Isaac are installed with
+isolated translation-retargeted rigs and individual scale factors. Their first
+scaled live check preserves the gameplay capsule and restores Peony's scale and
+customization. The installed follow-up corrects weapon scaling: all four boss
+cases preserve native weapon sizes and restore the original appearance. Droeg's
+CSS preview and restoration to Peony also pass. All four bosses and Merrick now
+complete short forward/back walking with valid moving poses and restoration of
+the user's Obsidian Eredrim appearance. Captured frames show intact bodies.
+Interrupted camera checks are retained in the evidence. The four adaptations now
+ship inside the installed shared pack at `/Game/CSS/eins0fx/Bosses/` paths.
+All 283 prior shared packages and the full decoded boss assets are preserved.
+A normal restart verifies all four permanent mesh/Skeleton bindings, body and
+weapon scales, and restoration. The former trial is retained outside mounted
+Paks for rollback. Coordinated release metadata remains a later delivery step.
+Orrem's Discarded and Headless
+forms require fourteen additional native body parts and join the individually
+documented v1.0.1 deferrals. [Evidence](../research/2026-10-15-boss-appearances.md).
+
+**October 15, finish implementation before release preparation:** the user
+explicitly requires completing the current goal and reported bug fixes before
+preparing the public release. No release announcement, tag or upload while
+current-scope work remains unfinished. Add all bosses that can use a
+straightforward adaptation like Merrick under the existing NPC/Enemy selector.
+Inspect actual rigs and validate the adaptation before exposing each boss.
+Bosses requiring substantial bind, geometry or garment repair like Zhirelle
+are explicitly deferred to **CSS v1.0.1**, with individual reasons recorded.
+This expands the earlier NPC scope beyond only shared-skeleton matches.
+
+**October 15, latest scope correction:** the user explicitly deferred Zhirelle
+to **CSS v1.0.1**. Stop her current trials; she does not block v1.0.0. Preserve
+her source assets and findings for that release. Merrick, eligible NPCs sharing
+his skeleton, and native shell shades remain required current-release work.
+The earlier clarification that low priority means sequencing still applies to
+other work; this explicit Zhirelle deferral supersedes her previous priority.
+
+**October 15, user priority correction:** stop expanding diagnostic matrices and
+repeating accepted work. The user explicitly objects to the time and token cost
+of prolonged checking. Prioritize unfinished reported defects and the agreed
+stable delivery. Keep required checks tied to concrete changes or unresolved
+defects; do not add new acceptance requirements. Existing scope, accepted results
+and explicit deferrals remain intact. The in-progress body-cost matrix is stopped,
+with its partial evidence retained, not treated as a release fix or a full pass.
+
 **October 15, native playback controls pass:** original Genessa in Stray passes
 looping, pose hold, pause/resume and native Iris Out interruption by mapped parry.
 Raw montage/ability records verify the result; Peony and 15 final restoration
@@ -307,7 +544,7 @@ Twenty-six host suites and archived-profile checks pass. The second live fixture
 passes repeated Stray loads, return to Faithful, exact settings/CINE restoration
 and guarded restoration of displacement during the form round trip. The first
 fixture's position failure remains recorded. [Evidence and scope](../research/2026-10-15-profile-forms.md).
-The cross-save form report, doubles and broader gameplay/release matrix remain open.
+The later two-save/fresh-launch form regression is recorded above. Doubles and the broader gameplay/release matrix remain open.
 The subsequent visibility regression finds actor-only hidden-flag drift on three
 items after the form checks. Meshes remain hidden, but enforcement does not repair
 an owner actor whose hidden flag was cleared. Repair and retest this lifecycle
@@ -1828,6 +2065,62 @@ implemented and pass portable checks; native visual review and gameplay remain
 pending. Completed cook intermediates are removed under the same cleanup record.
 The required optional glowing, flowing trim remains in scope.
 
+
+**October 15, remaining sidearm firing checks advanced:** Barrage plus Emberseed
+now passes actual secondary fire and stowing: 40 Resolve, three groups of eight
+projectiles keep rendering after the weapon and attached glow hide. A newly
+equipped Trebuchaxe also passes an early-release shot: native minimum-charge
+completion, 30 Resolve, no visible preview axe, and the actual projectile remains
+visible after stow. Original equipment, infusion, Tarstone progression, settings,
+resources and view restore in both checks. Independent capture verifiers pass.
+[Barrage evidence](../research/2026-10-15-sidearm-barrage.md) and
+[Trebuchaxe evidence](../research/2026-10-15-trebuchaxe-visibility.md#early-release-shot).
+No enemy was hit, so damage remains open. These checks do not complete the full goal.
+
+
+**October 15, live body-cost comparison:** four Peony pairs, four Unholy Genessa
+pairs and four Commander White pairs now independently verify, totaling 24
+captures and 12,380 frames. Body bypass stops solver steps; enabling resumes them,
+with other body inputs preserved and no sampled secondary-rig resets. Whole-frame
+median paired changes are +0.061 ms, -0.082 ms and +0.025 ms respectively, with
+variable tails. Original appearance, state, CINE, resources and view restore.
+CW's last two pairs complete after the user's renewed testing authorization.
+The combined verifier passes. Focus-interrupted captures and the separate
+rig-name diagnostic failure and recovery are retained. No production asset or
+solver tuning changed. [Evidence and limits](../research/2026-10-15-live-body-cost.md).
+This does not close movement, transition, cloth/GPU or full performance gates.
+
+**October 15, changelog presentation requested:** prepare simple Nexus BBCode
+changelogs for CSS, Eve, Unholy Genessa and Commander White. Include shared-assets
+changes in the CSS changelog and the same CSS post thread; do not create a
+separate shared-assets BBCode file. Put additions and new features first, with representative screenshots
+captured from the actual build, uploaded to the project Git repository and
+embedded using raw GitHub image URLs. Put fixes and improvements afterward,
+without screenshots. Follow the user's supplied compact version-heading and
+bullet-list example. Screenshot uploads are authorized; this does not authorize
+premature release tags, Nexus publication or claiming unfinished fixes. Keep
+release versions aligned with the stable targets and finalize claims from the
+completed evidence. This is queued delivery work; finish the current source
+check and outstanding goal work first.
+
+**October 15, Peony source chain verified:** 610 retained files connect the
+accepted assembly and editor sources to all 294 installed Peony V2 payloads and
+twelve shared doubles material exports. Both installed package trios match their
+recorded candidates. Frozen recipes and unchanged cook inputs are retained;
+historical base-game links are explicitly separated from source verification.
+No asset, gameplay setting or accepted appearance changed.
+[Evidence and scope](../research/2026-10-15-peony-source-chain.md).
+
+**October 15, remaining Faithful doubles verified:** both Unholy Genessa
+variants and Commander White now pass normal Faithful summon, copied mesh/bone
+readback and temporary-group cleanup. This completes Faithful binding/cleanup
+coverage for all ten release appearances. Original Stray form, Obsidian Eredrim,
+settings, health, view and upgrades restore. The summons consumed 56.25 Resolve;
+a separate guarded native refund and read-only check confirm its restoration.
+The original fixture failure and void-return helper exception remain recorded.
+No production code or assets changed. Cloth/contact and broader customization
+coverage remain separate. [Evidence](../research/2026-10-15-outfit-doubles.md#remaining-faithful-cases-completed).
+
 ## Objective
 
 Audit and repair demonstrated mesh deformation, garment fit, skeletal mapping, attachment, contact and secondary-motion defects in Eve's six outfits, Unholy Genessa's two variants and Commander White. Preserve their accepted appearance, customization and gameplay behavior. Use the four reviewed videos as authoring references and UE 5.6.1/game evidence to choose implementations that actually work in the shipped game. Complete the work with reproducible assets, measured performance and explicit regression results.
@@ -2202,7 +2495,14 @@ remaining Peony defects: obvious gaps, broken silhouettes and loose garments
 remain in the current repair scope. No extra user test is needed solely to
 confirm an inconspicuous close-up intersection.
 
-## Deferred follow-up: Genessa Form after switching save games
+## Genessa Form after switching save games
+
+**Regression verified October 15:** normal main-menu loading between two saves
+and back passes. The unblocked save permits both ordinary form requests; the
+blocked save retains its native restriction and explanatory message. A fresh
+launch also preserves that restriction. Confirm/Cancel and the one-time override
+were already verified on the blocked save. Evidence and limits are in
+[the override record](../research/2026-10-15-genessa-override.md#two-save-and-fresh-launch-regression).
 
 **October 15:** the upgraded save reproduces a refused Faithful request. Its
 active Alteration upgrade applies `State.ReviveBlock`; the native revival
@@ -2237,8 +2537,16 @@ Inspect form-control state across save/world/player replacement, including stale
 
 **Status:** reproduced and diagnosed October 15. The installed nested-visibility
 repair passes 13 live visibility phases and charged firing with a 30-point
-Resolve drop. Other sidearms, Tarstone combinations, uncharged firing, damage
-and fresh launch remain open. [Evidence](../research/2026-10-15-trebuchaxe-visibility.md).
+Resolve drop. A fresh equip after restart/save loading passes seven more phases;
+All eight sidearms now pass that mode sequence, totaling 56 visibility phases.
+The final Machine Gun, Lute and Naylshotte checks restore equipment, infusion,
+settings, resources, unlocks and view. An independently verified actor-angle
+rounding difference is documented without changing the raw receipt. A fresh-equip
+early-release shot now also passes: the native minimum-charge path fires for
+30 Resolve, the preview stays hidden, and the actual projectile renders after
+stow. Original loadout, progression, settings, resources and view restore.
+Trebuchaxe-specific Tarstone combinations and damage remain open.
+[Evidence](../research/2026-10-15-trebuchaxe-visibility.md).
 
 DirektorSvemira reported on 2026-10-08 at 00:05 (report timezone unspecified) that CSS sidearm visibility set to **Only when in use** produces a hovering axe above the Trebuchaxe. The offset persists when the weapon turns sideways for a charged shot. The reporter says gameplay is unaffected and no other installed mod alters the weapon or its hiding behavior. Controlled A/B/A now establishes the CSS visibility cause; Tarstone interaction remains unverified.
 
@@ -2261,7 +2569,7 @@ When this item is reached, reproduce with that loadout and visibility setting; c
 
 ## Low-priority follow-up: Naylshotte Tarstone effects while hidden
 
-**Status:** partial verification on October 15. Mesh-only hiding reproduces lingering Burn; the installed owner-visibility repair removes it without deactivating infusion. Actual draw/fire/stow passes on the user's new save. Effect replacement, Barrage, damage and the original natural owner-drift trigger remain open. See [evidence](../research/2026-10-15-sidearm-aim.md). A shared cause with Trebuchaxe has not been established.
+**Status:** partial verification on October 15. Mesh-only hiding reproduces lingering Burn; the installed owner-visibility repair removes it without deactivating infusion. Actual Burn draw/fire/stow passes on the user's new save. After restart and a two-save round trip, Bleed draw/stow also passes with infusion, resources and settings preserved. Native Burn/Bleed replacement now passes six stowed/drawn/restowed phases, with all Tarstone builds, progression, resources, settings and infusion restored. Barrage/Emberseed secondary fire and stowing now pass: 40 Resolve, three groups of eight projectiles remain visible after the weapon and attached glow hide, then native projectile cleanup. Original loadout, progression, resources and settings restore. Damage and the original natural owner-drift trigger remain open. [Barrage evidence](../research/2026-10-15-sidearm-barrage.md). [Replacement evidence](../research/2026-10-15-sidearm-tarstone-swap.md). See [evidence](../research/2026-10-15-sidearm-aim.md). A shared cause with Trebuchaxe has not been established.
 
 With Naylshotte visibility set to **Only when in use**, the user reports a lingering Tarstone effect while the sidearm should be hidden. The supplied world screenshot shows an orange, weapon-shaped effect behind the character's shoulder. The loadout screenshots identify **Barrage Stone, Level 3** in the top slot and **Emberseed Stone, Level 3** in the second slot. The third slot's name is unconfirmed; do not infer it from its icon. Emberseed's displayed permanent-infusion upgrade is relevant reproduction context, not proof of the cause.
 
@@ -2275,19 +2583,23 @@ Identify the lingering object's owner and lifecycle before changing visibility l
 
 **Acceptance:** the hidden sidearm's attached visuals no longer linger, appropriate weapon effects return when it is in use, and infusion, damage, aiming and firing retain their behavior. Check other sidearms and the Trebuchaxe report separately. Record the actual cause and regression results; keep this queued until investigated and verified.
 
-## Low-priority follow-up: Zhirelle and Merrick appearances
+## NPC appearances: Merrick for v1.0.0, Zhirelle deferred to v1.0.1
 
-**Status:** queued at the user's request on October 11. Eve remains the current priority. The requested targets are **Zhirelle and Merrick** under the existing **SHELL > Use NPC/Enemy** selector. Also support other NPCs that use the same skeleton as either target and pass the compatibility checks below. This is not a general expansion to NPCs with other skeletons.
+**Status:** Merrick remains active for v1.0.0. The user's latest October 15 instruction explicitly defers **Zhirelle to CSS v1.0.1**, including her current authoring trials. Both targets belong under **SHELL > Use NPC/Enemy**. Other NPCs sharing a target's skeleton are eligible after compatibility checks, in that target's release scope. This is not a general expansion to unrelated NPC skeletons.
+
+October 15 implementation: Merrick is now installed in the existing NPC selector using his native mesh, native post-process graph and the player animation graph. A live selection and restoration check passed. Zhirelle repair is stopped and deferred to v1.0.1: the seated bind, reversed left-leg axes and skirt weights are incompatible with simply admitting her skeleton. No rejected Zhirelle mesh has been installed. The indexed game meshes contain no additional users of either target skeleton. Evidence and remaining checks: [NPCs and native shades](../research/2026-10-15-npc-appearances-and-shades.md).
 
 Inspect the game assets and dumps to identify Zhirelle's and Merrick's meshes, skeletons, animation setups, materials and attached components. Verify which other NPCs share either skeleton from asset references rather than names or visual similarity. Sharing a skeleton makes an NPC eligible for this work, but does not alone prove that its mesh, proportions, attachments and animation behavior work correctly. Determine why an appearance is missing or incompatible before choosing a repair. Retargeting is a possible solution, not an established requirement. Check whether the existing native-human path can support the targets first; reuse the repair for matching NPCs where valid rather than changing shared behavior blindly.
 
 Keep the gameplay shell, abilities and progression unchanged. Follow the existing selector and saved-profile design, expose only validated options, and give a clear fallback for unsupported appearances. Validate movement, combat, aiming, attachments, menu/world transitions, save/reload and appearance restoration after gates or form changes. Assess doubles compatibility separately; do not imply every NPC supports it.
 
-**Acceptance:** Zhirelle, Merrick and validated NPCs sharing either skeleton can be selected and restored reliably without breaking gameplay or existing appearance choices. Record the shared-skeleton matches, tested characters and limitations. NPCs using different skeletons remain outside this follow-up. This is deferred work, not a release blocker or a claim of current support.
+**Acceptance for v1.0.0:** Merrick and validated NPCs sharing his skeleton can be selected and restored reliably without breaking gameplay or existing appearance choices. Record shared-skeleton matches, tested characters and limitations. **Deferred acceptance for v1.0.1:** apply the same requirements to Zhirelle and eligible NPCs sharing her skeleton. Zhirelle does not block completion of the current release. NPCs using unrelated skeletons remain outside this follow-up.
 
 ## Low-priority follow-up: native shell shades for appearance overrides
 
-**Status:** queued investigation, not implemented. HydraVenom8's October 10 request was clarified by DoraGong4N as choosing a native shell's alternate shade while using that shell only as the CSS appearance. Examples supplied were Eredrim's Yellow King/Obsidian looks. Kenshinto described playing Thiel while displaying Eredrim with another color. These names and colors are report examples; verify the available Mortal Shell II assets and variants before promising specific choices.
+**Status:** implemented and installed in the development core on October 15. **SHELL > Use Original Shell > Shade** lists the native choices separately from the shell list. The game provides 16 alternate shades across eight shells. Current-save unlock checks disable locked choices and reject direct requests; unavailable saved shades fall back to the original appearance. Obsidian Eredrim passed world/preview material parity and return-to-original checks while Genessa remained the gameplay form. King In Yellow was correctly shown as locked on this save. Existing data/profile tests and the replacement-mod regression test pass. This is not yet acceptance of every shade through every lifecycle listed below. See [evidence](../research/2026-10-15-npc-appearances-and-shades.md).
+
+HydraVenom8's October 10 request was clarified by DoraGong4N as choosing a native shell's alternate shade while using that shell only as the CSS appearance. Examples supplied were Eredrim's Yellow King/Obsidian looks. Kenshinto described playing Thiel while displaying Eredrim with another color.
 
 Inspect how the game selects native shades, including material/mesh substitutions, shell association and unlock state. Add supported shade selection through the existing SHELL appearance flow while retaining the actual gameplay shell and its abilities. Respect the game's ownership and unlock behavior; do not silently unlock shades or alter progression. Preserve existing profiles and original-appearance defaults when no shade is selected or an asset is unavailable.
 

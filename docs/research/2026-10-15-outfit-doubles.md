@@ -214,3 +214,41 @@ Python compilation and whitespace checks pass. No core or asset changes.
 This closes current Peony secondary ghost-parameter, morph and hidden-section
 copying. Other outfits' material combinations, visual cloth/contact and the
 remaining Faithful UG/CW cases are still open.
+
+
+## Remaining Faithful cases completed
+
+`faithful-remaining-20261015/` completes the three previously interrupted cases
+on core `dc0a609e74750815084130278354de76f754643326c8ec3829393d7439cead67`.
+Normal summon input produces the expected Faithful `AstralCopy` in every case:
+
+| Appearance | Active observations | Finite sampled bone transforms |
+| --- | ---: | ---: |
+| Unholy Genessa, Eve | 9 | 72 |
+| Unholy Genessa, Genessa | 13 | 104 |
+| Commander White | 12 | 96 |
+
+Each copy matches its captured source mesh. Each temporary CSS group is removed,
+with no remaining active/cached group, error or fallback. The three-case child
+restores the Faithful appearance, settings, CINE and view. The outer fixture
+returns to the original Stray form and Obsidian Eredrim appearance. Purchased
+upgrade ability records and Alteration's revival-blocker handle remain unchanged.
+This uses the previously accepted one-time revival override; it does not edit
+save files or remove the upgrade.
+
+The first outer result remains failed because the summons spent 18.75 Resolve
+each and the fixture did not refund that cost. All its other restoration fields
+pass. A guarded follow-up issues exactly one native `S_GainResolve(56.25)` call.
+That call succeeds, but the generic helper then raises `KeyError` because the
+function has no return value. It is not called again. Separate read-only
+verification checks the successful void-call acknowledgement and confirms
+Resolve 100, health 72, exact saved settings, original form/appearance and restored
+geometry. `resolve-recovery.json` and `verification.json` retain that result;
+the failed parent receipt and request logs remain unchanged.
+
+`verify-recovery.py` independently verifies the three raw summon captures and
+records the evidence hashes. The diagnostic now accepts a selected outfit list,
+so already accepted Eve cases were not repeated. No production code or assets
+changed. Faithful copy binding and cleanup now cover all ten release appearances;
+visual cloth/contact and broader material/customization combinations remain
+separate requirements.
