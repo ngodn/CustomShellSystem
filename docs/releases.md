@@ -1,5 +1,13 @@
 # Runtime releases
 
+For local delivery before final tagging, use
+`python3 tools/css_release.py build --candidate --output dist/v1.0.0`.
+This requires committed build and payload inputs, uses the shipping build
+configuration, and marks the archive manifest `local_candidate`. It does not
+create a tag or publish a release. The normal build still requires a clean
+annotated version tag. Candidate archives must be withdrawn before replacing
+them with the final tagged build; existing archives are never overwritten.
+
 The release ZIP contains a single `CustomShellSystem/` folder to extract into
 `MortalShell2/Binaries/Win64/ue4ss/Mods/`. Outfit packages and UE4SS are separate.
 The canonical version is the root `VERSION` file. CMake generates the loader's

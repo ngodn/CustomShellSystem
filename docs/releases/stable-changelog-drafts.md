@@ -25,8 +25,9 @@ have no screenshots. Commander White adds belt physics, facial controls and
 52 additional idles. Images are uploaded separately to the `media/css-v1.0.0` Git branch; code,
 release tags and Nexus publication are not part of that upload.
 
-The shared-assets final metadata, archives and remaining release gates still
-need completion. CSS now describes the installed Sunlight shadows option as an
+All five local candidate archives are now under `dist`, including the CSS
+runtime and matching shared metadata. Remaining release gates and the final
+tagged build are still open. CSS describes the installed Sunlight shadows option as an
 optional workaround, with Default (game) retained and sharper shadows disclosed.
 The actual MISC screenshot shows both choices. This is not a universal engine
 fix or a performance claim. Zhirelle and the documented difficult boss
@@ -63,8 +64,12 @@ were removed after verification. The initial cross-device hard-link failure
 is retained in the log; the completed recipe uses a cross-device copy fallback.
 The current Genessa, CW and combined Shared Assets candidates are also packaged
 under dist. Their cooked data matches the accepted installation. The combined
-catalog check passes 1,545 checks. The CSS runtime archive and the overall goal
-remain unfinished.
+catalog check passes 1,545 checks. The CSS runtime archive is now also staged at
+`dist/v1.0.0/MSII-CSS-v1.0.0.zip`. Its shipping core matches the reviewed build,
+its shared dependency hashes match the bundled Shared Assets trio, and all five
+archive checksums pass. `dist/coordinated-v1.0.0.json` lists their exact paths.
+This is a local candidate, not a published or final tagged release. The overall
+goal remains open.
 
 ## Public-release comparison
 
