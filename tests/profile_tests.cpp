@@ -16,6 +16,51 @@ static void rejected(css::State& state,const std::string& name,const std::string
 }
 int main(int argc,char** argv) {
     {
+        const std::string living="CharacterId.Player.Shell.Genessa";
+        const std::string stray="CharacterId.Player.Darkform.CorruptedGenessa";
+        css::State state;
+        state.darkform_mirror_cleaned=true;
+        state.last_living_shell=living;
+        state.selections[living]={"current.outfit","regular",{}};
+        state.misc_rules["seal"]={"in_use"};
+        css::Preset profile;
+        profile.selections[living]={"missing.outfit","saved",{}};
+        profile.misc_rules["seal"]={"hidden"};
+        profile.has_misc_rules=true;
+        profile.walk_animation="feminine";
+        css::Catalog catalog;
+        css::Outfit separate;
+        separate.id="separate.outfit"; separate.same_skeleton=true;
+        css::Variant variant; variant.id="regular"; separate.variants.push_back(variant);
+        catalog.outfits.push_back(separate);
+        for(bool remembered:{true,false}) for(bool has_separate:{false,true}) {
+            state.last_living_shell=remembered?living:"";
+            if(has_separate) profile.selections[stray]={separate.id,"regular",{}};
+            else profile.selections.erase(stray);
+            auto runtime=state;
+            runtime.selections=profile.selections;
+            check(css::appearance_selection_key(runtime,catalog,stray)==stray,
+                  "Ordinary appearance lookup stopped falling back past a missing mirror provider");
+            const auto before=state.json();
+            std::string error;
+            try { css::restore_profile_snapshot(state,profile,catalog,stray); }
+            catch(const std::runtime_error& e) { error=e.what(); }
+            check(error.starts_with("Profile outfit is unavailable: missing.outfit"),
+                  "Missing mirrored outfit was silently replaced by a fallback");
+            check(state.json()==before,"Missing mirrored profile changed selections or global settings");
+        }
+        state.harbinger_mirror=false;
+        check(css::profile_selection(profile,catalog,state,stray).choice->outfit==separate.id,
+              "Disabled mirroring was blocked by an unrelated missing living outfit");
+        state.harbinger_mirror=true;
+        css::Outfit restored; restored.id="missing.outfit"; restored.same_skeleton=true;
+        variant.id="saved"; restored.variants.push_back(variant); catalog.outfits.push_back(restored);
+        const auto selected=css::restore_profile_snapshot(state,profile,catalog,stray);
+        check(selected.slot==living && selected.choice->outfit==restored.id &&
+              state.misc_rules.at("seal").mode=="hidden",
+              "Reinstalled mirrored outfit could not restore its saved profile");
+    }
+    {
         const std::string shell="CharacterId.Player.Shell.Genessa";
         css::State state;
         state.darkform_mirror_cleaned=true;

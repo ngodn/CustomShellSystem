@@ -13,6 +13,7 @@
 #endif
 
 namespace css {
+static std::string resolve_appearance_selection_key(const State&,const Catalog&,const std::string&,bool);
 // 1.0 renamed the manifest and state block from "colors" to "customize": it carries
 // switches, textures and live springs now, not only colour. Anything published under the
 // old name keeps loading, because the old key is read whenever the new one is absent.
@@ -87,7 +88,8 @@ ProfileSelection profile_selection(const Preset& preset,const Catalog& catalog,c
     saved.selections=preset.selections;
     saved.harbinger_mirror=state.harbinger_mirror;
     saved.last_living_shell=state.last_living_shell;
-    ProfileSelection result{appearance_selection_key(saved,catalog,shell),{}};
+    // Missing mirror providers must reach validation before any profile state changes.
+    ProfileSelection result{resolve_appearance_selection_key(saved,catalog,shell,true),{}};
     const auto selected=preset.selections.find(result.slot);
     if(selected==preset.selections.end()) return result;
     const auto& choice=selected->second;
@@ -664,12 +666,16 @@ bool set_animation_choice(State& state,const Catalog& catalog,const std::string&
     state.animation_choices=std::move(next);
     return true;
 }
-std::string appearance_selection_key(const State& state,const Catalog& catalog,const std::string& shell) {
+static std::string resolve_appearance_selection_key(const State& state,const Catalog& catalog,
+    const std::string& shell,bool include_missing_outfits) {
     constexpr std::string_view darkform="CharacterId.Player.Darkform.";
     if(!state.harbinger_mirror || !shell.starts_with(darkform)) return shell;
     const auto mirrors=[&](const std::string& key) {
         const auto it=state.selections.find(key);
-        return it!=state.selections.end() && catalog.compatible(it->second.outfit,shell);
+        if(it==state.selections.end()) return false;
+        return catalog.compatible(it->second.outfit,shell) || (include_missing_outfits &&
+            std::none_of(catalog.outfits.begin(),catalog.outfits.end(),
+                [&](const auto& outfit) {return outfit.id==it->second.outfit;}));
     };
     if(!state.last_living_shell.empty() && mirrors(state.last_living_shell)) return state.last_living_shell;
     // A save loaded while severed may have no observed living shell yet.
@@ -680,6 +686,9 @@ std::string appearance_selection_key(const State& state,const Catalog& catalog,c
         if(mirrors(inferred)) return inferred;
     }
     return shell;
+}
+std::string appearance_selection_key(const State& state,const Catalog& catalog,const std::string& shell) {
+    return resolve_appearance_selection_key(state,catalog,shell,false);
 }
 bool use_feminine_animation(const State& state,const std::string& shell,AnimationSlot slot) {
     if(slot!=AnimationSlot::Idle && slot!=AnimationSlot::Walk) return false;
