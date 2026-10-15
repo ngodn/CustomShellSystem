@@ -51,6 +51,21 @@ int main() {
             s.restore(w.bridge()); expect(w.writes==2,"Repeated restoration wrote again");
         }
         {
+            World w; css::SunlightShadows s;
+            w.blending=true; w.angle=3;
+            s.tick(true,0,w.bridge());
+            expect(w.angle==3 && w.writes==0,"Enabling during a weather blend overwrote game lighting");
+            s.tick(false,1,w.bridge());
+            expect(w.angle==3 && w.writes==0,"Disable restored a captured intermediate weather value");
+            s.tick(true,2000,w.bridge());
+            expect(w.writes==0,"Re-enabling interrupted the same weather blend");
+            w.blending=false; w.angle=w.preset_angle=2;
+            s.tick(true,4000,w.bridge());
+            expect(w.angle<.536f && w.writes==1,"Did not acquire the light after its weather blend finished");
+            s.restore(w.bridge());
+            expect(w.angle==2,"Restoration lost the completed weather value");
+        }
+        {
             World w; css::SunlightShadows s; s.tick(true,0,w.bridge());
             w.angle=2; s.tick(true,2000,w.bridge()); s.tick(true,4000,w.bridge());
             expect(w.angle==2 && w.writes==1,"Overwrote a later lighting change");

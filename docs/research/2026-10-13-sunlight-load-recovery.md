@@ -53,3 +53,25 @@ started by that helper.
 Real weather transitions, other maps, continuous-motion artifact comparison and
 performance still need coverage. The independent animation crash remains open;
 this cold-installed change does not claim to fix it.
+
+## October 15: enabling during an active transition
+
+The initial acquisition path did not check the lighting timeline. Enabling
+Reduced noise during a blend could therefore capture an intermediate source
+angle and overwrite the game while it was still changing that value. Recovery
+of an already owned light had the guard, but first acquisition did not.
+
+A regression reproduced this before the fix, exiting with
+`Enabling during a weather blend overwrote game lighting`. Initial acquisition
+now uses the same stopped-timeline check as recovery. A missing timeline also
+prevents acquisition. Turning the option off during that wait writes nothing;
+after the timeline stops, CSS captures the completed value for restoration.
+
+The targeted `css_sunlight` test passes, including enabling, disabling and
+re-enabling during the blend, applying afterward, and restoring the completed
+value. This is offline lifecycle coverage, not new visual acceptance or a
+claim that the general sunlight artifact is fixed. The running game still uses
+the accepted shell-list core `cd942c57df307581`; this follow-up is not installed.
+Development (`CSS_INVENTORY_DEV=ON`) and shipping (`OFF`) Windows core builds
+both pass. Test outcome and artifact hashes are recorded in
+`work/three-outfit-rig-physics/sunlight-enable-transition-20261015/result.json`.

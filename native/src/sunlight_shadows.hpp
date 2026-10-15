@@ -47,12 +47,15 @@ private:
         // A later writer owns any different value. Do not overwrite it.
         light.original.reset();
     }
+    static bool timeline_stopped(const Query& query,const Json& manager) {
+        const auto timeline=get(query,manager,"SpartaLightingTimeline");
+        return !timeline.is_null() &&
+            !query({{"op","call"},{"target",timeline},{"function","IsPlaying"},{"args",Json::object()}}).at("ReturnValue").get<bool>();
+    }
     static void recover_preset(const Query& query,const Json& manager,Light& light) {
         if(!light.relinquished) return;
-        const auto timeline=get(query,manager,"SpartaLightingTimeline");
         const auto preset=get(query,manager,"ActiveLightPreset");
-        if(timeline.is_null() || preset.is_null() ||
-           query({{"op","call"},{"target",timeline},{"function","IsPlaying"},{"args",Json::object()}}).at("ReturnValue").get<bool>()) {
+        if(preset.is_null() || !timeline_stopped(query,manager)) {
             light.pending_angle.reset(); return;
         }
         const float current=angle(query,light.target);
@@ -108,6 +111,7 @@ public:
             if(existing!=lights_.end()) { recover_preset(query,manager,*existing); continue; }
             if(!get(query,light,"bVisible").get<bool>() || get(query,light,"bHiddenInGame").get<bool>() ||
                !get(query,light,"CastShadows").get<bool>()) continue;
+            if(!timeline_stopped(query,manager)) continue;
             const auto signature=query({{"op","describe"},{"target",light},{"function","SetLightSourceAngle"}});
             if(signature!=Json{{"NewValue",{{"out",false},{"return",false},{"size",4}}}})
                 throw std::runtime_error("Sunlight setter signature is unsupported");
