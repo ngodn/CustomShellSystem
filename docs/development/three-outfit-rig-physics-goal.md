@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Genessa editable baseline linked:** both W3 sources match their
+creation receipts, namespace migration and facial integration. The original
+full-data wing comparison reruns byte-exactly; 2,220 retained files verify through
+the current package lineage. No game or asset changes. Recreating the accepted
+outfit from its earliest Blender scene is not an additional release requirement.
+[Evidence and scope](../research/2026-10-15-genessa-w3-sources.md).
+
 **October 15, matched visibility-repair timing complete:** nine captures bracket
 the predecessor with the repaired core. All 162 owner-drift repairs pass across
 4,873 frames; MISC timings are similar, without an FPS-gain claim. The repaired

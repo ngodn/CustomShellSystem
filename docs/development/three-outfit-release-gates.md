@@ -70,8 +70,14 @@ Accepted observations apply to their recorded test scope, not every variant.
   stages, with exact installed trio hashes and 261 preserved non-graph payloads.
   Genessa's [original material and rig source chains](../research/2026-10-15-genessa-material-rig-sources.md)
   also pass: 55 authored material/texture sources, 13 original rig/mesh sources,
-  and exact replay of all 33 preserved material instances. Whole-outfit source
-  reproduction, fresh rebuild and remaining full-goal source coverage stay open.
+  and exact replay of all 33 preserved material instances. The
+  [W3 editable baseline link](../research/2026-10-15-genessa-w3-sources.md)
+  now verifies the original creation inputs and exact identity at both later
+  consumers; the original full-data wing comparison reruns byte-exactly.
+  Genessa's retained W3-to-current-package chain is accounted for. Recreating
+  the outfit from its earliest Blender scene or repeating an unchanged cook is
+  not an extra gate. Remaining full-goal source coverage and final coordinated
+  artifact provenance still apply.
 - Finish the remaining runtime checks and other non-deferred defects. Preserve accepted
   belt/skirt motion, Genessa cloth and Peony motion/design; complete their separate
   regression and performance requirements without reopening accepted minor flaws.
