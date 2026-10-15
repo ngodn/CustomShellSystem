@@ -313,30 +313,7 @@ static std::string asset_evidence(UObject* object) {
         ", destroying="+std::to_string(object->HasAnyFlags(RF_BeginDestroyed) || object->HasAnyFlags(RF_FinishDestroyed))+
         ", unreachable="+std::to_string(object->IsUnreachable())+"]";
 }
-static UObject* load(const std::string& path,bool required=true) {
-    if (auto it = s_asset_cache.find(path); it != s_asset_cache.end())
-        if (auto* cached = it->second.get()) return cached;
-    auto name = wide(path);
-    if (auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, name.c_str())) {
-        s_asset_cache[path].capture(object);
-        return object;
-    }
-    static UObject* s_kismet = nullptr;
-    if (!s_kismet) s_kismet = find(L"/Script/Engine.Default__KismetSystemLibrary");
-    Call make(s_kismet, L"MakeSoftObjectPath", 2);
-    FString string(name.c_str()); make.set(L"PathString", string); make.run();
-    Call convert(s_kismet, L"Conv_SoftObjPathToSoftObjRef", 2);
-    convert.copy(L"SoftObjectPath", make, L"ReturnValue"); convert.run();
-    Call loading(s_kismet, L"LoadAsset_Blocking", 2);
-    loading.copy(L"Asset", convert, L"ReturnValue"); loading.run();
-    auto* object = loading.get<UObject*>();
-    if (!object) {
-        if(required) throw std::runtime_error("Asset could not load: " + path);
-        return nullptr;
-    }
-    s_asset_cache[path].capture(object);
-    return object;
-}
+#include "asset_loading.inl"
 static UObject* load_astral_pose() {
     if(auto* pose=load(std::string(authored_astral_pose),false)) return pose;
     if(auto* pose=load(std::string(legacy_astral_pose),false)) return pose;
@@ -1206,10 +1183,12 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
             for(const auto& [name,weight]:facial.weights)
                 if(!mesh_has_morph(candidate,name)) throw std::runtime_error("Facial asset is missing required shape '"+name+"': "+asset_evidence(candidate));
             target=candidate; loading_roots.take(face_roots);
-        } catch(const std::exception& error) {facial_failures_.emplace(facial.mesh,error.what());}
+        } catch(const AssetNotReady&) { throw; }
+        catch(const std::exception& error) {facial_failures_.emplace(facial.mesh,error.what());}
     }
     if(!target) {
         try {target=load(mesh_path);}
+        catch(const AssetNotReady&) { throw; }
         catch(const std::exception&) {
             if(mesh_path.starts_with("/Game/CSS/eins0fx/Bosses/"))
                 throw std::runtime_error("Boss appearance could not load. Install or update CSS Shared Assets and restart the game.");

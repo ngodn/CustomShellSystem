@@ -1,5 +1,6 @@
 #include <optional>
 #pragma once
+#include "asset_loading.hpp"
 #include <string>
 #include <string_view>
 #include <functional>

@@ -431,6 +431,9 @@ struct Core {
             const auto result=appearance.start_performance(catalog,selection.outfit,id,1.,0.,face,PerformanceUse::Idle);
             automatic_idle.begin(performance_context(),id,result.at("token").get<uint64_t>());
             if(animation_trace) animation_trace.write("facial idle active: "+id);
+        } catch(const AssetNotReady&) {
+            // Native loading can finish on a later tick; this is not a failed binding.
+            return;
         } catch(const std::exception& error) {
             automatic_idle.fail(performance_context(),id);
             host.log(("Idle facial playback unavailable; keeping body idle: "+std::string(error.what())).c_str());

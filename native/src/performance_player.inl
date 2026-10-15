@@ -524,6 +524,10 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
                 }
             }
             write_pose();return status();
+        } catch(const AssetNotReady& error) {
+            if(session_.active()) interrupt(error.what());
+            else if(restore_layer_) release();
+            throw;
         } catch(const std::exception& error) {
             failure=error.what();
             if(session_.active()) {interrupt(failure);throw;}

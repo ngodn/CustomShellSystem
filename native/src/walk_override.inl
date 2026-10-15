@@ -270,6 +270,10 @@ SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catal
             cache.checked=true;++revision_;
             if(trace && *trace) trace->write("resolved: "+choice+" skeleton="+narrow(skeleton->GetPathName()));
             return cache.result;
+        } catch(const AssetNotReady& error) {
+            // Keep this resolution retryable once native loading completes.
+            cache.result.reason=error.what();
+            return cache.result;
         } catch(const std::exception& error) {
             cache.result.reason=error.what();
             if(trace && *trace) trace->write("resolve failed: "+choice+" reason="+cache.result.reason);
