@@ -1,5 +1,13 @@
 # Three-outfit implementation status
 
+**October 15, ten-outfit menu recovery passes:** the visible CSS preview matches
+world meshes, body settings, morphs and section visibility. Active measured rigs
+update in the preview and resume in the world across all ten appearances in Stray.
+Raw-read verification and 15 final restoration checks pass. Two corrected fixture
+failures remain recorded. No production code or assets changed; continuous visual,
+attached-cloth, other-form and broader lifecycle coverage remain separate.
+[Evidence](../research/2026-10-15-menu-recovery.md).
+
 **October 15, reviewed core installed:** missing mirrored-provider preflight and
 developer probe cleanup fixes pass review, 26 host suites, 83 Python tests,
 archived profiles and both Windows builds. Guarded development-core activation

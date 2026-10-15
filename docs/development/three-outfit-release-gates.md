@@ -92,6 +92,11 @@ Accepted observations apply to their recorded test scope, not every variant.
   regression and performance requirements without reopening accepted minor flaws.
 - Complete the goal's Phase 4 matrix: actions, preview/world, lifecycle,
   both-form doubles, customization, attachments/gameplay and existing UI fixes.
+  [Ten-outfit CSS-menu recovery](../research/2026-10-15-menu-recovery.md) now
+  passes preview/world body settings, morph and section-visibility parity, plus
+  active primary-rig update recovery after close in Stray. All saved state,
+  resources, view, actual idle and nested weapon flags restore. Continuous
+  visuals, attached cloth, forced LODs and other-form coverage remain separate.
   [Twenty actual aim interruptions](../research/2026-10-15-outfit-aim-interruption.md)
   now pass for Iris Out and Come Closer across the ten release variants in
   Faithful form, with preserved settings, infusion and view.
