@@ -33,7 +33,7 @@ def main():
         raise RuntimeError('Profile correction is not the mapped core')
     cine = request(GAME, {'op': 'model', 'extension': 'eins0fx.cine'})
     buttons = {c['id']: c.get('enabled', True) for s in cine['result']['sections'] for c in s['controls']}
-    if not cine['ok'] or not buttons['take'] or original['busy'] or original['expression']['performance']:
+    if not cine['ok'] or not buttons.get('record', False) or not buttons.get('capture', False) or original['busy'] or original['expression']['performance']:
         raise RuntimeError('Appearance or CINE is busy')
     before = json.loads((MOD/'state/state.json').read_text())
     name = 'css-diagnostic-default-' + str(time.time_ns())
@@ -47,6 +47,15 @@ def main():
                   temporary_profile=name, gameplay_input=False, camera_input=False, samples={})
     expected = copy.deepcopy(before)
     player = engine({'op': 'player'})
+    weapons = engine({'op': 'get', 'target': player['pawn'], 'property': 'WeaponsComponent'})
+    equipment = engine({'op': 'get', 'target': weapons, 'property': 'EquippedWeapons'})
+    sidearm, = [r['value'] for r in equipment['$map'] if r['key']['TagName'] == 'Weapon.Slot.Sidearm']
+    sidearm_class = sidearm['class'].rsplit('.', 1)[-1]
+    report['equipped_sidearm'] = sidearm
+
+    def category(row):
+        # The inspection's socket/name heuristic predates slot-based sidearm detection.
+        return 'sidearm' if row['owner'] == sidearm_class else row['rest_category']
 
     def geometry():
         return {key: engine({'op': 'call', 'target': target, 'function': function, 'args': {}})['ReturnValue']
@@ -93,7 +102,7 @@ def main():
                     actor_bHidden=int(get(owner, 'bHidden')),
                     comp_bHiddenInGame=int(get(child, 'bHiddenInGame')),
                     comp_bVisible=int(get(child, 'bVisible')),
-                    rest_category={'WP_NailShotgun_C': 'sidearm', 'WP_InfiniteSeal_C': 'seal'}.get(owner_name, '')))
+                    rest_category={sidearm_class: 'sidearm', 'WP_InfiniteSeal_C': 'seal'}.get(owner_name, '')))
             if not {'sidearm', 'seal'} <= {r['rest_category'] for r in rows}:
                 raise RuntimeError('Wardrobe preview lacks the expected sidearm and seal')
             log.write(json.dumps({'menu_character': character, 'menu_items': rows})+'\n'); log.flush()
@@ -160,8 +169,8 @@ def main():
             mutate('misc_mode', category='sidearm', mode='hidden')
             mutate('misc_mode', category='seal', mode='hidden')
             hidden = inspect('hidden')
-            affected = [r for r in hidden if r['rest_category'] in ('sidearm', 'seal')]
-            assert {r['rest_category'] for r in affected} == {'sidearm', 'seal'}, 'Required equipped props absent'
+            affected = [r for r in hidden if category(r) in ('sidearm', 'seal')]
+            assert {category(r) for r in affected} == {'sidearm', 'seal'}, 'Required equipped props absent'
             assert all(r['comp_bHiddenInGame'] == 1 for r in affected), 'Overrides did not reach props'
             assert visibility(hidden) != visibility(default_items), 'No actual visibility change to verify'
             mutate('load_profile', name=name)

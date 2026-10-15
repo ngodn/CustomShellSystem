@@ -2,8 +2,9 @@
 
 Independent standards and specification reviews covered the runtime/test diff
 from the goal's `dddaf703fc8df00f2b38e46e08fe01426b1e0694` baseline through
-`2fcf221`. Both found a concrete issue. Both fixes are committed and built;
-the candidate is not installed or live-verified yet.
+`2fcf221`. Both found a concrete issue. Both fixes are committed and built. The
+development candidate is now installed through the stationary reload guard, and
+normal world profile loading passes with exact saved-state and visibility restoration.
 
 ## Standards
 
@@ -79,9 +80,40 @@ exact source patch and two DLLs:
 | Development | `a5f4fef63056904f5821cb74aad8fd2ce3ea884ab970291a3d57781139b35d06` |
 | Shipping | `952afa47d1fbfb10fcdc299c747dd6662249aba18c7879e4293f7299838e38a0` |
 
-The installed core remains
-`css_core-development-5f04a31900c8e323-nested-visibility.dll`, hash
-`5f04a31900c8e323a27f6ed5650649595015b6dea6600f6682db582dc8fcd619`.
-Next: guarded stationary activation of the completed development candidate and
-normal live profile regression, retaining exact user-state restoration. These
-checks do not replace the remaining full-goal lifecycle and release requirements.
+## Guarded activation and live profile regression
+
+The installed core is now
+`css_core-development-a5f4fef63056904f-profile-preflight.dll`, with the development
+hash above. The previous `5f04a31900c8e323` core remains available for rollback.
+The shipping DLL remains uninstalled. `candidate.json` preserves the earlier
+build-time state; the later activation and profile receipts record deployment.
+
+Evidence is under `work/three-outfit-rig-physics/runtime-review-20261015/`:
+
+- `activation/result.json` verifies source and loader contracts, the same game
+  process, new DLL mapped and old DLL unmapped. Reload occurred only after
+  returning to native idle and checking stationary speed, no montage, no active
+  developer trial, no menu, no doubles and released input. Original Peony,
+  customization, idle 702 and its actual animation binding, saved state, CINE,
+  player/view, Health 72 and Resolve 100 restore. Equipment actors and nested
+  mesh visibility are unchanged, including the native hidden preview axe.
+- `profile-world/result.json` retains an initial fixture failure with complete
+  restoration. Its inspection-name heuristic called Trebuchaxe a stowed weapon
+  despite the equipped slot being Sidearm. The sidearm did hide correctly.
+- `profile-world-slot/result.json` passes using the actual equipped sidearm
+  slot. The test saves Default visibility, hides the sidearm and seal, loads
+  the profile twice, verifies original visibility, deletes its temporary
+  profile and restores the user's full state, CINE and exact player/view.
+- `final-live-restoration.json` independently passes 15 checks after the profile
+  test, including all equipped actor/nested-mesh flags, resources, actual idle,
+  zero doubles, inactive trials, released keys and the mapped candidate.
+
+The profile fixture also now checks CINE Record/Capture availability, rather
+than treating disabled Take outside Cine World as an active take. This follows
+`extensions/cine/src/cine.cpp:1666` and lines 1671 through 1672. Neither fixture
+correction changes production behavior.
+
+These are normal profile and stationary activation checks. The new
+missing-mirrored-provider rejection has host regression coverage, not a live
+uninstall/reinstall test. No reference-pose trial was started to test its cleanup
+change. Remaining full-goal lifecycle and release requirements stay open.

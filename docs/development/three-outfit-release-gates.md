@@ -22,7 +22,7 @@ historical rehearsal and is not the stable release tag.
 | Peony pockets, robotic ornaments, neckline | Included in the accepted V2 design, with requested gloves/collar/heels/ponytail retained | Preserve accepted appearance |
 | Peony palettes, removable pieces, flowing trim, profiles | User accepts four palettes, flow in CSS/world and restored profiles | Both-form and broader lifecycle coverage |
 | Profile saved at Default visibility retains later overrides | Empty MISC snapshot correction installed; offline regression and actual world/preview profile loads pass. Exact saved settings and post-menu world visibility restore | Broader profile/lifecycle coverage; preserve missing legacy fields. Intermediate inactive-world-actor differences inside the menu are documented |
-| Loading an unavailable outfit profile partly changes settings | Direct-shell catalog preflight is installed and tested. Review found a missing mirrored-provider bypass; the source fix and remembered/inferred Stray regression now pass | Guarded activation and live normal loads on the new candidate; actual missing-provider/reinstall lifecycle and runtime asset failures remain open |
+| Loading an unavailable outfit profile partly changes settings | Direct-shell catalog preflight is installed and tested. The mirrored-provider fix is now installed after remembered/inferred Stray host regressions, guarded activation and repeated normal world profile loads | Actual missing-provider/reinstall lifecycle and runtime asset failures remain open |
 | Profile loading uses a separate Darkform choice while mirroring | Selection snapshot restoration and normal mirror reconciliation installed. Offline tests and repeated live Stray loads preserve Peony and the separate CW choice; Faithful/settings/view restore | Single-save coverage only; independent-form activation, other outfits and cross-save report remain distinct |
 | Hidden item actor flag drifts after form checks | Enforcement repair installed. Three live actor-only faults, Default control, form/profile round trip and exact world-flag restoration pass. Attached Burn rendering also follows repaired owner visibility in controlled checks | Actual draw/fire/stow now passes; original Tarstone triggering sequence and effect replacement remain unproven; sequential timings do not close performance acceptance |
 | Peony excessive jiggle despite Firm/Natural | Restoration correction and tighter limits installed; user accepts walking/Iris Out motion, live limit readback passes | Other six Eve variants and lifecycle/performance regression |
@@ -218,9 +218,11 @@ does not invent new deferrals for the primary repairs or release gates.
 The [runtime review candidate](../research/2026-10-15-stable-runtime-review.md)
 fixes a missing-provider bypass for mirrored profiles and unsafe timeout cleanup
 in a developer reference-pose diagnostic. Host and Python regressions, archived
-profiles and development/shipping builds pass. It is not installed yet. Activate
-through the established stationary guard and recheck normal live profile loading
-before treating these fixes as installed acceptance.
+profiles and development/shipping builds pass. Guarded development-core activation
+and repeated normal live profile loads now pass, with full saved-state, actual
+idle and nested weapon-visibility restoration. Missing-provider uninstall/reinstall
+and the developer trial cleanup itself have no new live coverage. Continue the
+remaining lifecycle and coordinated-release requirements below.
 
 The [combined surface candidate](../research/2026-10-14-eve-surface-tangents.md#combined-eve-package)
 now passes all twelve mesh-preservation checks, 1,545 catalog checks and the

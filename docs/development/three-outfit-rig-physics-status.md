@@ -1,11 +1,12 @@
 # Three-outfit implementation status
 
-**October 15, runtime review fixes built:** independent review found a missing
-mirrored-provider preflight bypass and unsafe timed recreation in a developer
-reference-pose probe. Both are fixed in source and pass follow-up static review.
-All 26 host suites, 83 Python tests, archived profiles and both Windows builds
-pass. Candidates are retained, not installed; current game/core/state are unchanged.
-[Evidence and next activation](../research/2026-10-15-stable-runtime-review.md).
+**October 15, reviewed core installed:** missing mirrored-provider preflight and
+developer probe cleanup fixes pass review, 26 host suites, 83 Python tests,
+archived profiles and both Windows builds. Guarded development-core activation
+and repeated normal world profile loading now pass. Full state, Peony/idle,
+resources, view, CINE and nested weapon visibility restore. The initial fixture
+failure and its correction are retained; remaining lifecycle/release gates stay open.
+[Evidence and limits](../research/2026-10-15-stable-runtime-review.md).
 
 **October 15, CW baseline sources verified:** 1,622 retained file hashes connect
 172 editable assets, original materials/textures and rig outputs to all 413

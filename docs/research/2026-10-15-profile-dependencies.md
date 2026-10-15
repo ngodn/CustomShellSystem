@@ -104,7 +104,8 @@ gates are not closed by these results.
 
 The [stable runtime review](2026-10-15-stable-runtime-review.md) found that the
 mirrored selection resolver could skip a missing living-shell provider before
-this preflight. The installed core still has that gap. Commit `ac62655` fixes
-it, with remembered/inferred Stray source, fallback, disabled-mirror and
-reinstall regressions. The compiled candidate awaits guarded activation and
-normal live profile checks; direct-shell acceptance above remains historical.
+this preflight. Commit `ac62655` fixes it, with remembered/inferred Stray source,
+fallback, disabled-mirror and reinstall host regressions. The development
+candidate is now installed through guarded activation; repeated normal live
+profile loads and exact restoration pass. Actual missing-provider uninstall/
+reinstall remains untested. Direct-shell acceptance above remains historical.
