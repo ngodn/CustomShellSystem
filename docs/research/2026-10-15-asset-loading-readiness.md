@@ -4,7 +4,8 @@ The retained reload/rescan crash remains unresolved. This source review found
 a separate concrete gap in the same loading path: CSS returned cached or found
 objects without checking whether native loading or destruction was in progress.
 The new candidate rejects those objects before consumers inspect or bind them.
-It is built and tested offline, not installed or claimed to fix the game crash.
+It is built, tested offline and now installed through the established stationary
+reload. It is not claimed to fix the original game crash.
 
 ## Evidence and change
 
@@ -50,3 +51,17 @@ child blueprints and excludes standalone, so it is not evidence that this game
 shares that bug. The existing instrumented reproducer and crash gate remain.
 Next runtime work must verify normal loading/playback with this candidate and
 then address the retained crash trigger; passing host tests alone cannot close it.
+
+## Installed development core
+
+The user explicitly requested installation. The existing stationary reload
+procedure activated `css_core-development-1e5d805527c22d4a-asset-readiness.dll`
+in Linux process 645797. Loader acknowledgement and process maps verify the
+new core is loaded and the prior core is unmapped. Developer mode remains on.
+Merrick, original idle and exact saved CSS state are unchanged. No gameplay or
+camera input was sent. The previous core remains available for rollback.
+
+The before/after class inventories are not truncated; all observed game
+animation classes after activation retain sparse data and clear load/destruction
+flags. This checks activation and current bindings, not the intermittent crash.
+Receipts: `work/three-outfit-rig-physics/asset-readiness-activation-20261015/`.
