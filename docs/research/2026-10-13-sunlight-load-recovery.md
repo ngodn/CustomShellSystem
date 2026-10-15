@@ -75,3 +75,24 @@ the accepted shell-list core `cd942c57df307581`; this follow-up is not installed
 Development (`CSS_INVENTORY_DEV=ON`) and shipping (`OFF`) Windows core builds
 both pass. Test outcome and artifact hashes are recorded in
 `work/three-outfit-rig-physics/sunlight-enable-transition-20261015/result.json`.
+
+### Installed follow-up
+
+The guarded stationary reload installs development core
+`faaf5794308ae8f482e7bd24e793aa1352cc6d8d1c884e8312bdeb88b2d3fe6d`
+in Linux process 478716. The new module is mapped and the previous module is
+unmapped. The selected Iris Out idle is stopped normally for activation and
+restored afterward. Equipment visibility, health/Resolve, CINE, appearance,
+customization, position, camera and exact saved CSS state all restore.
+`activation/result.json` and `installation.json` both pass in the same directory.
+
+The live follow-up reads a stopped lighting timeline and verifies Default at
+4 degrees, Reduced at 0.535700023 degrees, then Default at exactly 4 degrees.
+One light is owned while Reduced is enabled; Default leaves zero owned lights
+and no error. The user's original Default setting and all saved CSS state are
+restored. See `validation.json` and its request log. No weather timeline was
+forced or modified. The active-blend behavior is covered by the offline test.
+
+The current-world screenshot looks down at CW against dark ground and is not
+a useful reproduction of the reported moving sunlight artifact. It is retained
+as context only, not as evidence that visual quality or performance is accepted.
