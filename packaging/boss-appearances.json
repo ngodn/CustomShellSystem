@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "container": "CSS_SharedAssets_P",
+  "outfit": "css.npc.bosses",
+  "characters": [
+    {
+      "id": "ms1_tarsus",
+      "source_mesh": "/Game/MS1/Characters/Enemies/Bosses/Tarsus/Art/Mesh/SK_MS1_Tarsus",
+      "source_skeleton": "/Game/MS1/Characters/Enemies/Bosses/Tarsus/Art/Mesh/MS1_Tarsus_Skeleton",
+      "trial_mesh": "/Game/CSS/Bosses/ms1_tarsus/Mesh___________________/SK_MS1_Tarsus",
+      "mesh": "/Game/CSS/eins0fx/Bosses/ms1_tarsus/Mesh___________/SK_MS1_Tarsus",
+      "trial_skeleton": "/Game/CSS/Bosses/ms1_tarsus/Rig____________________/MS1_Tarsus_Skeleton",
+      "skeleton": "/Game/CSS/eins0fx/Bosses/ms1_tarsus/Rig____________/MS1_Tarsus_Skeleton",
+      "variant": "sk_ms1_tarsus",
+      "mesh_scale": 0.7661
+    },
+    {
+      "id": "dwarf",
+      "source_mesh": "/Game/Sparta/Characters/Bosses/Dwarf/Art/Mesh/SK_Dwarf",
+      "source_skeleton": "/Game/Sparta/Characters/Bosses/Dwarf/Art/Mesh/SKEL_Dwarf_Skeleton",
+      "trial_mesh": "/Game/CSS/Bosses/dwarf/Mesh__________________/SK_Dwarf",
+      "mesh": "/Game/CSS/eins0fx/Bosses/dwarf/Mesh__________/SK_Dwarf",
+      "trial_skeleton": "/Game/CSS/Bosses/dwarf/Rig___________________/SKEL_Dwarf_Skeleton",
+      "skeleton": "/Game/CSS/eins0fx/Bosses/dwarf/Rig___________/SKEL_Dwarf_Skeleton",
+      "variant": "sk_dwarf",
+      "mesh_scale": 0.3349
+    },
+    {
+      "id": "swordman",
+      "source_mesh": "/Game/Sparta/Characters/Bosses/Swordman/Art/Mesh/SK_Swordman",
+      "source_skeleton": "/Game/Sparta/Characters/Bosses/Swordman/Art/Mesh/SK_Swordman_Skeleton",
+      "trial_mesh": "/Game/CSS/Bosses/swordman/Mesh__________________/SK_Swordman",
+      "mesh": "/Game/CSS/eins0fx/Bosses/swordman/Mesh__________/SK_Swordman",
+      "trial_skeleton": "/Game/CSS/Bosses/swordman/Rig___________________/SK_Swordman_Skeleton",
+      "skeleton": "/Game/CSS/eins0fx/Bosses/swordman/Rig___________/SK_Swordman_Skeleton",
+      "variant": "sk_swordman",
+      "mesh_scale": 0.4283
+    },
+    {
+      "id": "mothknight",
+      "source_mesh": "/Game/Sparta/Characters/Bosses/MothKnight/Art/Mesh/SK_MothKnight",
+      "source_skeleton": "/Game/Sparta/Characters/Bosses/MothKnight/Art/Mesh/SK_MothKnight_Skeleton",
+      "trial_mesh": "/Game/CSS/Bosses/mothknight/Mesh__________________/SK_MothKnight",
+      "mesh": "/Game/CSS/eins0fx/Bosses/mothknight/Mesh__________/SK_MothKnight",
+      "trial_skeleton": "/Game/CSS/Bosses/mothknight/Rig___________________/SK_MothKnight_Skeleton",
+      "skeleton": "/Game/CSS/eins0fx/Bosses/mothknight/Rig___________/SK_MothKnight_Skeleton",
+      "variant": "sk_mothknight",
+      "mesh_scale": 0.6523
+    }
+  ]
+}

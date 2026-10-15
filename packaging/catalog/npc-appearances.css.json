@@ -2,6 +2,42 @@
  "schema": 1,
  "outfits": [
   {
+   "id": "css.npc.bosses",
+   "name": "Bosses",
+   "author": "Cold Symmetry",
+   "description": "Wear a boss appearance while keeping your shell and abilities.",
+   "compatibility": "same_skeleton",
+   "shells": [
+    "CharacterId.Player.Shell.Genessa"
+   ],
+   "variants": [
+    {
+     "id": "sk_ms1_tarsus",
+     "name": "Tarsus",
+     "mesh": "/Game/CSS/eins0fx/Bosses/ms1_tarsus/Mesh___________/SK_MS1_Tarsus.SK_MS1_Tarsus",
+     "mesh_scale": 0.7661
+    },
+    {
+     "id": "sk_dwarf",
+     "name": "Droeg, the Conquerer",
+     "mesh": "/Game/CSS/eins0fx/Bosses/dwarf/Mesh__________/SK_Dwarf.SK_Dwarf",
+     "mesh_scale": 0.3349
+    },
+    {
+     "id": "sk_swordman",
+     "name": "The Nameless Captive",
+     "mesh": "/Game/CSS/eins0fx/Bosses/swordman/Mesh__________/SK_Swordman.SK_Swordman",
+     "mesh_scale": 0.4283
+    },
+    {
+     "id": "sk_mothknight",
+     "name": "Sir Isaac, the Scholar-Prince",
+     "mesh": "/Game/CSS/eins0fx/Bosses/mothknight/Mesh__________/SK_MothKnight.SK_MothKnight",
+     "mesh_scale": 0.6523
+    }
+   ]
+  },
+  {
    "id": "css.npc.enemies",
    "name": "Enemies",
    "author": "Cold Symmetry",
@@ -278,6 +314,11 @@
     "CharacterId.Player.Shell.Genessa"
    ],
    "variants": [
+    {
+     "id": "sk_shopkeeper_mh",
+     "name": "Merrick",
+     "mesh": "/Game/Sparta/Characters/NPCs/Shopkeeper/Art/Mesh/MH/SK_Shopkeeper_MH.SK_Shopkeeper_MH"
+    },
     {
      "id": "sk_blacksmith",
      "name": "Franz",

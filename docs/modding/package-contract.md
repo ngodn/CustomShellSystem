@@ -48,6 +48,16 @@ Each variant declares a stable `id`, `name`, relocated mesh object path, optiona
 
 ## Validation and generated data
 
+An optional catalog-variant `mesh_scale` multiplies the appearance mesh's
+component scale. It defaults to 1 and accepts finite values from 0.1 to 4.
+CSS applies the same factor to the wardrobe preview and restores the original
+component scale when leaving the appearance. The gameplay capsule is unchanged.
+Equipped weapon roots receive an inverse scale correction while attached to the
+scaled body, including body weapons and shell tools. Their native scale restores
+on removal or an appearance change. Other attached cosmetics inherit the body's
+scale, so authors must check accessory placement. Older runtimes ignore this
+field; it requires CSS 1.0.0.
+
 An optional catalog-variant `ground_offset_cm` sets a fixed world-mesh height
 correction. CSS 1.0.0 accepts a finite number from -20 to 20 centimeters and defaults
 to zero. Negative values lower the mesh. CSS preserves the original component
@@ -109,6 +119,12 @@ The offline verifier hashes the full `.ucas`. Runtime discovery checks the small
 CSS extracts thumbnails and dye resources into a rebuildable package cache. User selections, favorite IDs and templates belong to CSS's own state. Cache files, loose developer catalogs, personal state and DLLs never belong in an outfit trio or outfit ZIP.
 
 A new asset container requires restarting the game. Native core live reload does not hot-replace a mounted pak/IoStore set. See [verification and install details](../css-packages.md).
+
+CSS's built-in Tarsus, Droeg, Nameless Captive and Sir Isaac appearance choices
+use isolated assets supplied by CSS Shared Assets, under
+`/Game/CSS/eins0fx/Bosses/`. They preserve the original game packages. Install the
+matching shared pack and restart when updating these appearances. Merrick and
+the existing native human-skeleton choices continue to use game assets directly.
 
 ## Discovery failures
 

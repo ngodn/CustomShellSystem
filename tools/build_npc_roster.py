@@ -6,8 +6,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 recs = [json.loads(l) for l in open(ROOT / 'work/research/skel/skeletons.jsonl')]
 human = {r['path'] for r in recs if r['kind'] == 'mesh' and r['skeleton'] and 'SKEL_Human_Skeleton' in r['skeleton']}
+# Merrick uses the human body chains plus a separate facial hierarchy. Keep the
+# exception tied to his actual mesh/Skeleton pair, not every humanoid-looking NPC.
+native_adapters = {
+    'MortalShell2/Content/Sparta/Characters/NPCs/Shopkeeper/Art/Mesh/MH/SK_Shopkeeper_MH.uasset':
+        '/Game/Sparta/Characters/NPCs/Shopkeeper/Art/Mesh/MH/SK_Shopkeeper_MH_LOD0_Skeleton.SK_Shopkeeper_MH_LOD0_Skeleton',
+}
+native_adapters.update({
+    'MortalShell2/Content/MS1/Characters/Enemies/Bosses/Tarsus/Art/Mesh/SK_MS1_Tarsus.uasset':
+        '/Game/MS1/Characters/Enemies/Bosses/Tarsus/Art/Mesh/MS1_Tarsus_Skeleton.MS1_Tarsus_Skeleton',
+    'MortalShell2/Content/Sparta/Characters/Bosses/Dwarf/Art/Mesh/SK_Dwarf.uasset':
+        '/Game/Sparta/Characters/Bosses/Dwarf/Art/Mesh/SKEL_Dwarf_Skeleton.SKEL_Dwarf_Skeleton',
+    'MortalShell2/Content/Sparta/Characters/Bosses/Swordman/Art/Mesh/SK_Swordman.uasset':
+        '/Game/Sparta/Characters/Bosses/Swordman/Art/Mesh/SK_Swordman_Skeleton.SK_Swordman_Skeleton',
+    'MortalShell2/Content/Sparta/Characters/Bosses/MothKnight/Art/Mesh/SK_MothKnight.uasset':
+        '/Game/Sparta/Characters/Bosses/MothKnight/Art/Mesh/SK_MothKnight_Skeleton.SK_MothKnight_Skeleton',
+})
+boss_assets = json.loads((ROOT / 'packaging/boss-appearances.json').read_text())['characters']
+boss_meshes = {row['source_mesh'].rsplit('/', 1)[1]: row['mesh'] for row in boss_assets}
+boss_scales = {row['variant']: row['mesh_scale'] for row in boss_assets}
+for path, skeleton in native_adapters.items():
+    matches = [r for r in recs if r['kind'] == 'mesh' and r['path'] == path]
+    if len(matches) != 1 or matches[0]['skeleton'] != skeleton:
+        raise ValueError('NPC skeleton changed: ' + path)
+    human.add(path)
 def game_path(p):
     p = re.sub(r'^MortalShell2/Content/', '/Game/', p).replace('.uasset', '')
+    p = boss_meshes.get(p.rsplit('/', 1)[1], p)
     return f"{p}.{p.rsplit('/', 1)[1]}"
 # folder-relative mesh name -> (group, display name)
 ROSTER = {
@@ -63,7 +88,13 @@ ROSTER = {
  'Enemies/Wraith/SK_Wraith': ('enemies', 'Gloombound Wraith'),
  'MS1/Characters/Enemies/Fallgrim/Vampire/Mesh/SK_MS1_Vampire': ('enemies', 'Fallgrim Vampire'),
  'Bosses/Offspring/SK_Offspring': ('enemies', 'Offspring'),
+ # ---- Bosses (names from ST_Core_Bosses and native dialogue)
+ '/Game/MS1/Characters/Enemies/Bosses/Tarsus/Art/Mesh/SK_MS1_Tarsus': ('bosses', 'Tarsus'),
+ 'Bosses/Dwarf/Art/Mesh/SK_Dwarf': ('bosses', 'Droeg, the Conquerer'),
+ 'Bosses/Swordman/Art/Mesh/SK_Swordman': ('bosses', 'The Nameless Captive'),
+ 'Bosses/MothKnight/Art/Mesh/SK_MothKnight': ('bosses', 'Sir Isaac, the Scholar-Prince'),
  # ---- People (names from ST_Core_NpcNames)
+ 'NPCs/Shopkeeper/MH/SK_Shopkeeper_MH': ('people', 'Merrick'),
  'NPCs/Blacksmith/Blacksmith_Old/SK_Blacksmith': ('people', 'Franz'),
  'NPCs/SesterGenessa/Sk_Sester_Genessa': ('people', 'Sester Genessa, first form'),
  'NPCs/SesterGenessa/Sk_Sester_Genessa_V4_Corrupted': ('people', 'Corrupted Sester'),
@@ -84,7 +115,8 @@ ROSTER = {
  'Shells/DarkForm_Bulk/SK_DarkForm_Bulk_backpack': ('harbinger', 'Harbinger with pack'),
  'Shells/DarkForm_Skel/SK_DarkBro_SKeleton': ('harbinger', 'Skeletal Harbinger'),
 }
-GROUPS = {'enemies': ('Enemies', 'Wear an enemy the way the game draws it. Your shell keeps its abilities; the enemy keeps its default materials.'),
+GROUPS = {'bosses': ('Bosses', 'Wear a boss appearance while keeping your shell and abilities.'),
+          'enemies': ('Enemies', 'Wear an enemy the way the game draws it. Your shell keeps its abilities; the enemy keeps its default materials.'),
           'people': ('People', "Wear one of the game's people. Your shell keeps its abilities."),
           'harbinger': ('Harbinger forms', 'Wear a Harbinger form while you still have a shell.')}
 outfits = {g: {'id': f'css.npc.{g}', 'name': name, 'author': 'Cold Symmetry', 'description': desc,
@@ -99,6 +131,8 @@ for rel, (group, name) in ROSTER.items():
     if len(found) != 1: missing.append((rel, found)); continue
     vid = re.sub(r'[^a-z0-9]+', '_', base).strip('_')
     outfits[group]['variants'].append({'id': vid, 'name': name, 'mesh': game_path(found[0])})
+    if vid in boss_scales:
+        outfits[group]['variants'][-1]['mesh_scale'] = boss_scales[vid]
 doc = {'schema': 1, 'outfits': list(outfits.values())}
 out = ROOT / 'packaging/catalog/npc-appearances.css.json'
 out.parent.mkdir(parents=True, exist_ok=True)
