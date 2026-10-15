@@ -1,0 +1,21 @@
+{
+  "scope": "Unmodified copies of the executed local boss authoring recipes. Native inputs and accepted outputs remain in work. The five-rig trial includes deferred Orrem; the final shared recipe selects four accepted bosses.",
+  "files": {
+    "configure-isolated.py": {
+      "retained_source": "work/npc-appearances/bosses/configure-isolated.py",
+      "sha256": "ec084305dd3cf8c0258cea7d20fe76b831246f229d51beaeee64ac00fee7aa40"
+    },
+    "clear-preview.py": {
+      "retained_source": "work/npc-appearances/bosses/clear-preview.py",
+      "sha256": "50ca7637cdf64a80a5b2195182378ac368abbae0807f3628ca02f977c6d86351"
+    },
+    "package.py": {
+      "retained_source": "work/npc-appearances/bosses/package.py",
+      "sha256": "10036f48f7231535eeb657a039551582d0c7f9892ff5702b56db2d9695f39847"
+    },
+    "verify.py": {
+      "retained_source": "work/npc-appearances/bosses/verify.py",
+      "sha256": "aced80d0e9efc48486602e8e67b4f8dcf792e6b656d9156c68599af5f71bb14e"
+    }
+  }
+}
