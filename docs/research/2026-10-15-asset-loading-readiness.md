@@ -49,8 +49,8 @@ The earlier crash dump still lacks the failing class memory. Epic's
 [UE-215992](https://issues.unrealengine.com/issue/UE-215992) concerns editor/PIE
 child blueprints and excludes standalone, so it is not evidence that this game
 shares that bug. The existing instrumented reproducer and crash gate remain.
-Next runtime work must verify normal loading/playback with this candidate and
-then address the retained crash trigger; passing host tests alone cannot close it.
+The normal loading/playback check below now passes with this candidate.
+The retained crash trigger remains unresolved; these checks do not close it.
 
 ## Installed development core
 
@@ -65,3 +65,26 @@ The before/after class inventories are not truncated; all observed game
 animation classes after activation retain sparse data and clear load/destruction
 flags. This checks activation and current bindings, not the intermittent crash.
 Receipts: `work/three-outfit-rig-physics/asset-readiness-activation-20261015/`.
+
+## Normal loading and one rescan
+
+The installed core now passes a CW normal-to-facial load, one catalog rescan
+and continued Iris Out playback. Three inventories contain 61 animation
+instances each, without truncation. Bound game classes retain sparse data and
+clear load/destruction flags. The live facial time advances after the rescan;
+shared idle, jog and sprint assets remain available with no maintenance or
+animation error. Merrick, saved CSS settings, position and camera restore
+exactly in process 645797. No gameplay or camera input was sent.
+
+Evidence: `work/three-outfit-rig-physics/asset-readiness-live-20261015/current-walk-path/`.
+The parent `check.py` retains the procedure. Two earlier attempts restored
+everything but failed an outdated test expectation: CW's accepted walking
+correction uses an outfit-local asset, so walk is absent from the shared resolver
+status. The second attempt's `loaded-status-timeout.json` establishes this;
+it reports available idle/jog/sprint assets and no runtime error. The final
+check requires the shared Iris Out binding and inspects all reported shared
+entries without requiring an unrelated local walk in that list. Failed receipts
+remain in the parent and `settled-status` folders.
+
+This is normal-load and rescan coverage for the changed loader, not a new
+motion-acceptance matrix or proof that the intermittent crash is fixed.

@@ -1,4 +1,37 @@
-### CSS 1.0.0-beta.12
+### CSS 1.0.0 (unreleased)
+
+#### Added
+
+- Select facial expressions in Customize and save them in profiles.
+- Play synchronized facial animations on supported Eve, Unholy Genessa and Commander White outfits.
+- Choose from 52 additional idle animations, with native-human versions for compatible original shells.
+- Wear Merrick, Tarsus, Droeg, the Nameless Captive and Sir Isaac through Use NPC / Enemy.
+- Choose sixteen native shades across eight original shells, respecting the game's unlocks.
+- Confirm a one-time Faithful override when Alteration blocks revival. Upgrades remain intact; form and health save normally.
+- Choose Default (game) or Reduced noise under MISC > Sunlight shadows. Reduced noise makes sunlight shadows sharper.
+
+#### Fixed
+
+- Hide attached Tarstone effects with their sidearm while keeping infusions active and fired projectiles visible.
+- Keep the Trebuchaxe's unused preview axe hidden while aiming.
+- Restore Default visibility and mirrored outfit choices when loading profiles.
+- Check missing outfit dependencies before applying profiles.
+- Restore customization after Genessa form changes.
+- Remove the 128-attachment snapshot limit.
+
+#### Upgrading
+
+Close the game before updating. Keep CustomShellSystem/state and profiles.
+Update CSS, the combined CSS Shared Assets package and the matching outfit
+packages together. Remove superseded CSS_AstralSharedAssets_P and
+CSS_LocomotionSharedAssets_P folders. Shared Assets is a separate download
+in the CSS release post.
+
+### CSS 1.0.0-beta.12 (withdrawn rehearsal)
+
+> This local rehearsal was never a public release. It is superseded by the
+> [coordinated 1.0.0 candidate](../docs/releases/stable-changelog-drafts.md).
+> The previous public release remains beta.11.
 
 #### Added
 

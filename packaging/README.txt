@@ -49,6 +49,9 @@ and Stray Doubles choices. Use CSS copies supported current customization with
 the ghost effect; Default keeps the original double. Profiles save both choices.
 Genessa Form switches once after closing the menu, then the game controls later
 death/revival/travel transitions. It is not a permanent form lock.
+When Alteration blocks Faithful form, CSS offers a one-time override with
+Confirm and Cancel. Purchased upgrades and progression stay intact. Native
+revival may heal you, and the game saves form and health normally.
 NPC/enemy compatibility is partial and may have visual or animation issues.
 Unsupported appearances or missing shared assets retain the original double.
 The matching CSS_SharedAssets_P download combines the shared support. Do not
@@ -72,12 +75,18 @@ Only one core DLL is supplied; old cores from development are not included.
 Existing CSS.Package v1 outfit ZIPs and saved choices remain compatible.
 The standalone N menu is replaced by Inventory > CSS.
 Reset CSS preferences only with the game closed by moving state/ to a backup.
-The CSS wardrobe does not modify the game's save files. Extensions may do so.
+CSS stores its preferences separately from game saves. Genessa Form uses native
+gameplay transitions, whose resulting form and health can be saved by the game.
 
-Beta status
-This is a prerelease of CSS 1.0.0. Outfit packages are separate downloads.
+Customization and lighting
+Outfit packages are separate downloads.
 Animation, fabric and other customization options depend on the installed outfit.
 Missing custom animation options fall back to the game.
+Facial Expression appears directly in Customize for supported outfits.
+Use Original Shell offers Choose shade, with the game's normal unlock rules.
+MISC > Sunlight shadows starts at Default (game). Reduced noise is an optional
+workaround for moving sunlight shadow speckles; it makes shadows sharper across
+the scene. Select Default (game) to restore the game's light settings.
 
 Use normal game restarts when updating DLLs or outfit containers.
 CSSX is optional and distributed separately. CSS works without it.
