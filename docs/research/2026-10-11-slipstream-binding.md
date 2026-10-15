@@ -1159,3 +1159,44 @@ Every archived file was read back and SHA-256 checked before removing its local
 copy. The archive retains 105,571,025 logical bytes in 42,386,544 bytes on theark.
 Unique logs, terminal receipts, final comparison captures and source assets
 remain local. `rejected-render-archive.json` records each recoverable file.
+
+## Continuous simulation surface comparison
+
+`prepare_slipstream_continuous_proxy.py` builds a simulation surface from the
+preserved fitted garment. It bridges authored cutouts only in the invisible
+simulation mesh. Visible garment geometry remains unchanged. The first prototype
+produced thin triangles where radial columns contained only waistband fabric;
+the second interpolates those columns from adjacent full-height fabric. An
+optional Blender library export also crashed in the first prototype, so the
+successful recipe exports a diagnostic OBJ instead. Original source assets are
+preserved.
+
+`slipstream-cloth-continuous2` has 640 particles, 1,152 triangles, one connected
+component, two boundary loops and no invalid vertex fans. Minimum normalized
+triangle quality is 0.30435, with no triangles below 0.1. There are 113 exact
+pins and 128 particles below the native 0.1 cm kinematic threshold. These checks
+establish connectivity only, not fit or stable motion.
+
+`slipstream-cloth-native18` stages the original cloth physics and configuration.
+Rebuild, fresh inspection and two sprint captures all exit zero. Independent
+native preservation checks retain all 8,000 visible skirt triangles, positions,
+skin weights and six body morphs. Both 145-frame, 60 Hz sprint captures pass the
+kinematic anchor check (maximum error below 0.000025 cm). The gross strain screen
+fails 10 frames without secondary motion and four with it, versus the original
+surface's two and one. Maximum extension is about 3.611 cm. This candidate is
+not accepted for installation. Timing overlaps other authoring checks and is
+not a controlled performance comparison.
+
+`rest-basis-topology-normals.json` reconstructs native mapping endpoints using
+the established averaged unit-face normals: maximum position, normal endpoint
+and tangent endpoint errors are 0.02633, 0.18400 and 0.04061 cm across 5,306
+non-static rows. Only one normal endpoint exceeds 0.1 cm. The earlier
+`rest-basis-summary.json` incorrectly used the physical backstop normals and is
+superseded, not valid binding evidence. These static results do not establish
+moving shading or body clearance. Continue from this surface's captured strain
+witnesses and the remaining normal endpoint; do not ship based on topology alone.
+
+The installed game remains on Peony `refit2`. The user was told to check its
+stationary lower fit, brief walking and usual body sliders, with no restart
+needed if their session was launched after that installation. No new game
+package or core DLL was installed by this Slipstream comparison.
