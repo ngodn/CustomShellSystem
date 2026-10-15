@@ -113,7 +113,8 @@ class RelocatedWorkTests(unittest.TestCase):
     def test_exact_path_guards_accept_both_spellings(self):
         count = 0
         for path in (ROOT / 'tools').rglob('*.py'):
-            for node in ast.walk(ast.parse(path.read_text())):
+            tree = ast.parse(path.read_text())
+            for node in ast.walk(tree):
                 if not isinstance(node, ast.Compare) or len(node.ops) != 1 or not isinstance(node.ops[0], (ast.Eq, ast.NotEq)):
                     continue
                 rhs = node.comparators[0]
@@ -127,6 +128,9 @@ class RelocatedWorkTests(unittest.TestCase):
                 root = self.repo.parent if parts[0].startswith('CustomShellSystem/') else self.repo
                 env = {name: root for name in ('ROOT', 'CSS', 'MOD', 'mod')}
                 env.update(Path=Path, __file__=str(self.repo / path.relative_to(ROOT)), REVISION='V1')
+                if any(isinstance(n, ast.Name) and n.id not in env for n in ast.walk(rhs)):
+                    # Variant receipt comparisons are not fixed output-directory guards.
+                    continue
                 target = eval(compile(ast.Expression(rhs), str(path), 'eval'), {'__builtins__': {}}, env)
                 logical = self.repo / 'work' / target.relative_to(self.physical)
                 uses_parent = any(isinstance(n, ast.Attribute) and n.attr == 'parent' for n in ast.walk(node.left))
@@ -134,11 +138,20 @@ class RelocatedWorkTests(unittest.TestCase):
                 for candidate, same in [(logical, True), (target, True), (self.outside, False)]:
                     value = candidate / 'trial' if uses_parent else candidate
                     variables = {name: value for name in ('OUT', 'WORK', 'TARGET', 'candidate')}
+                    for name in variables:
+                        assignments = [n for n in ast.walk(tree) if isinstance(n, ast.Assign)
+                                       and n.lineno < node.lineno and any(
+                                           isinstance(t, ast.Name) and t.id == name for t in n.targets)]
+                        if assignments:
+                            last = max(assignments, key=lambda n: n.lineno)
+                            if any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                                   and n.func.attr == 'resolve' for n in ast.walk(last.value)):
+                                variables[name] = value.resolve()
                     expected = same if isinstance(node.ops[0], ast.Eq) else not same
                     with self.subTest(tool=str(path.relative_to(ROOT)), candidate=str(candidate)):
                         self.assertEqual(eval(expression, {'__builtins__': {}}, env | variables), expected)
                 count += 1
-        self.assertEqual(count, 20)
+        self.assertEqual(count, 25)
 
 
 if __name__ == '__main__':
