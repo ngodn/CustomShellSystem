@@ -1,11 +1,12 @@
 # Three-outfit implementation status
 
-**October 15, Genessa ability interruption preflight passes:** Peony's Iris Out
-releases playback on the mapped F action. Both upgraded-save Stray clones appear
-and expire, with native ability/input blocks cleared and full settings/resources,
-position/view and focus restoration. Seven negative controls are rejected. The
-same check is running across both clips and all ten release variants. No accepted
-assets or production core changed.
+**October 15, twenty Genessa ability interruptions pass:** Iris Out and Come
+Closer release playback on mapped F across all ten release variants in Stray.
+Forty raw native activation observations and both clones per case are verified;
+clones expire with no leftover CSS groups or input blocks. Seven negative
+controls are rejected. Final read-only verification confirms original Peony,
+idle, settings, resources, position/view, CINE and released input restored.
+The sequence is complete. No accepted assets or production core changed.
 [Evidence and scope](../research/2026-10-15-shell-ability-interruption.md).
 
 **October 15, ten-outfit stationary timing coverage complete:** the combined

@@ -151,9 +151,11 @@ def main():
             row['second_input']['key_observed'] = False
         elif label == 'clone still active':
             row['summon_after']['status']['active'] = 1
+            row['summon_samples'][-1]['status']['active'] = 1
         elif label == 'missing secondary clone':
             for sample in row['summon_samples']:
                 sample['observed']['actors'] = [a for a in sample['observed']['actors'] if a['id'] != 'AstralCloneSecondary']
+            row['summon_after'] = copy.deepcopy(row['summon_samples'][-1])
         elif label == 'input still blocked':
             row['input_blocks_after_cleanup'] = [1]
         else:

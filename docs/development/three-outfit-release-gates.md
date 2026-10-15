@@ -77,6 +77,11 @@ Accepted observations apply to their recorded test scope, not every variant.
   [Twenty actual two-hit combo interruptions](../research/2026-10-15-outfit-combo-interruption.md)
   now pass both clips on all ten variants in Stray. Raw native records confirm
   B1-to-B2 progression, released facial ownership and complete restoration.
+  [Twenty normal Genessa ability interruptions](../research/2026-10-15-shell-ability-interruption.md)
+  pass both clips on all ten variants in Stray. Both upgraded-save clones appear
+  and expire, native input blocks clear, and settings/resources/view restore.
+  Independent raw-log verification rejects seven corrupted records; final live
+  restoration is confirmed without changing the accepted core or assets.
   Moving/directional dodge, interaction, damage, other-form cases and
   the rest of this matrix remain open.
   [Peony's four normal summon cases](../research/2026-10-15-peony-doubles.md)
