@@ -494,7 +494,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const auto base_count=original_bases.size();
         row_look.badge=original_worn;
         row(2,"Use Original Shell",wear_original(original_index),base_count?wear_original(original_bases[(original_base_index+base_count-1)%base_count]):Json{},
-            base_count?wear_original(original_bases[original_worn?(original_base_index+1)%base_count:0]):Json{});
+            base_count?wear_original(original_bases[original_worn?(original_base_index+1)%base_count:0]):Json{},
+            original_worn?Json{{"action","ui_browse_shades"}}:Json{});
         // The game's enemies, people and Harbinger forms, one flat list across the shipped
         // css.npc.* outfits so Left/Right walks all of them.
         struct NpcChoice { const Outfit* outfit; size_t variant; };
@@ -629,27 +630,15 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             }
         } else if(row_==2) {
             detail("Use Original Shell",original_worn?originals->variants[original_index].name:"Appearance only",
-                "Wear an official shell's appearance. Your current shell keeps its abilities and progress.");
+                "Wear an official shell's appearance. Choose shade lists this save's unlocked shades. Your current shell keeps its abilities and progress.");
             if(!originals) note("Official shell appearances are unavailable in this session.");
             else {
                 std::vector<Choice> choices;
                 for(const auto i:original_bases) choices.push_back({originals->variants[i].id,originals->variants[i].name,wear_original(i)});
                 choice_rows(choices,original_worn?originals->variants[original_index].original_shell:"");
-                if(original_worn) {
-                    divider("Shade");choices.clear();
-                    const auto& selected=originals->variants[original_index];
-                    for(size_t i=0;i<count;++i) {
-                        const auto& shade=originals->variants[i];
-                        if(shade.original_shell!=selected.original_shell) continue;
-                        bool available=false;
-                        try {available=original_shade_available(pc,shade);} catch(...) {}
-                        choices.push_back({shade.id,shade.original_shade+(available?"":" (locked)"),available?wear_original(i):Json{}});
-                    }
-                    choice_rows(choices,selected.id);
-                    note("Shades use this save's unlocks. Your equipped shell and progression stay the same.");
-                }
                 direction_hint(true,"Choose a shell");
                 action_button("accept","Wear",rows_[2].accept,3,!rows_[2].accept.is_null());
+                if(original_worn) action_button("secondary","Choose shade",rows_[2].secondary,4);
             }
         } else {
             const auto& outfit=*ordered[row_-appearance_rows];
@@ -758,6 +747,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const auto face=catalog.facial_match(worn->id,selection->second.variant);
             const bool has_face=face.rig || !custom.expression.empty();
             const int face_row=ground_row+1;
+            std::vector<Choice> expressions{{"","Original face",{{"action","expression"},{"expression",""}}}};
+            size_t expression_index=0;
+            if(face.rig) for(const auto& expression:face.rig->expressions) {
+                if(expression.id==custom.expression) expression_index=expressions.size();
+                expressions.push_back({expression.id,expression.name,{{"action","expression"},{"expression",expression.id}}});
+            }
             row_=std::clamp(row_,0,has_face?face_row:ground_row);
             auto swatch_of=[&](const Control& c) {
                 auto v=values.contains(c.id)?values.at(c.id):c.value;
@@ -868,15 +863,18 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 section("Face");
                 const auto* expression=face.rig?face.rig->find(custom.expression):nullptr;
                 row_look.value=custom.expression.empty()?"Original":expression?expression->name:"Unavailable";
-                row(face_row,"Facial Expression",{{"action","ui_browse_expressions"}});
+                row(face_row,"Facial Expression",expressions.front().action,
+                    expressions[(expression_index+expressions.size()-1)%expressions.size()].action,
+                    expressions[(expression_index+1)%expressions.size()].action);
             }
             const auto& entry=entries[std::min(row_,ground_row-1)];
             if(has_face && row_==face_row) {
-                detail("Facial Expression",worn->name,"Choose an expression for this outfit. Original restores its original face. Saved in profiles.");
+                detail("Facial Expression",worn->name,"Select an expression below, or use Left / Right to cycle. Original restores its original face. Saved in profiles.");
                 const auto status=appearance.expression_status();
                 if(!status.value("reason",std::string{}).empty()) note(status.at("reason").get<std::string>());
-                action_button("accept","Choose expression",{{"action","ui_browse_expressions"}},3);
-                action_button("secondary","Restore original face",{{"action","expression"},{"expression",""}},4,!custom.expression.empty());
+                choice_rows(expressions,custom.expression);
+                direction_hint(true,"Cycle expression");
+                action_button("accept","Restore original face",expressions.front().action,3,!custom.expression.empty());
             } else if(row_==ground_row) {
                 // placement() drew the details window
             } else if(row_==0) {
@@ -1574,15 +1572,29 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         native_search_query_.clear(); dirty_=true;
         return {};
     }
-    if(name=="ui_browse_expressions" && catalog_ && appearance_) {
+    if(name=="ui_browse_shades" && catalog_ && appearance_) {
         const auto selected=state.selections.find(appearance_selection_key(state,*catalog_,appearance_->shell));
-        if(selected==state.selections.end()) return {};
-        const auto face=catalog_->facial_match(selected->second.outfit,selected->second.variant);
-        Json choices=Json::array({{{"id",""},{"label","Original face"}}});
-        if(face.rig) for(const auto& expression:face.rig->expressions)
-            choices.push_back({{"id",expression.id},{"label",expression.name}});
-        native_options_.reset(choices);native_picker_=true;
-        native_picker_kind_="expression";native_picker_title_="Facial Expressions";
+        if(selected==state.selections.end() || selected->second.outfit!=original_shells_id) return {};
+        const Outfit* originals=nullptr;
+        for(const auto& outfit:catalog_->outfits) if(outfit.id==original_shells_id) originals=&outfit;
+        if(!originals) return {};
+        const Variant* current=nullptr;
+        for(const auto& variant:originals->variants) if(variant.id==selected->second.variant) current=&variant;
+        if(!current) return {};
+        Json choices=Json::array();
+        size_t current_index=0;
+        for(const auto& shade:originals->variants) {
+            if(shade.original_shell!=current->original_shell) continue;
+            bool available=false;
+            try {available=original_shade_available(controller_.Get(),shade);} catch(...) {}
+            if(!available) continue;
+            if(shade.id==current->id) current_index=choices.size();
+            choices.push_back({{"id",originals->id+"/"+shade.id},{"label",shade.original_shade}});
+        }
+        native_options_.reset(choices);
+        native_options_.selected=current_index;
+        native_picker_=true;native_picker_title_="Choose shade";
+        native_picker_kind_="npc";native_picker_target_.clear();
         native_search_query_.clear();dirty_=true;return {};
     }
     if(name=="ui_browse_templates" && catalog_ && appearance_) {
@@ -1648,9 +1660,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         const auto val=native_options_.value();
         if(val.is_null()) return {};
         native_picker_=false; dirty_=true;
-        if(native_picker_kind_=="expression") {
-            return {{"action","expression"},{"expression",val}};
-        } else if(native_picker_kind_=="outfit") {
+        if(native_picker_kind_=="outfit") {
             const std::string outfit_id=val.get<std::string>();
             std::string variant_id;
             if(catalog_) for(const auto& o:catalog_->outfits) if(o.id==outfit_id && !o.variants.empty()) { variant_id=o.variants.front().id; break; }
