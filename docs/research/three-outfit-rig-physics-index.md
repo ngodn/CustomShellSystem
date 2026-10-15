@@ -1,6 +1,6 @@
 # Three-outfit rig and physics research index
 
-- [Genessa facial source replay](2026-10-15-genessa-facial-source-replay.md): both facial packets reproduce byte-for-byte, 39 retained inputs match, and the installed facial geometry/morph comparison passes. Full assembly and Blender-source chains remain separate.
+- [Genessa facial source replay](2026-10-15-genessa-facial-source-replay.md): five Blender authoring stages regenerate accepted facial data, allowing only verified preview provenance changes. Both final W3 packets are byte-exact; twelve corruption controls, the 39-input audit and installed facial geometry/morph checks pass. Whole-outfit source and assembly remain separate.
 
 - [Genessa ability interruption](2026-10-15-shell-ability-interruption.md): all twenty outfit/clip cases pass early playback release, both Stray clones, cleanup and restoration. Forty raw native activation observations are verified, seven corrupted records rejected, and original Peony/settings/resources/view restored by a final read-only check.
 

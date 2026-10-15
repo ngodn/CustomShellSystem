@@ -1,10 +1,12 @@
 # Three-outfit implementation status
 
-**October 15, Genessa facial inputs reproduce exactly:** both accepted facial
-packets match the retained recipe output byte-for-byte. Thirty-nine retained
-inputs match, including original W3 meshes and the editor module. The installed
-facial geometry/morph comparison passes again for both variants. No game state,
-core or assets changed. Full assembly and Blender-source provenance remain open.
+**October 15, Genessa facial authoring chain reproduced:** five Blender stages
+regenerate the source surfaces, transfer, articulation, backing and final patch.
+Three data outputs are byte-exact; the other two differ only in the verified
+generated-preview path/hash. Both final W3 packets are byte-exact. Twelve corrupted
+records are rejected. This extends the 39-input module/source audit and installed
+facial geometry/morph comparison. No game state, core or assets changed. Whole-outfit
+source, namespace/cloth assembly and remaining rig/material provenance stay open.
 [Evidence](../research/2026-10-15-genessa-facial-source-replay.md).
 
 **October 15, twenty Genessa ability interruptions pass:** Iris Out and Come
