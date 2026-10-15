@@ -21,8 +21,8 @@ The withdrawn October 12 Eve/beta.12 rehearsal has moved to
 Future delivery updates must refresh the matching `dist` BBCode too.
 
 New features appear first with actual game screenshots. Fixes and improvements
-have no screenshots. Commander White currently contains fixes and improvements
-only. Images are uploaded separately to the `media/css-v1.0.0` Git branch; code,
+have no screenshots. Commander White adds belt physics, facial controls and
+52 additional idles. Images are uploaded separately to the `media/css-v1.0.0` Git branch; code,
 release tags and Nexus publication are not part of that upload.
 
 The shared-assets final metadata, archives and remaining release gates still
@@ -61,4 +61,31 @@ The exact recipe, relocation record and retained versioned manifest are under
 `work/three-outfit-rig-physics/stable-dist-20261015`. Disposable staging copies
 were removed after verification. The initial cross-device hard-link failure
 is retained in the log; the completed recipe uses a cross-device copy fallback.
-CSS/shared/Genessa/CW final archives and the overall goal remain unfinished.
+The current Genessa, CW and combined Shared Assets candidates are also packaged
+under dist. Their cooked data matches the accepted installation. The combined
+catalog check passes 1,545 checks. The CSS runtime archive and the overall goal
+remain unfinished.
+
+## Public-release comparison
+
+Classify changes against CSS beta.11, Eve 1.4.0, Unholy Genessa 0.2.0 and
+Commander White 0.0.6-dev. Unreleased trial corrections are not public bug fixes.
+Facial Expression selection and synchronized facial playback are additions.
+
+The current shared library has 60 idle choices. The released Eve 1.4.0 manifest
+has eight: Eve Default and seven numbered Eve idles (702, 703, 704, 705, 706,
+708, 713). Those eight remain in the current library, so the addition is exactly
+52 idle animations. Public notes use the count, without naming example clips.
+
+For the NPC addition, the user requests Merrick as the feature image. Show
+Use NPC / Enemy selected, Merrick selected, and his face clearly in frame.
+The first Merrick capture is rejected because it crops off his head.
+
+Merrick now replaces Droeg in the CSS post, with Use NPC / Enemy and Merrick
+selected. The final capture preserves the current Merrick appearance and saved
+settings and closes CSS afterward. The first two framing retries stopped before
+opening CSS after detecting world movement. No gameplay inputs were sent.
+
+Merrick, CW expressions and the idle-animation list were uploaded in media commit
+`1f777697ad6fb93f9cfbcf4867fa677cd7ea0eca`. All three raw URLs were downloaded and
+matched to the captured bytes. Receipt: `upload-new-features.json`.
