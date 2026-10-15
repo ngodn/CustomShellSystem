@@ -31,6 +31,9 @@ Full outfit Blender-source reproduction, intermediate namespace/cloth assembly,
 remaining rig/material provenance and runtime/performance coverage remain
 separate requirements. The earlier facial-preservation record already documents
 the permitted oral topology additions; this replay does not change their design.
+The later [package-lineage audit](2026-10-15-genessa-package-lineage.md) verifies
+the retained namespace/cloth/final-hair stages against the installed trio without
+a new cook or package rebuild.
 
 ## Blender source through final packets
 

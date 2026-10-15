@@ -1,5 +1,13 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, Genessa installed package lineage verified:** 1,769 retained files
+match, connecting namespace inputs, the four-mesh cloth overlay and the later
+two-graph hair update to the current installed trio. The final overlay preserves
+all 261 non-graph payloads. Archived graph and 22 metadata readbacks compare
+successfully. No game state or assets changed. This is a retained-artifact audit;
+fresh rebuild, whole-outfit authoring and remaining release gates stay open.
+[Evidence](../research/2026-10-15-genessa-package-lineage.md).
+
 **October 15, Genessa facial authoring chain reproduced:** five Blender stages
 regenerate the source surfaces, transfer, articulation, backing and final patch.
 Three data outputs are byte-exact; the other two differ only in the verified

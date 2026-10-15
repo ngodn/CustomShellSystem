@@ -65,8 +65,11 @@ Accepted observations apply to their recorded test scope, not every variant.
   hashes and current installed facial geometry/morph comparisons pass. Five
   Blender authoring stages now also regenerate the facial data, allowing only
   the verified new preview provenance; both final packets remain byte-exact.
-  Whole-outfit source, namespace/cloth assembly and remaining rig/material
-  provenance remain open.
+  The [installed Genessa package lineage](../research/2026-10-15-genessa-package-lineage.md)
+  now verifies 1,769 retained files through the namespace, cloth and final hair
+  stages, with exact installed trio hashes and 261 preserved non-graph payloads.
+  Whole-outfit source reproduction, fresh rebuild and remaining rig/material
+  authoring provenance remain open; retained assembly identities now pass.
 - Finish the remaining runtime checks and other non-deferred defects. Preserve accepted
   belt/skirt motion, Genessa cloth and Peony motion/design; complete their separate
   regression and performance requirements without reopening accepted minor flaws.
