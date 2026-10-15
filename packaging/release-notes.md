@@ -1,4 +1,4 @@
-### CSS 1.0.0 (unreleased)
+### CSS 1.0.0
 
 #### Added
 

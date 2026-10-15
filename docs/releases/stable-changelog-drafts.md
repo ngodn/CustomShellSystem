@@ -1,7 +1,7 @@
-# Stable changelog drafts
+# Stable release changelogs
 
-These four BBCode files are drafts for the coordinated stable release, not an
-upload-ready release declaration:
+These four BBCode files accompany the coordinated stable release approved by
+the user on October 16:
 
 - [CSS v1.0.0](css-v1.0.0.bbcode), including Shared Assets information in the same post.
 - [Eve v1.5.0](eve-v1.5.0.bbcode).

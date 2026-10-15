@@ -1,5 +1,16 @@
 # Stable release and bug audit
 
+## October 16: release accepted by the user
+
+The user explicitly ended further validation and requested release now. Ship the
+accepted CSS 1.0.0, Shared Assets 1.0.0, Eve 1.5.0, Unholy Genessa 0.3.0 and
+Commander White 0.1.0. No further sunlight captures or gameplay checks are
+release requirements. Remaining research and unperformed checks carry forward
+to v1.0.1; they are not recorded as passed. Existing specific deferrals and
+known limitations remain documented. Sunlight shadows stays optional, with
+Default (game) unchanged. This decision supersedes earlier open release gates.
+
+
 Updated 2026-10-15. Retains the user's October 12 release-scope correction.
 
 **Not release-ready.** Targets remain CSS v1.0.0, Eve v1.5.0, Unholy Genessa
