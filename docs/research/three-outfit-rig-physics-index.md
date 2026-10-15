@@ -1,5 +1,7 @@
 # Three-outfit rig and physics research index
 
+- [Stable runtime review](2026-10-15-stable-runtime-review.md): independent reviews found and fixed missing mirrored-profile preflight and developer trial cleanup issues. Host/Python/archived-profile checks and both Windows builds pass; candidates are not installed.
+
 - [CW baseline sources](2026-10-15-cw-baseline-sources.md): 1,622 retained files connect 172 editable assets and preserved native inputs to all 413 baseline payloads and the installed repair chain. All 78 textures and two compiled body graphs replay exactly; duplicate outputs removed. No new cook or game changes.
 
 - [Twenty parry interruptions](2026-10-15-outfit-parry-interruption.md): both facial clips release on native Q parry across all ten variants in Stray. Forty raw native observations, six rejected controls and final read-only restoration pass. Incoming-hit/riposte/damage coverage is separate.

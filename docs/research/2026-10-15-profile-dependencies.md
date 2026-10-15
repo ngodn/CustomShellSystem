@@ -98,3 +98,13 @@ explanation of the user's separate Stray/Faithful cross-save report.
 The full release goal remains active. Broader profile/save migration, actual
 missing-provider/reinstall lifecycle, form transitions and the other release
 gates are not closed by these results.
+
+
+## Later mirrored-provider review
+
+The [stable runtime review](2026-10-15-stable-runtime-review.md) found that the
+mirrored selection resolver could skip a missing living-shell provider before
+this preflight. The installed core still has that gap. Commit `ac62655` fixes
+it, with remembered/inferred Stray source, fallback, disabled-mirror and
+reinstall regressions. The compiled candidate awaits guarded activation and
+normal live profile checks; direct-shell acceptance above remains historical.

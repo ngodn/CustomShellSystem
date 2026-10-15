@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, runtime review fixes built:** independent review found a missing
+mirrored-provider preflight bypass and unsafe timed recreation in a developer
+reference-pose probe. Both are fixed in source and pass follow-up static review.
+All 26 host suites, 83 Python tests, archived profiles and both Windows builds
+pass. Candidates are retained, not installed; current game/core/state are unchanged.
+[Evidence and next activation](../research/2026-10-15-stable-runtime-review.md).
+
 **October 15, CW baseline sources verified:** 1,622 retained file hashes connect
 172 editable assets, original materials/textures and rig outputs to all 413
 baseline payloads and the installed repair chain. Fresh relocation reproduces
