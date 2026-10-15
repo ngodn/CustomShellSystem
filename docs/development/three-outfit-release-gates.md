@@ -81,8 +81,12 @@ Accepted observations apply to their recorded test scope, not every variant.
   [CW's accepted repair lineage](../research/2026-10-15-cw-repair-lineage.md)
   now verifies 578 retained files through hair, ankle, belt and walking stages.
   The installed permanent walk preserves all 445 other payloads, and all nine
-  renamed assets match the accepted decoded trial. Original base-asset source
-  coverage remains distinct from these verified repair layers.
+  renamed assets match the accepted decoded trial. The
+  [CW original baseline](../research/2026-10-15-cw-baseline-sources.md) now also
+  verifies 1,622 files, 172 editable sources and all 413 baseline payloads.
+  Fresh relocation reproduces the 78 textures and two preserved body graphs
+  exactly. CW baseline and repair provenance are accounted for; coordinated
+  final artifact provenance and runtime requirements remain open.
 - Finish the remaining runtime checks and other non-deferred defects. Preserve accepted
   belt/skirt motion, Genessa cloth and Peony motion/design; complete their separate
   regression and performance requirements without reopening accepted minor flaws.

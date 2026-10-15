@@ -1,5 +1,12 @@
 # Goal: Eve, Unholy Genessa and Commander White rig and physics repair
 
+**October 15, CW baseline sources verified:** 1,622 retained file hashes connect
+172 editable assets, original materials/textures and rig outputs to all 413
+baseline payloads and the installed repair chain. Fresh relocation reproduces
+78 textures and both preserved compiled body graphs exactly. Historical tool
+changes are recorded; no fresh cook or game acceptance is claimed.
+[Evidence](../research/2026-10-15-cw-baseline-sources.md).
+
 **October 15, twenty parry interruptions pass:** both facial clips release on
 native Q parry across all ten release appearances in Stray. Forty raw native
 observations and six negative controls verify the result. Peony, original idle,
