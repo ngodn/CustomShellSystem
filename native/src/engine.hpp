@@ -34,7 +34,7 @@
 #include "astral_lifecycle.hpp"
 #include "performance_session.hpp"
 #include "animation_trace.hpp"
-#include "hand_support.hpp"
+#include "hand_support_catalog.hpp"
 
 namespace css {
 fs::path engine_content_directory();
@@ -92,6 +92,8 @@ public:
 };
 class Appearance;
 class HandSupport {
+    std::optional<hand_support::Catalog> catalog_;
+    std::string catalog_error_;
     WeakObject component_, instance_, rig_, candidate_;
     WeakObject carry_weapon_;
     AssetLoadRoots roots_;
@@ -103,6 +105,7 @@ class HandSupport {
     bool busy_=false, enabled_=false;
     std::string state_="inactive";
 public:
+    std::string configure(const fs::path& path);
     void sync(RC::Unreal::UObject* component,bool enabled,RC::Unreal::UObject* pawn);
     void release();
     Json status() const;
@@ -963,6 +966,7 @@ public:
     void sync_overlay_effects();
     void sync_attachments();
     void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz
+    std::string configure_hand_support(const fs::path& path) {return hand_support_.configure(path);}
     void sync_hand_support();
     Json hand_support_status() const { return hand_support_.status(); }
     // MISC visibility. `set_misc_rules` copies the player's choices in; `sync_misc` re-hides

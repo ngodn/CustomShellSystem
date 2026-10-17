@@ -1,5 +1,19 @@
 # Current work queue
 
+## October 17: hand-support catalog, CSS 1.0.1
+
+CSS 1.0.1 loads `catalog/hand-support.json` once at startup, following the
+existing runtime catalog pattern. It owns the exact bindings, weapon IDs/classes,
+15 finger profiles, 25 grips, output-bone lists and carry ranges/blend settings.
+All values match the accepted measured baseline exactly. Outfit/weapon bindings
+and calibration values are data; the solver and rig interface remain code.
+Malformed or missing catalogs disable hand support with a diagnostic.
+[Authoring and schema](modding/hand-support.md).
+
+CSS 1.0.1 remains unpublished. Replace its local archive and installation with
+this catalog build under `dist/v1.0.1`. Shared Assets 1.0.1 and outfit packages
+are unchanged. Keep the game on workspace 3 for testing. No online publication.
+
 ## October 17: bundle shoulder rigs in Shared Assets
 
 The user then requested local release archives under `dist` and installation

@@ -9,7 +9,7 @@ Installation
 4. Install CSS outfit packages separately under MortalShell2/Content/Paks/~mods/.
    Install the matching CSS Shared Assets download there for Peony, shared
    animations, facial playback, customized Genessa doubles and shoulder support.
-   CSS 1.0.1 shoulder support requires CSS Shared Assets 1.0.1.
+   Shoulder support requires CSS Shared Assets 1.0.1 or later.
    Remove CSS_HandSupport_P if you installed the earlier shoulder test package.
    Replace CSS_SharedAssets_P and remove the superseded CSS_AstralSharedAssets_P
    and CSS_LocomotionSharedAssets_P folders if present. Keep one shared pack.
@@ -68,6 +68,9 @@ as needed. catalog/npc-appearances.css.json is the Use NPC / Enemy roster; it is
 ordinary JSON you may edit. catalog/replacement-targets.json is the folder table
 Use Non-CSS Mod reads installed replacement mods against; keep it as shipped.
 The rest of catalog/ is optional.
+catalog/hand-support.json supplies shoulder rig bindings and measured grips.
+CSS reads it once at startup. Restart the game after editing it. A missing or
+invalid file disables shoulder support and is reported in the loader log.
 CSS starts with no selected outfit. Select one in the wardrobe to enable it.
 A previous valid state is kept as state/state.json.bak after settings change.
 

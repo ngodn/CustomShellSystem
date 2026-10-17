@@ -4,8 +4,6 @@
 #include "physics_presets.hpp"
 #include "skeleton_compatibility.hpp"
 #include "hand_support.hpp"
-#include "hand_support_targets.hpp"
-#include "hand_support_grips.hpp"
 #include "recovery.hpp"
 #include "misc_attachment.hpp"
 #include "astral_adapter.hpp"

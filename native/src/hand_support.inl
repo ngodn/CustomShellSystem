@@ -94,15 +94,15 @@ void grip_reference(UObject* rig,const hand_support::Grip& grip) {
     write(L"Translation",L"Vector",grip.translation.data(),3);
     constexpr double unit_scale[]={1.,1.,1.};write(L"Scale3D",L"Vector",unit_scale,3);
 }
-std::pair<hand_support::CarryInput,UObject*> sample(UObject* component,UObject* pawn,UObject* rig,bool enabled) {
+std::pair<hand_support::CarryInput,UObject*> sample(UObject* component,UObject* pawn,UObject* rig,bool enabled,const hand_support::Catalog& catalog) {
     hand_support::CarryInput input;input.enabled=enabled;
     if(!enabled || !pawn || read<UObject*>(pawn,L"Mesh")!=component) return {input,nullptr};
     auto* weapons=read<UObject*>(pawn,L"WeaponsComponent");
     if(!weapons) return {input,nullptr};
     Call in_hand(weapons,L"GetWeaponInHand",1);in_hand.run();auto* weapon=in_hand.get<UObject*>();
     if(!weapon) return {input,nullptr};
-    input.weapon=hand_support::weapon_class(narrow(weapon->GetClassPrivate()->GetPathName()));
-    if(input.weapon==hand_support::Weapon::none) return {input,weapon};
+    input.weapon=catalog.weapon_class(narrow(weapon->GetClassPrivate()->GetPathName()));
+    if(input.weapon.empty()) return {input,weapon};
     auto* root=read<UObject*>(weapon,L"RootComponent");
     auto* hidden=checked(weapon->GetClassPrivate(),L"bHidden");
     if(!hidden->IsA<FBoolProperty>()) throw std::runtime_error("Weapon visibility layout mismatch");
@@ -179,7 +179,7 @@ void copy_inputs(UObject* instance,UObject* rig,const Inputs& inputs) {
         else destination->CopyCompleteValue(to,from);
     }
 }
-void expand_output(void* node,UScriptStruct* type,hand_support::Family family) {
+void expand_output(void* node,UScriptStruct* type,const std::vector<std::string>& required) {
     auto* property=checked(type,L"OutputBonesToTransfer");
     if(!property->IsA<FArrayProperty>()) throw std::runtime_error("Hand output filter is not an array");
     auto* array=static_cast<FArrayProperty*>(property);
@@ -196,12 +196,6 @@ void expand_output(void* node,UScriptStruct* type,hand_support::Family family) {
     if(values.Num()<0 || values.Num()>512) throw std::runtime_error("Hand output filter exceeds bound");
     // An empty filter already transfers every bone.
     if(values.Num()==0) return;
-    std::vector<std::string> required;
-    for(int side=0;side<(family==hand_support::Family::commander?2:1);++side)
-        for(const auto right:hand_support::right_bones) {
-            std::string name(right);if(side)name.back()='l';required.push_back(std::move(name));
-        }
-    for(const auto bone:hand_support::arm_bones) required.emplace_back(bone);
     for(const auto& bone_name:required) {
         const FName wanted(wide(bone_name).c_str());
         bool found=false;
@@ -243,13 +237,21 @@ void HandSupport::release() {
     carry_weapon_=nullptr;carry_.reset();last_tick_=0;moving_phase_=0.;
     roots_.release();node_offset_=-1;enabled_=false;state_="inactive";
 }
+std::string HandSupport::configure(const fs::path& path) {
+    release();catalog_.reset();catalog_error_.clear();
+    try {catalog_=hand_support::Catalog::load(path);}
+    catch(const std::exception& error) {catalog_error_=error.what();}
+    return catalog_error_;
+}
 void HandSupport::sync(UObject* component,bool enabled,UObject* pawn) {
+    if(!catalog_) {state_="catalog unavailable";return;}
+    const auto& catalog=*catalog_;
     if(busy_) return;
     busy_=true;
     struct Reset {bool& flag;~Reset(){flag=false;}} reset{busy_};
     auto* instance=post_process_instance(component);
     auto* mesh=component?mesh_asset(component):nullptr;
-    const auto* binding=mesh && instance?hand_support::match(narrow(mesh->GetPathName()),narrow(instance->GetClassPrivate()->GetPathName())):nullptr;
+    const auto* binding=mesh && instance?catalog.match(narrow(mesh->GetPathName()),narrow(instance->GetClassPrivate()->GetPathName())):nullptr;
     if(component_.Get()!=component || instance_.Get()!=instance || !binding) release();
     if(!binding) return;
     if(!enabled && !candidate_.Get()) {state_="default game";return;}
@@ -288,7 +290,7 @@ void HandSupport::sync(UObject* component,bool enabled,UObject* pawn) {
         if(!original || (narrow(original->GetClassPrivate()->GetPathName())!=binding->original &&
                          narrow(original->GetClassPrivate()->GetPathName())!=binding->candidate))
             throw std::runtime_error("Hand rig changed during loading");
-        hand_runtime::expand_output(node,type,binding->family);
+        hand_runtime::expand_output(node,type,binding->output_bones);
         if(!hand_runtime::object(node,default_field))
             hand_runtime::set_object(node,default_field,hand_runtime::object(node,class_field));
         hand_runtime::set_object(node,class_field,candidate);
@@ -309,14 +311,15 @@ void HandSupport::sync(UObject* component,bool enabled,UObject* pawn) {
         if(rig_.Get()!=rig) inputs_=hand_runtime::input_bindings(node,type,instance,rig);
         hand_runtime::copy_inputs(instance,rig,inputs_);
         rig_=rig;
-        const auto [input,weapon]=hand_runtime::sample(component,pawn,rig,enabled);
+        auto [input,weapon]=hand_runtime::sample(component,pawn,rig,enabled,catalog);
         if(carry_weapon_.Get()!=weapon) {carry_.reset();carry_weapon_=weapon;}
         const auto now=GetTickCount64();
         const double seconds=last_tick_ && now>=last_tick_?double(now-last_tick_)/1000.:0.;last_tick_=now;
-        const auto* profile=hand_support::profile(binding->family,input.weapon);
-        const auto* grip=hand_support::grip(binding->variant,input.weapon);
-        const auto alpha=carry_.update(input,seconds);
-        if(input.supported()) moving_phase_=hand_support::moving_phase(input.prop_local_z);
+        const auto* profile=catalog.profile(binding->finger_profile,input.weapon);
+        const auto* grip=catalog.grip(binding->grip_profile,input.weapon);
+        input.enabled=input.enabled && profile && grip;
+        const auto alpha=carry_.update(input,seconds,catalog.carry());
+        if(input.supported(catalog.carry())) moving_phase_=hand_support::moving_phase(input.prop_local_z,catalog.carry());
         if(profile && grip) {
             hand_runtime::targets(rig,*profile);
             hand_runtime::grip_reference(rig,*grip);
@@ -327,7 +330,7 @@ void HandSupport::sync(UObject* component,bool enabled,UObject* pawn) {
     } catch(...) {carry_.reset();state_="deferred";throw;}
 }
 Json HandSupport::status() const {
-    return Json{{"state",state_},{"enabled",enabled_},{"carry_alpha",carry_.value()},{"moving_phase",moving_phase_},
+    return Json{{"catalog_loaded",catalog_.has_value()},{"catalog_error",catalog_error_},{"state",state_},{"enabled",enabled_},{"carry_alpha",carry_.value()},{"moving_phase",moving_phase_},
                 {"rig",rig_.Get()?narrow(rig_.Get()->GetPathName()):""}};
 }
 void Appearance::sync_hand_support() {

@@ -363,6 +363,8 @@ struct Core {
     explicit Core(const CssHost& h) : host(h), root(h.root), package_root(package_directory()), catalog(load_catalog(package_root)), message(wardrobe_startup_message(catalog.outfits.size())) {
         player_recovery.watch();
         inventory.assets(root);
+        if(const auto error=appearance.configure_hand_support(root/"catalog/hand-support.json"); !error.empty())
+            host.log(("Hand support catalog unavailable: "+error).c_str());
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
         std::error_code trace_error;
@@ -1541,6 +1543,8 @@ struct Core {
         status["socket_fit"]=appearance.fit_diagnostics();
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
+        status["hand_support"]=appearance.hand_support_status();
+        status["hand_support"]["error"]=hand_support_error;
         status["overlay_error"]=overlay_error;
         status["astral"]=astral.diagnostics();
         status["astral"]["modes"]=state.doubles.json();

@@ -41,6 +41,23 @@ class ReleaseTests(unittest.TestCase):
         self.write()
         self.assertEqual(verify(self.archive)['version'], '0.1.1')
 
+    def test_catalog_release_requires_hand_support_payload(self):
+        version = '1.0.1'
+        self.files['cores/css_core-' + version + '.dll'] = self.files.pop('cores/css_core-0.1.1.dll')
+        self.files['README.txt'] = ('MSII - CSS v' + version).encode()
+        self.files['core.json'] = json.dumps({'abi': 1, 'file': 'css_core-' + version + '.dll'}).encode()
+        self.files['catalog/hand-support.json'] = (Path(__file__).resolve().parents[1] /
+                                                  'packaging/catalog/hand-support.json').read_bytes()
+        del self.files['release.json']
+        self.files['release.json'] = json.dumps({'version': version, 'interface': 'inventory',
+            'files': {p: digest(data) for p, data in self.files.items()}}).encode()
+        self.write()
+        self.assertEqual(verify(self.archive)['version'], version)
+        del self.files['catalog/hand-support.json']
+        self.write()
+        with self.assertRaisesRegex(ValueError, 'unexpected or missing'):
+            verify(self.archive)
+
     def test_alpha_archive_uses_matching_versioned_core(self):
         version = '1.0.0-alpha.1'
         self.files['cores/css_core-' + version + '.dll'] = self.files.pop('cores/css_core-0.1.1.dll')

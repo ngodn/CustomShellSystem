@@ -2,6 +2,13 @@
 
 ## Current result
 
+CSS 1.0.1 loads measured calibration and mesh/weapon bindings from
+`catalog/hand-support.json`. Seven bindings, five weapon classes, 15 finger
+profiles, 25 grip transforms and carry settings match the accepted measurements
+exactly. The solver and cooked rigs are unchanged. See
+[catalog authoring](../modding/hand-support.md). This release remains local and
+unpublished while the catalog build is installed and tested.
+
 October 17: CSS 1.0.1 and Shared Assets 1.0.1 are built under `dist/v1.0.1`
 and installed from those exact archives for local testing. Nothing is published.
 The three shoulder rigs are consolidated into Shared Assets; the standalone
