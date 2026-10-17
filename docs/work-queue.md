@@ -40,6 +40,12 @@ The earlier resume timeout was not evidence of a game failure. Shader compilatio
 was observed directly on the final launch; the existing native menu functions
 continued the save after a black menu screen. No additional pose sweep was run.
 
+The user subsequently requested uploading the supplied Vista images to the
+repository and placing them beside the Vista feature description. Completed on
+branch `docs/vista-rest-1.0.1-media`, with two verified raw image URLs pinned to
+`9b85d80`. Source and dist BBCode match, and the separate bottom image block is
+removed. This publication covers the screenshots and changelog only.
+
 ## October 17: Commander White blood and Peony revealed skin
 
 CW 0.1.1 and compatible Shared Assets 1.0.1 metadata are built and installed.

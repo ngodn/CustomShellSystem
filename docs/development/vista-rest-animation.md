@@ -142,5 +142,8 @@ and the loaded world was checked visually. This records successful save loading,
 not a claim that the black menu screen was diagnosed or repaired.
 
 `dist/DELIVERY.md` links all five packages and their BBCode changelogs. The two
-user-provided Vista images are preserved in `dist/v1.0.1/media/`; the BBCode image
-placeholders require the eventual host URLs. No online upload was performed.
+user-provided Vista images are preserved in `dist/v1.0.1/media/`. At the user's
+subsequent request, both were uploaded on branch `docs/vista-rest-1.0.1-media`.
+The BBCode uses verified raw image URLs pinned to image commit `9b85d80`, placed
+directly beneath the Vista feature description. Both responses are HTTP 200 and
+byte-identical to the supplied images. Release ZIPs remain local.
