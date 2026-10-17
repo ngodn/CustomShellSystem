@@ -2,17 +2,25 @@
 
 ## Current result
 
-October 17: the user requested local CSS 1.0.1 and Shared Assets 1.0.1 release
-archives and installation for testing before any public release. The three
-shoulder rigs are consolidated into Shared Assets; outfit packages do not
-change. The R7 validation below is the accepted source and asset baseline.
-Exact release installation evidence is recorded separately under
-`work/shoulder-weapon-hold/release-install-1.0.1`.
+October 17: CSS 1.0.1 and Shared Assets 1.0.1 are built under `dist/v1.0.1`
+and installed from those exact archives for local testing. Nothing is published.
+The three shoulder rigs are consolidated into Shared Assets; the standalone
+hand provider is backed up outside `~mods`. Outfit packages do not change.
+The release uses annotated local tag `v1.0.1`, commit `ffef9ad`, with developer
+diagnostics and transition tests disabled. All 28 host suites, 14 packaging
+tests, 180 startup checks and the production four-package catalog check pass.
 
-R7 is installed for testing under the user's “Install and test” approval. It
+Steam applied game build 26001001 before launching. The exact release loader
+and core are mapped in the running game on workspace 3, with CSS state unchanged.
+The existing save loads Smert, which has no saved CSS appearance; no appearance
+or shell was changed during this startup check. New-game-build shoulder pose
+and gameplay testing remain for the user. Exact installation and startup
+evidence: `work/shoulder-weapon-hold/release-install-1.0.1`.
+
+The earlier R7 candidate was installed under the user's “Install and test” approval. It
 uses a relaxed thumb/index support pose and fits the right arm to the native
 weapon placement without stretching the arm or moving the weapon in world
-space. The game runs on workspace 3. This is a private candidate for CSS 1.0.1;
+space. Its validation below is the source and asset baseline for CSS 1.0.1;
 released CSS 1.0.0 and the three outfit releases remain closed.
 
 The Windows core builds, all 28 host tests pass, and all three saved rigs pass

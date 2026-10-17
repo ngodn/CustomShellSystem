@@ -9,6 +9,15 @@ The coordinated source pins `shared-assets-1.0.1`, with both shared catalog
 version fields stamped 1.0.1. Remove the isolated hand-support provider during
 installation. Public upload is not part of this step.
 
+Completed: both release ZIPs and checksum files are in `dist/v1.0.1`, built
+from local annotated tag `v1.0.1` at `ffef9ad`. Those exact files are installed;
+the old hand provider is outside `~mods` in a rollback directory. The game
+loads the shipping core on workspace 3 after Steam updated to build 26001001.
+Saved CSS state is unchanged. The save loads Smert without a CSS selection;
+no shell/appearance switch or new pose matrix was performed. User testing
+comes before publication. See `release-install-1.0.1/receipt.json` and the
+dist release status for the exact scope.
+
 The user requested the existing Shared Assets package own the shoulder rigs.
 Built `work/shoulder-weapon-hold/shared-assets-r7/CSS_SharedAssets_P-v1.0.1-candidate.zip`
 with all 291 released packages plus three rigs. All 588 reconstructed files
