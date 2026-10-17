@@ -1104,15 +1104,16 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             }
         }
     } else if(section_==2) {
-        constexpr AnimationSlot slots[]={AnimationSlot::Idle,AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint,AnimationSlot::Beacon};
-        constexpr const char* titles[]={"Idle animation","Walk animation","Jog animation","Sprint animation","Beacon teleport animation"};
+        constexpr AnimationSlot slots[]={AnimationSlot::Idle,AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint,AnimationSlot::Beacon,AnimationSlot::Vista};
+        constexpr const char* titles[]={"Idle animation","Walk animation","Jog animation","Sprint animation","Beacon teleport animation","Vista rest animation"};
         const bool has_variant=worn && catalog.find(worn->id,selection->second.variant);
         const std::string outfit=has_variant?worn->id:"",variant=has_variant?selection->second.variant:"";
-        row_=std::clamp(row_,0,4);
+        row_=std::clamp(row_,0,5);
         std::vector<AnimationMenu> menus;
         const auto target_skeleton=appearance.animation_skeleton();
         const bool native_target=target_skeleton=="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
         const bool native_context=!has_variant && native_target;
+        const bool vista_supported=appearance.has_idle_layer();
         const auto options_for=[&](AnimationSlot slot) {
             auto options=catalog.animation_options(outfit,variant,slot);
             if(!target_skeleton.empty()) std::erase_if(options,[&](const auto& option) {
@@ -1126,11 +1127,14 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             auto menu=animation_menu(options,slot,
                 (has_variant || native_context)?state.animation_choices.find(outfit,variant,slot):nullptr,state.walk_animation=="feminine");
             for(auto& item:menu.items) {
+                if(slot==AnimationSlot::Vista && !vista_supported && item.id!="original") {
+                    item.available=false;item.name+=" (Needs an outfit idle layer)";continue;
+                }
                 const auto option=std::find_if(options.begin(),options.end(),[&](const auto& value){return value.id==item.id;});
                 if(option==options.end() || option->library_identity.empty()) continue;
                 const auto match=resolve_library_animation(catalog.animation_libraries,slot,item.id,
                     catalog.bundled_animation_options(outfit,variant,slot),target_skeleton);
-                const auto loaded=appearance.shared_animation_available(slot,item.id);
+                const auto loaded=appearance.shared_animation_available(animation_source_slot(slot),item.id);
                 if((match.entry && match.candidates.empty()) || (loaded && !*loaded)) {
                     item.available=false;item.name+=" (Unavailable)";
                 }
@@ -1138,14 +1142,15 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             menus.push_back(std::move(menu));
         }
         Json idle_choices=Json::array();
-        for(const auto& item:menus[0].items)
+        const size_t search_menu=row_==5?5:0;
+        for(const auto& item:menus[search_menu].items)
             idle_choices.push_back({{"id",item.id},{"label",item.name}});
         if(idle_options_.options!=idle_choices) {
             idle_options_.reset(idle_choices);
             idle_options_.filter(idle_search_query_);
         }
-        auto step_idle=[&](int direction) {
-            const auto& menu=menus[0];
+        auto step_idle=[&](size_t which,int direction) {
+            const auto& menu=menus[which];
             auto index=menu.selected;
             for(size_t n=0;n<menu.items.size();++n) {
                 index=direction>0?(index+1)%menu.items.size():(index+menu.items.size()-1)%menu.items.size();
@@ -1160,10 +1165,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             return {};
         };
         section("Movement");
-        for(int i=0;i<5;++i) {
+        for(int i=0;i<6;++i) {
             const auto& menu=menus[i];
-            const auto next=choose(slots[i],i==0?step_idle(1):menu.step(1)),previous=choose(slots[i],i==0?step_idle(-1):menu.step(-1));
+            const bool searchable=i==0 || i==5;
+            const auto next=choose(slots[i],searchable?step_idle(i,1):menu.step(1)),previous=choose(slots[i],searchable?step_idle(i,-1):menu.step(-1));
             if(i==4) section("Travel");
+            if(i==5) section("Rest");
             row(i,titles[i],next,previous,next);
         }
         const auto slot=slots[row_];const auto& menu=menus[row_];
@@ -1171,6 +1178,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const auto options=options_for(slot);
         std::string body;
         if(!current.available) body="This saved animation is unavailable. Default is used until the option returns or you choose another.";
+        else if(slot==AnimationSlot::Vista) body=vista_supported?
+            "Choose a pose or animation from the idle library while resting at a vista. Default keeps the game's sitting pose. Your normal idle stays separate.":
+            "Wear a compatible CSS outfit to change the vista resting pose. Default keeps the game's sitting pose.";
         else if(current.id==feminine_animation_id)
             body=slot==AnimationSlot::Idle?"The Cultist Spear Lady's standing pose. Your walking choice stays separate."
                                          :"The Cultist Spear Lady's walk at its authored pace. Your standing pose stays separate.";
@@ -1183,7 +1193,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         detail(titles[row_],has_variant?worn->name:"Movement",body);
         if(has_variant && mod_outfit(worn->id)) note("Shared animations require a compatible rig. Default and the CSS feminine idle and walk remain available.");
         std::vector<Choice> choices;
-        if(slot==AnimationSlot::Idle && panel_open) {
+        if((slot==AnimationSlot::Idle || slot==AnimationSlot::Vista) && panel_open) {
             auto& input=native_take(panel_head_,NativeKind::input);
             native_search_input_=input.extra;
             if(input.value!=idle_search_query_) {
@@ -1990,7 +2000,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         const bool gamepad=read<uint8_t>(prompt,L"InputType")==1;
         if(gamepad!=gamepad_) { gamepad_=gamepad; dirty_=true; }
     }
-    const bool idle_search=section_==2 && row_==0 && !native_picker_ && native_search_input_.Get();
+    const bool idle_search=section_==2 && (row_==0 || row_==5) && !native_picker_ && native_search_input_.Get();
     bool editing_native=false;
     if(native_picker_ || idle_search) if(auto* search=native_search_input_.Get()) {
         try {

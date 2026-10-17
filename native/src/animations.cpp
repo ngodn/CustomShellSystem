@@ -6,7 +6,7 @@
 
 namespace css {
 namespace {
-constexpr const char* SLOT_NAMES[]={"idle","walk","jog","sprint","beacon"};
+constexpr const char* SLOT_NAMES[]={"idle","walk","jog","sprint","beacon","vista"};
 void fields(const Json& value, const std::set<std::string>& allowed) {
     if(!value.is_object()) throw std::runtime_error("Animation entry must be an object");
     for(const auto& [key,_]:value.items()) if(!allowed.contains(key))
@@ -37,7 +37,7 @@ AnimationSet AnimationSet::parse(const Json& value) {
     AnimationSet result;
     for(const auto& [key,list]:value.items()) {
         const auto slot=animation_slot_from_name(key);
-        if(!slot || !list.is_array() || list.size()>64) throw std::runtime_error("Invalid animation slot or option list: "+key);
+        if(!slot || *slot==AnimationSlot::Vista || !list.is_array() || list.size()>64) throw std::runtime_error("Invalid animation slot or option list: "+key);
         auto& options=result.slots[*slot];
         std::set<std::string> ids;
         for(const auto& entry:list) {
@@ -89,6 +89,7 @@ bool animation_choice_matches(const AnimationOption& option,const std::string& c
 }
 ResolvedAnimation resolve_animation(const std::vector<AnimationOption>& options,AnimationSlot slot,
     const std::string& choice,const std::string& weapon) {
+    slot=animation_source_slot(slot);
     if(choice.empty() || choice=="original") return {};
     const auto found=std::find_if(options.begin(),options.end(),[&](const auto& o){return animation_choice_matches(o,choice);});
     if(found==options.end()) return {};
@@ -105,7 +106,7 @@ AnimationMenu animation_menu(const std::vector<AnimationOption>& options,Animati
     const std::string* saved,bool legacy_feminine) {
     AnimationMenu menu;
     menu.items.push_back({"original","Default"});
-    if(slot==AnimationSlot::Walk || slot==AnimationSlot::Idle) menu.items.push_back({feminine_animation_id,"Feminine (CSS)"});
+    if(slot==AnimationSlot::Walk || animation_source_slot(slot)==AnimationSlot::Idle) menu.items.push_back({feminine_animation_id,"Feminine (CSS)"});
     for(const auto& option:options) menu.items.push_back({option.id,option.name});
     const std::string choice=saved?*saved:(slot==AnimationSlot::Walk || slot==AnimationSlot::Idle) && legacy_feminine?feminine_animation_id:"original";
     for(size_t i=0;i<menu.items.size();++i) if(menu.items[i].id==choice) {menu.selected=i;return menu;}
@@ -131,7 +132,7 @@ AnimationChoices AnimationChoices::parse(const Json& value) {
     size_t variant_count=0;
     for(const auto& [outfit,variants]:value.items()) {
         if(outfit=="$native") {
-            if(!variants.is_object() || variants.size()>4) throw std::runtime_error("Invalid native animation choices");
+            if(!variants.is_object() || variants.size()>5) throw std::runtime_error("Invalid native animation choices");
             for(const auto& [key,id]:variants.items()) {
                 const auto slot=animation_slot_from_name(key);
                 if(!slot || *slot==AnimationSlot::Beacon || !id.is_string() || !valid_id(id.get<std::string>()))

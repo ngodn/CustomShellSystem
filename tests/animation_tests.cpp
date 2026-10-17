@@ -189,6 +189,33 @@ int main() {
         const std::string shell="CharacterId.Player.Shell.Genessa";
         choosing.walk_animation="feminine";
         choosing.selections[shell]={"eve","pearl",{}};
+        {
+            auto resting=choosing;
+            const auto& choices=catalog.animation_options("eve","pearl",AnimationSlot::Vista);
+            expect(&choices==&catalog.animation_options("eve","pearl",AnimationSlot::Idle),
+                   "Vista choices diverged from the complete idle list");
+            const auto unset=animation_menu(choices,AnimationSlot::Vista,nullptr,true);
+            expect(unset.items[unset.selected].id=="original","Legacy feminine choice changed Vista without selection");
+            const auto idle_before=resting.animation_choices.get("eve","pearl",AnimationSlot::Idle);
+            set_animation_choice(resting,catalog,shell,"eve","pearl",AnimationSlot::Vista,"relaxed");
+            expect(resting.animation_choices.get("eve","pearl",AnimationSlot::Idle)==idle_before,
+                   "Vista choice changed ordinary idle");
+            expect(resolve_animation(choices,AnimationSlot::Vista,"relaxed").asset==idle[0].clip,
+                   "Vista choice failed to resolve its idle sequence");
+            save_profile_snapshot(resting,"vista");
+            const auto loaded=State::parse(resting.json());
+            expect(loaded.animation_choices==resting.animation_choices &&
+                   loaded.presets.at("vista").animation_choices==resting.animation_choices,
+                   "Vista choice was lost from settings or profiles");
+            set_animation_choice(resting,catalog,shell,"eve","pearl",AnimationSlot::Vista,feminine_animation_id);
+            set_animation_choice(resting,catalog,shell,"eve","pearl",AnimationSlot::Vista,"original");
+            expect(resting.animation_choices.get("eve","pearl",AnimationSlot::Idle)==idle_before,
+                   "Resetting Vista changed ordinary idle");
+            expect(!resting.animation_choices.find("eve","other",AnimationSlot::Vista),
+                   "Vista choice leaked into another variant");
+            auto invalid=definitions;invalid["vista"]=invalid["idle"];
+            rejects([&]{AnimationSet::parse(invalid);});
+        }
         auto menu=animation_menu(catalog.animation_options("eve","pearl",AnimationSlot::Walk),AnimationSlot::Walk,nullptr,true);
         expect(menu.items[menu.selected].id==feminine_animation_id && menu.items.front().name=="Default","Legacy walk menu lost selection or Default label");
         expect(use_feminine_animation(choosing,shell,AnimationSlot::Walk),"Legacy feminine walk lost before explicit choice");

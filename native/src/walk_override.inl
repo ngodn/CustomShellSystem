@@ -184,6 +184,22 @@ std::string Appearance::performance_mesh() const {
     auto* body=component?mesh_asset(component):nullptr;
     return body?narrow(body->GetPathName()):std::string{};
 }
+bool Appearance::vista_resting() const {
+    auto* pawn=observed_pawn_.Get();
+    auto* mesh=pawn?read<UObject*>(pawn,L"Mesh"):nullptr;
+    auto* anim=mesh?read<UObject*>(mesh,L"AnimScriptInstance"):nullptr;
+    if(!anim) return false;
+    Call current(anim,L"GetCurrentActiveMontage",1);current.run();
+    auto* montage=current.get<UObject*>();
+    return montage && is_vista_rest_loop(narrow(montage->GetPathName()));
+}
+bool Appearance::has_idle_layer() const {
+    auto* pawn=observed_pawn_.Get();
+    auto* mesh=pawn?read<UObject*>(pawn,L"Mesh"):nullptr;
+    auto* post=mesh?read<UObject*>(mesh,L"PostProcessAnimInstance"):nullptr;
+    return post && has_field(post,L"CSSIdleEnabled",sizeof(bool)) &&
+           has_field(post,L"CSSIdleSequence",sizeof(UObject*));
+}
 Json SharedAnimationResolver::status() const {
     Json result=Json::object();
     for(size_t i=0;i<slots_.size();++i) {
@@ -556,7 +572,7 @@ void WalkOverride::release() {
 void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     const std::array<std::string,3>& custom_paths,
     const std::string& custom_idle_clip,
-    bool hide_weapons,const std::string& idle_blend_space) {
+    bool hide_weapons,const std::string& idle_blend_space,bool vista_rest) {
     const auto now=GetTickCount64();
     speed_->thread=GetCurrentThreadId();
     const bool custom=std::any_of(custom_paths.begin(),custom_paths.end(),[](const auto& path){return !path.empty();});
@@ -616,9 +632,12 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         if(blocked.get<bool>()) {release();return;}
     }
     Call montage(anim,L"GetCurrentActiveMontage",1);montage.run();
-    if(montage.get<UObject*>()) {release();return;}
+    auto* current_montage=montage.get<UObject*>();
+    if(vista_rest) {
+        if(!current_montage || !is_vista_rest_loop(narrow(current_montage->GetPathName()))) {release();return;}
+    } else if(current_montage) {release();return;}
     Call playing(anim,L"IsAnyMontagePlaying",1);playing.run();
-    if(playing.get<bool>() || gameplay_input_blocked(pawn)) {release();return;}
+    if((playing.get<bool>() && !vista_rest) || gameplay_input_blocked(pawn)) {release();return;}
     UObject* walk_bs=(walk_feminine || idle_feminine)?blendspace(walk_bs_,WALK_BLENDSPACE):nullptr;
     // Asset loads may collect objects. Revalidate ownership before dereferencing
     // any instance captured before the load.
@@ -645,7 +664,8 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         }
     }
     if(!speed_known) {release();return;}
-    const auto gait=gait_selector_.update(speed,walking,sprint_requested,custom,has_acceleration);
+    if(vista_rest && (!std::isfinite(speed) || speed>1.)) {release();return;}
+    const auto gait=vista_rest?AnimationGait::Idle:gait_selector_.update(speed,walking,sprint_requested,custom,has_acceleration);
     if(gait==AnimationGait::None) {release();return;}
     const bool walk_now=gait==AnimationGait::Walk;
     const bool sprinting=gait==AnimationGait::Sprint;
@@ -666,7 +686,11 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
             get_post.run();
             post=get_post.get<UObject*>();
         }
-        if(!custom_idle_blend_.empty()) {
+        if(vista_rest && (!post || !has_field(post,L"CSSIdleEnabled",sizeof(bool)) ||
+                          !has_field(post,L"CSSIdleSequence",sizeof(UObject*)))) {
+            release();throw std::runtime_error("Vista poses need an outfit with an idle animation layer");
+        }
+        if(!custom_idle_blend_.empty() && !vista_rest) {
             want=custom_idle_carrier_.Get();
             if(!want || !custom_idle_asset_.Get()) {release();return;}
             reason="custom idle";

@@ -613,6 +613,7 @@ FacialMatch Catalog::facial_match(const std::string& outfit,const std::string& v
 }
 const std::vector<AnimationOption>& Catalog::animation_options(const std::string& outfit,
     const std::string& variant,AnimationSlot slot) const {
+    slot=animation_source_slot(slot);
     const auto& bundled=bundled_animation_options(outfit,variant,slot);
     if(animation_libraries.empty() || (!(outfit.empty() && variant.empty()) && !find(outfit,variant))) return bundled;
     const auto key=std::make_tuple(outfit,variant,slot);
@@ -621,6 +622,7 @@ const std::vector<AnimationOption>& Catalog::animation_options(const std::string
 }
 const std::vector<AnimationOption>& Catalog::bundled_animation_options(const std::string& outfit,
     const std::string& variant,AnimationSlot slot) const {
+    slot=animation_source_slot(slot);
     static const std::vector<AnimationOption> empty;
     for(const auto& o:outfits) if(o.id==outfit) {
         for(const auto& v:o.variants) if(v.id==variant) {
@@ -657,7 +659,7 @@ bool set_animation_choice(State& state,const Catalog& catalog,const std::string&
     // Validate the enum and the declared option, not just arbitrary save IDs.
     animation_slot_name(slot);
     const auto& options=catalog.animation_options(outfit,variant,slot);
-    if(choice!="original" && !((slot==AnimationSlot::Walk || slot==AnimationSlot::Idle) && choice==feminine_animation_id) &&
+    if(choice!="original" && !((slot==AnimationSlot::Walk || animation_source_slot(slot)==AnimationSlot::Idle) && choice==feminine_animation_id) &&
         std::none_of(options.begin(),options.end(),[&](const auto& option){return animation_choice_matches(option,choice);}))
         throw std::runtime_error("Animation choice is unavailable for this outfit");
     const auto matched=std::find_if(options.begin(),options.end(),[&](const auto& option){return animation_choice_matches(option,choice);});

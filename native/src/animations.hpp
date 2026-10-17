@@ -8,7 +8,10 @@
 
 namespace css {
 inline constexpr const char* feminine_animation_id = "css.feminine";
-enum class AnimationSlot { Idle, Walk, Jog, Sprint, Beacon };
+enum class AnimationSlot { Idle, Walk, Jog, Sprint, Beacon, Vista };
+constexpr AnimationSlot animation_source_slot(AnimationSlot slot) {
+    return slot==AnimationSlot::Vista?AnimationSlot::Idle:slot;
+}
 const char* animation_slot_name(AnimationSlot);
 std::optional<AnimationSlot> animation_slot_from_name(std::string_view);
 

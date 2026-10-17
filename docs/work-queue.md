@@ -1,5 +1,16 @@
 # Current work queue
 
+## October 17: Vista sitting animation and local skin releases
+
+The user requested an in-game inspection of the sitting interaction, a separate
+choice using the full Idle Animation list in CSS 1.0.1 if supported, and all skin
+release ZIPs with BBCode changelogs under `dist`. The live main animation instance
+is playing `A_Shared_Actions_Vista_Sit_Loop_Montage`, establishing the game's
+Vista Sit interaction as the target. Preserve native entry, exit and interaction
+ownership, and keep ordinary idle selection independent. Evidence:
+`work/sitting-animation/`. The release request covers local artifacts; no online
+publication was requested.
+
 ## October 17: Commander White blood and Peony revealed skin
 
 CW 0.1.1 and compatible Shared Assets 1.0.1 metadata are built and installed as

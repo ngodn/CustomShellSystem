@@ -34,7 +34,7 @@ std::string asset(const Json& value,const char* key) {
 }
 AnimationSlot slot(const Json& value) {
     const auto result=animation_slot_from_name(value.get<std::string>());
-    if(!result || *result==AnimationSlot::Beacon)
+    if(!result || *result==AnimationSlot::Beacon || *result==AnimationSlot::Vista)
         throw std::runtime_error("Unsupported shared animation slot");
     return *result;
 }
@@ -242,6 +242,7 @@ std::vector<AnimationOption> merge_library_animation_options(const std::vector<A
 AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibrary>& libraries,
     AnimationSlot requested_slot,const std::string& choice,const std::vector<AnimationOption>& bundled,
     const std::string& target_skeleton,const std::string& weapon) {
+    requested_slot=animation_source_slot(requested_slot);
     if(choice.empty() || choice=="original" || choice==feminine_animation_id) return {};
     const auto legacy=resolve_animation(bundled,requested_slot,choice,weapon);
     const auto aliases=[&](const LibraryAnimation& entry,const LegacyAnimationAlias& alias,

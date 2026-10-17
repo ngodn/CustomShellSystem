@@ -747,7 +747,7 @@ public:
     void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,
                 const std::array<std::string,3>& custom_paths,
                 const std::string& custom_idle_clip={},
-                bool hide_weapons=false,const std::string& idle_blend_space={});
+                bool hide_weapons=false,const std::string& idle_blend_space={},bool vista_rest=false);
     void release();
 };
 // MISC visibility applier. Bounded: it hides only the OWNER ACTORS of accessories found as
@@ -1014,13 +1014,15 @@ public:
     uint64_t shared_animation_revision() const { return shared_animations_.revision(); }
     std::string animation_skeleton() const;
     std::string performance_mesh() const;
+    bool vista_resting() const;
+    bool has_idle_layer() const;
     std::optional<bool> shared_animation_available(AnimationSlot slot,const std::string& choice) const {
         return shared_animations_.available(slot,choice);
     }
     void sync_walk(bool idle_feminine,bool walk_feminine,const std::array<std::string,3>& custom_paths,
-                   const std::string& custom_idle_clip={},bool hide_weapons=false,const std::string& idle_blend_space={}) {
+                   const std::string& custom_idle_clip={},bool hide_weapons=false,const std::string& idle_blend_space={},bool vista_rest=false) {
         if(!performance.active())
-            walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons,idle_blend_space);
+            walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons,idle_blend_space,vista_rest);
     }
     void tick_performance() { performance.tick(observed_pawn_.Get()); }
     std::string performance_unavailable(const Catalog& catalog,const std::string& outfit) const {

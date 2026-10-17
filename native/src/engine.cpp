@@ -5,6 +5,7 @@
 #include "skeleton_compatibility.hpp"
 #include "hand_support.hpp"
 #include "recovery.hpp"
+#include "vista_rest.hpp"
 #include "misc_attachment.hpp"
 #include "astral_adapter.hpp"
 #include "astral_namespace.hpp"

@@ -8,6 +8,7 @@
 #include "performance_request.hpp"
 #include "startup.hpp"
 #include "sunlight_shadows.hpp"
+#include "vista_rest.hpp"
 #include <windows.h>
 #include <atomic>
 #include <chrono>
@@ -246,6 +247,8 @@ struct Core {
         const auto started=std::chrono::steady_clock::now();
         try {
             appearance.walk.walk_mod_active(root.parent_path());
+            const bool vista_rest=appearance.vista_resting();
+            const auto idle_slot=vista_rest?AnimationSlot::Vista:AnimationSlot::Idle;
             std::array<std::string,3> movement;
             ResolvedAnimation custom_idle;
             std::string idle_carrier;
@@ -257,7 +260,7 @@ struct Core {
                 if(applied_id==selection.outfit+"/"+selection.variant) {
                     selected_animations=true;
                     constexpr AnimationSlot slots[]={AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint};
-                    for(size_t i=0;i<movement.size();++i) {
+                    for(size_t i=0;!vista_rest && i<movement.size();++i) {
                         const auto choice=state.animation_choices.get(selection.outfit,selection.variant,slots[i]);
                         movement[i]=resolve_animation(catalog.animation_options(selection.outfit,selection.variant,slots[i]),slots[i],
                             choice).asset;
@@ -267,9 +270,9 @@ struct Core {
                     }
                     const auto& idles=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
                     // The override only where this look has that idle; otherwise its own choice stands.
-                    const bool overridden=!idle_override.empty() &&
+                    const bool overridden=!vista_rest && !idle_override.empty() &&
                         std::any_of(idles.begin(),idles.end(),[&](const auto& option){return animation_choice_matches(option,idle_override);});
-                    const auto choice=overridden?idle_override:state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle);
+                    const auto choice=overridden?idle_override:state.animation_choices.get(selection.outfit,selection.variant,idle_slot);
                     custom_idle=resolve_animation(idles,AnimationSlot::Idle,choice);
                     const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
                         selection.outfit,selection.variant,AnimationSlot::Idle,choice,&animation_trace);
@@ -280,23 +283,32 @@ struct Core {
                (selected==state.selections.end() || !catalog.find(selected->second.outfit,selected->second.variant))) {
                 selected_animations=true;
                 constexpr AnimationSlot slots[]={AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint};
-                for(size_t i=0;i<movement.size();++i) {
+                for(size_t i=0;!vista_rest && i<movement.size();++i) {
                     const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
                         "","",slots[i],state.animation_choices.get("","",slots[i]),&animation_trace);
                     if(shared.matched) movement[i]=shared.asset;
                 }
                 const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
-                    "","",AnimationSlot::Idle,state.animation_choices.get("","",AnimationSlot::Idle),&animation_trace);
+                    "","",AnimationSlot::Idle,state.animation_choices.get("","",idle_slot),&animation_trace);
                 if(shared.matched) {custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;}
             }
             if(!selected_animations) appearance.clear_shared_animations();
+            if(vista_rest) {
+                idle_carrier.clear();
+                const bool worn=appearance.active() && selected!=state.selections.end();
+                const auto outfit=worn?selected->second.outfit:std::string{};
+                const auto variant=worn?selected->second.variant:std::string{};
+                const auto choice=state.animation_choices.get(outfit,variant,AnimationSlot::Vista);
+                if(!selected_animations || !appearance.has_idle_layer()) custom_idle={};
+                else if(choice==feminine_animation_id) custom_idle.asset=vista_feminine_idle;
+            }
             if(shared_animation_revision!=appearance.shared_animation_revision()) {
                 shared_animation_revision=appearance.shared_animation_revision();
                 ui_refresh=true;status_dirty=true;
             }
-            appearance.sync_walk(use_feminine_animation(state,selection_key,AnimationSlot::Idle),
-                                 use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
-                                 custom_idle.asset,custom_idle.hide_weapons,idle_carrier);
+            appearance.sync_walk(!vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Idle),
+                                 !vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
+                                 custom_idle.asset,custom_idle.hide_weapons,idle_carrier,vista_rest);
             if(animation_trace && traced_idle_engaged!=appearance.walk.custom_idle_engaged()) {
                 traced_idle_engaged=appearance.walk.custom_idle_engaged();
                 animation_trace.write(std::string("body idle ")+(traced_idle_engaged?"active: ":"released: ")+custom_idle.asset);
@@ -429,7 +441,7 @@ struct Core {
     void start_idle_face() {
         if(!state.enabled || apply_pending || restore_pending || pending_performance.active() ||
            genessa_form_request || appearance.performance.active() || appearance.performance.cleanup_pending() ||
-           !appearance.walk.custom_idle_engaged()) return;
+           !appearance.walk.custom_idle_engaged() || appearance.vista_resting()) return;
         const auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
         if(!appearance.active() || selected==state.selections.end()) return;
         const auto& selection=selected->second;

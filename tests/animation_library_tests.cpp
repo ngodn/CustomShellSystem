@@ -192,6 +192,15 @@ int main(int argc,char** argv) {
         };
         expect(resolve("css.eve.dance",{},base).candidates.size()==1,
                "Shared dance is missing from the CSS Idle Animation resolver");
+        for(const auto& choice:{"css.eve.dance","css.eve.idle","eve"}) {
+            const auto idle=resolve(choice,bundled,base);
+            const auto vista=resolve_library_animation(libraries,AnimationSlot::Vista,choice,bundled,base);
+            expect(vista.entry==idle.entry && vista.candidates.size()==idle.candidates.size(),
+                   "Vista lost an idle performance or legacy alias");
+            for(size_t i=0;i<idle.candidates.size();++i)
+                expect(vista.candidates[i].asset==idle.candidates[i].asset,
+                       "Vista resolved a different body animation");
+        }
         auto match=resolve("eve",bundled,base);
         expect(match.entry && match.entry->id=="css.eve.idle","Audited old ID did not resolve to shared identity");
         expect(match.candidates.size()==2 && !match.candidates[0].bundled && match.candidates[1].bundled,
