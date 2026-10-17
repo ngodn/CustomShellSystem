@@ -6,8 +6,7 @@
 
 ### Changed
 
-- Include shoulder-support assets in CSS Shared Assets. No separate hand-support
-  download is needed.
+- Include shoulder-support assets in CSS Shared Assets.
 - Keep shared animation and facial-playback compatibility for Commander White
   0.1.1 alongside the existing 0.1.0 package.
 
@@ -21,10 +20,9 @@
 
 Close the game and update both CSS and CSS Shared Assets to 1.0.1. Keep your
 existing CSS `state` folder. Replace the `CSS_SharedAssets_P` folder under
-`MortalShell2/Content/Paks/~mods/`. If you installed the private shoulder test,
-remove `CSS_HandSupport_P` from that folder. Restart the game after updating.
+`MortalShell2/Content/Paks/~mods/`. Restart the game after updating.
 
 Existing Eve, Unholy Genessa and Commander White packages remain compatible.
-Vista animation changes require an outfit with a CSS idle layer. The native
+Vista poses use the same supported bodies and skeletons as Idle Animation. Native
 sit/stand transitions remain in control. Poses use their authored position;
 standing and dancing clips may not fit the stone as closely as seated poses.
