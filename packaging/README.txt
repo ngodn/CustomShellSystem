@@ -8,7 +8,9 @@ Installation
    MortalShell2/Binaries/Win64/ue4ss/Mods/
 4. Install CSS outfit packages separately under MortalShell2/Content/Paks/~mods/.
    Install the matching CSS Shared Assets download there for Peony, shared
-   animations, facial playback and customized Genessa doubles.
+   animations, facial playback, customized Genessa doubles and shoulder support.
+   CSS 1.0.1 shoulder support requires CSS Shared Assets 1.0.1.
+   Remove CSS_HandSupport_P if you installed the earlier shoulder test package.
    Replace CSS_SharedAssets_P and remove the superseded CSS_AstralSharedAssets_P
    and CSS_LocomotionSharedAssets_P folders if present. Keep one shared pack.
 5. Launch the game, enter the game world, open Inventory, and select CSS.

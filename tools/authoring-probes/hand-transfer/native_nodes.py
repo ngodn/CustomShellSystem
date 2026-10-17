@@ -41,10 +41,20 @@ def append_calibration(g, start, models):
             # Swing is unchanged by quaternion antipodes. Canonicalize the
             # two angle inputs only, retaining a shortest signed twist.
             sign = g.math('FloatSelectBool', Condition=g.math('FloatLess', A=w, B=0), IfTrue=-1, IfFalse=1)
-            angle = g.math('FloatMul', A=g.math('FloatAtan2', A=g.math('FloatMul', A=projection, B=sign), B=g.math('FloatAbs', Value=w)), B=2 * m['ratio'])
+            signed_projection = g.math('FloatMul', A=projection, B=sign)
+            if 'tangent_gain' in m:
+                signed_projection = g.math('FloatMul', A=signed_projection, B=m['tangent_gain'])
+            multiplier = 2 if 'tangent_gain' in m else 2*m['ratio']
+            angle = g.math('FloatMul', A=g.math('FloatAtan2', A=signed_projection, B=g.math('FloatAbs', Value=w)), B=multiplier)
             split = g.unit('RigVMFunction_MathQuaternionSwingTwist', Input=delta, TwistAxis=m['axis'])
             twist = g.math('QuaternionFromAxisAndAngle', Axis=m['axis'], Angle=angle)
-            delta = g.math('QuaternionMul', A=Pin(split + '.Swing'), B=twist)
+            swing = Pin(split + '.Swing')
+            if 'swing_ratio' in m:
+                swing = g.math('QuaternionSlerp', A=quaternion([1, 0, 0, 0]), B=swing, T=m['swing_ratio'])
+            delta = g.math('QuaternionMul', A=swing, B=twist)
+        if 'delta_gain' in m:
+            assert 0 <= m['delta_gain'] <= 1
+            delta = g.math('QuaternionSlerp', A=quaternion([1, 0, 0, 0]), B=delta, T=m['delta_gain'])
         transported = g.math('QuaternionMul', A=quaternion(m['transport']), B=delta)
         transported = g.math('QuaternionMul', A=transported, B=quaternion(m['transport'], True))
         output = g.math('QuaternionUnit', Value=g.math('QuaternionMul', A=quaternion(m['target_ref']), B=transported))

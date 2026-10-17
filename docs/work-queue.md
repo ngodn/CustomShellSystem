@@ -1,5 +1,112 @@
 # Current work queue
 
+## October 17: bundle shoulder rigs in Shared Assets
+
+The user then requested local release archives under `dist` and installation
+of those exact release builds for testing before publication. CSS and Shared
+Assets advance together to 1.0.1; the three outfit versions stay unchanged.
+The coordinated source pins `shared-assets-1.0.1`, with both shared catalog
+version fields stamped 1.0.1. Remove the isolated hand-support provider during
+installation. Public upload is not part of this step.
+
+The user requested the existing Shared Assets package own the shoulder rigs.
+Built `work/shoulder-weapon-hold/shared-assets-r7/CSS_SharedAssets_P-v1.0.1-candidate.zip`
+with all 291 released packages plus three rigs. All 588 reconstructed files
+round-trip exactly and the independent decoded rigs match the tested R6 assets.
+The released archive, installed trios and core are unchanged. Installation must
+replace the shared trio and retire `CSS_HandSupport_P` together. The private
+candidate retains the released catalog version until release preparation.
+See [consolidation evidence](development/shoulder-weapon-hold.md#shared-assets-consolidation-october-17).
+
+## October 16: shoulder-carried weapon hold, CSS 1.0.1
+
+Implement relaxed thumb/index support on Eve Peony/Black Pearl, Commander
+White and both Unholy skins. Compare the native game's eight primary weapons,
+gaits and combat, plus sidearm/seal transitions. Preserve proportions, V44
+binding, motion limits, existing profiles and released package versions.
+[Report and matrix](development/shoulder-weapon-hold.md).
+
+The user approved “Install and test”, authorized autonomous game control, and
+explicitly handed control back after interrupting the R5 combat run. Use English
+and workspace 3. Do not repeat ready/go or routine staging-permission questions.
+
+R7 is installed: core `8977a2c68192d922` plus the unchanged three R6
+`CSS_HandSupport_P` containers, with R6 rollback copies in `live-candidate-r7`.
+Windows and all 28 host tests pass. Three saved rigs pass 1,804 native evaluations, nine negative
+cases, fresh component checks, cooking and independent cooked readback.
+Cold game start passes with saved CSS state preserved.
+
+R6 failed live CW body-motion acceptance: the new rig's UpdateSerial stayed at
+18 and TotalSteps at zero, while the old cached rig kept receiving inputs.
+R7 forwards only the compiled input pins with reflected type checks. The
+engine fixture reproduces the failure without forwarding and advances 58
+steps across 30 frames with it, with no extra reset. R7 cold start and live
+body-clock checks pass: 1,159 to 2,192 steps, no further reset. Evidence:
+`install-r7-restart`, `live-r7-cw-body-clock`, `live-r6-cw-body-clock` and
+`arm-rig-cw-r3/input-clock-r7`. No asset recook was needed.
+
+The fix preserves native weapon world placement by fitting the right arm
+without stretching and compensating `prop_r`. Finger targets remain relaxed.
+The independent 451-pose replay has zero weapon crossings; one retained pose
+is outside the runtime carry envelope and correctly bypasses the arm solve.
+
+Live R6: all five variants have completed all eight primary weapons and four
+gaits, including 800 cm/s sprint: 40 cases, 160 gaits, 721 atomic poses.
+All 450 measured shoulder-carry poses have zero weapon crossings and zero
+cross-region hand self-intersections. Combine `live-r6-all-weapons` with the
+two Peony pilot cases. Non-shoulder weapons keep carry alpha zero.
+
+All six Default toggles preserve the held weapon world transform; stock has
+zero bone changes. CW's frozen take changes hair because its existing hair rig
+reseeds when arm collision endpoints change with zero delta time. The contact
+trace confirms the right arm/hand endpoints and resolved contacts. Same-setting
+comparisons are stable; later toggles do not repeat the initial hair rotation
+change. Keep the strict failed analysis.
+Game-frame and measured hand-surface comparisons are in `live-r6-defaults`.
+
+The R6 combat batch stopped cleanly after eight native controls and Peony
+Scythe: nine restored cases, 72 action takes and 2,749 poses. One initial block
+sample has carry alpha 0.1333 during the blend-out; later samples are zero.
+
+R7 CW gait regression now passes for all five carry weapons, including full
+sprint. Its 381 poses clear the weapon; one Hadern sprint pose retains a
+0.057 mm intersection segment at the wrist/thumb-base crease, inspected and
+recorded in `live-r7-cw-gaits-skin/crease-detail.json`. Strict zero-self-crossing
+therefore does not pass. The unfrozen
+corrected/Default/corrected test passes: 1,192 to 2,246 body steps, one reset
+throughout, same rig and unchanged motion settings.
+
+R7 combat stopped cleanly after CW and Unholy Eve: 16 primary/sidearm loadouts,
+128 action takes and 4,262 poses, zero rig errors. Three first block samples
+show the designed carry blend-out. The other R7 outfit/action combinations
+remain untested; earlier R5/R6 and offline evidence is separate.
+
+The Gragu comparison passes with Scythe on the native appearance and all five
+variants, four gaits each. Its 405 custom hand poses have zero weapon or
+cross-region hand intersections. `live-r7-gragu-r2` is complete and restored.
+The first Gragu attempt caught an asynchronous selection-save delay in the
+probe; the outer restore succeeded and the corrected wait passed.
+
+Four existing profiles pass in `live-r7-profile-load-r4`: native animation
+choices and temporary visible melee weapons all reach carry alpha one.
+Saved presets and full CSS state are restored exactly. Earlier test attempts
+mistakenly required carry support while the profiles hid melee weapons at idle;
+those failed receipts are retained. Profile visibility was never saved over.
+
+The nine original Genessa containers and complete CCS settings are restored.
+The approved R7 bundle remains installed. The final handover restart on workspace
+3 passed: `live-r7-profile-load-r4/final-after.json` and its matching control
+receipt verify saved state, equipment, health/Resolve, geometry, mapped R7 core,
+active support, all nine original file hashes and complete original CCS settings.
+The implemented fix is installed and handed back. `final-matrix-r7.json` records
+the completed validation scope and remaining coverage limits.
+
+The broader before-fix and offline matrices remain available. Exhaustive live
+moveset coverage, successful enemy parry/riposte, Axatana alternate form and
+Slayer are not claimed. Slayer remains excluded because equipping it alters an
+unset save/achievement flag before Save=false is checked. No commit or public
+push has been made.
+
 ## October 15: current release status
 
 The [goal](development/three-outfit-rig-physics-goal.md) and

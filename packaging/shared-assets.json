@@ -1,12 +1,14 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "container": "CSS_SharedAssets_P",
-  "required_for": "shared_animations_facial_playback_customized_genessa_doubles_and_npc_appearances",
+  "required_for": "shared_animations_facial_playback_customized_genessa_doubles_and_npc_appearances_shoulder_support",
   "files": {
-    "CSS_SharedAssets_P.utoc": "e7df54cac1e3757033d7363a41e242e1782854da12dd2ed0bf01c85202e50628",
-    "CSS_SharedAssets_P.ucas": "9a23a53579dd87a5890e46c364e45363bc296c394f4e32ad66d6f18543e6b185",
-    "CSS_SharedAssets_P.pak": "049c293762ea4362d90e791a255507f864c28f3793fa4d5cb4eeb41407a364ee"
+    "CSS_SharedAssets_P.utoc": "fde7763d895231785c611144a85a64146884431fa09264ce70f2f6d690fdd830",
+    "CSS_SharedAssets_P.ucas": "135f8089780fc549fe34b776f158f7ee3d06e4219746f69ef93fdabd2bcbdaeb",
+    "CSS_SharedAssets_P.pak": "e44cadaa4fb2b878e34e2cbaea76d99489304cb2c526e914a8e0175dbb4d8238"
   },
-  "source_candidate": "stable-asset-delivery/shared",
-  "asset_containers_identical_to_accepted": true
+  "source_candidate": "shoulder-weapon-hold/shared-assets-1.0.1",
+  "asset_containers_identical_to_accepted": false,
+  "existing_assets_preserved": true,
+  "asset_count": 294
 }

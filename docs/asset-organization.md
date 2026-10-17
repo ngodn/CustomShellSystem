@@ -21,6 +21,12 @@ For the current eins0fx migration:
 | Reusable skeletons | `/Game/CSS/eins0fx/Shared/Skeletons/` | `CSS_SharedAssets_P` |
 | Shared animation library | `/Game/CSS/eins0fx/Shared/Locomotion/` | `CSS_SharedAssets_P` |
 | Astral resources | `/Game/CSS/eins0fx/Shared/Astral/` | `CSS_SharedAssets_P` |
+| Shoulder-support rigs (next candidate) | `/Game/CSS/Runtime/Hands/` | `CSS_SharedAssets_P` |
+
+The October 17 shoulder candidate consolidates the three tested runtime rigs
+into Shared Assets. Their existing asset paths remain stable. `CSS_HandSupport_P`
+was an isolated test container; retire it when installing the combined shared
+trio to avoid duplicate providers. See the [packaging evidence](development/shoulder-weapon-hold.md#shared-assets-consolidation-october-17).
 
 Animation-library catalogs accept assets under
 `/Game/CSS/<author>/Shared/Locomotion/`, with performance adapter classes in

@@ -20,7 +20,15 @@ def apply(doc, models, compatible=False):
             norm = math.hypot(delta.w,projection)
             if norm <= 1e-5:return result,dict(valid=False)
             twist = Quaternion((delta.w/norm,*(axis*(projection/norm))))
-            delta = delta @ twist.inverted() @ Quaternion(axis,2*math.atan2(projection,delta.w)*m['ratio'])
+            swing = delta @ twist.inverted()
+            if 'swing_ratio' in m:
+                swing = Quaternion().slerp(swing, m['swing_ratio'])
+            angle = (2*math.atan2(projection*m['tangent_gain'],delta.w)
+                     if 'tangent_gain' in m else 2*math.atan2(projection,delta.w)*m['ratio'])
+            delta = swing @ Quaternion(axis,angle)
+        if 'delta_gain' in m:
+            assert 0 <= m['delta_gain'] <= 1
+            delta = Quaternion().slerp(delta, m['delta_gain'])
         transport = Quaternion(m['transport'])
         output[m['index']] = (Quaternion(m['target_ref']) @ transport @ delta @ transport.inverted()).normalized()
     for i,q in output.items():

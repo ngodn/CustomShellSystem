@@ -34,6 +34,7 @@
 #include "astral_lifecycle.hpp"
 #include "performance_session.hpp"
 #include "animation_trace.hpp"
+#include "hand_support.hpp"
 
 namespace css {
 fs::path engine_content_directory();
@@ -90,6 +91,22 @@ public:
     ~AssetLoadRoots() noexcept { release(); }
 };
 class Appearance;
+class HandSupport {
+    WeakObject component_, instance_, rig_, candidate_;
+    WeakObject carry_weapon_;
+    AssetLoadRoots roots_;
+    hand_support::CarryBlend carry_;
+    std::vector<std::pair<RC::Unreal::FProperty*,RC::Unreal::FProperty*>> inputs_;
+    uint64_t last_tick_=0;
+    double moving_phase_=0.;
+    int32_t node_offset_=-1;
+    bool busy_=false, enabled_=false;
+    std::string state_="inactive";
+public:
+    void sync(RC::Unreal::UObject* component,bool enabled,RC::Unreal::UObject* pawn);
+    void release();
+    Json status() const;
+};
 class PerformancePlayer {
     PerformanceSession session_;
     WeakObject pawn_, component_, mesh_, post_, animation_, sequence_, montage_;
@@ -897,6 +914,7 @@ class Appearance {
     // shell list arrives or the worn shell changes (refit_attachments, attachment_follower.inl).
     std::map<std::string,AttachmentOffset> fit_offsets_;
     bool fit_defaults_=true, fit_stale_=false;
+    HandSupport hand_support_;
     std::string fit_shell_, fit_error_;
     std::map<std::string,std::string> shell_data_;   // CharacterId -> its character data asset
     WeakObject fit_worn_data_;
@@ -945,6 +963,8 @@ public:
     void sync_overlay_effects();
     void sync_attachments();
     void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz
+    void sync_hand_support();
+    Json hand_support_status() const { return hand_support_.status(); }
     // MISC visibility. `set_misc_rules` copies the player's choices in; `sync_misc` re-hides
     // the world pawn's accessories when locomotion changes (called from the tick); the menu
     // pass runs inside sync_menu against the wardrobe preview character.

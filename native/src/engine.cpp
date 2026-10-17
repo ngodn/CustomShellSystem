@@ -3,6 +3,9 @@
 #include "startup.hpp"
 #include "physics_presets.hpp"
 #include "skeleton_compatibility.hpp"
+#include "hand_support.hpp"
+#include "hand_support_targets.hpp"
+#include "hand_support_grips.hpp"
 #include "recovery.hpp"
 #include "misc_attachment.hpp"
 #include "astral_adapter.hpp"
@@ -1427,6 +1430,7 @@ void Appearance::set_ground_offset(double offset) {
 }
 bool Appearance::restore() {
     ++appearance_revision;
+    hand_support_.release();
     restore_expression();
     menu_overlay_controls_.release(); overlay_controls_.release();
     restore_visual_scale(false);visual_scale_=1;
@@ -1821,6 +1825,7 @@ std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
 #include "engine_dynamics.inl"
 }
 #include "facial_runtime.inl"
+#include "hand_support.inl"
 void WornItems::release() {
     for(auto& worn:worn_) if(auto* component=worn.component.Get()) {
         Call owner(component,L"GetOwner",1); owner.run();

@@ -196,6 +196,18 @@ struct Core {
         }
     }
     std::string walk_error;
+    std::string hand_support_error;
+    uint64_t hand_support_after=0;
+    void sync_hand_support_safely(uint64_t now) {
+        if(now<hand_support_after) return;
+        try {appearance.sync_hand_support();hand_support_error.clear();}
+        catch(const std::exception& error) {
+            if(hand_support_error!=error.what()) {
+                hand_support_error=error.what();host.log(("Hand support deferred: "+hand_support_error).c_str());
+            }
+            hand_support_after=now+1000;
+        }
+    }
     AutomaticIdlePlayback automatic_idle;
     AnimationTrace animation_trace;
     bool traced_idle_engaged=false;
@@ -628,6 +640,8 @@ struct Core {
                 idles.push_back({{"id",option.id},{"name",option.name}});
             out["idles"]=std::move(idles); out["idle_override"]=idle_override;
             out["expression"]=appearance.expression_status();
+            out["hand_support"]=appearance.hand_support_status();
+            out["hand_support"]["error"]=hand_support_error;
             return out;
         }
         if(action!="apply") throw std::runtime_error("Unknown customize action");
@@ -1090,6 +1104,7 @@ struct Core {
             finish_performance_face();
         });
         measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
+        measured(FrameProfile::attachments,[&] { sync_hand_support_safely(now); });
         if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
         measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
         if(!restore_performance_face && !apply_pending && !restore_pending && !appearance.performance.active())
