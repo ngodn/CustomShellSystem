@@ -113,6 +113,14 @@ desktop-view changes and are not controlled evidence.
 
 ## Peony measurements
 
+After the candidate report, the user supplied a close-up of dark torso/arm
+coverage and then identified it themselves as the stocking layer: "ohhh itu
+stocking wtf, ok ok la". The live status was read while Peony was selected;
+no outfit, material, camera or effect was changed during this follow-up.
+Treat that screenshot as a user-identified clothing-layer case, separate from
+the controlled axe-shadow finding below. It does not establish approval of
+the outstanding acceptance deviations.
+
 The first world matrix covers all 13 removable controls alone, all shown and
 all off. Section flags restore the covered feet when boots are hidden; material
 identities remain unchanged. Camera changes during that batch prevent using

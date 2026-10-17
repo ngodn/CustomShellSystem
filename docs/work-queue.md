@@ -18,6 +18,10 @@ The user's saved state is restored. Frozen releases are unchanged, and nothing
 is published. Evidence, separate ZIPs, exact staged files and limits are in
 [the finding doc](development/cw-blood-peony-skin.md).
 
+Follow-up: the user identified the dark coverage in their new Peony close-up
+as the stocking layer. Only live status was read; no game settings were changed.
+That report is resolved separately from the outstanding acceptance decision.
+
 ## October 17: hand-support catalog, CSS 1.0.1
 
 CSS 1.0.1 loads `catalog/hand-support.json` once at startup, following the
