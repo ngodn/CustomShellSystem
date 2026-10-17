@@ -1,7 +1,7 @@
 # Commander White blood and Peony revealed skin
 
 Status, October 17, 2026: CW 0.1.1 and its Shared Assets 1.0.1 metadata update
-are built and installed as local candidates. The cooked CW clothing and skin
+are packaged as local releases at the user's later request. The cooked CW clothing and skin
 pass the native blood ladder, color and profile checks. Peony's reproduced dark
 bands come from the equipped weapon's shadow; no Peony asset repair is justified.
 Validation limits are recorded below. Working branch:
@@ -409,11 +409,11 @@ literal acceptance item or every possible view has passed. Existing saved
 profiles remain byte-for-byte equivalent as JSON; the temporary CW profile
 exercises loading the new package without changing those profiles.
 
-The user was asked whether to accept the measured matrix and the three
-constant-channel texture enlargements, or retain literal exhaustive acceptance.
-That scope decision is pending; it is not implied by the earlier installation
-authorization. The installed candidates, rollback and evidence remain available
-for that review.
+The earlier candidate review was followed by the user identifying the dark layer
+in their Peony screenshot as stockings, accepting that appearance, and explicitly
+requesting all skin releases and BBCode changelogs under `dist`. That later release
+instruction authorizes the local delivery. The measured matrix above remains the
+record of what was tested.
 
 ## Completion audit
 
@@ -442,5 +442,8 @@ No game process or capture job is currently being waited on.
 | Approved scene/staging, restore and cleanup | User-approved scene and installs; final appearance/state/input/animation/blood checks pass. Temporary profile/effects/overrides and owned bridge request files cleared. Met. |
 | Commit only own paths; no public main push | Investigation branch commits contain only the finding doc, index/queue entries and separate changelogs. No push. Met. |
 
-Completion remains unproven until the user resolves the documented acceptance
-deviations, or the missing literal checks and source constraints are fulfilled.
+The audit above records the original candidate checkpoint. The subsequent local
+release request is fulfilled by Commander White 0.1.1 and Shared Assets 1.0.1,
+with unchanged Eve 1.5.0 and Unholy Genessa 0.3.0 archives. Each has its own BBCode
+changelog. See `dist/DELIVERY.md` and `dist/coordinated-v1.0.1.json` for final
+paths and hashes. No public upload is part of that instruction.

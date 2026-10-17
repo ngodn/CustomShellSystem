@@ -123,3 +123,24 @@ metadata. Commander White 0.1.1 includes the blood repair described in
 [the blood/skin investigation](cw-blood-peony-skin.md). Eve 1.5.0 and Unholy
 Genessa 0.3.0 retain their frozen archive bytes. BBCode changelogs and the current
 delivery index belong under `dist`. No online publication is part of this task.
+
+## Final local delivery
+
+The runtime archive is `dist/v1.0.1/MSII-CSS-v1.0.1.zip`, built from annotated
+tag `v1.0.1` at `2e672498ad7c52c60675ede14cb1ac5d3058d52c`. Its SHA-256 is
+`bda1335f6d766e653351911fcfe990116d05eca72f33e9cba18169968a115a68`.
+The installed loader and core match that archive. The save loads with Peony;
+position/camera are restored and CSS state remains byte-identical. Evidence is
+`work/sitting-animation/final-install-confirmed/` and
+`work/sitting-animation/install-release-01/receipt.json`.
+
+An earlier automation timeout was incorrectly described as a loading failure.
+The user reported that loading had finished before the agent closed the game.
+During the final launch, shader compilation was observed on screen and allowed
+to finish. The native menu functions were used after a black main-menu screen,
+and the loaded world was checked visually. This records successful save loading,
+not a claim that the black menu screen was diagnosed or repaired.
+
+`dist/DELIVERY.md` links all five packages and their BBCode changelogs. The two
+user-provided Vista images are preserved in `dist/v1.0.1/media/`; the BBCode image
+placeholders require the eventual host URLs. No online upload was performed.

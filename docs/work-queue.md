@@ -32,10 +32,18 @@ ZIPs and BBCode notes are verified under `dist`; both supplied Vista screenshots
 are preserved in `dist/v1.0.1/media`. The delivery index records final archive
 paths and hashes; no public upload is part of this request.
 
+Final delivery: CSS 1.0.1 is built from annotated tag `v1.0.1` at `2e67249`.
+All five archives and separate BBCode changelogs are under `dist`. Both final DLLs
+match the archive. Startup, restored Peony appearance, position/camera and unchanged
+CSS settings are confirmed in `work/sitting-animation/final-install-confirmed`.
+The earlier resume timeout was not evidence of a game failure. Shader compilation
+was observed directly on the final launch; the existing native menu functions
+continued the save after a black menu screen. No additional pose sweep was run.
+
 ## October 17: Commander White blood and Peony revealed skin
 
-CW 0.1.1 and compatible Shared Assets 1.0.1 metadata are built and installed as
-local candidates. Spatial garment masks and nine blood-enabled skin instances
+CW 0.1.1 and compatible Shared Assets 1.0.1 metadata are built and installed.
+The later explicit request for local releases is fulfilled under `dist`. Spatial garment masks and nine blood-enabled skin instances
 pass ten native blood ladders, all displayed colors/palettes, profile reload,
 package round-trip and catalog checks; 28/28 host suites pass. The user's
 correction adds our Unholy Genessa, both variants, to the blood references.
@@ -52,7 +60,9 @@ is published. Evidence, separate ZIPs, exact staged files and limits are in
 
 Follow-up: the user identified the dark coverage in their new Peony close-up
 as the stocking layer. Only live status was read; no game settings were changed.
-That report is resolved separately from the outstanding acceptance decision.
+The user then accepted the appearance and requested all skin releases with
+BBCode changelogs. The local release delivery supersedes the candidate-only
+checkpoint; the finding doc retains the exact tested matrix.
 
 ## October 17: hand-support catalog, CSS 1.0.1
 
