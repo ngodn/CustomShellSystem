@@ -1113,7 +1113,6 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const auto target_skeleton=appearance.animation_skeleton();
         const bool native_target=target_skeleton=="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
         const bool native_context=!has_variant && native_target;
-        const bool vista_supported=appearance.has_idle_layer();
         const auto options_for=[&](AnimationSlot slot) {
             auto options=catalog.animation_options(outfit,variant,slot);
             if(!target_skeleton.empty()) std::erase_if(options,[&](const auto& option) {
@@ -1127,9 +1126,6 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             auto menu=animation_menu(options,slot,
                 (has_variant || native_context)?state.animation_choices.find(outfit,variant,slot):nullptr,state.walk_animation=="feminine");
             for(auto& item:menu.items) {
-                if(slot==AnimationSlot::Vista && !vista_supported && item.id!="original") {
-                    item.available=false;item.name+=" (Needs an outfit idle layer)";continue;
-                }
                 const auto option=std::find_if(options.begin(),options.end(),[&](const auto& value){return value.id==item.id;});
                 if(option==options.end() || option->library_identity.empty()) continue;
                 const auto match=resolve_library_animation(catalog.animation_libraries,slot,item.id,
@@ -1178,9 +1174,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const auto options=options_for(slot);
         std::string body;
         if(!current.available) body="This saved animation is unavailable. Default is used until the option returns or you choose another.";
-        else if(slot==AnimationSlot::Vista) body=vista_supported?
-            "Choose a pose or animation from the idle library while resting at a vista. Default keeps the game's sitting pose. Your normal idle stays separate.":
-            "Wear a compatible CSS outfit to change the vista resting pose. Default keeps the game's sitting pose.";
+        else if(slot==AnimationSlot::Vista) body=
+            "Choose a pose or animation from the idle library while resting at a vista. Default keeps the game's sitting pose. Your normal idle stays separate.";
         else if(current.id==feminine_animation_id)
             body=slot==AnimationSlot::Idle?"The Cultist Spear Lady's standing pose. Your walking choice stays separate."
                                          :"The Cultist Spear Lady's walk at its authored pace. Your standing pose stays separate.";

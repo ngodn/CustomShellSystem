@@ -11,6 +11,23 @@ ownership, and keep ordinary idle selection independent. Evidence:
 `work/sitting-animation/`. The release request covers local artifacts; no online
 publication was requested.
 
+Follow-up: audit every native Vista animation mapping and supported Idle body/
+skeleton, including Stray Genessa, Harbinger, Dark Bro and Lazlo. Reuse existing
+Shared Assets Idle compatibility; do not require an outfit-only idle layer.
+The user supplied these images for the Vista BBCode changelog:
+`/home/eins0fx/Pictures/screenshot-2026-10-17_18-07-12.png` and
+`/home/eins0fx/Pictures/screenshot-2026-10-17_18-05-18.png`.
+
+Current checkpoint: the installed native-body fix passes all 62 exact carrier
+choices on native Genessa, plus four Harbinger poses. Harbinger exit and the
+remaining body/form matrix are unfinished because game and Steam closed during
+the batch; Steam relaunch requires sign-in. Eight nearby non-boss hostile enemies
+were killed with the user's explicit authorization. Do not ask the user to find
+the Vista again: its interaction and coordinates are recorded. Resume the matrix
+after sign-in, then verify keyboard search and package the final CSS runtime.
+All four skin/shared release ZIPs and BBCode notes are staged under `dist`;
+both supplied Vista screenshots are preserved in `dist/v1.0.1/media`.
+
 ## October 17: Commander White blood and Peony revealed skin
 
 CW 0.1.1 and compatible Shared Assets 1.0.1 metadata are built and installed as

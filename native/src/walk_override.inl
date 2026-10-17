@@ -529,7 +529,52 @@ void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
         }
     } catch(...) {}
 }
+namespace {
+FName* vista_slot_name(UObject* animation) {
+    if(animation->GetClassPrivate()->GetPathName()!=
+       L"/Game/Sparta/Characters/Humans/Player/Animations/ABP_Player.ABP_Player_C")
+        throw std::runtime_error("Vista locomotion requires the player animation graph");
+    // GetCurveValue synchronizes the animation proxy before touching one node input.
+    Call barrier(animation,L"GetCurveValue",2);
+    barrier.set(L"CurveName",FName(L"None"));barrier.run();
+    FProperty* node=nullptr;
+    for(auto* property:animation->GetClassPrivate()->ForEachProperty())
+        if(property->GetFName()==FName(L"AnimGraphNode_Slot_5")) {node=property;break;}
+    if(!node || !node->IsA<FStructProperty>() || node->GetArrayDim()!=1 ||
+       node->GetOffset_Internal()<0 ||
+       node->GetOffset_Internal()>animation->GetClassPrivate()->GetPropertiesSize()-node->GetElementSize())
+        throw std::runtime_error("Vista slot node layout changed");
+    auto* type=static_cast<FStructProperty*>(node)->GetStruct().Get();
+    auto* name=type?type->GetPropertyByNameInChain(L"SlotName"):nullptr;
+    if(!type || type->GetFName()!=FName(L"AnimNode_Slot") || !name ||
+       !name->IsA<FNameProperty>() || name->GetArrayDim()!=1 || name->GetElementSize()!=sizeof(FName) ||
+       name->GetOffset_Internal()<0 || name->GetOffset_Internal()>node->GetElementSize()-int(sizeof(FName)))
+        throw std::runtime_error("Vista slot name layout changed");
+    return reinterpret_cast<FName*>(reinterpret_cast<std::byte*>(animation)+
+        node->GetOffset_Internal()+name->GetOffset_Internal());
+}
+}
+void WalkOverride::mute_vista_slot(UObject* animation) {
+    if(vista_slot_owner_.Get()==animation && vista_slot_original_) return;
+    restore_vista_slot();
+    auto* name=vista_slot_name(animation);
+    if(*name!=FName(L"DefaultSlot")) throw std::runtime_error("Vista slot is owned by another override");
+    vista_slot_original_=*name;vista_slot_owner_=animation;
+    // Only this player's output bypasses the sitting pose. The native montage,
+    // ability tasks, entry/exit events and shared assets remain owned by the game.
+    *name=FName(L"CSSVistaLocomotion");
+}
+void WalkOverride::restore_vista_slot() {
+    if(vista_slot_original_) {
+        if(auto* animation=vista_slot_owner_.Get()) {
+            auto* name=vista_slot_name(animation);
+            if(*name==FName(L"CSSVistaLocomotion")) *name=*vista_slot_original_;
+        }
+        vista_slot_original_.reset();vista_slot_owner_.Reset();
+    }
+}
 void WalkOverride::release() {
+    restore_vista_slot();
     speed_->scale=false;
     push_off();
     if(custom_idle_engaged_ || !hidden_weapons_.empty()) {
@@ -578,7 +623,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     const bool custom=std::any_of(custom_paths.begin(),custom_paths.end(),[](const auto& path){return !path.empty();});
     const bool has_custom_idle=!custom_idle_clip.empty();
     if(!idle_feminine && !walk_feminine && !custom && !has_custom_idle) {
-        if(engaged_ || blend_lease_.engaged() || hook_ || custom_idle_engaged_) release();
+        if(engaged_ || blend_lease_.engaged() || hook_ || custom_idle_engaged_ || vista_slot_original_) release();
         return;
     }
     if(!pawn) { release(); return; }
@@ -610,6 +655,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     Call instance(mesh,L"GetAnimInstance",1);instance.run();
     auto* anim=instance.get<UObject*>();
     if(anim_.Get()!=anim) {
+        restore_vista_slot();
         gait_selector_.reset();
         push_off();
         if(!anim || !has_field(anim,L"UseActiveBlendspace",sizeof(bool)) || !has_field(anim,L"ActiveBlendSpace",sizeof(UObject*)))
@@ -686,11 +732,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
             get_post.run();
             post=get_post.get<UObject*>();
         }
-        if(vista_rest && (!post || !has_field(post,L"CSSIdleEnabled",sizeof(bool)) ||
-                          !has_field(post,L"CSSIdleSequence",sizeof(UObject*)))) {
-            release();throw std::runtime_error("Vista poses need an outfit with an idle animation layer");
-        }
-        if(!custom_idle_blend_.empty() && !vista_rest) {
+        if(!custom_idle_blend_.empty()) {
             want=custom_idle_carrier_.Get();
             if(!want || !custom_idle_asset_.Get()) {release();return;}
             reason="custom idle";
@@ -756,6 +798,8 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     if(want) off_ticks_=0;
     else if(hard_off) off_ticks_=WALK_OFF_DWELL;
     else if(++off_ticks_<WALK_OFF_DWELL && engaged_ && active_.Get() && (!speed_known || speed<=WALK_SLIDE_MAX)) { want=active_.Get(); reason=reason_.empty()?"hold":reason_; }
+    if(vista_rest && want) mute_vista_slot(anim);
+    else restore_vista_slot();
     if(want) {
         // Re-assert on every mismatch, not on a timer: a walk mod ticking against the same
         // two fields must not silently replace the option the player selected.

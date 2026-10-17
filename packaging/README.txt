@@ -90,7 +90,8 @@ Missing custom animation options fall back to the game.
 Locomotion > Rest > Vista rest animation uses the Idle Animation library during
 the game's vista sitting interaction. It saves separately from normal idle and
 is included in profiles. Default keeps the native sitting pose. Custom vista
-poses need an outfit with a CSS idle layer; pose height and contact vary by clip.
+poses use the same body/skeleton compatibility as Idle Animation. Pose height
+and contact vary by clip.
 Facial Expression appears directly in Customize for supported outfits.
 Use Original Shell offers Choose shade, with the game's normal unlock rules.
 MISC > Sunlight shadows starts at Default (game). Reduced noise is an optional

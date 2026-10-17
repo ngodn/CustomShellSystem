@@ -293,20 +293,23 @@ struct Core {
                 if(shared.matched) {custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;}
             }
             if(!selected_animations) appearance.clear_shared_animations();
+            bool vista_feminine=false;
             if(vista_rest) {
-                idle_carrier.clear();
                 const bool worn=appearance.active() && selected!=state.selections.end();
                 const auto outfit=worn?selected->second.outfit:std::string{};
                 const auto variant=worn?selected->second.variant:std::string{};
                 const auto choice=state.animation_choices.get(outfit,variant,AnimationSlot::Vista);
-                if(!selected_animations || !appearance.has_idle_layer()) custom_idle={};
-                else if(choice==feminine_animation_id) custom_idle.asset=vista_feminine_idle;
+                if(!selected_animations) custom_idle={};
+                else if(choice==feminine_animation_id) {
+                    if(appearance.has_idle_layer()) custom_idle.asset=vista_feminine_idle;
+                    else vista_feminine=true;
+                }
             }
             if(shared_animation_revision!=appearance.shared_animation_revision()) {
                 shared_animation_revision=appearance.shared_animation_revision();
                 ui_refresh=true;status_dirty=true;
             }
-            appearance.sync_walk(!vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Idle),
+            appearance.sync_walk(vista_feminine || (!vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Idle)),
                                  !vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
                                  custom_idle.asset,custom_idle.hide_weapons,idle_carrier,vista_rest);
             if(animation_trace && traced_idle_engaged!=appearance.walk.custom_idle_engaged()) {

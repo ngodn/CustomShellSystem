@@ -13,21 +13,61 @@ filter as Idle Animation. The `vista` saved choice is independent of `idle`, per
 outfit variant, and travels with profiles. An absent choice means Default,
 including saves with the legacy global feminine movement setting enabled.
 
-Only the exact native Vista loop permits the override. Entry, exit, other
+Only the exact native Vista loops (common and Lazlo) permit the override. Entry, exit, other
 montages, menu input, movement and aiming retain their existing gates. The
 outfit's existing CSS idle postprocess inputs supply the body pose while the
 native interaction keeps running. Default releases those inputs. The shared
 animation resolver retains and validates the same clips used by normal idle.
 
-This requires a CSS idle layer on the current outfit. The selector disables
-custom choices when that layer is absent. It does not insert a new animation
-instance into a running native action. In particular, rest selection does not
+Native bodies use the existing Shared Assets idle BlendSpace carriers, with the
+same skeleton checks as normal Idle. All 60 shared idle entries have native-human
+carriers in the installed manifest. The player's DefaultSlot output temporarily
+bypasses the sitting pose while that carrier is active. This changes one reflected
+SlotName input on the current ABP_Player instance, after GetCurveValue synchronizes
+pending animation evaluation. It restores the original name on release, exit,
+menu, mesh/instance changes and errors, provided CSS still owns the value. Shared
+montages and their ability tasks are unchanged. The postprocess path remains in
+use for outfits that already provide CSSIdle inputs.
+
+Rest selection does not insert a new animation instance into a running native
+action. In particular, it does not
 start the facial-performance adapter, whose reinitialization can interrupt
 the main animation instance. Body poses keep their authored height and position;
 there is no automatic adjustment to the stone or conversion of dances into
 seated animations.
 
 ## Verification
+
+The form-compatibility revision is installed for live testing, SHA-256
+`d9df18ba210534341415c5fa9d1b9b4f2f52608feb58c2a0116c415683a17531`.
+Its production build and all 28 host suites pass. `forms-live-02/result.json`
+verifies all 62 choices on native Genessa, including exact active carrier asset
+paths and restoration of DefaultSlot during native Stand. Harbinger's native
+body also applied Default, Feminine, Seated Recline and Iris Out, but its exit
+check was interrupted when the game and Steam processes disappeared. No new
+Unreal crash report was found. The saved CSS state still exactly matches the
+pre-batch snapshot. Steam relaunch currently requires user sign-in.
+
+The remaining body matrix, actual Stray/Faithful and Lazlo gameplay forms, and
+search Enter-key check remain open. The interrupted Harbinger exit is not a pass.
+The user authorized removing nearby enemies: eight non-boss Team.Hostile actors
+within 50 metres of the Vista were killed through their native health component,
+with dead-state readback in `vista-enemies-cleared.json`. NPCs were excluded.
+
+`audit_vista_sets.py` follows every CSAnimSet/CSAnimSubset dependency from the 25
+player character definitions and common animation sets. Its 41-package closure
+has no unresolved set references. All Vista mappings live in
+`AS_Player_Interactions`: common fallback plus Lazlo
+(`CharacterId.Player.Shell.Necrophage.Default`), each with Start, Loop and End.
+The predicate accepts both Loop paths and rejects all four transition paths.
+`vista-mapping-audit.json`, `vista-assets.json`, `player-assets.json` and
+`human-skeleton.json` retain the decoded evidence from the installed game.
+
+Source ordering was checked against the matching local UE 5.6.1
+`AnimNode_Slot.cpp`, `AnimInstanceProxy.cpp`, and `AnimInstance.h`: a slot without
+a matching montage passes its source pose, and GetProxyOnAnyThread on the game
+thread drains the component's pending parallel evaluation. No node structure or
+pose link is copied or rewritten.
 
 - Both the host and production Windows builds pass. Production disables
   `CSS_INVENTORY_DEV` and `CSS_TRANSITION_TESTS`.

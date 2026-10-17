@@ -14,9 +14,12 @@ static bool same(const Lease::Value& a,const Lease::Value& b) {return a.object==
 int main() {
     try {
         expect(is_vista_rest_loop(vista_rest_montage),"Native Vista loop was not recognized");
+        expect(is_vista_rest_loop(vista_lazlo_rest_montage),"Lazlo Vista loop was not recognized");
         for(const auto* path:{"", "A_Shared_Actions_Vista_Sit_Loop_Montage",
             "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/Vista_Sit/A_Shared_Actions_Vista_Sit_Start_Montage.A_Shared_Actions_Vista_Sit_Start_Montage",
             "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/Vista_Sit/A_Shared_Actions_Vista_Sit_Stand_Montage.A_Shared_Actions_Vista_Sit_Stand_Montage",
+            "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/Vista_Sit/A_Shared_Actions_Vista_Sit_Lazlo_Start_Montage.A_Shared_Actions_Vista_Sit_Lazlo_Start_Montage",
+            "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/Vista_Sit/A_Shared_Actions_Vista_Sit_Lazlo_Stand_Montage.A_Shared_Actions_Vista_Sit_Lazlo_Stand_Montage",
             "/Game/Other/A_Shared_Actions_Vista_Sit_Loop_Montage.A_Shared_Actions_Vista_Sit_Loop_Montage"})
             expect(!is_vista_rest_loop(path),"Vista override accepted another action or transition");
         const Lease::Value css_walk{{1,10},true},css_jog{{2,10},true},other{{3,20},true};

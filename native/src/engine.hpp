@@ -714,6 +714,10 @@ class WalkOverride {
     bool hide_weapons_=false;
     bool custom_idle_engaged_=false;
     WeakObject custom_idle_post_;
+    WeakObject vista_slot_owner_;
+    std::optional<RC::Unreal::FName> vista_slot_original_;
+    void mute_vista_slot(RC::Unreal::UObject* animation);
+    void restore_vista_slot();
     // The selection's custom blendspaces and idle clip, loaded when the selection arrives (the
     // wear already loads a mesh, so the cost lands there) and rooted while it is active. Loaded
     // on the first step instead, an asset the engine had collected came back from disk mid-walk.
