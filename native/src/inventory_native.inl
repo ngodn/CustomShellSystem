@@ -465,6 +465,8 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
         auto* back=native_image(tree,native_texture("T_UI_Resource_BG_02"));
         native_fill(native_add(widget,back));
         auto* input=construct(L"/Script/UMG.EditableText",tree);
+        // Enter is handled by CSS after Slate processes the key.
+        write_field<bool>(input,L"ClearKeyboardFocusOnCommit",false);
         Call current(input,L"GetFont",1); current.run();
         Call set(input,L"SetFont",1); set.copy(L"InFontInfo",current,L"ReturnValue");
         auto* font=set.param(L"InFontInfo"); auto* info=find(L"/Script/SlateCore.SlateFontInfo");

@@ -18,15 +18,19 @@ The user supplied these images for the Vista BBCode changelog:
 `/home/eins0fx/Pictures/screenshot-2026-10-17_18-07-12.png` and
 `/home/eins0fx/Pictures/screenshot-2026-10-17_18-05-18.png`.
 
-Current checkpoint: the installed native-body fix passes all 62 exact carrier
-choices on native Genessa, plus four Harbinger poses. Harbinger exit and the
-remaining body/form matrix are unfinished because game and Steam closed during
-the batch; Steam relaunch requires sign-in. Eight nearby non-boss hostile enemies
-were killed with the user's explicit authorization. Do not ask the user to find
-the Vista again: its interaction and coordinates are recorded. Resume the matrix
-after sign-in, then verify keyboard search and package the final CSS runtime.
-All four skin/shared release ZIPs and BBCode notes are staged under `dist`;
-both supplied Vista screenshots are preserved in `dist/v1.0.1/media`.
+Current checkpoint: all 62 exact carrier choices pass on native Genessa. Four
+choices and native sit/stand pass on 16 additional bodies, including every
+Harbinger body, Dark Bro and our four outfit variants. After the user's timing
+complaint, stop expanding the body sweep. Six targeted gameplay cases now pass:
+Lazlo, Harbinger and Stray, each native and with Peony, including mirror behavior.
+The original profile and Faithful form are restored. Eight nearby non-boss hostile
+enemies were cleared with explicit authorization, then cleared after respawn.
+The final Enter-focus repair is installed and verified: filtering for `iris` and
+pressing Enter selects Iris Out without changing normal Idle. Final packaging
+uses that exact DLL. Do not expand the matrix again. All four skin/shared release
+ZIPs and BBCode notes are verified under `dist`; both supplied Vista screenshots
+are preserved in `dist/v1.0.1/media`. The delivery index records final archive
+paths and hashes; no public upload is part of this request.
 
 ## October 17: Commander White blood and Peony revealed skin
 

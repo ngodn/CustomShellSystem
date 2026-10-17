@@ -38,21 +38,40 @@ seated animations.
 
 ## Verification
 
-The form-compatibility revision is installed for live testing, SHA-256
+The form-compatibility revision used for the live body/form checks has SHA-256
 `d9df18ba210534341415c5fa9d1b9b4f2f52608feb58c2a0116c415683a17531`.
 Its production build and all 28 host suites pass. `forms-live-02/result.json`
 verifies all 62 choices on native Genessa, including exact active carrier asset
-paths and restoration of DefaultSlot during native Stand. Harbinger's native
-body also applied Default, Feminine, Seated Recline and Iris Out, but its exit
-check was interrupted when the game and Steam processes disappeared. No new
-Unreal crash report was found. The saved CSS state still exactly matches the
-pre-batch snapshot. Steam relaunch currently requires user sign-in.
+paths and restoration of DefaultSlot during native Stand. Steam and the game
+closed during the following Harbinger exit, so that interrupted exit is not
+counted. The restarted `forms-live-03` batch completes four choices and native
+sit/stand on 16 additional bodies: all eight Harbinger variants (including Dark
+Bro), Lazlo, Tiel, Smert, Harros, both Unholy Genessa variants, Commander White
+and Peony. The wider body sweep stopped after the user's timing complaint;
+Eredrim's partial case and the unvisited bodies are not counted as live passes.
+Settings were restored, and testing narrowed to actual gameplay forms.
 
-The remaining body matrix, actual Stray/Faithful and Lazlo gameplay forms, and
-search Enter-key check remain open. The interrupted Harbinger exit is not a pass.
+`gameplay-forms-02/result.json` completes six cases with Default, Seated Recline
+and Iris Out: actual Lazlo with native body and Peony, actual Harbinger with
+mirror off and mirrored Peony, and actual Stray Genessa with mirror off and
+mirrored Peony. Each verifies the active asset and native exit. Lazlo uses its
+specific Loop and Stand; Harbinger and Stray use the common mappings. The batch
+returns to Faithful Genessa and reloads the original profile successfully.
+
+The final shipping DLL adds only the search-field focus fix to that tested
+runtime, SHA-256 `00e8bc5fdbd17939400d08d23df2a7cab169f3f760abd55e4d55bae7d3646e49`.
+EditableText normally clears keyboard focus on Enter before CSS polls the key.
+CSS text inputs now retain it. `ui-final-05/result.json` verifies native keyboard
+navigation to Vista, filtering for `iris`, Enter selecting Iris Out, unchanged
+normal Idle selection, and profile restoration. `ui-final-selected.png` shows
+the selected result and unobstructed search hint at 2560x1440. The normal restart
+and unchanged settings are recorded in `install-search-01`.
+
 The user authorized removing nearby enemies: eight non-boss Team.Hostile actors
 within 50 metres of the Vista were killed through their native health component,
-with dead-state readback in `vista-enemies-cleared.json`. NPCs were excluded.
+with dead-state readback in `vista-enemies-cleared.json`. The same local group
+respawned after restart and was cleared again in `vista-enemies-cleared-03.json`.
+NPCs were excluded.
 
 `audit_vista_sets.py` follows every CSAnimSet/CSAnimSubset dependency from the 25
 player character definitions and common animation sets. Its 41-package closure
