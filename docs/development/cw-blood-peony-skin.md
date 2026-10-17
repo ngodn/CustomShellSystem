@@ -188,6 +188,16 @@ the task's literal byte-identical source requirement. It preserves the exact
 roughness/metallic value at every source and destination texel, but cannot be
 reported as array byte identity. The receipts identify these three cases.
 
+An offline follow-up repeats the same spatial bake at the original 4x4 size,
+without enlarging anything (`original-size-mask-audit.json`). Green/blue arrays
+remain byte-identical in all three diagnostic outputs. The slot-16 and slot-34
+textures sample zero occupied UV texel centers and bake all-zero red. The
+slot-47 texture samples one occupied center, red 70, and its padding largely
+repeats that value. This recipe cannot reproduce the tested spatial patches at
+that resolution. It explains the enlargement; it does not prove every possible
+alternative authoring technique impossible. These probes were not cooked or
+installed.
+
 UE 5.6.1 imports and cooks the textures in a private project. The first cook
 omitted the commandlet's required Windows destination argument and emitted
 nothing; the corrected cook emitted 13 packages. Freshly cooked textures replace
@@ -396,3 +406,33 @@ constant-channel texture enlargements, or retain literal exhaustive acceptance.
 That scope decision is pending; it is not implied by the earlier installation
 authorization. The installed candidates, rollback and evidence remain available
 for that review.
+
+## Completion audit
+
+The last goal turn made progress by adding both Unholy control ladders,
+finishing the garment diagnostic pairs, verifying restored state and installed
+hashes, and committing the report and changelogs. The subsequent offline
+original-size bake adds evidence for the remaining texture-size decision.
+No game process or capture job is currently being waited on.
+
+| Explicit requirement | Current evidence and disposition |
+| --- | --- |
+| Released baseline before changes | Frozen CW/Eve cooked payload matches; captures predate installation. CSS 1.0.1 baseline explicitly approved by the user. Met with that approved baseline change. |
+| Decode masks and test hypotheses in order | 23 BRM histograms, static-switch inventory, dye binding audit and same-MID red-only comparison identify the asset cause. No live primitive-array claim is made. Met. |
+| Native four-strength CW ladder, stock control and Black Pearl | Initial baseline and ten final CW ladders, plus final stock/BP ladders. Both Unholy variants added at the user's request. Captured views and clear values pass; tiny garment details are supported by UV readback rather than isolated close-ups. |
+| Patchy skin as well as garments | Dedicated skin BRM, nine parameter-only child MIs, parent/parameter readback and exposed-skin front/rear ladders. Met in the tested scene; broader shader behavior is untested. |
+| All displayed CW colors/palettes and saved profiles | Six palette states, 18 displayed swatches, stable BRM bindings and temporary-profile reload. Existing profiles are preserved; no existing CW profile was present to reload. |
+| Peony per-piece preview/world matrix and four palettes/glow | All 13 single removals, all-off/all-shown, re-show, eight all-off palette/glow states and accepted skin controls captured. Met for those cases. |
+| Every Peony combination visually checked in both contexts | Production visibility and save/load pass 65,536 cases. Full GPU cross-product and a screenshot for every combination are missing. Not complete under literal acceptance. |
+| Exact restored face identities and accepted skin preserved | 185,442 equivalent skin corners, 4,944 covered triangles, exact material/UV/tangent/normal identities; unchanged Eve package hashes. Met. |
+| Matched before/after stills for every matrix case | Controlled red/skin-parent and garment pairs match body pose/camera. Initial baseline and separate visibility cases do not all match; weapons animate independently. Not complete under literal acceptance. |
+| Byte-identical source roughness/metallic and measured DXT1 drift | Exact arrays for ten garment masks and the skin mask; constant values preserved across enlarged dimensions for three garment masks. Drift quantified. The three dimension changes remain a literal deviation. |
+| Rebuild through existing recipes/readback, no cooked byte edits | MeshExport, Blender bake, UE commandlet cook, retoc container round-trip and native catalog checks. Met. |
+| Host tests and conditional Windows build | 28/28 host suites pass. Runtime unchanged, so a Windows core build is not applicable. |
+| Assign owner and preserve contracts/frozen releases | CW 0.1.1 owns assets; Shared 1.0.1 owns revision metadata; no Eve/CSS patch. Existing contract and old CW revision resolve. Frozen archive checksums pass. Met. |
+| Separate artifacts/changelogs and exact staged-file report | Two verified local ZIPs, separate BBCode files, full staged paths/hashes and rollback receipts. Prepared as candidates, not published releases. |
+| Approved scene/staging, restore and cleanup | User-approved scene and installs; final appearance/state/input/animation/blood checks pass. Temporary profile/effects/overrides and owned bridge request files cleared. Met. |
+| Commit only own paths; no public main push | Investigation branch commits contain only the finding doc, index/queue entries and separate changelogs. No push. Met. |
+
+Completion remains unproven until the user resolves the documented acceptance
+deviations, or the missing literal checks and source constraints are fulfilled.
