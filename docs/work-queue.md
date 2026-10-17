@@ -10,9 +10,14 @@ and calibration values are data; the solver and rig interface remain code.
 Malformed or missing catalogs disable hand support with a diagnostic.
 [Authoring and schema](modding/hand-support.md).
 
-CSS 1.0.1 remains unpublished. Replace its local archive and installation with
-this catalog build under `dist/v1.0.1`. Shared Assets 1.0.1 and outfit packages
-are unchanged. Keep the game on workspace 3 for testing. No online publication.
+Completed: the unpublished CSS 1.0.1 archive under `dist/v1.0.1` and local
+installation now contain the catalog build, tagged at `e76447a`. All 28 host
+suites, 15 release tests and catalog ASan/UBSan checks pass. The cold start loads
+the JSON without errors and resumes the existing Smert save on workspace 3.
+Runtime hashes match the archive; saved CSS state, Shared Assets 1.0.1 and outfit
+packages are unchanged. Evidence: `catalog-install-1.0.1/receipt.json` under
+`work/shoulder-weapon-hold`. No online publication. The lookup benchmark has
+zero allocations; full-game FPS and exhaustive combat acceptance are not claimed.
 
 ## October 17: bundle shoulder rigs in Shared Assets
 

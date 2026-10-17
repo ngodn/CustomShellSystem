@@ -7,22 +7,28 @@ CSS 1.0.1 loads measured calibration and mesh/weapon bindings from
 profiles, 25 grip transforms and carry settings match the accepted measurements
 exactly. The solver and cooked rigs are unchanged. See
 [catalog authoring](../modding/hand-support.md). This release remains local and
-unpublished while the catalog build is installed and tested.
+unpublished. The catalog build is installed and its cold start is verified.
 
 October 17: CSS 1.0.1 and Shared Assets 1.0.1 are built under `dist/v1.0.1`
 and installed from those exact archives for local testing. Nothing is published.
 The three shoulder rigs are consolidated into Shared Assets; the standalone
 hand provider is backed up outside `~mods`. Outfit packages do not change.
-The release uses annotated local tag `v1.0.1`, commit `ffef9ad`, with developer
-diagnostics and transition tests disabled. All 28 host suites, 14 packaging
-tests, 180 startup checks and the production four-package catalog check pass.
+The release uses annotated local tag `v1.0.1`, commit `e76447a`, with developer
+diagnostics and transition tests disabled. All 28 host suites, 15 packaging
+tests and the catalog AddressSanitizer/UndefinedBehaviorSanitizer checks pass.
+The earlier 180 startup checks and production four-package catalog check remain
+evidence for the unchanged shared assets. Calibration matches the compiled R7
+baseline exactly. Five million catalog lookup sets allocated nothing; their
+124 ns median is a lookup benchmark, not a complete game-frame measurement.
 
 Steam applied game build 26001001 before launching. The exact release loader
 and core are mapped in the running game on workspace 3, with CSS state unchanged.
 The existing save loads Smert, which has no saved CSS appearance; no appearance
 or shell was changed during this startup check. New-game-build shoulder pose
 and gameplay testing remain for the user. Exact installation and startup
-evidence: `work/shoulder-weapon-hold/release-install-1.0.1`.
+evidence: `work/shoulder-weapon-hold/catalog-install-1.0.1`. The loaded core
+reports `catalog_loaded=true` with no catalog or hand-support errors. Installed
+runtime hashes match the archive; Shared Assets and saved CSS state are unchanged.
 
 The earlier R7 candidate was installed under the user's “Install and test” approval. It
 uses a relaxed thumb/index support pose and fits the right arm to the native
