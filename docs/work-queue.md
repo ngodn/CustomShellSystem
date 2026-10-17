@@ -1,5 +1,23 @@
 # Current work queue
 
+## October 17: Commander White blood and Peony revealed skin
+
+CW 0.1.1 and compatible Shared Assets 1.0.1 metadata are built and installed as
+local candidates. Spatial garment masks and nine blood-enabled skin instances
+pass ten native blood ladders, all displayed colors/palettes, profile reload,
+package round-trip and catalog checks; 28/28 host suites pass. The user's
+correction adds our Unholy Genessa, both variants, to the blood references.
+Peony's reproduced bands are the axe's native shadow; preview controls share
+the same harsh shading. No Eve or runtime repair is justified by this evidence.
+All 65,536 Peony palette/glow/visibility combinations pass native section
+resolution and save round-trip, with representative world/preview captures.
+Literal exhaustive visual acceptance remains unclaimed. Three garment masks
+need increased dimensions while preserving their constant roughness/metallic
+values; the skin parent has documented static-permutation differences.
+The user's saved state is restored. Frozen releases are unchanged, and nothing
+is published. Evidence, separate ZIPs, exact staged files and limits are in
+[the finding doc](development/cw-blood-peony-skin.md).
+
 ## October 17: hand-support catalog, CSS 1.0.1
 
 CSS 1.0.1 loads `catalog/hand-support.json` once at startup, following the
