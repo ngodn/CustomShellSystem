@@ -2,7 +2,7 @@
 
 [UUEPBS](https://github.com/XTGMods/UUEPBS) (Universal Unreal Engine Player Body Sliders, by XTGMods) adds bone and morph sliders to the player character. It works beside CSS: it edits the final pose after the animation and CSS physics have run, so CSS springs, body motion controls and customization keep working, and its edits sit on top of them.
 
-Status: this page is a draft from reading the UUEPBS source (v2.6.1). The live test on Eve, Unholy Genessa, Commander White and tHorny Proxima is pending; the hook pin below is filled in after it.
+Status: UUEPBS 2.7.1 loads beside CSS core 1.0.2 on this machine with the profile below (one custom bone group, 24 morph groups parsed, pose hook confirmed). The per-outfit slider checks and the feel verdict are in progress.
 
 ## What binds on a CSS body
 
@@ -50,4 +50,10 @@ A wildcard group such as `["PBMBreasts*"]` drives every matching morph at once, 
 
 ## Pose hook pin
 
-After the live test the recommended `"Hook"` line for `MortalShell2.json` goes here, so the search is skipped on start.
+Found on the live check of 19 October 2026 (UUEPBS 2.7.1, UE4SS 3.0.1 Beta, the current game exe) and already in the ready profile above:
+
+```json
+"Hook": { "Slot": 368, "Buffers": "0x600", "ReadIndex": "0x648" }
+```
+
+With the line in `MortalShell2.json` the hook search is skipped on start. If a game update moves things, the log says the check failed; delete the line to search again.
