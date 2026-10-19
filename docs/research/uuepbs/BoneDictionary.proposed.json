@@ -1,0 +1,581 @@
+{
+  "format": "UUEPBS bone dictionary",
+  "version": 1,
+  "help": [
+    "Decides which bones each slider in the Simplified Panel drives. Edit freely: the window picks up changes within a few seconds.",
+    "Bone names are cleaned before matching: IgnorePrefixes come off the front, the left/right marker is removed,",
+    "IgnoreSuffixes come off the end, then everything becomes lower case letters and digits only.",
+    "  MOT_Thigh_L -> thigh    CC_Base_L_Upperarm -> upperarm    Chest_M -> chest    mixamorig:LeftUpLeg -> upleg",
+    "Patterns: '*' = anything, '#' = any digits. A pattern starting with '=' matches the full original bone name instead.",
+    "Bones: tried in order; the first pattern that matches anything wins (both sides are taken together).",
+    "Extra: every match is added as well. Helpers: true also adds <bone>twist / roll / jiggle / stretch ... helper bones.",
+    "MatchAll: true adds the matches of every pattern (used for muscle groups).",
+    "Children: scale_too | keep_size | this_bone_only (what the rest of the body does when the slider moves).",
+    "Styles: rig-specific overrides, used when every Detect pattern matches at least one bone.",
+    "Per-game changes belong in Scripts/GameProfiles/<game>.json under \"BodyGroups\"; they override this file."
+  ],
+  "IgnorePrefixes": [
+    "MOT_",
+    "SUP_",
+    "PRG_",
+    "SCB_",
+    "SBC_",
+    "CC_Base_",
+    "J_Bip_C_",
+    "J_Bip_",
+    "J_Sec_",
+    "J_Adj_",
+    "Bip001 ",
+    "Bip01 ",
+    "Bip001_",
+    "Bip01_",
+    "DEF-",
+    "ORG-",
+    "MCH-",
+    "ValveBiped."
+  ],
+  "IgnoreSuffixes": [
+    "_M",
+    ".M",
+    "_C",
+    ".C",
+    "_x",
+    ".x",
+    "_SkinJNT",
+    "_jnt",
+    "_bind"
+  ],
+  "IgnoreStemPrefixes": [
+    "mixamorig",
+    "ccbase",
+    "jbipc",
+    "jbip",
+    "jsec",
+    "jadj",
+    "bip001",
+    "bip01",
+    "def",
+    "org",
+    "valvebiped"
+  ],
+  "HelperWords": [
+    "twist",
+    "roll",
+    "jiggle",
+    "bend",
+    "share",
+    "helper",
+    "stretch",
+    "part",
+    "correct",
+    "thicker",
+    "volume",
+    "fix"
+  ],
+  "Groups": [
+    {
+      "Section": "Head & Neck",
+      "Title": "Head",
+      "Bones": [
+        "head",
+        "head#"
+      ],
+      "Children": "scale_too",
+      "Hint": "Whole head including face and anything attached to it."
+    },
+    {
+      "Title": "Neck",
+      "Bones": [
+        "neck01",
+        "neck",
+        "necklower",
+        "neck1",
+        "neck#"
+      ],
+      "Helpers": true,
+      "Children": "keep_size",
+      "Hint": "Neck length/thickness; the head keeps its size."
+    },
+    {
+      "Title": "Horns",
+      "Bones": [
+        "horn1",
+        "horn",
+        "horn#"
+      ],
+      "Children": "scale_too",
+      "Hint": "Both horns."
+    },
+    {
+      "Title": "Ears",
+      "Bones": [
+        "cear01",
+        "ear",
+        "ear#"
+      ],
+      "Children": "scale_too",
+      "Hint": "Both ears."
+    },
+    {
+      "Title": "Eyes",
+      "Bones": [
+        "ceye",
+        "eye",
+        "eyeball",
+        "eye#"
+      ],
+      "Children": "scale_too",
+      "Hint": "Eyeballs."
+    },
+    {
+      "Section": "Torso",
+      "Title": "Rib cage",
+      "Bones": [
+        "spine02",
+        "spine2",
+        "chestlower",
+        "chest",
+        "abdomenupper",
+        "spine002",
+        "ribs",
+        "ribcage",
+        "*xiong"
+      ],
+      "Children": "keep_size",
+      "Hint": "Upper torso. Arms, neck and breasts keep their size but move with it."
+    },
+    {
+      "Title": "Waist",
+      "Bones": [
+        "spine01",
+        "abdomenlower",
+        "abdomen",
+        "spine",
+        "spine001",
+        "waist",
+        "spine1",
+        "*yaobu*",
+        "*koshi*"
+      ],
+      "Children": "keep_size",
+      "Hint": "Mid torso / waist."
+    },
+    {
+      "Title": "Belly",
+      "Bones": [
+        "belly",
+        "belly#",
+        "stomach",
+        "tummy",
+        "*belly*",
+        "*fubu*"
+      ],
+      "Children": "scale_too",
+      "Hint": "Belly / stomach soft-body bone."
+    },
+    {
+      "Title": "Hips",
+      "Bones": [
+        "pelvis",
+        "hips",
+        "hip",
+        "pelvis#"
+      ],
+      "Children": "keep_size",
+      "Hint": "Pelvis width. Legs, butt and spine keep their size."
+    },
+    {
+      "Title": "Shoulders",
+      "Bones": [
+        "clavicle",
+        "shoulder",
+        "collar",
+        "clavicle#",
+        "scapula"
+      ],
+      "Children": "keep_size",
+      "Hint": "Collarbones / shoulder width."
+    },
+    {
+      "Section": "Chest",
+      "Title": "Breasts",
+      "Bones": [
+        "boob",
+        "breast",
+        "bust1",
+        "bust",
+        "pectoral",
+        "breastbase",
+        "chestbreast",
+        "*breast",
+        "breast*",
+        "boob*",
+        "bust*",
+        "*oppai*",
+        "*rufang*",
+        "*breast*",
+        "brust",
+        "brust#",
+        "*brust*"
+      ],
+      "Children": "scale_too",
+      "Hint": "Breast size (nipples scale along)."
+    },
+    {
+      "Title": "Nipples",
+      "Bones": [
+        "nipp",
+        "nipple",
+        "nipple#",
+        "*nipple*",
+        "nipp#"
+      ],
+      "Children": "scale_too",
+      "Hint": "Nipple size."
+    },
+    {
+      "Section": "Hips & Legs",
+      "Title": "Butt",
+      "Bones": [
+        "butt",
+        "glute",
+        "buttock",
+        "gluteus",
+        "butt#",
+        "buttcheek",
+        "*butt*",
+        "*glute*",
+        "*buttock*",
+        "*pigu*",
+        "*shiri*",
+        "*tunbu*"
+      ],
+      "Children": "scale_too",
+      "Hint": "Glutes."
+    },
+    {
+      "Title": "Thighs",
+      "Bones": [
+        "thigh",
+        "upleg",
+        "upperleg",
+        "thighbend",
+        "thigh#",
+        "thighstretch",
+        "*datui*",
+        "*momo*"
+      ],
+      "Extra": [
+        "*dtui*",
+        "thighjiggle#"
+      ],
+      "Helpers": true,
+      "Children": "keep_size",
+      "Hint": "Upper legs. Use Width/Depth for thickness without longer legs."
+    },
+    {
+      "Title": "Calves",
+      "Bones": [
+        "calf",
+        "lowerleg",
+        "leg",
+        "shin",
+        "calf#",
+        "legstretch",
+        "knee",
+        "*xiaotui*"
+      ],
+      "Extra": [
+        "*xtui*"
+      ],
+      "Helpers": true,
+      "Children": "keep_size",
+      "Hint": "Lower legs."
+    },
+    {
+      "Title": "Feet",
+      "Bones": [
+        "foot",
+        "foot#",
+        "ankle"
+      ],
+      "Children": "scale_too",
+      "Hint": "Feet and toes."
+    },
+    {
+      "Section": "Arms",
+      "Title": "Upper arms",
+      "Bones": [
+        "upperarm",
+        "arm",
+        "shldrbend",
+        "upperarm#",
+        "armstretch",
+        "*dabi*"
+      ],
+      "Helpers": true,
+      "Children": "keep_size",
+      "Hint": "Upper arms."
+    },
+    {
+      "Title": "Forearms",
+      "Bones": [
+        "lowerarm",
+        "forearm",
+        "forearmbend",
+        "lowerarm#",
+        "forearmstretch",
+        "elbow",
+        "*xiaobi*"
+      ],
+      "Helpers": true,
+      "Children": "keep_size",
+      "Hint": "Forearms."
+    },
+    {
+      "Title": "Hands",
+      "Bones": [
+        "hand",
+        "hand#",
+        "wrist"
+      ],
+      "Children": "scale_too",
+      "Hint": "Hands and fingers."
+    },
+    {
+      "Section": "Muscles",
+      "Title": "Deltoids",
+      "Bones": [
+        "*deltoid*",
+        "delt",
+        "delt#",
+        "*shoulderdelt*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Shoulder muscle helper bones."
+    },
+    {
+      "Title": "Biceps",
+      "Bones": [
+        "*bicep*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Biceps helper bones."
+    },
+    {
+      "Title": "Triceps",
+      "Bones": [
+        "*tricep*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Triceps helper bones."
+    },
+    {
+      "Title": "Pecs",
+      "Bones": [
+        "*pectoral*",
+        "pec",
+        "pec#",
+        "pecs",
+        "*pecs*",
+        "*claviclepec*",
+        "*chestmuscle*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Chest muscle helper bones."
+    },
+    {
+      "Title": "Lats",
+      "Bones": [
+        "*latissimus*",
+        "lat",
+        "lats",
+        "lat#",
+        "*lats"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Latissimus (back width) helper bones."
+    },
+    {
+      "Title": "Traps",
+      "Bones": [
+        "*trapezius*",
+        "trap",
+        "traps",
+        "trap#"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Trapezius helper bones."
+    },
+    {
+      "Title": "Serratus",
+      "Bones": [
+        "*serratus*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Serratus helper bones."
+    },
+    {
+      "Title": "Abs",
+      "Bones": [
+        "abs",
+        "abs#",
+        "*abdominis*",
+        "*sixpack*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Abdominal muscle helper bones."
+    },
+    {
+      "Title": "Obliques",
+      "Bones": [
+        "*oblique*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Oblique helper bones."
+    },
+    {
+      "Title": "Quads",
+      "Bones": [
+        "*quadricep*",
+        "*quads*",
+        "quad",
+        "quad#"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Front thigh muscle helper bones."
+    },
+    {
+      "Title": "Hamstrings",
+      "Bones": [
+        "*hamstring*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Back thigh muscle helper bones."
+    },
+    {
+      "Title": "Calf muscles",
+      "Bones": [
+        "*gastroc*",
+        "*soleus*"
+      ],
+      "MatchAll": true,
+      "Children": "scale_too",
+      "Hint": "Calf muscle helper bones."
+    }
+  ],
+  "Styles": [
+    {
+      "Name": "Advanced Skeleton",
+      "Detect": [
+        "=Root_M",
+        "hip",
+        "knee",
+        "ankle"
+      ],
+      "Groups": [
+        {
+          "Title": "Hips",
+          "Bones": [
+            "=Root_M"
+          ]
+        },
+        {
+          "Title": "Waist",
+          "Bones": [
+            "spine1",
+            "spine1part1",
+            "rootpart2",
+            "rootpart1"
+          ]
+        },
+        {
+          "Title": "Rib cage",
+          "Bones": [
+            "chest",
+            "spine2",
+            "spine3"
+          ]
+        },
+        {
+          "Title": "Neck",
+          "Bones": [
+            "neck",
+            "neckpart1"
+          ]
+        },
+        {
+          "Title": "Shoulders",
+          "Bones": [
+            "scapula"
+          ]
+        },
+        {
+          "Title": "Upper arms",
+          "Bones": [
+            "shoulder"
+          ],
+          "Extra": [
+            "shoulderpart#",
+            "*dabi*"
+          ]
+        },
+        {
+          "Title": "Forearms",
+          "Bones": [
+            "elbow"
+          ],
+          "Extra": [
+            "elbowpart#",
+            "*xiaobi*"
+          ]
+        },
+        {
+          "Title": "Hands",
+          "Bones": [
+            "wrist"
+          ]
+        },
+        {
+          "Title": "Thighs",
+          "Bones": [
+            "hip"
+          ],
+          "Extra": [
+            "hippart#",
+            "*dtui*",
+            "*datui*"
+          ]
+        },
+        {
+          "Title": "Calves",
+          "Bones": [
+            "knee"
+          ],
+          "Extra": [
+            "kneepart#",
+            "*xtui*",
+            "*xiaotui*"
+          ]
+        },
+        {
+          "Title": "Feet",
+          "Bones": [
+            "ankle"
+          ]
+        }
+      ]
+    }
+  ]
+}
