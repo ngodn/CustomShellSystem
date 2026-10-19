@@ -50,6 +50,25 @@ BODY_REGIONS=('brust001','brust002','butt001','butt002','thigh_twist_02_l','thig
 
 def body_rig(control):
     return kind_of(control)=='rig' and control.get('solver','positional_hair')=='angular_body'
+
+# Widest travel a body region may be given, degrees. Must match body_travel_ceiling in
+# native/src/controls.hpp.
+BODY_TRAVEL_CEILING=45
+
+def travel_range(control):
+    """A body rig's optional travel: the largest angle in degrees its regions may swing.
+
+    Absent is valid and means the rig keeps its own cooked limits, so every recipe written
+    before the travel channel still validates unchanged.
+    """
+    value=control.get('travel')
+    if value is None: return None
+    if not isinstance(value,dict) or set(value)!={'min','max','default'}:
+        raise ValueError('A travel range needs min, max and default')
+    for x in value.values(): number(x,0,BODY_TRAVEL_CEILING)
+    if not 0<value['min']<value['max'] or not value['min']<=value['default']<=value['max']:
+        raise ValueError('Travel range outside solver limits')
+    return value
 # Same rule CSSImportMesh applies. It refuses any name the engine would have had to
 # rename at build time, so a name that passes here is one the runtime can address.
 MORPH=re.compile(r'[A-Za-z0-9_]{1,64}\Z')
@@ -179,17 +198,18 @@ def validate(recipe:dict) -> set[str]:
                 body_owners.update(regions)
                 if any(k in c for k in ('stiffness','damping','gravity')):
                     raise ValueError('Body rig uses frequency, damping ratio and motion amount')
+                travel_range(c)
             else:
                 if rig_owner: raise ValueError('The post-process rig needs one control owner')
                 rig_owner=True
-                if any(k in c for k in ('frequency','damping_ratio','motion_amount','regions')):
+                if any(k in c for k in ('frequency','damping_ratio','motion_amount','regions','travel')):
                     raise ValueError('Hair rig does not accept body settings')
             if any(k in c for k in ('default','min','max','step','nodes','bindings','angular_spring')):
                 raise ValueError('Rig controls use their own ranges and no material bindings or node names')
             if not isinstance(c.get('enabled',True),bool): raise ValueError('Rig enabled default must be boolean')
             used.add(c['id'])
-        elif any(k in c for k in ('stiffness','enabled','solver','regions','motion_amount')):
-            raise ValueError('Only rig controls accept stiffness and enabled')
+        elif any(k in c for k in ('stiffness','enabled','solver','regions','motion_amount','travel')):
+            raise ValueError('Only rig controls accept stiffness, enabled and travel')
         if kind_of(c) in ('spring','dynamics'):
             nodes=c.get('nodes');bounded_array(nodes,32)
             if not nodes: raise ValueError('A spring control needs between one and thirty-two bones')

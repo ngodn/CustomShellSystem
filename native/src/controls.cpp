@@ -175,6 +175,19 @@ void valid_value(const Control& c,const ControlValue& v) {
         throw std::runtime_error("A toggle or choice needs a whole-number value: "+c.id);
     if(v[3]!=c.value[3]) throw std::runtime_error("Opacity is fixed by its author");
 }
+// A travel override against its control: a body rig that declares travel, inside its range.
+void valid_travel(const Control& c,float degrees) {
+    if(!c.rig || !c.rig->body || !c.rig->travel) throw std::runtime_error("Only a body rig with a travel range takes travel: "+c.id);
+    if(!std::isfinite(degrees) || degrees<c.rig->travel->minimum || degrees>c.rig->travel->maximum)
+        throw std::runtime_error("Travel outside control limits: "+c.id);
+}
+// A saved travel before any schema is known: a positive angle no wider than any rig allows.
+float stored_travel(const Json& j) {
+    if(!j.is_number()) throw std::runtime_error("Saved travel needs a number");
+    const auto degrees=j.get<float>();
+    if(!std::isfinite(degrees) || degrees<=0 || degrees>body_travel_ceiling) throw std::runtime_error("Saved travel outside supported range");
+    return degrees;
+}
 void valid_tint(const std::string& group,const ColorTint& tint) {
     if(group!="outfit" && group!="body") throw std::runtime_error("Invalid tint group");
     if(!std::isfinite(tint.hue) || !std::isfinite(tint.saturation) || !std::isfinite(tint.brightness) ||
@@ -196,7 +209,7 @@ SpringAxes spring_axes(const Control& control, SpringAxes authored) {
     return authored;
 }
 int control_channel_count(const Control& control) {
-    if(control.kind==ControlKind::Rig) return 4;
+    if(control.kind==ControlKind::Rig) return body_travel_control(control)?5:4;
     if(control.kind==ControlKind::Dynamics) return 3;
     if(control.kind==ControlKind::Spring) return control.spring_clamp?3:2;
     return control.scalar?1:3;
@@ -214,28 +227,50 @@ RigSettings rig_settings(const Control& control,const ControlValue& value) {
 bool body_rig_control(const Control& control) {
     return control.kind==ControlKind::Rig && control.rig && control.rig->body;
 }
+bool body_travel_control(const Control& control) {
+    return body_rig_control(control) && control.rig->travel.has_value();
+}
 BodyRigSettings body_rig_settings(const std::vector<Control>& controls,const std::map<std::string,ControlValue>& values,
-                                  const BodyRigSettings& authored) {
+                                  const BodyRigSettings& authored,const std::map<std::string,float>& travel) {
     auto result=authored;
     bool active=false;
-    for(const auto& control:controls) if(body_rig_control(control) && values.contains(control.id)) {
-        const auto& value=values.at(control.id);
-        valid_value(control,value);
+    for(const auto& control:controls) if(body_rig_control(control)) {
+        const auto value=values.find(control.id);
+        const auto degrees=travel.find(control.id);
+        if(degrees!=travel.end()) valid_travel(control,degrees->second);
+        // On a rig without the travel inputs a travel-only override changes nothing at all,
+        // not even the region switch.
+        if(value==values.end() && (degrees==travel.end() || !authored.has_travel)) continue;
+        if(value!=values.end()) valid_value(control,value->second);
         if(!active && !authored.use_regions) {
             result.frequency.fill(authored.global_frequency);
             result.damping.fill(authored.global_damping);
             result.motion.fill(authored.global_motion);
             result.enabled.fill(true);
+            result.travel.fill(authored.global_travel);
         }
         active=true;
         for(auto region:control.rig->regions) {
             if(region>=body_region_names.size()) throw std::runtime_error("Invalid body region index");
-            result.frequency[region]=value[0]; result.damping[region]=value[1];
-            result.motion[region]=value[2]; result.enabled[region]=value[3]==1;
+            // A travel-only override leaves the region's tuning where the rig had it.
+            if(value!=values.end()) {
+                const auto& v=value->second;
+                result.frequency[region]=v[0]; result.damping[region]=v[1];
+                result.motion[region]=v[2]; result.enabled[region]=v[3]==1;
+            }
+            // A rig cooked before the travel channel keeps its own envelope.
+            if(degrees!=travel.end() && authored.has_travel) result.travel[region]=degrees->second;
         }
     }
     if(active) result.use_regions=true;
     return result;
+}
+BodyTravelSupport body_travel_support(const BodyTravelFields& fields) {
+    if(!fields.array && !fields.global) return BodyTravelSupport::Absent;
+    if(!fields.array || !fields.global) throw std::runtime_error("Body travel needs both CSSBodyRegionTravel and CSSBodyTravel");
+    if(!fields.array_float || !fields.global_float) throw std::runtime_error("Body travel inputs must be float");
+    if(fields.count!=7) throw std::runtime_error("Body travel requires seven region values");
+    return BodyTravelSupport::Ready;
 }
 bool dynamics_reset_required(const DynamicsSettings& before,const DynamicsSettings& after) {
     // AnimDynamics refreshes spring forcing and gravity scale each update, but
@@ -249,6 +284,7 @@ SliderRange control_channel(const Control& control,int channel) {
     if(control.kind==ControlKind::Rig) {
         if(!control.rig) throw std::runtime_error("Missing rig control settings");
         if(channel==3) return {0,1,control.value[3],1};
+        if(channel==4) return *control.rig->travel;
         return control.rig->channels[size_t(channel)];
     }
     if(control.kind==ControlKind::Dynamics) {
@@ -394,7 +430,23 @@ ControlSet ControlSet::parse(const Json& j) {
                 }
                 for(const auto* key:{"stiffness","damping","gravity"})
                     if(c.contains(key)) throw std::runtime_error("Body rig uses frequency, damping ratio and motion amount");
-            } else for(const auto* key:{"frequency","damping_ratio","motion_amount","regions"})
+                // Optional travel, the largest angle in degrees the regions may swing from
+                // their animated pose. Absent: the rig keeps its own cooked limits.
+                if(c.contains("travel")) {
+                    const auto& r=c.at("travel");
+                    if(!r.is_object() || r.size()!=3 || !r.contains("min") || !r.contains("max") || !r.contains("default"))
+                        throw std::runtime_error("A travel range needs min, max and default");
+                    for(const auto* key:{"min","max","default"})
+                        if(!r.at(key).is_number()) throw std::runtime_error("A travel range must be numeric");
+                    SliderRange travel{r.at("min").get<float>(),r.at("max").get<float>(),r.at("default").get<float>(),.5f};
+                    if(!std::isfinite(travel.minimum) || !std::isfinite(travel.maximum) || !std::isfinite(travel.value) ||
+                       travel.minimum<=0 || travel.maximum>body_travel_ceiling || travel.minimum>=travel.maximum ||
+                       travel.value<travel.minimum || travel.value>travel.maximum)
+                        throw std::runtime_error("Travel range outside solver limits");
+                    travel.step=std::min(travel.step,travel.maximum-travel.minimum);
+                    settings.travel=travel;
+                }
+            } else for(const auto* key:{"frequency","damping_ratio","motion_amount","regions","travel"})
                 if(c.contains(key)) throw std::runtime_error("Hair rig does not accept body settings");
             const char* names[]={settings.body?"frequency":"stiffness",settings.body?"damping_ratio":"damping",settings.body?"motion_amount":"gravity"};
             const float low[]={settings.body?.2f:1,settings.body?.01f:0,settings.body?0.f:-5},
@@ -418,8 +470,9 @@ ControlSet ControlSet::parse(const Json& j) {
             if(c.contains("enabled") && !c.at("enabled").is_boolean()) throw std::runtime_error("Rig enabled default must be boolean");
             control.value[3]=c.value("enabled",true)?1.f:0.f;
             control.rig=settings;
-        } else if(c.contains("stiffness") || c.contains("enabled") || c.contains("solver") || c.contains("regions") || c.contains("motion_amount"))
-            throw std::runtime_error("Only rig controls accept stiffness and enabled");
+        } else if(c.contains("stiffness") || c.contains("enabled") || c.contains("solver") || c.contains("regions") || c.contains("motion_amount") ||
+                  c.contains("travel"))
+            throw std::runtime_error("Only rig controls accept stiffness, enabled and travel");
         if(control.kind==ControlKind::Dynamics) {
             for(const auto* key:{"frequency","damping_ratio","bindings"})
                 if(c.contains(key)) throw std::runtime_error(std::string("Dynamics does not accept ")+key);
@@ -598,6 +651,12 @@ ControlSet ControlSet::parse(const Json& j) {
                 ControlValue check=control.value;
                 for(size_t i=0;i<3;++i) check[i]=preset.channels[i];
                 valid_value(control,check);
+                if(entry.contains("travel")) {
+                    if(!body_travel_control(control)) throw std::runtime_error("Only a body rig with a travel range has preset travel");
+                    if(!entry.at("travel").is_number()) throw std::runtime_error("Preset travel needs a number");
+                    preset.travel=entry.at("travel").get<float>();
+                    valid_travel(control,*preset.travel);
+                }
                 control.presets.push_back(std::move(preset));
             }
         }
@@ -724,6 +783,12 @@ Customization Customization::parse(const Json& j) {
         valid_tint(group,tint);
         if(!tint.neutral()) result.tints[group]=tint;
     }
+    auto travel=j.value("travel",Json::object());
+    if(!travel.is_object() || travel.size()>max_customization_controls) throw std::runtime_error("Invalid saved travel count");
+    for(const auto& [id,degrees]:travel.items()) {
+        if(!valid_id(id)) throw std::runtime_error("Invalid saved travel part");
+        result.travel[id]=stored_travel(degrees);
+    }
     if(j.contains("ground_offset_cm")) {
         const auto& offset=j.at("ground_offset_cm");
         if(!offset.is_number() || !GroundOffset::valid(offset.get<double>()))
@@ -742,6 +807,7 @@ Json Customization::json() const {
     }
     if(ground_offset_cm) out["ground_offset_cm"]=*ground_offset_cm;
     if(!expression.empty()) out["expression"]=expression;
+    if(!travel.empty()) out["travel"]=travel;
     return out;
 }
 Customization compatible_values(const ControlSet& options,const Customization& source) {
@@ -750,6 +816,10 @@ Customization compatible_values(const ControlSet& options,const Customization& s
     for(const auto& [id,value]:source.values) if(auto* control=options.find(id)) {
         try { valid_value(*control,value); result.values[id]=value; }
         catch(const std::exception&) { /* A changed part keeps its new authored default. */ }
+    }
+    for(const auto& [id,degrees]:source.travel) if(auto* control=options.find(id)) {
+        try { valid_travel(*control,degrees); result.travel[id]=degrees; }
+        catch(const std::exception&) { /* No travel here, or a narrower range: the author's default. */ }
     }
     // A tint is a plain adjustment, so it carries over to any outfit that still has parts
     // in that group.
@@ -789,13 +859,14 @@ Customization choose_palette(const ControlSet& options,const Customization& curr
     Customization result=current;
     result.palette=palette;
     // Original is the author's look, placement included.
-    if(palette=="original") { result.values.clear(); result.tints.clear(); result.ground_offset_cm.reset(); return result; }
+    if(palette=="original") { result.values.clear(); result.travel.clear(); result.tints.clear(); result.ground_offset_cm.reset(); return result; }
     auto found=std::find_if(options.palettes.begin(),options.palettes.end(),
                             [&](const auto& p){return p.id==palette;});
     if(found==options.palettes.end()) throw std::runtime_error("That palette is not installed");
     std::set<std::string> groups;
     for(const auto& [id,value]:found->values) if(auto* control=options.find(id)) {
         result.values.erase(id);
+        result.travel.erase(id);
         groups.insert(control_group_name(control->group));
     }
     for(const auto& group:groups) result.tints.erase(group);
@@ -875,6 +946,13 @@ std::map<std::string,ControlValue> control_values(const ControlSet& options,cons
     }
     return result;
 }
+std::map<std::string,float> control_travel(const ControlSet& options,const Customization& custom) {
+    for(const auto& [id,degrees]:custom.travel) {
+        auto* c=options.find(id); if(!c) throw std::runtime_error("Saved part is not installed");
+        valid_travel(*c,degrees);
+    }
+    return custom.travel;
+}
 Customization apply_customize(const ControlSet& options, Customization custom, const nlohmann::json& command) {
     const auto action=command.at("action").get<std::string>();
     if(action=="reset_customization") custom=Customization{};
@@ -884,7 +962,14 @@ Customization apply_customize(const ControlSet& options, Customization custom, c
         auto id=command.at("control").get<std::string>();
         auto* control=options.find(id);
         if(!control) throw std::runtime_error("Unknown part");
-        if(clearing) custom.values.erase(id);
+        if(clearing) { custom.values.erase(id); custom.travel.erase(id); }
+        else if(command.value("channel",0)==4 && !command.contains("rgb")) {
+            // Travel lives beside the four-number value, not in it.
+            const auto slider=control_channel(*control,4);
+            const float held=custom.travel.contains(id)?custom.travel.at(id):slider.value;
+            custom.travel[id]=command.contains("value")?command.at("value").get<float>()
+                :std::clamp(held+command.at("delta").get<float>()*slider.step,slider.minimum,slider.maximum);
+        }
         else {
             // Read the value before the group tint, or the tint would be folded
             // into the override and then applied to it a second time.
@@ -908,6 +993,7 @@ Customization apply_customize(const ControlSet& options, Customization custom, c
     }
     else throw std::runtime_error("Unknown customization action");
     control_values(options,custom);   // the request path validated here too
+    control_travel(options,custom);
     return custom;
 }
 Customization restore_customization(const ControlSet& options, const nlohmann::json& snapshot) {

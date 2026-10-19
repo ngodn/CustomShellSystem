@@ -734,3 +734,19 @@ The native adapter validates the real CSS AnimInstance, reflected types, bounds,
 Changed body inputs advance only `CSSBodyResetEpoch`. Hair retains `CSSResetEpoch`. General dynamics reset advances both, while unchanged body input values perform no write or reset. No body solver or object scan is added to a per-frame native hook. The UI uses Frequency (Hz), Damping ratio, Motion amount and Motion on/off. Profiles use the existing four-channel saved-control representation.
 
 Current evidence: Windows core compilation, 307 portable control checks and 16 metadata tests pass. The actual combined editor component passes 23 fixtures and 37542 checks, including independent reset isolation. This does not verify the UE4SS reflection adapter in the game. Native UI interaction, preview/profile recovery, cooked execution and live performance remain required. See [the body-region checkpoint](../../CSS-Mod-Authoring/docs/next-gen-body-region-controls.md).
+
+### Body travel (candidate, 2026-10-19)
+
+A body rig control may add an optional `travel` range: the largest angle, in degrees, its regions may swing away from the animated pose.
+
+```json
+"travel": {"min": 2, "max": 24, "default": 4}
+```
+
+Bounds are `0 < min < max <= 45`, step 0.5. Hair rigs, springs and every other kind reject `travel` (a spring's travel stays `max_displacement`, in cm). Without `travel` a control keeps exactly four channels and the rig keeps its own cooked limits, so every recipe written before this validates and behaves unchanged.
+
+Travel is channel 4 in requests (`{"action":"control","control":"chest_motion","channel":4,"value":6}`, or `delta` in 0.5-degree steps). It is saved beside the four-number value as `"travel": {"<control id>": degrees}` in the customization object, so a saved look stays four numbers per part and CSS builds without travel ignore the key. Original and Reset part drop it; a named palette drops it for the parts that palette sets. Palettes do not carry travel. Built-in physics presets set it per region on parts that declare a range, clamped to that range; a package preset may add `"travel": <degrees>` on such a part.
+
+AnimBP contract, optional: a seven-entry float array `CSSBodyRegionTravel` (canonical region order) and a float `CSSBodyTravel`, both defaulting to 0. Zero means "the rig's own limit", min(`Limits`, the `MaxTravel` cap); a positive value replaces both for that region. The AnimBP forwards them to rig inputs `RegionTravel[7]` and `Travel`, selected by `UseRegionSettings` like the other region inputs. CSS writes travel only when both properties exist with that layout. A rig without them is accepted: travel is skipped, the other channels apply, and a travel-only override changes nothing. A half-built pair (one missing, wrong type or not seven entries) is refused like any other contract mismatch. Travel changes advance `CSSBodyResetEpoch` like the other body inputs.
+
+Evidence: host builds only. 470 portable control checks and 21 Python control tests pass; the Windows core compiles. No AnimBP or rig carries the inputs yet, so nothing is verified in game. Design, migration and the soft-limit plan: [body motion travel channel](research/2026-10-19-body-motion-travel-channel.md).

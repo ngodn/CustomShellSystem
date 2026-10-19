@@ -199,6 +199,147 @@ int main() {
                 rejects([&]{body_rig_settings(model.controls,{{"chest-motion",value}},authored);});
         }
         {
+            // Body rig travel: an optional fifth channel in degrees, saved beside the
+            // four-number value. Recipes and rigs without it keep working unchanged.
+            auto legacy=Json::parse(R"({"schema":1,"controls":[{"id":"chest-motion","name":"Chest motion","kind":"rig",
+              "solver":"angular_body","regions":["brust001","brust002"],
+              "frequency":{"min":0.5,"max":6,"default":2},"damping_ratio":{"min":0.1,"max":2,"default":0.7},
+              "motion_amount":{"min":0,"max":5,"default":1}}]})");
+            const auto old=ControlSet::parse(legacy);
+            const auto& old_chest=old.controls[0];
+            expect(!body_travel_control(old_chest) && control_channel_count(old_chest)==4,"A recipe without travel gained a channel");
+            rejects([&]{control_channel(old_chest,4);});
+            rejects([&]{apply_customize(old,{},{{"action","control"},{"control","chest-motion"},{"channel",4},{"value",6}});});
+            for(const auto& preset:physics_presets(old_chest)) expect(!physics_preset_travel(old_chest,preset),"Preset travel on a part without travel");
+            const auto old_firm=apply_physics_preset(old,{},"firm","chest-motion");
+            expect(old_firm.travel.empty() && old_firm.values.at("chest-motion")[0]==2.6f,"Legacy preset must write only its three channels");
+
+            auto recipe=legacy;
+            recipe["controls"][0]["travel"]={{"min",2},{"max",24},{"default",4}};
+            recipe["controls"].push_back(Json::parse(R"({"id":"glute-motion","name":"Glute motion","kind":"rig",
+              "solver":"angular_body","regions":["butt001","butt002"],
+              "frequency":{"min":0.5,"max":6,"default":2},"damping_ratio":{"min":0.1,"max":2,"default":0.7},
+              "motion_amount":{"min":0,"max":5,"default":1},"travel":{"min":2,"max":12,"default":8}})"));
+            const auto model=ControlSet::parse(recipe);
+            const auto& chest=model.controls[0]; const auto& glute=model.controls[1];
+            expect(body_travel_control(chest) && control_channel_count(chest)==5,"Travel channel missing");
+            const auto range=control_channel(chest,4);
+            expect(range.minimum==2 && range.maximum==24 && range.value==4 && range.step==.5f,"Travel range wrong");
+            expect(chest.value==ControlValue{2,.7f,1,1},"Travel changed the four saved channels");
+            for(const auto& bad:{Json{{"min",0},{"max",24},{"default",4}},Json{{"min",2},{"max",46},{"default",4}},
+                                 Json{{"min",8},{"max",8},{"default",8}},Json{{"min",2},{"max",24},{"default",30}},
+                                 Json{{"min",2},{"max",24}},Json{{"min",2},{"max",24},{"default",4},{"step",1}},
+                                 Json{{"min",true},{"max",24},{"default",4}},Json(6),Json::array({2,24,4})}) {
+                auto broken=recipe; broken["controls"][0]["travel"]=bad;
+                rejects([&]{ControlSet::parse(broken);});
+            }
+            auto hair=Json::parse(R"({"schema":1,"controls":[{"id":"hair-motion","name":"Hair motion","kind":"rig",
+              "stiffness":{"min":100,"max":250,"default":150},"damping":{"min":12,"max":24,"default":18},
+              "gravity":{"min":-0.2,"max":0.2,"default":0},"travel":{"min":2,"max":24,"default":4}}]})");
+            rejects([&]{ControlSet::parse(hair);});
+            auto spring=Json::parse(R"({"schema":1,"controls":[{"id":"bust","name":"Bust","kind":"spring","nodes":["brust001"],
+              "frequency":{"min":1,"max":3,"default":2},"damping_ratio":{"min":0.1,"max":1,"default":0.7},
+              "travel":{"min":2,"max":24,"default":4}}]})");
+            rejects([&]{ControlSet::parse(spring);});
+
+            // Composition: travel lands on the owned regions only, and only on a rig that has the inputs.
+            BodyRigSettings authored; authored.use_regions=true; authored.has_travel=true;
+            authored.frequency.fill(5); authored.damping.fill(1.2f); authored.motion.fill(.9f); authored.enabled.fill(true);
+            const std::map<std::string,float> chest_travel{{"chest-motion",10}};
+            auto travelled=body_rig_settings(model.controls,{},authored,chest_travel);
+            expect(travelled.travel[0]==10 && travelled.travel[1]==10 && travelled.travel[2]==0 && travelled.travel[6]==0,
+                   "Travel must reach exactly the owned regions");
+            expect(travelled.frequency==authored.frequency && travelled.enabled==authored.enabled && travelled.use_regions,
+                   "A travel-only override must keep the region tuning");
+            auto both=body_rig_settings(model.controls,{{"glute-motion",{3,.8f,.5f,1}}},authored,chest_travel);
+            expect(both.travel[0]==10 && both.travel[2]==0 && both.frequency[2]==3 && both.frequency[0]==5,"Travel and tuning overrides must compose independently");
+            auto older=authored; older.has_travel=false;
+            expect(body_rig_settings(model.controls,{},older,chest_travel)==older,"A rig without travel inputs must be left alone by travel");
+            auto older_mixed=body_rig_settings(model.controls,{{"chest-motion",{3,.8f,.5f,1}}},older,chest_travel);
+            expect(older_mixed.frequency[0]==3 && older_mixed.travel==older.travel,"Old rig must still take the other channels");
+            auto global=authored; global.use_regions=false; global.global_travel=0; global.travel.fill(7);
+            auto filled=body_rig_settings(model.controls,{},global,chest_travel);
+            expect(filled.use_regions && filled.travel[0]==10 && filled.travel[3]==0 && filled.frequency[3]==global.global_frequency,
+                   "Global mode must seed travel from the global input");
+            rejects([&]{body_rig_settings(model.controls,{},authored,{{"chest-motion",30}});});
+            rejects([&]{body_rig_settings(old.controls,{},authored,{{"chest-motion",6}});});
+
+            // Requests: channel 4 steps from the author's default, the value form sets it, reset drops it.
+            Customization look;
+            look=apply_customize(model,look,{{"action","control"},{"control","chest-motion"},{"channel",4},{"delta",1}});
+            expect(look.travel.at("chest-motion")==4.5f && look.values.empty(),"Travel step must not touch the saved value");
+            look=apply_customize(model,look,{{"action","control"},{"control","chest-motion"},{"channel",4},{"value",12}});
+            expect(look.travel.at("chest-motion")==12,"Travel value not set");
+            rejects([&]{apply_customize(model,look,{{"action","control"},{"control","chest-motion"},{"channel",4},{"value",30}});});
+            rejects([&]{apply_customize(model,look,{{"action","control"},{"control","chest-motion"},{"channel",5},{"value",3}});});
+            expect(control_travel(model,look).at("chest-motion")==12,"Travel overrides not reported");
+            expect(!apply_customize(model,look,{{"action","reset_control"},{"control","chest-motion"}}).travel.contains("chest-motion"),
+                   "Reset must drop the travel override");
+            look.travel["glute-motion"]=10;
+
+            // Saved looks: round trip, older saves without the key, schema-free bounds.
+            const auto saved=look.json();
+            expect(saved.contains("travel") && Customization::parse(saved)==look,"Travel did not round trip");
+            expect(!Customization{}.json().contains("travel"),"Empty travel must not be written");
+            expect(Customization::parse(Json::parse(R"({"palette":"original","values":{"chest-motion":[2,0.7,1,1]}})")).travel.empty(),
+                   "An older save must load without travel");
+            for(const auto& bad:{Json(0),Json(-1),Json(46),Json("6"),Json(nullptr)}) {
+                auto broken=saved; broken["travel"]["chest-motion"]=bad;
+                rejects([&]{Customization::parse(broken);});
+            }
+            auto broken=saved; broken["travel"]=Json::array(); rejects([&]{Customization::parse(broken);});
+            expect(restore_customization(model,saved)==look,"Profile restore lost travel");
+            auto narrowed=look; narrowed.travel["glute-motion"]=14;
+            const auto carried=compatible_values(model,narrowed);
+            expect(carried.travel.at("chest-motion")==12 && !carried.travel.contains("glute-motion"),
+                   "Travel outside the new range must fall back to the default");
+            expect(compatible_values(old,look).travel.empty(),"A variant without travel must drop travel");
+            rejects([&]{control_travel(old,look);});
+
+            // Palettes: Original clears travel, a palette clears only the parts it sets.
+            auto with_palette=recipe;
+            with_palette["palettes"]=Json::parse(R"([{"id":"calm","name":"Calm","values":{"glute-motion":[2,0.9,0.5,1]}}])");
+            const auto painted=ControlSet::parse(with_palette);
+            expect(choose_palette(painted,look,"original").travel.empty(),"Original kept travel");
+            const auto calm=choose_palette(painted,look,"calm");
+            expect(calm.travel.contains("chest-motion") && !calm.travel.contains("glute-motion"),"Palette travel scope wrong");
+
+            // Presets: built-ins carry per-region travel, clamped to the part's range.
+            const auto presets=physics_presets(chest);
+            const float chest_expected[]={4,6,10,14,20}, glute_expected[]={8,10,12,12,12};
+            for(size_t i=0;i<5;++i) {
+                expect(presets[i].builtin && physics_preset_travel(chest,presets[i])==chest_expected[i],"Chest preset travel wrong");
+                expect(physics_preset_travel(glute,physics_presets(glute)[i])==glute_expected[i],"Glute preset travel not clamped to range");
+            }
+            std::string label;
+            const auto firm=apply_physics_preset(model,look,"firm","chest-motion",&label);
+            expect(label=="Firm" && firm.travel.at("chest-motion")==4 && firm.travel.at("glute-motion")==10 &&
+                   firm.values.at("chest-motion")[0]==2.6f,"Preset must write travel to its part only");
+            const auto everywhere=apply_physics_preset(model,{},"OMG_Earthquake","");
+            expect(everywhere.travel.at("chest-motion")==20 && everywhere.travel.at("glute-motion")==12,"Preset for all parts lost travel");
+            rejects([&]{apply_physics_preset(model,{},"no-such-preset","");});
+            const auto held=firm.values.at("chest-motion");
+            expect(matching_physics_preset(chest,held)=="firm" && matching_physics_preset(chest,held,4.f)=="firm","Applied preset with travel not recognised");
+            expect(matching_physics_preset(chest,held,6.f).empty(),"Moved travel still matched a preset");
+            auto own=recipe;
+            own["controls"][0]["presets"]=Json::parse(R"([{"id":"studio","name":"Studio","value":[3,0.9,0.5],"travel":16}])");
+            const auto studio=ControlSet::parse(own);
+            expect(physics_preset_travel(studio.controls[0],studio.controls[0].presets[0])==16,"Package preset travel lost");
+            own["controls"][0]["presets"][0]["travel"]=30; rejects([&]{ControlSet::parse(own);});
+            own["controls"][0]["presets"][0]["travel"]="16"; rejects([&]{ControlSet::parse(own);});
+            auto untravelled=legacy;
+            untravelled["controls"][0]["presets"]=Json::parse(R"([{"id":"studio","name":"Studio","value":[3,0.9,0.5],"travel":6}])");
+            rejects([&]{ControlSet::parse(untravelled);});
+
+            // What the reflected AnimBP offers: absent is accepted, half-built is refused.
+            expect(body_travel_support({})==BodyTravelSupport::Absent,"An older rig must be accepted without travel");
+            expect(body_travel_support({true,true,7,true,true})==BodyTravelSupport::Ready,"Complete travel inputs refused");
+            for(const auto& bad:{BodyTravelFields{true,true,7,false,false},BodyTravelFields{false,false,0,true,true},
+                                 BodyTravelFields{true,true,6,true,true},BodyTravelFields{true,false,0,true,true},
+                                 BodyTravelFields{true,true,7,true,false}})
+                rejects([&]{body_travel_support(bad);});
+        }
+        {
             auto recipe=Json::parse(R"({"schema":1,"controls":[{"id":"hair-motion","name":"Hair motion","kind":"rig",
               "stiffness":{"min":100,"max":250,"default":150},"damping":{"min":12,"max":24,"default":18},
               "gravity":{"min":-0.2,"max":0.2,"default":0},"enabled":true}]})");

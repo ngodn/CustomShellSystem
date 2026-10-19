@@ -99,6 +99,30 @@ class ControlTests(unittest.TestCase):
             frequency=dict(min=1,max=3,default=2),damping_ratio=dict(min=.1,max=1,default=.7)))
         with self.assertRaises(ValueError):validate(bad)
 
+    def test_body_rig_travel_is_optional_and_bounded(self):
+        body=dict(id='chest-motion',name='Chest motion',kind='rig',solver='angular_body',regions=['brust001','brust002'],
+                  frequency=dict(min=.5,max=6,default=2),damping_ratio=dict(min=.1,max=2,default=.7),
+                  motion_amount=dict(min=0,max=5,default=1))
+        recipe=dict(schema=1,controls=[body],palettes=[dict(id='calm',name='Calm',values={'chest-motion':[2,.9,.5,1]})])
+        validate(recipe)  # a recipe written before travel stays valid
+        recipe['controls'][0]['travel']=dict(min=2,max=24,default=4)
+        validate(recipe)
+        for travel in (dict(min=0,max=24,default=4),dict(min=2,max=46,default=4),dict(min=8,max=8,default=8),
+                       dict(min=2,max=24,default=30),dict(min=2,max=24),dict(min=2,max=24,default=4,step=1),
+                       dict(min=True,max=24,default=4),dict(min=2,max=24,default='4'),6,[2,24,4]):
+            bad=copy.deepcopy(recipe);bad['controls'][0]['travel']=travel
+            with self.subTest(travel=travel),self.assertRaises(ValueError):validate(bad)
+        hair=dict(id='hair-motion',name='Hair motion',kind='rig',stiffness=dict(min=100,max=250,default=150),
+                  damping=dict(min=12,max=24,default=18),gravity=dict(min=-.2,max=.2,default=0),
+                  travel=dict(min=2,max=24,default=4))
+        with self.assertRaises(ValueError):validate(dict(schema=1,controls=[hair]))
+        spring=dict(id='bust',name='Bust',kind='spring',nodes=['brust001'],frequency=dict(min=1,max=3,default=2),
+                    damping_ratio=dict(min=.1,max=1,default=.7),travel=dict(min=2,max=24,default=4))
+        with self.assertRaises(ValueError):validate(dict(schema=1,controls=[spring]))
+        # Palettes stay four numbers per part; travel is not a palette channel.
+        bad=copy.deepcopy(recipe);bad['palettes'][0]['values']['chest-motion']=[2,.9,.5,1,6]
+        with self.assertRaises(ValueError):validate(bad)
+
     def test_rig_inputs_and_palette_contract(self):
         recipe=dict(schema=1,controls=[dict(id='hair-motion',name='Hair motion',kind='rig',
             stiffness=dict(min=100,max=250,default=150),damping=dict(min=12,max=24,default=18),

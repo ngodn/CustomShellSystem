@@ -973,20 +973,10 @@ struct Core {
             else if(action=="physics_preset") {
                 // One control's preset (the page's Preset selector), or with no control every
                 // part that has a preset of that id.
-                const auto preset_id=physics_preset_id(command.at("preset").get<std::string>());
-                const auto target_id=command.value("control",std::string{});
-                const auto current=control_values(options,custom);
+                // A body rig with a travel range takes the preset's travel too.
                 std::string label;
-                for(const auto& ctrl:options.controls) {
-                    if(!target_id.empty() && ctrl.id!=target_id) continue;
-                    const auto presets=physics_presets(ctrl);
-                    const auto found=std::find_if(presets.begin(),presets.end(),[&](const auto& p){ return p.id==preset_id; });
-                    if(found==presets.end()) continue;
-                    const auto held=current.contains(ctrl.id)?current.at(ctrl.id):ctrl.value;
-                    custom.values[ctrl.id]=physics_preset_value(ctrl,*found,held);
-                    label=found->name;
-                }
-                if(label.empty()) throw std::runtime_error("No part has the physics preset "+preset_id);
+                custom=apply_physics_preset(options,custom,command.at("preset").get<std::string>(),
+                                            command.value("control",std::string{}),&label);
                 report("Applied physics preset: "+label);
             }
             else if(action=="tint" || action=="reset_tint") {

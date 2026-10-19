@@ -3,32 +3,43 @@
 #include <array>
 #include <cctype>
 #include <cmath>
+#include <stdexcept>
 #include <string_view>
 
 namespace css {
 namespace {
 // Body presets per region: {frequency Hz, damping ratio, third channel}. The third channel
-// is the rig's motion amount, or a spring's travel clamp in cm (spring rows).
+// is the rig's motion amount, or a spring's travel clamp in cm (spring rows). `travel` is
+// the angular rig's travel in degrees, written only to a part that declares a travel range.
+// Firm is the Eve 1.5.0 envelope (chest 3.8, glutes 8.0, thighs 3, belly 5 degrees after
+// the cm cap); the looser rows are starting points pending the trace comparison in
+// docs/research/2026-10-19-body-motion-travel-channel.md.
 struct BodyPreset {
     const char* id; const char* name; const char* description;
     std::array<std::array<float,3>,4> rig, spring;   // chest, glute, thigh, belly
+    std::array<float,4> travel;                      // chest, glute, thigh, belly
 };
 constexpr BodyPreset body_presets[]={
     {"firm","Firm","High stiffness & damping, perky sculpted look",
      {{{2.60f,.65f,.60f},{2.50f,.65f,.65f},{2.80f,.72f,.40f},{2.70f,.68f,.45f}}},
-     {{{2.60f,.65f,1.20f},{2.50f,.65f,1.50f},{2.80f,.72f,.80f},{2.70f,.68f,.90f}}}},
+     {{{2.60f,.65f,1.20f},{2.50f,.65f,1.50f},{2.80f,.72f,.80f},{2.70f,.68f,.90f}}},
+     {4,8,3,5}},
     {"natural","Natural","Realistic soft-tissue sway, balanced & restrained",
      {{{2.15f,.48f,1.00f},{2.10f,.50f,1.00f},{2.35f,.58f,.75f},{2.20f,.52f,.85f}}},
-     {{{2.15f,.48f,2.20f},{2.10f,.50f,2.20f},{2.35f,.58f,1.60f},{2.20f,.52f,1.80f}}}},
+     {{{2.15f,.48f,2.20f},{2.10f,.50f,2.20f},{2.35f,.58f,1.60f},{2.20f,.52f,1.80f}}},
+     {6,10,4,6}},
     {"bouncy","Bouncy","Playful, energetic motion with plenty of bounce",
      {{{1.70f,.28f,1.80f},{1.65f,.30f,1.80f},{1.85f,.38f,1.35f},{1.75f,.32f,1.50f}}},
-     {{{1.70f,.28f,4.50f},{1.65f,.30f,4.50f},{1.85f,.38f,3.20f},{1.75f,.32f,3.80f}}}},
+     {{{1.70f,.28f,4.50f},{1.65f,.30f,4.50f},{1.85f,.38f,3.20f},{1.75f,.32f,3.80f}}},
+     {10,14,6,8}},
     {"soft","Soft / Saggy","Heavier relaxed tissue, slow and swinging",
      {{{1.25f,.18f,2.60f},{1.20f,.20f,2.50f},{1.40f,.25f,2.00f},{1.30f,.22f,2.20f}}},
-     {{{1.25f,.18f,7.50f},{1.20f,.20f,7.00f},{1.40f,.25f,5.50f},{1.30f,.22f,6.50f}}}},
+     {{{1.25f,.18f,7.50f},{1.20f,.20f,7.00f},{1.40f,.25f,5.50f},{1.30f,.22f,6.50f}}},
+     {14,16,7,9}},
     {"earthquake","OMG! Earthquake!","Maximum exaggerated comedic jiggle & wobble",
      {{{.85f,.06f,4.20f},{.85f,.08f,4.20f},{.95f,.10f,3.50f},{.90f,.08f,3.80f}}},
-     {{{.85f,.06f,14.0f},{.85f,.08f,14.0f},{.95f,.10f,10.0f},{.90f,.08f,13.0f}}}},
+     {{{.85f,.06f,14.0f},{.85f,.08f,14.0f},{.95f,.10f,10.0f},{.90f,.08f,13.0f}}},
+     {20,18,10,12}},
 };
 // Positional hair rig: {stiffness, damping, gravity scale}.
 struct HairPreset { const char* id; const char* name; const char* description; std::array<float,3> values; };
@@ -63,6 +74,10 @@ PhysicsRegion region_of_words(const std::string& raw) {
     return PhysicsRegion::none;
 }
 bool hair_rig(const Control& c) { return c.kind==ControlKind::Rig && c.rig && !c.rig->body; }
+std::optional<float> clamp_travel(const Control& c,std::optional<float> travel) {
+    if(!travel || !body_travel_control(c)) return std::nullopt;
+    return std::clamp(*travel,c.rig->travel->minimum,c.rig->travel->maximum);
+}
 // Whether a channel carries a setting: a spring without a travel clamp ignores channel 2.
 bool live_channel(const Control& c,int channel) {
     return !(c.kind==ControlKind::Spring && channel==2 && !c.spring_clamp);
@@ -97,7 +112,8 @@ std::vector<PhysicsPreset> physics_presets(const Control& c) {
         if(region!=PhysicsRegion::none) {
             const bool spring=c.kind==ControlKind::Spring;
             for(const auto& p:body_presets)
-                out.push_back({p.id,p.name,p.description,clamp_to((spring?p.spring:p.rig)[size_t(region)]),true});
+                out.push_back({p.id,p.name,p.description,clamp_to((spring?p.spring:p.rig)[size_t(region)]),
+                               spring?std::nullopt:clamp_travel(c,p.travel[size_t(region)]),true});
         }
     }
     out.insert(out.end(),c.presets.begin(),c.presets.end());
@@ -111,7 +127,11 @@ ControlValue physics_preset_value(const Control& c,const PhysicsPreset& preset,c
     return value;
 }
 
-std::string matching_physics_preset(const Control& c,const ControlValue& value) {
+std::optional<float> physics_preset_travel(const Control& c,const PhysicsPreset& preset) {
+    return clamp_travel(c,preset.travel);
+}
+
+std::string matching_physics_preset(const Control& c,const ControlValue& value,std::optional<float> travel) {
     for(const auto& preset:physics_presets(c)) {
         bool same=true;
         for(int channel=0;channel<3 && same;++channel) {
@@ -122,9 +142,35 @@ std::string matching_physics_preset(const Control& c,const ControlValue& value) 
             const float tolerance=std::max(1e-4f,.005f*(range.maximum-range.minimum));
             same=std::abs(value[size_t(channel)]-preset.channels[size_t(channel)])<=tolerance;
         }
+        // Travel counts only when the caller knows it and the preset sets one.
+        if(same && travel && preset.travel && body_travel_control(c)) {
+            const auto range=control_channel(c,4);
+            const float tolerance=std::max(1e-4f,.005f*(range.maximum-range.minimum));
+            same=std::abs(*travel-*physics_preset_travel(c,preset))<=tolerance;
+        }
         if(same) return preset.id;
     }
     return {};
+}
+
+Customization apply_physics_preset(const ControlSet& options,Customization custom,const std::string& requested,
+                                   const std::string& control_id,std::string* label) {
+    const auto preset_id=physics_preset_id(requested);
+    const auto current=control_values(options,custom);
+    std::string applied;
+    for(const auto& ctrl:options.controls) {
+        if(!control_id.empty() && ctrl.id!=control_id) continue;
+        const auto presets=physics_presets(ctrl);
+        const auto found=std::find_if(presets.begin(),presets.end(),[&](const auto& p){ return p.id==preset_id; });
+        if(found==presets.end()) continue;
+        const auto held=current.contains(ctrl.id)?current.at(ctrl.id):ctrl.value;
+        custom.values[ctrl.id]=physics_preset_value(ctrl,*found,held);
+        if(const auto travel=physics_preset_travel(ctrl,*found)) custom.travel[ctrl.id]=*travel;
+        applied=found->name;
+    }
+    if(applied.empty()) throw std::runtime_error("No part has the physics preset "+preset_id);
+    if(label) *label=applied;
+    return custom;
 }
 
 std::string physics_preset_id(std::string id) {

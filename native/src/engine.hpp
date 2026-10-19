@@ -882,6 +882,7 @@ class Appearance {
     std::map<std::string,WeakObject> mask_cache_;
     AssetLoadRoots mask_roots_;
     std::map<std::string,ControlValue> last_values_;
+    std::map<std::string,float> last_travel_;   // body rig travel overrides last applied
     std::string control_outfit_;
     std::string control_palette_;
     // Transition guard: one dye value CSS wrote, cheap to re-read. A launchpad/Harbinger gate

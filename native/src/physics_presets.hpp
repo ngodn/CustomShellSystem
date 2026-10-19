@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <string>
 #include <vector>
 #include "controls.hpp"
@@ -22,8 +23,20 @@ std::vector<PhysicsPreset> physics_presets(const Control&);
 // fixed opacity) stays as it is, and so does a spring's travel when it has no clamp.
 ControlValue physics_preset_value(const Control&, const PhysicsPreset&, const ControlValue& current);
 
-// The preset `value` matches, or "" when the sliders were moved off every preset.
-std::string matching_physics_preset(const Control&, const ControlValue& value);
+// A body rig preset's travel in degrees, clamped to the part's range. Empty for a part
+// without a travel range, a spring, or a package preset that sets none.
+std::optional<float> physics_preset_travel(const Control&, const PhysicsPreset&);
+
+// The preset `value` matches, or "" when the sliders were moved off every preset. With
+// `travel` (the part's current travel) a preset that sets travel must match it as well.
+std::string matching_physics_preset(const Control&, const ControlValue& value,
+                                    std::optional<float> travel = std::nullopt);
+
+// The `physics_preset` request: one part's preset, or with an empty control id every part
+// that has a preset of that id. Writes the three channels and, on a part with a travel
+// range, its travel. Throws when no part has the preset. `label` gets the preset's name.
+Customization apply_physics_preset(const ControlSet&, Customization, const std::string& preset,
+                                   const std::string& control, std::string* label = nullptr);
 
 // Ids older saves and commands used for today's built-ins.
 std::string physics_preset_id(std::string id);

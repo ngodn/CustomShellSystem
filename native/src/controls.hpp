@@ -17,6 +17,9 @@ using ControlValue = std::array<float,4>;
 struct PhysicsPreset {
     std::string id, name, description;
     std::array<float,3> channels{};
+    // Body rig only: the preset's travel, the largest angle in degrees a region may swing
+    // from its animated pose. Unset leaves the part's travel alone.
+    std::optional<float> travel;
     bool builtin=false;
 };
 struct ColorSwatch {
@@ -71,11 +74,18 @@ struct DynamicsControl {
     // gravity multiplier. These are not SpringBone frequency/damping-ratio units.
     std::array<SliderRange,3> channels;
 };
+// The widest travel a body region may be given, in degrees. Past this an angular helper
+// stops reading as tissue and starts reading as a broken joint, whatever the garment.
+inline constexpr float body_travel_ceiling=45;
 struct RigControl {
     // CSS ControlRig positional stiffness, exponential damping, gravity scale.
     std::array<SliderRange,3> channels;
     bool body=false;
     std::vector<uint8_t> regions;
+    // Body rig only, optional: channel 4, travel in degrees (CSSBodyRegionTravel). Saved
+    // apart from the four-number value in Customization::travel, so a look saved with it
+    // still loads in a CSS that predates it. See docs/control-convention.md.
+    std::optional<SliderRange> travel;
 };
 struct Control {
     std::string id, name, role;
@@ -147,13 +157,33 @@ inline constexpr std::array<const char*,7> body_region_names={"brust001","brust0
 struct BodyRigSettings {
     std::array<float,7> frequency{}, damping{}, motion{};
     std::array<bool,7> enabled{};
-    float global_frequency=2, global_damping=.7f, global_motion=1;
+    // Degrees. Zero (the cooked default) keeps the rig's own Limits/MaxTravel envelope.
+    std::array<float,7> travel{};
+    float global_frequency=2, global_damping=.7f, global_motion=1, global_travel=0;
     bool use_regions=false;
+    // The AnimBP exposes CSSBodyRegionTravel and CSSBodyTravel. False on every rig cooked
+    // before the travel channel: travel is then left to the rig and nothing fails.
+    bool has_travel=false;
     bool operator==(const BodyRigSettings&) const = default;
 };
 bool body_rig_control(const Control&);
+bool body_travel_control(const Control&);
+// `travel` holds the player's travel overrides (Customization::travel, or control_travel()).
+// A control counts as active when it has a value or a travel override; travel is written
+// only when the authored settings say the rig can take it.
 BodyRigSettings body_rig_settings(const std::vector<Control>&, const std::map<std::string,ControlValue>&,
-                                  const BodyRigSettings& authored);
+                                  const BodyRigSettings& authored,
+                                  const std::map<std::string,float>& travel = {});
+// What the reflected AnimBP offers for travel, reduced to plain facts so the decision is
+// testable without the engine. Absent: an older rig, travel disabled. Ready: both inputs
+// have the contract's layout. Anything in between is an authoring error and throws.
+struct BodyTravelFields {
+    bool array=false, array_float=false;
+    int count=0;
+    bool global=false, global_float=false;
+};
+enum class BodyTravelSupport { Absent, Ready };
+BodyTravelSupport body_travel_support(const BodyTravelFields&);
 // A hue rotation in degrees plus saturation and brightness multipliers, applied to a whole
 // group on top of the palette and any per-part override.
 struct ColorTint {
@@ -195,6 +225,9 @@ struct Customization {
     std::optional<double> ground_offset_cm;
     // Stable optional-library identity. Empty restores the outfit's original face.
     std::string expression;
+    // Body rig travel overrides in degrees, keyed by control id. Kept out of `values` so a
+    // saved look stays four numbers per part; older CSS builds ignore the key.
+    std::map<std::string,float> travel;
     static Customization parse(const nlohmann::json&);
     nlohmann::json json() const;
     bool operator==(const Customization&) const = default;
@@ -202,6 +235,8 @@ struct Customization {
 const char* control_group_name(ControlGroup);
 ControlValue apply_tint(const ColorTint&, const ControlValue&, bool hue_locked);
 std::map<std::string,ControlValue> control_values(const ControlSet&, const Customization&);
+// The travel overrides this outfit accepts, validated against each control's range.
+std::map<std::string,float> control_travel(const ControlSet&, const Customization&);
 std::set<int> hidden_control_sections(const ControlSet&, const std::map<std::string,ControlValue>&);
 Customization compatible_values(const ControlSet&, const Customization&);
 Customization choose_palette(const ControlSet&, const Customization&, const std::string& palette);

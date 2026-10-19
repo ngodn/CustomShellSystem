@@ -1458,7 +1458,7 @@ bool Appearance::restore() {
             if(component_.Get()==component) material_debug=material_snapshot(component,original);
         }
     }
-    control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); control_outfit_.clear(); control_palette_.clear();
+    control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); last_travel_.clear(); control_outfit_.clear(); control_palette_.clear();
     color_check_valid_=false;
     expected_materials_.clear();
     retained_.release(); original_retained_.release();
@@ -2244,7 +2244,7 @@ void Appearance::reset_controls() {
             if(current.get<UObject*>()==mid) material(component,slot,applied_materials_.contains(slot)?read<UObject*>(mid,L"Parent"):nullptr);
         }
     }
-    control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); control_outfit_.clear(); control_palette_.clear();
+    control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); last_travel_.clear(); control_outfit_.clear(); control_palette_.clear();
     color_check_valid_=false;
 }
 void Appearance::prepare_deformation_materials() {
@@ -2295,6 +2295,8 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     };
     const auto& options=outfit.controls_for(variant);
     auto values=control_values(options,custom);
+    // Body rig travel overrides, degrees. Saved beside the four-number values.
+    auto travel=control_travel(options,custom);
     const auto palette=std::find_if(options.palettes.begin(),options.palettes.end(),[&](const auto& p){return p.id==custom.palette;});
     const bool has_parameters=palette!=options.palettes.end() && !palette->parameters.empty();
     auto* component=component_.Get();
@@ -2304,6 +2306,8 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     // Dropping a control restores its authored value, including layered parameters.
     // Rebuild from the original material rather than guessing a layer's default.
     if(std::any_of(last_values_.begin(),last_values_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_controls();
+    // The same for a dropped travel override: restore the captured rig inputs, then recompose.
+    if(std::any_of(last_travel_.begin(),last_travel_.end(),[&](const auto& p){return !travel.contains(p.first);})) reset_controls();
     prepare_deformation_materials();
     // Original keeps authored materials, but garment visibility still needs its defaults.
     // Reconcile all controls together so a switch cannot expose another garment's mask.
@@ -2312,7 +2316,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         toggle_hidden_=hidden_control_sections(options,values);
         reconcile_sections();
     } catch(...) { reset_controls(); throw; }
-    if(values.empty() && !has_parameters) { control_outfit_=control_identity; control_palette_=custom.palette; material_debug=material_snapshot(component,applied_.Get()); material_debug["controls"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
+    if(values.empty() && travel.empty() && !has_parameters) { control_outfit_=control_identity; control_palette_=custom.palette; material_debug=material_snapshot(component,applied_.Get()); material_debug["controls"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
     // The post-process anim instance is built with the mesh, and a fresh one comes up with
     // the blueprint's own numbers. Notice that rather than quietly losing the player's
     // tuning the first time the shell reloads. Costs nothing until a spring is in use.
@@ -2330,11 +2334,11 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     }
     if(body_rig_original_ && (!body_rig_instance_.Get() || post_process_instance(component)!=body_rig_instance_.Get())) {
         body_rig_original_.reset(); body_rig_applied_.reset(); body_rig_instance_.Reset();
-        for(const auto& control:options.controls) if(body_rig_control(control)) last_values_.erase(control.id);
+        for(const auto& control:options.controls) if(body_rig_control(control)) { last_values_.erase(control.id); last_travel_.erase(control.id); }
     }
     if((body_geometry_model_ || body_geometry_instance_.Get()) && body_geometry_instance_.Get()!=post_process_instance(component))
-        last_values_.clear();
-    if(values==last_values_ && control_palette_==custom.palette) return;
+        { last_values_.clear(); last_travel_.clear(); }
+    if(values==last_values_ && travel==last_travel_ && control_palette_==custom.palette) return;
     color_check_valid_=false;
     auto mid_for=[&](int index) {
         Call count(component,L"GetNumMaterials",1); count.run();
@@ -2379,13 +2383,16 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     throw std::runtime_error("Palette parameter read-back failed: "+item.parameter);
             }
         }
-        if(std::any_of(options.controls.begin(),options.controls.end(),[&](const auto& c){return body_rig_control(c) && values.contains(c.id);})) {
+        if(std::any_of(options.controls.begin(),options.controls.end(),[&](const auto& c){
+                return body_rig_control(c) && (values.contains(c.id) || travel.contains(c.id));})) {
             auto* anim=post_process_instance(component);
             if(anim && has_body_rig_inputs(anim)) {
                 const auto inputs=body_rig_inputs(anim);
                 if(body_rig_instance_.Get()!=anim) { body_rig_original_.reset(); body_rig_instance_=anim; }
                 if(!body_rig_original_) body_rig_original_=inputs.capture();
-                const auto tuning=body_rig_settings(options.controls,values,*body_rig_original_);
+                // A rig without CSSBodyRegionTravel captures has_travel=false, so travel is
+                // left to its cooked limits; the other channels still apply.
+                const auto tuning=body_rig_settings(options.controls,values,*body_rig_original_,travel);
                 if(body_rig_applied_!=tuning) inputs.apply(tuning);
                 body_rig_applied_=tuning;
             } else if(anim) {
@@ -2732,9 +2739,11 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         step("geometry");
         if(dynamics_needs_reset) reset_dynamics(dynamics_instance_.Get());
         prepare_deformation_materials();
-        last_values_=std::move(values); control_outfit_=control_identity; control_palette_=custom.palette;
+        last_values_=std::move(values); last_travel_=std::move(travel); control_outfit_=control_identity; control_palette_=custom.palette;
         material_debug=material_snapshot(component,applied_.Get());
         material_debug["controls"]=last_values_;
+        material_debug["travel"]=last_travel_;
+        if(body_rig_applied_) material_debug["body_travel_supported"]=body_rig_applied_->has_travel;
         material_debug["dye_targets"]=dye_targets_.size();
         remember_materials();
         step("snapshot");

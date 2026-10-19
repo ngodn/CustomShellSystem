@@ -207,9 +207,14 @@ struct BodyRigInputs {
     FBoolProperty* use_regions;
     std::array<FFloatProperty*,3> globals;
     FProperty* epoch;
+    // CSSBodyRegionTravel and CSSBodyTravel, degrees. Null on a rig cooked before the
+    // travel channel; such a rig keeps its own Limits/MaxTravel and nothing fails.
+    FArrayProperty* travel=nullptr;
+    FFloatProperty* global_travel=nullptr;
     static bool same_owned(const BodyRigSettings& a,const BodyRigSettings& b) {
         return a.frequency==b.frequency && a.damping==b.damping && a.motion==b.motion &&
-               a.enabled==b.enabled && a.use_regions==b.use_regions;
+               a.enabled==b.enabled && a.use_regions==b.use_regions &&
+               (!a.has_travel || !b.has_travel || a.travel==b.travel);
     }
     BodyRigSettings capture() const {
         BodyRigSettings value;
@@ -233,6 +238,19 @@ struct BodyRigInputs {
             if(!std::isfinite(*fields[i])) throw std::runtime_error("Non-finite global body input");
         }
         value.use_regions=use_regions->GetPropertyValueInContainer(instance);
+        if(travel) {
+            FScriptArrayHelper values(travel,reinterpret_cast<std::byte*>(instance)+travel->GetOffset_Internal());
+            if(values.Num()!=7) throw std::runtime_error("Body rig requires seven region travel values");
+            if(!values.GetRawPtr(0)) throw std::runtime_error("Body travel array has no storage");
+            for(int32_t i=0;i<7;++i) {
+                float v{};std::memcpy(&v,values.GetRawPtr(i),sizeof(v));
+                if(!std::isfinite(v)) throw std::runtime_error("Non-finite body travel input");
+                value.travel[size_t(i)]=v;
+            }
+            std::memcpy(&value.global_travel,reinterpret_cast<std::byte*>(instance)+global_travel->GetOffset_Internal(),sizeof(float));
+            if(!std::isfinite(value.global_travel)) throw std::runtime_error("Non-finite global body travel");
+            value.has_travel=true;
+        }
         return value;
     }
     void apply(const BodyRigSettings& value) const {
@@ -252,6 +270,18 @@ struct BodyRigInputs {
         const std::array<float,3> global_values={value.global_frequency,value.global_damping,value.global_motion};
         for(size_t i=0;i<3;++i) {
             std::memcpy(reinterpret_cast<std::byte*>(instance)+globals[i]->GetOffset_Internal(), &global_values[i], sizeof(float));
+        }
+        // Travel only when both sides know it: settings captured from an older rig (or a
+        // preview instance without the inputs) leave the other side's travel alone.
+        if(travel && value.has_travel) {
+            for(float v:value.travel) if(!std::isfinite(v) || v<0 || v>body_travel_ceiling)
+                throw std::runtime_error("Body travel outside supported range");
+            if(!std::isfinite(value.global_travel) || value.global_travel<0 || value.global_travel>body_travel_ceiling)
+                throw std::runtime_error("Global body travel outside supported range");
+            FScriptArrayHelper values(travel,reinterpret_cast<std::byte*>(instance)+travel->GetOffset_Internal());
+            if(values.Num()!=7) throw std::runtime_error("Body rig requires seven region travel values");
+            for(int32_t i=0;i<7;++i) travel->GetInner()->CopyCompleteValue(values.GetRawPtr(i),&value.travel[size_t(i)]);
+            std::memcpy(reinterpret_cast<std::byte*>(instance)+global_travel->GetOffset_Internal(),&value.global_travel,sizeof(float));
         }
         if(auto* ep=instance->GetClassPrivate()->GetPropertyByNameInChain(L"CSSBodyEnabled"); ep && ep->IsA<FBoolProperty>()) {
             static_cast<FBoolProperty*>(ep)->SetPropertyValueInContainer(instance, true);
@@ -282,6 +312,9 @@ BodyRigInputs body_rig_inputs(UObject* instance) {
         FName(L"CSSBodyRegionMotionAmounts"),FName(L"CSSBodyRegionEnabled"),FName(L"CSSBodyUseRegionSettings"),
         FName(L"CSSBodyFrequency"),FName(L"CSSBodyDampingRatio"),FName(L"CSSBodyMotionAmount")};
     std::array<FProperty*,8> fields{};
+    // Optional: absent on every rig cooked before the travel channel.
+    const std::array<FName,2> travel_names={FName(L"CSSBodyRegionTravel"),FName(L"CSSBodyTravel")};
+    std::array<FProperty*,2> travel_fields{};
     unsigned depth=0,count=0;
     for(UStruct* type=owner;type;type=type->GetSuperStruct()) {
         if(++depth>64) throw std::runtime_error("Body rig hierarchy exceeds bound");
@@ -290,6 +323,10 @@ BodyRigInputs body_rig_inputs(UObject* instance) {
             for(size_t i=0;i<names.size();++i) if(property->GetFName()==names[i]) {
                 if(fields[i] && fields[i]!=property) throw std::runtime_error("Ambiguous body rig input");
                 fields[i]=property;
+            }
+            for(size_t i=0;i<travel_names.size();++i) if(property->GetFName()==travel_names[i]) {
+                if(travel_fields[i] && travel_fields[i]!=property) throw std::runtime_error("Ambiguous body travel input");
+                travel_fields[i]=property;
             }
         }
     }
@@ -318,7 +355,35 @@ BodyRigInputs body_rig_inputs(UObject* instance) {
     }
     auto* epoch=control_rig_reset_epoch(instance,L"CSSBodyResetEpoch");
     if(!epoch) throw std::runtime_error("Body rig requires an independent reset epoch");
-    return {instance,arrays,static_cast<FBoolProperty*>(fields[4]),globals,epoch};
+    BodyRigInputs inputs{instance,arrays,static_cast<FBoolProperty*>(fields[4]),globals,epoch};
+    // Travel: the same layout checks as the other inputs, reduced to facts for
+    // body_travel_support(), which accepts an absent pair and refuses a half-built one.
+    BodyTravelFields facts;
+    for(auto* p:travel_fields)
+        if(p && (p->GetArrayDim()!=1 || p->GetElementSize()<=0 || p->GetOffset_Internal()<0 ||
+                 p->GetOffset_Internal()>owner->GetPropertiesSize()-p->GetElementSize()))
+            throw std::runtime_error("Body travel input layout mismatch");
+    if(auto* p=travel_fields[0]) {
+        facts.array=true;
+        if(p->IsA<FArrayProperty>() && p->GetElementSize()==sizeof(TArray<float>)) {
+            auto* inner=static_cast<FArrayProperty*>(p)->GetInner();
+            facts.array_float=inner && inner->GetArrayDim()==1 && inner->GetOffset_Internal()==0 &&
+                              inner->IsA<FFloatProperty>() && inner->GetElementSize()==sizeof(float);
+            if(facts.array_float) {
+                FScriptArrayHelper values(static_cast<FArrayProperty*>(p),reinterpret_cast<std::byte*>(instance)+p->GetOffset_Internal());
+                facts.count=values.Num();
+            }
+        }
+    }
+    if(auto* p=travel_fields[1]) {
+        facts.global=true;
+        facts.global_float=p->IsA<FFloatProperty>() && p->GetElementSize()==sizeof(float);
+    }
+    if(body_travel_support(facts)==BodyTravelSupport::Ready) {
+        inputs.travel=static_cast<FArrayProperty*>(travel_fields[0]);
+        inputs.global_travel=static_cast<FFloatProperty*>(travel_fields[1]);
+    }
+    return inputs;
 }
 
 #include "engine_body_geometry.inl"
