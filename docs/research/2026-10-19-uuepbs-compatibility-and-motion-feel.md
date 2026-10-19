@@ -54,3 +54,10 @@ Eve (CSS_SeduXtress_eins0fx), Unholy Genessa, Commander White, tHorny Proxima:
 - Author the expanded morph set in Blender on the package's body (and garments/overlays that must follow), bake, export, `check_shapes`, cook, verify.
 - Add the matching `shape_*` controls and a MorphGroups snippet for the package README.
 - After the CSS core travel channel lands: recook the rig with the new template values.
+
+## Status 19 Oct 2026, evening
+
+- Package lanes (Eve, Unholy Genessa, Commander White) each authored the 18 new morphs with followers, validated 24 shape controls, measured chest-support displacement and wrote the README snippet; exports and cooks wait for the core rig builder. Reports: `<package>/work/uuepbs/REPORT.md`.
+- Chest-support displacement at 1.0 (Eve, max / weighted RMS, cm): Implants 3.65 / 2.51, Cleavage 2.42 / 1.57, Underbust 1.60 / 0.50, Diameter 1.15 / 0.77, Natural 1.11 / 0.52, ChestWidth 1.09 / 0.40, the rest under 0.85 / 0.50. Genessa and Commander White measure the same order.
+- Decision (Fable): the measured solver corner set grows from six to eight axes, adding `PBMBreastsImplants` and `PBMBreastsCleavage` (256 corners instead of 64). The other new morphs stay outside the model; their support error is within the envelope inflation already measured (about 1 cm), documented as tolerance. `build_body_runtime_geometry.py` and the geometry packer take the axis list from the recipe instead of a fixed six; the solver reads the corner count from the JSON.
+- Core: travel channel and presets coded (b2c89a5); rig builder soft zone, AnimBP arrays, fixtures and the UI slider in progress.
