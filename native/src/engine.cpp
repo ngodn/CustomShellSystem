@@ -2229,7 +2229,7 @@ void Appearance::sync_body_geometry(UObject* component) {
         }
     }
     if(!body_geometry_model_) return;
-    std::array<float,6> values{};
+    std::vector<float> values(body_geometry_model_->axes());
     for(size_t i=0;i<values.size();++i) {
         Call get(component,L"GetMorphTarget",2);
         get.set(L"MorphTargetName",FName(wide(body_geometry_model_->morphs[i]).c_str(),FNAME_Add));get.run();

@@ -148,10 +148,35 @@ def kind_of(control) -> str:
 def scalar(control) -> bool:
     return kind_of(control)!='color'
 
+def solver_axes(controls:list) -> list[str]:
+    """The body solver axes a recipe declares: shape controls with `solver_axis`.
+
+    Optional. When present, axis i is the morph of the shape control whose
+    solver_axis is i; the indices run 0..n-1 with 6 <= n <= 8, one morph each.
+    The body geometry builder (tools/authoring/body-geometry) measures the
+    contact model at all 2^n corners of these axes. CSS itself reads the axes
+    from the cooked model, not from here.
+    """
+    axes={}
+    for c in controls:
+        if not isinstance(c,dict) or 'solver_axis' not in c: continue
+        index=c['solver_axis']
+        if c.get('kind')!='shape': raise ValueError('Only a shape control can be a solver axis')
+        if not isinstance(index,int) or isinstance(index,bool) or not 0<=index<8: raise ValueError('solver_axis must be an integer 0..7')
+        if index in axes: raise ValueError('Two controls claim the same solver axis')
+        axes[index]=c.get('morph')
+    if not axes: return []
+    if sorted(axes)!=list(range(len(axes))) or not 6<=len(axes)<=8:
+        raise ValueError('Solver axes must be numbered 0..n-1 with six to eight axes')
+    ordered=[axes[i] for i in range(len(axes))]
+    if len(set(ordered))!=len(ordered): raise ValueError('A morph is on two solver axes')
+    return ordered
+
 def validate(recipe:dict) -> set[str]:
     if not isinstance(recipe,dict) or recipe.get('schema')!=1: raise ValueError('Unsupported customize schema')
     controls=recipe.get('controls');bounded_array(controls,128)
     by_id={};used=set();files=set();dynamics_roots=set();rig_owner=False;body_owners=set()
+    solver_axes(controls)
     for c in controls:
         identifier(c['id'])
         if c['id'] in by_id or not isinstance(c['name'],str) or not 1<=len(c['name'])<=96: raise ValueError('Invalid color control name')

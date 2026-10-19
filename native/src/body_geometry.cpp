@@ -37,13 +37,29 @@ double determinant(const std::array<BodyVector,3>& a) {
 }
 
 BodyGeometryModel BodyGeometryModel::parse(const Json& data) {
-    require(data.is_object() && data.size()==3 && data.at("schema").is_number_integer() && data.at("schema")==1,
-            "Unsupported body geometry schema");
-    array(data.at("morphs"),6);array(data.at("helpers"),7);
+    require(data.is_object() && data.contains("schema") && data.at("schema").is_number_integer(),"Unsupported body geometry schema");
     BodyGeometryModel model;
+    model.schema=data.at("schema").get<int>();
+    size_t axes=0;
+    if(model.schema==1) {
+        // The six-axis model cooked before the axis list was recorded: exactly as before.
+        require(data.size()==3,"Unsupported body geometry schema");
+        array(data.at("morphs"),6);
+        axes=6;
+    } else {
+        require(model.schema==2 && data.size()==4,"Unsupported body geometry schema");
+        require(data.at("morphs").is_array(),"Body geometry requires a morph list");
+        axes=data.at("morphs").size();
+        require(axes>=body_geometry_min_axes && axes<=body_geometry_max_axes,"Body geometry axis count outside 6..8");
+        require(data.at("corners").is_number_unsigned() && data.at("corners").get<size_t>()==(size_t{1}<<axes),
+                "Body geometry corner count must be 2^axes");
+    }
+    const size_t corners=size_t{1}<<axes;
+    array(data.at("helpers"),7);
     std::set<std::string> seen;
-    for(size_t i=0;i<6;++i) {
-        model.morphs[i]=data.at("morphs")[i].get<std::string>();
+    for(size_t i=0;i<axes;++i) {
+        require(data.at("morphs")[i].is_string(),"Invalid body geometry morph name");
+        model.morphs.push_back(data.at("morphs")[i].get<std::string>());
         require(identifier(model.morphs[i]) && seen.insert(model.morphs[i]).second,"Invalid body geometry morph name");
     }
     for(size_t i=0;i<7;++i) {
@@ -54,20 +70,23 @@ BodyGeometryModel BodyGeometryModel::parse(const Json& data) {
         require(identifier(target.contact_bone),"Invalid body contact bone");
         target.offset=vector(source.at("offset_cm"));
         target.moment=number(source.at("moment_cm2"),1e-6,1e8);
-        array(source.at("offset_deltas_cm"),6);array(source.at("moment_linear_cm2"),6);
-        array(source.at("moment_quadratic_cm2"),6);
-        for(size_t m=0;m<6;++m) {
+        array(source.at("offset_deltas_cm"),axes);array(source.at("moment_linear_cm2"),axes);
+        array(source.at("moment_quadratic_cm2"),axes);
+        target.offset_deltas.resize(axes);target.moment_linear.resize(axes);
+        target.moment_quadratic.assign(axes,std::vector<double>(axes));
+        for(size_t m=0;m<axes;++m) {
             target.offset_deltas[m]=vector(source.at("offset_deltas_cm")[m]);
             target.moment_linear[m]=number(source.at("moment_linear_cm2")[m],-1e8,1e8);
-            array(source.at("moment_quadratic_cm2")[m],6);
-            for(size_t n=0;n<6;++n)
+            array(source.at("moment_quadratic_cm2")[m],axes);
+            for(size_t n=0;n<axes;++n)
                 target.moment_quadratic[m][n]=number(source.at("moment_quadratic_cm2")[m][n],-1e8,1e8);
         }
-        for(size_t m=0;m<6;++m) for(size_t n=0;n<6;++n)
+        for(size_t m=0;m<axes;++m) for(size_t n=0;n<axes;++n)
             require(std::abs(target.moment_quadratic[m][n]-target.moment_quadratic[n][m])<=1e-8,
                     "Body inertia matrix must be symmetric");
-        array(source.at("contact_centers_cm"),64);array(source.at("contact_scales"),64);
-        for(size_t corner=0;corner<64;++corner) {
+        array(source.at("contact_centers_cm"),corners);array(source.at("contact_scales"),corners);
+        target.contact_centers.resize(corners);target.contact_scales.resize(corners);
+        for(size_t corner=0;corner<corners;++corner) {
             target.contact_centers[corner]=vector(source.at("contact_centers_cm")[corner]);
             target.contact_scales[corner]=number(source.at("contact_scales")[corner],1e-6,1000);
         }
@@ -76,20 +95,22 @@ BodyGeometryModel BodyGeometryModel::parse(const Json& data) {
         require(std::abs(determinant(target.contact_axes))>1e-8,"Singular body contact geometry");
     }
     // Catch invalid corner inertia at load time. Interior values are checked before use.
-    for(unsigned mask=0;mask<64;++mask) {
-        std::array<float,6> values{};
-        for(unsigned i=0;i<6;++i) values[i]=float((mask>>i)&1);
+    for(size_t mask=0;mask<corners;++mask) {
+        std::vector<float> values(axes);
+        for(size_t i=0;i<axes;++i) values[i]=float((mask>>i)&1);
         model.evaluate(values);
     }
     return model;
 }
 
-BodyGeometry BodyGeometryModel::evaluate(const std::array<float,6>& morphs) const {
+BodyGeometry BodyGeometryModel::evaluate(const std::vector<float>& morphs) const {
+    const size_t count=axes(),total=corners();
+    require(morphs.size()==count,"Body morph count differs from the model");
     for(float value:morphs) require(std::isfinite(value) && value>=0 && value<=1,"Body morph outside [0,1]");
-    std::array<double,64> weights{};
-    for(unsigned mask=0;mask<64;++mask) {
+    std::vector<double> weights(total);
+    for(size_t mask=0;mask<total;++mask) {
         weights[mask]=1;
-        for(unsigned m=0;m<6;++m) weights[mask]*=(mask&(1u<<m))?double(morphs[m]):1-double(morphs[m]);
+        for(size_t m=0;m<count;++m) weights[mask]*=(mask&(size_t{1}<<m))?double(morphs[m]):1-double(morphs[m]);
     }
     BodyGeometry result;
     result.shape=morphs;
@@ -97,14 +118,14 @@ BodyGeometry BodyGeometryModel::evaluate(const std::array<float,6>& morphs) cons
         const auto& source=helpers[i];
         auto& offset=result.offsets[i];offset=source.offset;
         double moment=source.moment,scale=0;
-        for(size_t m=0;m<6;++m) {
+        for(size_t m=0;m<count;++m) {
             for(size_t axis=0;axis<3;++axis) offset[axis]+=double(morphs[m])*source.offset_deltas[m][axis];
             moment+=double(morphs[m])*source.moment_linear[m];
-            for(size_t n=0;n<6;++n) moment+=double(morphs[m])*double(morphs[n])*source.moment_quadratic[m][n];
+            for(size_t n=0;n<count;++n) moment+=double(morphs[m])*double(morphs[n])*source.moment_quadratic[m][n];
         }
         require(std::isfinite(moment) && moment>1e-6 && moment<=1e8,"Invalid evaluated body inertia");
         result.moments[i]=float(moment);
-        for(size_t corner=0;corner<64;++corner) {
+        for(size_t corner=0;corner<total;++corner) {
             scale+=weights[corner]*source.contact_scales[corner];
             for(size_t axis=0;axis<3;++axis)
                 result.contact_centers[i][axis]+=weights[corner]*source.contact_centers[corner][axis];

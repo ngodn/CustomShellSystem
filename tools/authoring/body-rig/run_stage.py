@@ -2,6 +2,7 @@
 """Run one body-rig editor script in a private, read-only-everywhere-else stage.
 
     run_stage.py STAGE SCRIPT [editor args...] [--log NAME]
+    run_stage.py STAGE --commandlet NAME [editor args...] [--log NAME]
 
 STAGE gets an editor project whose Content links the CSSAuthoring content
 read-only, except Content/CSSAuthoring/TransientProbes and Content/CSS/
@@ -12,6 +13,10 @@ change. command.json records the exact argv; <log>.engine.log the editor log.
 
 --module adds the CSSAuthoring editor module, built from STAGE/editor/Source
 (see the combined AnimBP step), instead of a content-only project.
+--writable CSS/<outfit> (repeatable) makes one more Content folder a real
+directory in the stage, for steps that must save beside an outfit's rigs.
+--commandlet runs that editor commandlet (for example CSSImportMesh) instead of
+a Python script.
 """
 import argparse
 import json
@@ -52,11 +57,17 @@ def link_tree(source, target, writable):
             destination.symlink_to(entry)
 
 
-def prepare(stage, module):
+def prepare(stage, module, writable=()):
     editor = stage/'editor'
     for name in ('tmp', 'cache', 'ddc', 'user', 'config-home', 'editor'):
         (stage/name).mkdir(parents=True, exist_ok=True)
-    link_tree(CONTENT, editor/'Content', {('CSSAuthoring', 'TransientProbes'), ('CSS', 'TransientProbes')})
+    folders = {('CSSAuthoring', 'TransientProbes'), ('CSS', 'TransientProbes')}
+    for folder in writable:
+        parts = tuple(Path(folder).parts)
+        if len(parts) != 2 or parts[0] not in ('CSS', 'CSSAuthoring') or '..' in parts:
+            raise ValueError('Writable folders are CSS/<outfit> or CSSAuthoring/<outfit>')
+        folders.add(parts)
+    link_tree(CONTENT, editor/'Content', folders)
     project = dict(FileVersion=3, Plugins=[dict(Name=p, Enabled=True) for p in PLUGINS]
                    + [dict(Name='AndroidFileServer', Enabled=False)])
     if module:
@@ -68,12 +79,16 @@ def prepare(stage, module):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('stage', type=Path)
-    parser.add_argument('script', type=Path)
+    parser.add_argument('script', type=Path, nargs='?')
+    parser.add_argument('--commandlet')
     parser.add_argument('--log', required=True)
     parser.add_argument('--module', action='store_true')
+    parser.add_argument('--writable', action='append', default=[])
     args, extra = parser.parse_known_args()
+    if bool(args.script) == bool(args.commandlet):
+        parser.error('Give either a script or --commandlet')
     stage = args.stage.resolve()
-    project = prepare(stage, args.module)
+    project = prepare(stage, args.module, args.writable)
     argv = ['nice', '-n', '19', 'bwrap', '--unshare-net', '--ro-bind', '/', '/',
             '--bind', str(stage), str(stage), '--bind', str(stage/'tmp'), '/tmp',
             '--dev-bind', '/dev', '/dev', '--proc', '/proc', '--die-with-parent',
@@ -83,7 +98,8 @@ def main():
             '--setenv', 'XDG_CONFIG_HOME', str(stage/'config-home'),
             '--setenv', 'LD_LIBRARY_PATH', ':'.join(str(ENGINE/p) for p in LIBRARIES),
             '--', str(ENGINE/'Engine/Binaries/Linux/UnrealEditor-Cmd'), str(project),
-            '-run=pythonscript', '-script=' + str(args.script.resolve()), *extra,
+            *(['-run=' + args.commandlet] if args.commandlet else
+              ['-run=pythonscript', '-script=' + str(args.script.resolve())]), *extra,
             '-unattended', '-nosplash', '-NoSound', '-NullRHI', '-NoShaderCompile',
             '-ddc=NoZenLocalFallback', '-LocalDataCachePath=' + str(stage/'ddc'),
             '-UserDir=' + str(stage/'user') + '/', '-abslog=' + str(stage/(args.log + '.engine.log')),

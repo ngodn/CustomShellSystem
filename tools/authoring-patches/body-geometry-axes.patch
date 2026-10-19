@@ -1,0 +1,32 @@
+diff --git a/Source/CSSAuthoring/CSSControlRigLibrary.cpp b/Source/CSSAuthoring/CSSControlRigLibrary.cpp
+--- a/Source/CSSAuthoring/CSSControlRigLibrary.cpp
++++ b/Source/CSSAuthoring/CSSControlRigLibrary.cpp
+@@ -126,10 +126,17 @@
+         const auto Reader=TJsonReaderFactory<>::Create(BodyGeometryJson);
+         double Schema=0;
+         const TArray<TSharedPtr<FJsonValue>> *Helpers=nullptr,*Morphs=nullptr;
++        // Schema 1: the six-axis model, no corner count. Schema 2: 6 to 8 recipe axes with
++        // "corners" = 2^axes, as build_body_runtime_geometry.py writes it. The native
++        // reader applies the same rules and checks every array length.
++        double Corners=0;
+         if (!FJsonSerializer::Deserialize(Reader,Model) || !Model ||
+-            !Model->TryGetNumberField(TEXT("schema"),Schema) || Schema!=1 ||
++            !Model->TryGetNumberField(TEXT("schema"),Schema) || (Schema!=1 && Schema!=2) ||
+             !Model->TryGetArrayField(TEXT("helpers"),Helpers) || Helpers->Num()!=7 ||
+-            !Model->TryGetArrayField(TEXT("morphs"),Morphs) || Morphs->Num()!=6)
++            !Model->TryGetArrayField(TEXT("morphs"),Morphs) ||
++            (Schema==1 ? Morphs->Num()!=6 || Model->HasField(TEXT("corners")) :
++                Morphs->Num()<6 || Morphs->Num()>8 || !Model->TryGetNumberField(TEXT("corners"),Corners) ||
++                Corners!=double(1<<Morphs->Num())))
+             return Fail(TEXT("Invalid body geometry model identity"));
+         auto* Contacts=FindFProperty<FArrayProperty>(BodyBlueprint->GeneratedClass.Get(),TEXT("ContactBoneNames"));
+         auto* ContactType=Contacts ? CastField<FNameProperty>(Contacts->Inner) : nullptr;
+@@ -149,7 +156,7 @@
+         {
+             FString Name;
+             if (!Value->TryGetString(Name) || Seen.Contains(Name) || !Mesh->FindMorphTarget(FName(*Name)))
+-                return Fail(TEXT("Body geometry requires six distinct mesh morphs"));
++                return Fail(TEXT("Body geometry requires distinct mesh morphs for every axis"));
+             Seen.Add(Name);
+         }
+     }

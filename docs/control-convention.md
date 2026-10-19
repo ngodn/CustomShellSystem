@@ -247,6 +247,25 @@ compares the recipe against the mesh JSON and needs no editor. `CSSInspectMesh` 
 saved asset back and reports every morph target with the number of vertices it moves and
 its largest delta, which is the check to run after an import.
 
+**Body solver axes (optional, 2026-10-19).** On a body with an angular body rig, the
+morphs that change where the chest, glutes, thighs and belly sit are measured into the
+rig's contact and inertia model. A shape control marks itself as one of those axes with
+`"solver_axis": i`:
+
+```json
+{"id": "shape_PBMBreastsImplants", "name": "Implants", "kind": "shape", "group": "body",
+ "role": "figure", "morph": "PBMBreastsImplants", "min": 0, "max": 1, "default": [0, 0, 0, 1],
+ "solver_axis": 6}
+```
+
+The indices run 0..n-1 with six to eight axes, one morph each, and every variant that
+declares axes declares the same list. `tools/authoring/body-geometry/` reads them
+(`measure_body_geometry_axes.py`, then `build_body_runtime_geometry.py`), measures the model
+at all 2^n morph corners and writes the cooked `CSSBodyGeometryJson` as schema 2 with the
+axis names and the corner count. CSS reads the axes from that model, so the field changes
+nothing at runtime by itself, and a recipe without it is unchanged. Shape controls that
+are not axes still work; their effect on the contact model is the documented tolerance.
+
 A `spring` tunes live secondary motion: how a bust, a belly or a hip moves when the
 character does. It is the only control with two numbers in it, and the only one that
 writes no material at all.

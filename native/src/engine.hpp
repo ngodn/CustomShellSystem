@@ -832,7 +832,7 @@ class Appearance {
     WeakObject body_geometry_instance_;
     std::optional<BodyGeometryModel> body_geometry_model_;
     std::optional<BodyGeometry> body_geometry_original_, body_geometry_applied_;
-    std::optional<std::array<float,6>> body_geometry_morphs_;
+    std::optional<std::vector<float>> body_geometry_morphs_;
     std::map<std::string,SpringOriginal> menu_spring_originals_;
     std::map<std::string,DynamicsSettings> menu_dynamics_originals_;
     std::optional<RigSettings> menu_rig_original_;
