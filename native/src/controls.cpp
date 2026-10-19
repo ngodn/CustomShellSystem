@@ -246,9 +246,17 @@ BodyRigSettings body_rig_settings(const std::vector<Control>& controls,const std
         const auto zone=soft_zones.find(control.id);
         if(zone!=soft_zones.end() && !(std::isfinite(zone->second) && zone->second>=0 && zone->second<=body_soft_zone_ceiling))
             throw std::runtime_error("Body soft zone outside supported range");
+        // The travel the part runs with on a rig that takes it: the override, else the travel
+        // of the preset its sliders match (an older look that reads "Soft / Saggy" swings like
+        // it), else the recipe default. The label, the slider and the rig then agree.
+        std::optional<float> degrees_now=degrees!=travel.end()?std::optional<float>(degrees->second):std::nullopt;
+        if(!degrees_now && authored.has_travel && body_travel_control(control)) {
+            degrees_now=effective_travel(control,value!=values.end()?value->second:control.value,std::nullopt);
+            if(!degrees_now) degrees_now=control_channel(control,4).value;
+        }
         // On a rig without the travel inputs a travel-only override changes nothing at all,
         // not even the region switch.
-        if(value==values.end() && (degrees==travel.end() || !authored.has_travel)) continue;
+        if(value==values.end() && !degrees_now) continue;
         if(value!=values.end()) valid_value(control,value->second);
         if(!active && !authored.use_regions) {
             result.frequency.fill(authored.global_frequency);
@@ -268,7 +276,7 @@ BodyRigSettings body_rig_settings(const std::vector<Control>& controls,const std
                 result.motion[region]=v[2]; result.enabled[region]=v[3]==1;
             }
             // A rig cooked before the travel channel keeps its own envelope.
-            if(degrees!=travel.end() && authored.has_travel) result.travel[region]=degrees->second;
+            if(degrees_now && authored.has_travel) result.travel[region]=*degrees_now;
             // The band follows the part's template; a rig without the inputs keeps its own.
             if(zone!=soft_zones.end() && authored.has_soft_zone) result.soft_zone[region]=zone->second;
         }

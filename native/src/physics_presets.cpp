@@ -160,6 +160,15 @@ std::string matching_physics_preset(const Control& c,const ControlValue& value,s
     return {};
 }
 
+std::optional<float> effective_travel(const Control& c,const ControlValue& value,std::optional<float> set) {
+    if(set) return set;
+    if(!body_travel_control(c)) return std::nullopt;
+    const auto id=matching_physics_preset(c,value);
+    if(id.empty()) return std::nullopt;
+    for(const auto& preset:physics_presets(c)) if(preset.id==id) return physics_preset_travel(c,preset);
+    return std::nullopt;
+}
+
 std::map<std::string,float> physics_soft_zones(const std::vector<Control>& controls,
                                                const std::map<std::string,ControlValue>& values,
                                                const std::map<std::string,float>& travel) {

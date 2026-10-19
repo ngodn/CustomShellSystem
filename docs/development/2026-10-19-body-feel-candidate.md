@@ -20,6 +20,10 @@ What it carries:
 
 Host tests on the same tree: ctest 29 of 29 suites, `css_control_tests` 516 checks, `css_body_geometry_tests` 6072 synthetic checks plus parity on the cooked six-axis model and Eve's 8-axis model, Python 97 tests.
 
+## rc2 (19 Oct, 22:07): the label, the Travel slider and the rig agree
+
+The first live check showed Eve Peony's glutes labelled "Soft / Saggy" (its saved sliders match that preset) while the rig ran at the recipe default travel, because looks saved before the travel channel carry no travel and only the label was inferred. rc2 makes travel follow one rule everywhere (`effective_travel` in physics_presets): the player's override when set, else the travel of the preset the part's sliders match, else the recipe default; and a rig with the travel inputs now receives the recipe default even for an untouched part (rc1 left such parts at the rig's cooked fallback). The Travel slider shows that same value. File `work/core-1.0.2-rc2/css_core-1.0.2-rc2.dll`; install exactly as rc1 with the file name changed; rollback as before.
+
 ## What the candidate does before any recook
 
 On today's outfits it should behave like 1.0.1. No shipped recipe declares a `travel` range, so no Travel row appears. No shipped rig has the travel or soft zone inputs, so presets write frequency, damping and motion as before and the rigs keep their own hard limits. The cooked six-axis geometry models load unchanged. Installing it alone is therefore a regression check of the core, not a feel test.

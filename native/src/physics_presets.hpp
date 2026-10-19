@@ -33,6 +33,12 @@ std::optional<float> physics_preset_travel(const Control&, const PhysicsPreset&)
 std::string matching_physics_preset(const Control&, const ControlValue& value,
                                     std::optional<float> travel = std::nullopt);
 
+// The travel a part runs with: the player's override when set, else the travel of the
+// preset its three sliders match (a look saved before the travel channel that reads
+// "Soft / Saggy" swings like Soft / Saggy, not like the recipe default), else empty, which
+// leaves the rig's own envelope. The label, the Travel slider and the rig agree this way.
+std::optional<float> effective_travel(const Control&, const ControlValue& value, std::optional<float> set);
+
 // The soft limit band (rig SoftZone) for every body rig part that has a value or a travel
 // override: the band of the preset its sliders match, else body_soft_zone_default. A
 // built-in template carries its band; a package preset or a hand-tuned part gets the

@@ -258,19 +258,42 @@ int main() {
             authored.frequency.fill(5); authored.damping.fill(1.2f); authored.motion.fill(.9f); authored.enabled.fill(true);
             const std::map<std::string,float> chest_travel{{"chest-motion",10}};
             auto travelled=body_rig_settings(model.controls,{},authored,chest_travel);
-            expect(travelled.travel[0]==10 && travelled.travel[1]==10 && travelled.travel[2]==0 && travelled.travel[6]==0,
+            // The untouched glute part takes its recipe default (8) on a rig with the inputs.
+            expect(travelled.travel[0]==10 && travelled.travel[1]==10 && travelled.travel[2]==8 && travelled.travel[6]==0,
                    "Travel must reach exactly the owned regions");
             expect(travelled.frequency==authored.frequency && travelled.enabled==authored.enabled && travelled.use_regions,
                    "A travel-only override must keep the region tuning");
-            auto both=body_rig_settings(model.controls,{{"glute-motion",{3,.8f,.5f,1}}},authored,chest_travel);
-            expect(both.travel[0]==10 && both.travel[2]==0 && both.frequency[2]==3 && both.frequency[0]==5,"Travel and tuning overrides must compose independently");
             auto older=authored; older.has_travel=false;
+            auto both=body_rig_settings(model.controls,{{"glute-motion",{3,.8f,.5f,1}}},authored,chest_travel);
+            expect(both.travel[0]==10 && both.travel[2]==8 && both.frequency[2]==3 && both.frequency[0]==5,"Travel and tuning overrides must compose independently");
+            // A look without travel: a part whose sliders match a preset swings with that preset's
+            // travel (Soft / Saggy glutes 16, clamped to the part's 12), the others at the recipe
+            // default; the Travel readout says the same; an explicit Travel wins over both.
+            {
+                const auto presets=physics_presets(glute);
+                const auto soft=std::find_if(presets.begin(),presets.end(),[](const auto& p){ return p.id=="soft"; });
+                expect(soft!=presets.end() && physics_preset_travel(glute,*soft)==12,"Soft glute travel must clamp to the range");
+                const ControlValue soft_glute{1.20f,.20f,2.50f,1};
+                expect(effective_travel(glute,soft_glute,std::nullopt)==12 && effective_travel(glute,soft_glute,5.f)==5 &&
+                       !effective_travel(glute,{3,.8f,.5f,1},std::nullopt) && !effective_travel(old_chest,{2.6f,.65f,.6f,1},std::nullopt),
+                       "Effective travel must follow the override, then the matched preset, then nothing");
+                auto inferred=body_rig_settings(model.controls,{{"glute-motion",soft_glute}},authored,{});
+                expect(inferred.travel[2]==12 && inferred.travel[3]==12 && inferred.travel[0]==4 && inferred.frequency[2]==1.2f,
+                       "A matched preset must set the part's travel and the rest keep the recipe default");
+                auto overridden=body_rig_settings(model.controls,{{"glute-motion",soft_glute}},authored,{{"glute-motion",5}});
+                expect(overridden.travel[2]==5,"An explicit travel must win over the matched preset");
+                auto untouched=body_rig_settings(model.controls,{},authored,{});
+                expect(untouched.use_regions && untouched.travel[0]==4 && untouched.travel[2]==8 && untouched.frequency==authored.frequency,
+                       "Recipe default travel must reach a rig with the inputs even with nothing saved");
+                expect(body_rig_settings(model.controls,{{"glute-motion",soft_glute}},older,{}).travel==older.travel,
+                       "A rig without travel inputs must ignore inferred travel");
+            }
             expect(body_rig_settings(model.controls,{},older,chest_travel)==older,"A rig without travel inputs must be left alone by travel");
             auto older_mixed=body_rig_settings(model.controls,{{"chest-motion",{3,.8f,.5f,1}}},older,chest_travel);
             expect(older_mixed.frequency[0]==3 && older_mixed.travel==older.travel,"Old rig must still take the other channels");
             auto global=authored; global.use_regions=false; global.global_travel=0; global.travel.fill(7);
             auto filled=body_rig_settings(model.controls,{},global,chest_travel);
-            expect(filled.use_regions && filled.travel[0]==10 && filled.travel[3]==0 && filled.frequency[3]==global.global_frequency,
+            expect(filled.use_regions && filled.travel[0]==10 && filled.travel[3]==8 && filled.travel[4]==0 && filled.frequency[3]==global.global_frequency,
                    "Global mode must seed travel from the global input");
             rejects([&]{body_rig_settings(model.controls,{},authored,{{"chest-motion",30}});});
             rejects([&]{body_rig_settings(old.controls,{},authored,{{"chest-motion",6}});});
@@ -378,7 +401,10 @@ int main() {
             auto seeded=banded; seeded.use_regions=false; seeded.global_soft_zone=.4f; seeded.soft_zone.fill(.9f);
             auto seeded_out=body_rig_settings(model.controls,{{"chest-motion",{2,.7f,1,1}}},seeded,{},{{"chest-motion",.6f}});
             expect(seeded_out.soft_zone[0]==.6f && seeded_out.soft_zone[3]==.4f,"Global mode must seed the band from the global input");
-            expect(body_rig_settings(model.controls,{},banded,{},{{"chest-motion",.6f}})==banded,"A band alone must not activate a part");
+            // On a rig with the travel inputs the recipe default travel activates the parts anyway,
+            // so the band-alone rule is checked on a rig without them.
+            auto band_only=banded; band_only.has_travel=false;
+            expect(body_rig_settings(model.controls,{},band_only,{},{{"chest-motion",.6f}})==band_only,"A band alone must not activate a part");
             for(float bad:{-.1f,.95f,std::numeric_limits<float>::quiet_NaN()})
                 rejects([&]{body_rig_settings(model.controls,{{"chest-motion",{2,.7f,1,1}}},banded,{},{{"chest-motion",bad}});});
             expect(body_soft_zone_support({})==BodyTravelSupport::Absent,"A rig without the band inputs must be accepted");

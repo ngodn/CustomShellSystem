@@ -702,10 +702,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         } else {
             const auto& options=worn->controls_for(selection->second.variant); const auto& custom=selection->second.custom;
             auto values=control_values(options,custom);
-            // A part's travel override, when the player set one. Without it the rig keeps its own limit.
+            // A part's travel: the player's override, else the travel of the preset its sliders
+            // match (what the rig runs with), else none, which leaves the rig its own limit.
             auto travel_of=[&](const Control& c)->std::optional<float> {
                 const auto found=custom.travel.find(c.id);
-                return found==custom.travel.end()?std::nullopt:std::optional<float>(found->second);
+                const auto held=values.find(c.id);
+                return effective_travel(c,held!=values.end()?held->second:c.value,
+                                        found==custom.travel.end()?std::nullopt:std::optional<float>(found->second));
             };
             // Whether the worn rig takes travel, asked once per build and only when a part has a
             // travel range. Unknown (nothing worn to ask) keeps the slider live.
