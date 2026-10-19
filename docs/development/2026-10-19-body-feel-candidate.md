@@ -55,9 +55,15 @@ Then start the game through Steam. `CSS.log` in `$MOD` should show `Core activat
 
 For the compatibility half of the live check, UUEPBS 2.7.1 is staged under `work/uuepbs-install/` with its own README (install steps, the seeded `MortalShell2.json` profile from `docs/research/uuepbs/MortalShell2.profile.json`, check list, removal). It installs after the core and the Eve recook, in the same closed-game window.
 
+## Shared Assets metadata for the recooked outfits
+
+Shared Assets resolves performance and facial adapters by the outfit's revision (utoc hash plus ucas size), so every recooked trio needs its rows added to the css.locomotion manifest or the idle, performance and facial features go quiet on it. The core keys rows by outfit, revision and source asset, so the new rows are appended beside the released ones: both revisions resolve, and rolling an outfit back needs no Shared Assets change.
+
+`tools/authoring/shared-assets/append_revision_pins.py --shared <installed CSS_SharedAssets_P dir> --handoff <lane>/work/uuepbs/step6/shared-adapter-handoff.json ... --out work/shared-assets-1.0.2/<run>` builds the 1.0.2 metadata PAK from the installed one (utoc and ucas copied unchanged into `<run>/trio`, hashes in `report.json`). Each lane writes its handoff after its final package; a repackage changes the utoc hash, so the handoff is regenerated with it. Install the three files over `~mods/CSS_SharedAssets_P/` in the same closed-game window as the core and the trios, after keeping a copy of the installed `.pak`.
+
 ## Rollback
 
-Close the game, then:
+Close the game, then (the Shared Assets 1.0.2 pak may stay: its added rows only match the recooked revisions):
 
 ```sh
 mv "$MOD/core.json.pre-1.0.2-rc1" "$MOD/core.json"     # back to css_core-1.0.1.dll
