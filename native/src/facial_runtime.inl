@@ -89,13 +89,16 @@ void Appearance::sample_facial_performance(double seconds,double weight) {
        mesh_asset(component)!=facial_motion_binding_.mesh.Get())
         throw std::runtime_error("The performance facial binding changed");
     const auto& values=facial_motion_->sample(seconds,weight);
+    // A performance writes up to 128 morphs a frame; reading each back doubled the reflected
+    // calls (about 1.5 ms on Commander White's face). Verify one sample in sixty instead.
+    const bool verify=(facial_motion_samples_++%60)==0;
     facial_motion_binding_.weights.apply(values,
         [&](const auto& name){return facial_weight(component,name);},
-        [&](const auto& name,float value){facial_weight(component,name,value);});
+        [&](const auto& name,float value){facial_weight(component,name,value);},verify);
 }
 void Appearance::restore_facial_performance() {
     restore_facial_binding(facial_motion_binding_);
-    facial_motion_.reset();
+    facial_motion_.reset();facial_motion_samples_=0;
 }
 Json Appearance::start_performance(const Catalog& catalog,const std::string& outfit,
     const std::string& id,double rate,double position,const FacialPerformance* face,PerformanceUse use) {

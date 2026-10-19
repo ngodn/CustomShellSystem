@@ -854,6 +854,7 @@ class Appearance {
     FacialBinding facial_world_, facial_preview_;
     FacialBinding facial_motion_binding_;
     std::optional<FacialPerformancePose> facial_motion_;
+    uint32_t facial_motion_samples_=0;   // read-back every 60th performance sample, see OwnedMorphs::apply
     std::map<std::string,float> facial_weights_;
     std::map<std::string,std::string> facial_failures_;
     std::string facial_requested_, facial_applied_, facial_reason_;

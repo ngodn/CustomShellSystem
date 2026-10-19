@@ -19,7 +19,10 @@ public:
         }
         baseline_.clear();
     }
-    template<class Read,class Write> void apply(const std::map<std::string,float>& values,Read read,Write write) {
+    // `verify` reads every written weight back (one reflected call per morph). A one-shot
+    // expression keeps it; a performance sampled every frame passes it only now and then,
+    // since the read-back was most of the per-frame cost on a 128-morph face.
+    template<class Read,class Write> void apply(const std::map<std::string,float>& values,Read read,Write write,bool verify=true) {
         if(matches(values)) return;
         for(const auto& [name,weight]:values)
             if(name.empty() || !std::isfinite(weight) || std::abs(weight)>4.f)
@@ -38,7 +41,10 @@ public:
         try {
             for(const auto& [name,weight]:values) {
                 if(const auto prior=written_.find(name);prior!=written_.end() && prior->second==weight) continue;
-                auto [entry,inserted]=written_.try_emplace(name,read(name));
+                // Read the live weight only for a shape this owner has not written yet; the
+                // argument of try_emplace would be evaluated (one reflected call) either way.
+                auto entry=written_.find(name);
+                if(entry==written_.end()) entry=written_.emplace(name,read(name)).first;
                 const auto previous=entry->second;
                 if(previous==weight) continue;
                 entry->second=weight;
@@ -47,6 +53,7 @@ public:
                     if(read(name)!=weight) entry->second=previous;
                     throw;
                 }
+                if(!verify) continue;
                 const auto actual=read(name);
                 if(actual!=weight) {
                     entry->second=actual;

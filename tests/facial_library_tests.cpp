@@ -273,7 +273,7 @@ int main(int argc,char** argv) {
         owned.apply(first,read,write);
         expect(reads==reads_before && writes==writes_before,"Unchanged expression repeated engine calls");
         owned.apply({{"eye",.9f},{"jaw",0.f}},read,write);
-        expect(writes==writes_before+1 && reads==reads_before+2,
+        expect(writes==writes_before+1 && reads==reads_before+1,
                "A changing facial shape also read or rewrote unchanged shapes");
         owned.apply({{"eye",0.f},{"jaw",-.07f}},read,write);
         owned.restore(read,write);
@@ -308,6 +308,15 @@ int main(int argc,char** argv) {
         expect(live==baseline,"Changed facial shape set lost its original baseline");
         rejects([&]{owned.apply({{"jaw",std::numeric_limits<float>::quiet_NaN()}},read,write);});
         expect(live==baseline,"Invalid expression partially changed the face");
+        // A performance sample without verification writes each changed shape once and reads nothing.
+        owned.apply(first,read,write);
+        const auto reads_fast=reads,writes_fast=writes;
+        owned.apply({{"eye",.5f},{"jaw",0.f}},read,write,false);
+        expect(writes==writes_fast+1 && reads==reads_fast && live.at("eye")==.5f,"Unverified apply must write once and read nothing");
+        owned.apply({{"eye",.5f},{"jaw",0.f}},read,write,false);
+        expect(writes==writes_fast+1 && reads==reads_fast,"Unverified apply repeated unchanged shapes");
+        owned.restore(read,write);
+        expect(live==baseline,"Unverified writes must still restore the baseline");
         OwnedMorphs expression_owner,performance_owner;
         live=baseline;
         expression_owner.apply(first,read,write);
