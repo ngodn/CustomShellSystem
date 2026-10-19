@@ -51,6 +51,10 @@ mv "$MOD/core.json.tmp" "$MOD/core.json"
 
 Then start the game through Steam. `CSS.log` in `$MOD` should show `Core activated: css_core-1.0.2-rc1.dll`; "Core load failed" or "Core ABI rejected" means the loader kept the old core.
 
+## UUEPBS beside the candidate
+
+For the compatibility half of the live check, UUEPBS 2.7.1 is staged under `work/uuepbs-install/` with its own README (install steps, the seeded `MortalShell2.json` profile from `docs/research/uuepbs/MortalShell2.profile.json`, check list, removal). It installs after the core and the Eve recook, in the same closed-game window.
+
 ## Rollback
 
 Close the game, then:
