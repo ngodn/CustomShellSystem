@@ -308,3 +308,62 @@ Test results on 19 Oct 2026, host build `build/uuepbs-host`: ctest 28 of 28 suit
 - Positive travel replaces the skin-travel bound. Each package's `travel.max` has to come from a clearance check at that angle, and the templates' upper rows are unmeasured against garments.
 - Natural 6/10 loosens the look the user accepted. Ship it only after the traces and a live check.
 - Fixture count is not frame cost. The soft zone adds a log_rotation and a few vector ops per helper per substep; measure with `measure_body_graph_cost.py` before shipping.
+
+## Status after the editor pass (19 Oct 2026)
+
+### Built
+
+| Part | Where | State |
+| --- | --- | --- |
+| Rig step and builder | `tools/authoring/body-rig/` (copied from the SeduXtress library, which is unchanged) | `-CSSBodyTravelInput` authors `BodyAngularV11`: V10 plus `RegionTravel[7]`, `Travel`, `SoftZone` (0.25) and `ClampContacts`, 1276 nodes (V10: 1162). `-CSSBodyHierarchyFrom=<rig>` duplicates an existing rig, keeps its hierarchy and members and rebuilds only the graph. |
+| Combined AnimBP | `tools/authoring-patches/body-travel-inputs.patch` against the CSSAuthoring module | Adds and wires `CSSBodyRegionTravel`/`CSSBodyTravel` when the rig has both. Compiled in a private stage, `ABP_CSS_ControlRigProbeCombinedV4` authored on V11. |
+| Fixtures and gates | `probe_controlrig_body_timing.py`, `probe_controlrig_body_softlimit.py`, `review_controlrig_body_softlimit.py` | 37 timing fixtures, 234 soft-limit fixtures, run. |
+| UI | `native/src/inventory_view.inl` and helpers | Travel slider, disabled on rigs without the pair. Host and Windows builds pass. |
+
+Two deviations from the design text, both deliberate:
+
+- The zone damping is integrated exactly over the step (the same exponential form as the main damping) instead of as an explicit force. At the 180 rad/s cap, 2 zetaL wL dt is 2.1, and an explicit step would reverse the velocity instead of damping it.
+- The design's restoring term is applied with the penetration clamped to the band width, so a limit that shrinks under a committed state cannot produce an unbounded push.
+
+Two findings along the way: the V40 mesh now has nine virtual bones (388), so a fresh import no longer gives the 379-bone hierarchy; and rebuilding the members from the measured JSON moves the chest by one float ulp (hierarchy-derived defaults are written at 12 digits). Both are why recooks duplicate the current rig.
+
+How to run (from `CustomShellSystem/`, stage `work/body-travel-softlimit1`, everything outside the stage read-only under bwrap):
+
+```sh
+R=tools/authoring/body-rig; S=work/body-travel-softlimit1
+python3 $R/run_stage.py $S $R/build_controlrig_body_timed.py -CSSBodyTravelInput \
+  -CSSBodyHierarchyFrom=/Game/CSSAuthoring/TransientProbes/CR_CSS_BodyAngularV10 --log build-v11
+python3 $R/run_stage.py $S $R/probe_controlrig_body_timing.py -CSSBodyVersion=10 -CSSBodyLabel=v10 --log timing-v10
+python3 $R/run_stage.py $S $R/probe_controlrig_body_timing.py -CSSBodyVersion=11 -CSSBodySoftZone=0 -CSSBodyLabel=sz0 --log timing-sz0
+python3 $R/run_stage.py $S $R/probe_controlrig_body_timing.py -CSSBodyVersion=11 -CSSBodySoftZone=0.25 -CSSBodyLabel=sz25 --log timing-sz25
+python3 $R/run_stage.py $S $R/probe_controlrig_body_softlimit.py -CSSBodyVersion=11 --log softlimit
+python3 $R/review_controlrig_body_timing.py $S --version 11 --label sz25
+python3 $R/review_controlrig_body_softlimit.py $S
+```
+
+The combined AnimBP check runs in a second stage with the patched module built (`run_stage.py --module`, `check_combined_travel_inputs.py`).
+
+### Gate results
+
+| Gate | Result |
+| --- | --- |
+| 1. theta <= L + 1e-6 every frame | Pass. 13417 frames x 7 helpers on each 37-fixture run and 146898 frames on the soft-limit fixtures. Largest excess 4.6e-7 rad (SoftZone 0), 8.7e-9 rad (soft-limit fixtures). |
+| 2. Unchanged tolerances | The unchanged timing review passes 27566 of 27566 checks on V11 at SoftZone 0 and at 0.25. On the soft-limit fixtures 1061 of 1100 checks pass: pivot, scale, unit quaternions, clock and preview checks all pass; 39 timing comparisons against the 120 FPS twin fail, 20 at SoftZone 0 and 19 at 0.25. They are the Bouncy, Soft and Earthquake rows, the bounce motion at 144/240 FPS and smooth input at 15/30 FPS (worst 1.19 degrees, Earthquake bounce, SoftZone 0). The hard clamp fails the same cases, so this is the tolerances meeting much larger motion than the 37 fixtures, not the soft zone. Four cases fail only with the zone (Soft bounce 15/30, Soft smooth 30, tight smooth 15, worst 0.42 degree): a stiff band reacts more to coarse input sampling. |
+| 3. SoftZone 0, travel 0 equals the old rig | Pass, bit for bit: 93919 of 93919 output transforms identical to a V10 rerun, and the V10 rerun is identical to the archived 20 Sep V10 run. |
+| 4. Band speed change at most a quarter of SoftZone 0 | Fail on all 12 applicable 120 FPS fixtures. Ratio 0.45 to 1.32 (for example Natural bounce 1.50 vs 1.76 rad/s, tight smooth 0.31 vs 0.53). |
+| 5. No hard contacts, Firm and Natural smooth, SoftZone 0.25 | Pass, 0 at every rate (12 of 12). |
+| 6. No acceleration step at the knee | 12 of 15 pass. Fails on Earthquake bounce (2428 vs 2121 rad/s^2 below the knee), Earthquake piecewise (643 vs 589) and tight piecewise (80 vs 65). |
+
+Hard projection contacts, SoftZone 0 vs 0.25: 126 vs 0 on the 37 fixtures, 5726 vs 862 over the soft-limit fixtures. At 120 FPS: tight smooth 325 vs 0, Bouncy smooth 76 vs 0, Soft smooth 121 vs 5, Natural bounce 17 vs 0, Earthquake bounce 101 vs 28. Earthquake piecewise and smooth go from 0 and 1 to 1 and 4: the elastic push sends a lightly damped helper back harder. Firm never reaches 75 percent of its travel on these fixtures. Settle to 0.1 degree after the input stops is the same or up to 0.27 s shorter with the zone, except Soft bounce (2.58 to 2.82 s); Earthquake does not settle within 4 s either way (damping ratio 0.06 to 0.10). The 8 Hz case, where the zone stiffness reaches its 180 rad/s cap, never gets deep into the band (peak 0.85 of L), so the cap's stability is not exercised by these fixtures.
+
+Why gate 4 fails: at the speeds these fixtures reach, a 25 percent band is crossed in about two 120 Hz steps (Natural bounce enters at 1.57 rad/s with a 0.026 rad band). Even a constant deceleration would need the whole band to spread the stop over four steps, and the quadratic push puts most of it near the limit, so the worst step is about half the entry speed. The hard clamp's own worst step is also less than the full speed, because the stop usually lands mid-step. The design's wL sizing stops the helper, but not gently enough for this gate. Gate 6 fails for the same reason: a fast crossing covers the first part of the quadratic in one step.
+
+Exploratory, not a gate: SoftZone 0.5 at 120 FPS on the same fixtures gives a band speed ratio of 0.20 to 0.54 on 6 of the 12 cases (Bouncy smooth 0.20, tight smooth 0.24, Natural bounce 0.45), and still 0.62 to 1.17 on the other six (Soft rows, Bouncy and Earthquake bounce, Earthquake smooth). Contacts drop further (tight smooth 0, Bouncy smooth 0, Soft smooth 5, tight bounce 92 vs 236). It is a runtime member, so this needs no rebuild.
+
+### Open
+
+- The soft limit as designed does not meet gates 4 and 6. Options, in order of cost: a wider `SoftZone` (0.5 measured above), a band whose push grows less steeply (linear above the knee with a matched damper), or the output soft clip from "Fallback". Pick after the trace comparison, not from these synthetic fixtures alone.
+- Template travel and tuning retune after the trace comparison (`compare_body_motion_feel.py`, still to write) and the user's live check. Natural 6/10 is still looser than the accepted 1.5.0 look.
+- Per-outfit recooks: Eve's `CR_Body`/`ABP_Secondary`, Unholy Genessa, Commander White and tHorny Proxima each need the rig rebuilt from their current rig with `-CSSBodyHierarchyFrom`, the AnimBP rebuilt with the patched builder (or their own library, for example Commander White's), a `travel` range in their recipes, and the live read-back probe (`sample_secondary_rigs.py` with `RegionTravel`/`Travel` added).
+- Frame cost of the 114 extra nodes is unmeasured (`measure_body_graph_cost.py`).
+- The UI uses a degree sign in the readout; the game font has not been checked for it.
