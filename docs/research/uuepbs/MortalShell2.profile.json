@@ -1,0 +1,40 @@
+{
+  "Project": "MortalShell2",
+  "Game": "Mortal Shell II",
+  "Target": "",
+  "TargetClassPath": "",
+  "PrimaryComponent": "",
+  "IncludeComponents": [],
+  "ExcludeComponents": [],
+  "SameSkeletonOnly": true,
+  "BodyGroups": {
+    "Breasts": ["brust001", "brust002"]
+  },
+  "MorphGroups": {
+    "Breast size":     { "Morphs": ["PBMBreastsSize"],        "Section": "CSS chest", "Hint": "CSS Breast size morph" },
+    "Cleavage":        { "Morphs": ["PBMBreastsCleavage"],    "Section": "CSS chest" },
+    "Diameter":        { "Morphs": ["PBMBreastsDiameter"],    "Section": "CSS chest" },
+    "Perk side":       { "Morphs": ["PBMBreastsPerkSide"],    "Section": "CSS chest" },
+    "Upward slope":    { "Morphs": ["PBMBreastsUpwardSlope"], "Section": "CSS chest" },
+    "Natural":         { "Morphs": ["PBMBreastsNatural"],     "Section": "CSS chest" },
+    "Implants":        { "Morphs": ["PBMBreastsImplants"],    "Section": "CSS chest" },
+    "Nipple size":     { "Morphs": ["PBMNipplesSize"],        "Section": "CSS chest" },
+    "Nipple depth":    { "Morphs": ["PBMNipplesDepth"],       "Section": "CSS chest" },
+    "Areola size":     { "Morphs": ["PBMAreolaeSize"],        "Section": "CSS chest" },
+    "Chest width":     { "Morphs": ["PBMChestWidth"],         "Section": "CSS chest" },
+    "Underbust depth": { "Morphs": ["PBMUnderbustDepth"],     "Section": "CSS chest" },
+    "Glute size":      { "Morphs": ["PBMGlutesSize"],         "Section": "CSS body" },
+    "Glute width":     { "Morphs": ["PBMGlutesWidth"],        "Section": "CSS body" },
+    "Glutes up/down":  { "Morphs": ["PBMGlutesUpDown"],       "Section": "CSS body" },
+    "Hip size":        { "Morphs": ["PBMHipSize"],            "Section": "CSS body" },
+    "Hip bone size":   { "Morphs": ["PBMHipBoneSize"],        "Section": "CSS body" },
+    "Waist width":     { "Morphs": ["PBMWaistWidth"],         "Section": "CSS body" },
+    "Waist depth":     { "Morphs": ["PBMWaistDepth"],         "Section": "CSS body" },
+    "Thigh tone":      { "Morphs": ["PBMThighsTone"],         "Section": "CSS body" },
+    "Thigh size":      { "Morphs": ["PBMThighsSize"],         "Section": "CSS body" },
+    "Calf size":       { "Morphs": ["PBMCalvesSize"],         "Section": "CSS body" },
+    "Shoulder size":   { "Morphs": ["PBMShouldersSize"],      "Section": "CSS body" },
+    "Body tone":       { "Morphs": ["FBMBodyTone"],           "Section": "CSS body" }
+  },
+  "_help": "Target: actor class to edit (empty = the pawn you control). TargetClassPath: optional full path of that class. PrimaryComponent: mesh whose bones are listed (empty = the Character's Mesh). Include/ExcludeComponents: mesh names. SameSkeletonOnly: also edit other meshes on the actor that share the primary mesh's skeleton. BodyGroups.Breasts binds the SKEL_Base chest helpers brust001/002, which the dictionary does not know. MorphGroups: one slider per CSS morph; a group whose morph the worn mesh lacks is not shown."
+}

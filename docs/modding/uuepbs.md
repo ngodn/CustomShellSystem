@@ -28,20 +28,18 @@ The chest helpers are named `brust` (German), which UUEPBS's dictionary does not
 
 ## Morph sliders
 
-The Detailed Panel > Morphs tab lists every morph target the worn mesh carries. Current eins0fx bodies carry six (`PBMBreastsSize`, `PBMGlutesSize`, `PBMHipSize`, `PBMWaistWidth`, `PBMThighsTone`, `FBMBodyTone`); the expanded chest and body sets are in progress per package. To get them as Simplified Panel sliders, add to the same profile:
+The Detailed Panel > Morphs tab lists every morph target the worn mesh carries. Eve, Unholy Genessa and Commander White are gaining a 24-morph body set (the six originals plus a chest set: cleavage, diameter, perk side, upward slope, natural, implants, nipple size and depth, areola size, chest width, underbust depth; and glute width, glutes up/down, hip bone size, thigh size, calf size, shoulder size, waist depth). To get them as Simplified Panel sliders, one per morph, use the ready profile `docs/research/uuepbs/MortalShell2.profile.json` from the CSS repo as your `GameProfiles/MortalShell2.json`; it carries the Breasts bone group above and a `MorphGroups` block like:
 
 ```json
 "MorphGroups": {
-  "Breasts (CSS)": ["PBMBreasts*"],
-  "Glutes (CSS)":  ["PBMGlutes*"],
-  "Hips (CSS)":    ["PBMHip*"],
-  "Waist (CSS)":   ["PBMWaist*"],
-  "Thighs (CSS)":  ["PBMThighs*"],
-  "Body tone":     ["FBMBodyTone"]
+  "Breast size": { "Morphs": ["PBMBreastsSize"],     "Section": "CSS chest" },
+  "Cleavage":    { "Morphs": ["PBMBreastsCleavage"], "Section": "CSS chest" },
+  "Glute size":  { "Morphs": ["PBMGlutesSize"],      "Section": "CSS body" },
+  "Body tone":   { "Morphs": ["FBMBodyTone"],        "Section": "CSS body" }
 }
 ```
 
-Stock game shells carry no morph targets, so the Morphs tab is empty on them; only bone sliders apply there.
+A wildcard group such as `["PBMBreasts*"]` drives every matching morph at once, which is not what you want on the chest set; name one morph per slider. A slider whose morph the worn outfit lacks is not shown (UUEPBS drops groups with no match on the current mesh), so the one profile serves every outfit. Stock game shells carry no morph targets, so the Morphs tab is empty on them; only bone sliders apply there.
 
 ## Rules of the road
 
