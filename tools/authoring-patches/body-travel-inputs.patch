@@ -1,0 +1,87 @@
+diff --git a/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl b/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl
+--- a/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl
++++ b/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl
+@@ -9,7 +9,7 @@ FString UCSSControlRigLibrary::EvaluateCombinedProbe(UAnimBlueprint* Blueprint,
+         TEXT("reset"),TEXT("reenable"),TEXT("reinitialize"),TEXT("repeat"),
+         TEXT("body_frequency"),TEXT("body_damping"),TEXT("body_motion"),TEXT("body_gravity"),TEXT("hair_stiffness"),
+         TEXT("region_defaults"),TEXT("region_frequency"),TEXT("region_damping"),TEXT("region_motion"),
+-        TEXT("region_off"),TEXT("region_reenable"),TEXT("body_only_reset"),TEXT("hair_only_reset")};
++        TEXT("region_off"),TEXT("region_reenable"),TEXT("body_only_reset"),TEXT("hair_only_reset"),TEXT("region_travel")};
+     const FString ProductionFolder=Mesh ? FPackageName::GetLongPackagePath(Mesh->GetOutermost()->GetName()).Replace(
+         TEXT("/Game/CSSAuthoring/"),TEXT("/Game/CSS/")) : FString();
+     const bool Production=Blueprint && FPackageName::GetLongPackagePath(Blueprint->GetOutermost()->GetName())==ProductionFolder &&
+@@ -167,6 +167,24 @@ FString UCSSControlRigLibrary::EvaluateCombinedProbe(UAnimBlueprint* Blueprint,
+             Inner->SetPropertyValue(Values.GetRawPtr(0),Mode!=TEXT("region_off") &&
+                 !(Mode==TEXT("region_reenable") && Frame>=Fps && Frame<3*Fps/2));
+         }
++        // Travel pair, with the exact property facts the native adapter requires:
++        // a float array of seven and a float scalar, both present or both absent.
++        auto* RegionTravel=FindFProperty<FArrayProperty>(Instance->GetClass(),TEXT("CSSBodyRegionTravel"));
++        auto* GlobalTravel=FindFProperty<FFloatProperty>(Instance->GetClass(),TEXT("CSSBodyTravel"));
++        if ((RegionTravel==nullptr)!=(GlobalTravel==nullptr) ||
++            (RegionTravel && (RegionTravel->ArrayDim!=1 || !CastField<FFloatProperty>(RegionTravel->Inner))))
++            return Fail(TEXT("Body travel inputs do not match the native contract"));
++        if (Mode==TEXT("region_travel") && !RegionTravel) return Fail(TEXT("Travel fixture requires the travel contract"));
++        if (RegionTravel)
++        {
++            FScriptArrayHelper Values(RegionTravel,RegionTravel->ContainerPtrToValuePtr<void>(Instance));
++            if (Values.Num()!=7) return Fail(TEXT("Invalid region travel count"));
++            // Distinct per region, changing at one second, so a stale or shifted copy fails.
++            for (int32 Index=0;Index<7;++Index)
++                CastField<FFloatProperty>(RegionTravel->Inner)->SetPropertyValue(Values.GetRawPtr(Index),
++                    Mode==TEXT("region_travel") ? float(2+Index+(Frame>=Fps ? 10 : 0)) : 0.f);
++            GlobalTravel->SetPropertyValue_InContainer(Instance,Mode==TEXT("region_travel") ? (Frame>=Fps ? 7.5f : 3.5f) : 0.f);
++        }
+         *Gravity->ContainerPtrToValuePtr<FVector>(Instance)=Mode==TEXT("body_gravity") ? FVector(0,0,-200) : FVector::ZeroVector;
+         if (Frame==Fps)
+         {
+@@ -236,6 +254,19 @@ FString UCSSControlRigLibrary::EvaluateCombinedProbe(UAnimBlueprint* Blueprint,
+                     return Fail(TEXT("Combined body array transfer differs"));
+                 Inputs->SetStringField(Name,BodyRig->GetVariableAsString(Name));
+             }
++            if (RegionTravel)
++            {
++                auto* Variable=FindFProperty<FArrayProperty>(BodyRig->GetClass(),TEXT("RegionTravel"));
++                auto* Scalar=FindFProperty<FFloatProperty>(BodyRig->GetClass(),TEXT("Travel"));
++                if (!Variable || !Scalar || !RegionTravel->SameType(Variable) ||
++                    !RegionTravel->Identical(RegionTravel->ContainerPtrToValuePtr<void>(Instance),Variable->ContainerPtrToValuePtr<void>(BodyRig),PPF_None) ||
++                    GlobalTravel->GetPropertyValue_InContainer(Instance)!=Scalar->GetPropertyValue_InContainer(BodyRig))
++                    return Fail(TEXT("Combined body travel transfer differs"));
++                Inputs->SetStringField(TEXT("RegionTravel"),BodyRig->GetVariableAsString(TEXT("RegionTravel")));
++                Inputs->SetStringField(TEXT("Travel"),BodyRig->GetVariableAsString(TEXT("Travel")));
++                Inputs->SetStringField(TEXT("SoftZone"),BodyRig->GetVariableAsString(TEXT("SoftZone")));
++                Inputs->SetStringField(TEXT("ClampContacts"),BodyRig->GetVariableAsString(TEXT("ClampContacts")));
++            }
+             const bool Active=BodyRig->GetVariableAsString(TEXT("UseRegionSettings")).Equals(TEXT("True"),ESearchCase::IgnoreCase);
+             if (Active!=RegionMode) return Fail(TEXT("Combined region switch transfer differs"));
+             Sample->SetBoolField(TEXT("region_settings"),Active);
+diff --git a/Source/CSSAuthoring/CSSControlRigLibrary.cpp b/Source/CSSAuthoring/CSSControlRigLibrary.cpp
+--- a/Source/CSSAuthoring/CSSControlRigLibrary.cpp
++++ b/Source/CSSAuthoring/CSSControlRigLibrary.cpp
+@@ -248,6 +248,26 @@ static UAnimBlueprint* CreatePostProcessGraph(USkeletalMesh* Mesh,
+                     return Fail(TEXT("Cannot export complete body region defaults"));
+                 BodyInputs.Add({FName(Name),FName(*(FString(TEXT("CSSBody"))+Name)),Category,Default,true});
+             }
++            // Travel in degrees (BodyAngularV11 and later). 0 keeps the rig's own
++            // Limits/MaxTravel. Older rigs have neither member and get neither input;
++            // the native adapter treats that pair as absent. A half pair is refused.
++            auto* RegionTravel=FindFProperty<FArrayProperty>(BodyBlueprint->GeneratedClass.Get(),TEXT("RegionTravel"));
++            auto* Travel=FindFProperty<FFloatProperty>(BodyBlueprint->GeneratedClass.Get(),TEXT("Travel"));
++            if ((RegionTravel==nullptr)!=(Travel==nullptr)) return Fail(TEXT("Body travel inputs must exist together"));
++            if (RegionTravel)
++            {
++                if (RegionTravel->ArrayDim!=1 || !CastField<FFloatProperty>(RegionTravel->Inner))
++                    return Fail(TEXT("Body region travel must be a float array"));
++                FScriptArrayHelper Values(RegionTravel,RegionTravel->ContainerPtrToValuePtr<void>(Defaults));
++                if (Values.Num()!=BodyNames.Num()) return Fail(TEXT("Body region travel must contain seven values"));
++                FString Default;
++                if (!RegionTravel->ExportText_InContainer(0,Default,Defaults,nullptr,Defaults,PPF_None) || Default.IsEmpty())
++                    return Fail(TEXT("Cannot export body region travel defaults"));
++                const float Global=Travel->GetPropertyValue_InContainer(Defaults);
++                if (!FMath::IsFinite(Global) || Global<0) return Fail(TEXT("Invalid body travel default"));
++                BodyInputs.Add({TEXT("RegionTravel"),TEXT("CSSBodyRegionTravel"),UEdGraphSchema_K2::PC_Real,Default,true});
++                BodyInputs.Add({TEXT("Travel"),TEXT("CSSBodyTravel"),UEdGraphSchema_K2::PC_Real,FString::SanitizeFloat(Global)});
++            }
+         }
+     }
+     auto Members = Inputs;
