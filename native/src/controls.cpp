@@ -214,6 +214,10 @@ int control_channel_count(const Control& control) {
     if(control.kind==ControlKind::Spring) return control.spring_clamp?3:2;
     return control.scalar?1:3;
 }
+int physics_slot_channel(const Control& control,int slot) {
+    if(!body_travel_control(control)) return slot;
+    return slot==3?4:slot==4?3:slot;
+}
 DynamicsSettings dynamics_settings(const Control& control,const ControlValue& value) {
     if(control.kind!=ControlKind::Dynamics) throw std::runtime_error("Expected a dynamics control");
     valid_value(control,value);

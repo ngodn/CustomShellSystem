@@ -223,6 +223,12 @@ int main() {
             const auto model=ControlSet::parse(recipe);
             const auto& chest=model.controls[0]; const auto& glute=model.controls[1];
             expect(body_travel_control(chest) && control_channel_count(chest)==5,"Travel channel missing");
+            // The details window puts Travel before the Motion switch; the map is its own inverse.
+            for(int slot=0;slot<5;++slot) {
+                expect(physics_slot_channel(chest,slot)==(slot==3?4:slot==4?3:slot),"Travel slot order wrong");
+                expect(physics_slot_channel(chest,physics_slot_channel(chest,slot))==slot,"Travel slot map is not its own inverse");
+            }
+            for(int slot=0;slot<4;++slot) expect(physics_slot_channel(old_chest,slot)==slot,"A rig without travel changed its slot order");
             const auto range=control_channel(chest,4);
             expect(range.minimum==2 && range.maximum==24 && range.value==4 && range.step==.5f,"Travel range wrong");
             expect(chest.value==ControlValue{2,.7f,1,1},"Travel changed the four saved channels");
@@ -346,6 +352,7 @@ int main() {
             const auto model=ControlSet::parse(recipe);
             const auto& control=model.controls.at(0);
             expect(control.kind==ControlKind::Rig && control.scalar && control_channel_count(control)==4,"Rig channels missing");
+            for(int slot=0;slot<4;++slot) expect(physics_slot_channel(control,slot)==slot,"A hair rig changed its slot order");
             expect(control.value==ControlValue{150,18,0,1},"Rig defaults wrong");
             expect(control_channel(control,3).step==1 && control_channel(control,1).maximum==24,"Rig slider ranges wrong");
             expect(control_values(model,{}).empty(),"Original must keep authored rig values");

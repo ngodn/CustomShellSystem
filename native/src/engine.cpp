@@ -2099,6 +2099,21 @@ void Appearance::restore_menu_physics() {
     }
     menu_post_process_disabled_.reset();
 }
+std::optional<bool> Appearance::body_travel_supported() const {
+    if(!active()) return std::nullopt;
+    auto* anim=post_process_instance(component_.Get());
+    if(!anim) return std::nullopt;
+    // customize() already captured this instance: use what it found.
+    if(body_rig_applied_ && body_rig_instance_.Get()==anim) return body_rig_applied_->has_travel;
+    if(travel_probe_instance_.Get()!=anim) {
+        travel_probe_instance_=anim;
+        travel_probe_=false;
+        // A half-built travel pair throws here and again when customize() applies it;
+        // either way the slider has nothing to drive.
+        try { travel_probe_=has_body_rig_inputs(anim) && body_rig_inputs(anim).travel; } catch(const std::exception&) {}
+    }
+    return travel_probe_;
+}
 void Appearance::sync_menu_physics(UObject* component) {
     auto* source=post_process_instance(component_.Get());
     if(!source) { restore_menu_physics(); return; }

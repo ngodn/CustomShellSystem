@@ -826,6 +826,9 @@ class Appearance {
     WeakObject rig_instance_;
     std::optional<BodyRigSettings> body_rig_original_, body_rig_applied_;
     WeakObject body_rig_instance_;
+    // body_travel_supported() asks an instance once; the answer is kept until the instance changes.
+    mutable WeakObject travel_probe_instance_;
+    mutable bool travel_probe_=false;
     WeakObject body_geometry_instance_;
     std::optional<BodyGeometryModel> body_geometry_model_;
     std::optional<BodyGeometry> body_geometry_original_, body_geometry_applied_;
@@ -951,6 +954,10 @@ public:
                const FacialPlan& facial = {});
     void set_expression(const FacialPlan&);
     Json expression_status() const;
+    // Whether the worn body rig takes the travel inputs (CSSBodyRegionTravel/CSSBodyTravel).
+    // False on a rig cooked before them, or one with no CSS body inputs at all. Empty when
+    // nothing is worn that could be asked.
+    std::optional<bool> body_travel_supported() const;
     void retain_expression_mesh(AssetLoadRoots& roots) const {
         if(auto* mesh=applied_.Get()) roots.keep(mesh);
     }

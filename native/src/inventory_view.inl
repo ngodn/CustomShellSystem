@@ -355,17 +355,20 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         bind(item.hit_left,minus); bind(item.hit_right,plus);
     };
     // The options menu slider row. The game's bar only steps with its arrows; CSS reads the
-    // mouse over the bar itself so a drag still sets the value directly.
+    // mouse over the bar itself so a drag still sets the value directly. A disabled slider is
+    // dimmed and takes neither arrows nor drags.
     auto slider=[&](const std::string& name,float value,float low,float high,float step,const std::string& readout,
-                     bool focused,Json action,bool scalar,const std::string& unit,Json minus,Json plus) {
+                     bool focused,Json action,bool scalar,const std::string& unit,Json minus,Json plus,bool enabled=true) {
         if(!panel_open) return;
         auto& item=native_take(panel_,NativeKind::slider);
         native_text(item.text_block.Get(),item.text,name);
         native_text(item.value_block.Get(),item.value,readout);
         const float fill=high>low?std::clamp((value-low)/(high-low),0.f,1.f):0.f;
         if(std::abs(item.fill-fill)>1e-4f) { invoke(item.extra.Get(),L"UpdateProgressBar",L"InPercent",fill); item.fill=fill; }
+        if(item.enabled!=int(enabled)) { invoke(item.widget.Get(),L"SetRenderOpacity",L"InOpacity",enabled?1.f:.45f); item.enabled=enabled; }
         native_state(item,focused);
         if(focused) panel_focus=item.widget.Get();
+        if(!enabled) return;
         bind(item.hit_left,minus); bind(item.hit_right,plus);
         action["refresh"]=false;
         sliders_.push_back({item.extra,item.value_block,item.widget,std::move(action),value,scalar,unit,low,high,step});
@@ -699,6 +702,18 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         } else {
             const auto& options=worn->controls_for(selection->second.variant); const auto& custom=selection->second.custom;
             auto values=control_values(options,custom);
+            // A part's travel override, when the player set one. Without it the rig keeps its own limit.
+            auto travel_of=[&](const Control& c)->std::optional<float> {
+                const auto found=custom.travel.find(c.id);
+                return found==custom.travel.end()?std::nullopt:std::optional<float>(found->second);
+            };
+            // Whether the worn rig takes travel, asked once per build and only when a part has a
+            // travel range. Unknown (nothing worn to ask) keeps the slider live.
+            std::optional<std::optional<bool>> travel_support;
+            auto travel_ready=[&] {
+                if(!travel_support) travel_support=appearance.body_travel_supported();
+                return travel_support->value_or(true);
+            };
             auto palette_action=[&](size_t i) { return Json{{"action","palette"},{"palette",i?options.palettes[i-1].id:"original"}}; };
             struct TemplateItem { std::string id,name,subtitle,kind_name,description; Json action; bool is_palette; };
             std::vector<TemplateItem> tmpl_items;
@@ -804,12 +819,14 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         const int at=std::clamp(int(std::lround(raw[0])),0,std::max(0,int(c.options.size())-1));
                         if(differs && at<int(c.options.size())) row_look.value=c.options[at].name.size()<=16?c.options[at].name:"Edited";
                     } else if(!physics_presets(c).empty()) {
-                        const auto now=matching_physics_preset(c,raw), was=matching_physics_preset(c,base);
+                        // Travel counts too, so moving only Travel off a preset reads "Custom".
+                        const bool travel_set=custom.travel.contains(c.id);
+                        const auto now=matching_physics_preset(c,raw,travel_of(c)), was=matching_physics_preset(c,base);
                         if(now!=was) {
                             row_look.value="Custom";
                             for(const auto& preset:physics_presets(c)) if(preset.id==now) row_look.value=preset.name;
-                        } else if(differs) row_look.value="Edited";
-                    } else if(differs) row_look.value="Edited";
+                        } else if(differs || travel_set) row_look.value="Edited";
+                    } else if(differs || custom.travel.contains(c.id)) row_look.value="Edited";
                 }
                 if(c.kind==ControlKind::Color || c.kind==ControlKind::Intensity || c.kind==ControlKind::Scalar || c.kind==ControlKind::Glow || c.kind==ControlKind::Opacity) row_look.chip=&chips[i];
                 Json accept={{"action","reset_control"},{"control",c.id}};
@@ -820,17 +837,19 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 const auto presets=physics_presets(c);
                 const bool has_presets=!presets.empty();
                 const int fieldcount=has_presets?1:control_channel_count(c);
-                const int channel=channel_%fieldcount;
+                // channel_ is the slider's position in the details window, where Travel sits before Motion.
+                const int channel=physics_slot_channel(c,channel_%fieldcount);
                 Json minus, plus;
                 if(has_presets) {
                     // Left / Right walk the part's presets from the one it is on; off every
                     // preset, Right starts at the first and Left at the last.
-                    const auto current=matching_physics_preset(c,held_value);
+                    const auto current=matching_physics_preset(c,held_value,travel_of(c));
                     const int total=int(presets.size()); int index=-1;
                     for(int p=0;p<total;++p) if(presets[size_t(p)].id==current) index=p;
                     minus=Json{{"action","physics_preset"},{"preset",presets[size_t(index<=0?total-1:index-1)].id},{"control",c.id}};
                     plus=Json{{"action","physics_preset"},{"preset",presets[size_t(index<0 || index>=total-1?0:index+1)].id},{"control",c.id}};
                 }
+                else if(channel==4 && !travel_ready()) { minus=Json{}; plus=Json{}; }   // the rig cannot take travel
                 else { minus={{"action","control"},{"control",c.id},{"channel",channel},{"delta",-1}}; plus=minus; plus["delta"]=1; }
                 if(!c.scalar && !exact_color_) {
                     // Left and Right walk the strip instead of nudging one channel.
@@ -913,20 +932,33 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 const bool rig=control.kind==ControlKind::Rig;
                 // Physics sliders: the preset panel's "Customize sliders", or a physics part
                 // without presets. Bounce / Settle / Travel (springs) or Stiffness /
-                // Damping / Gravity (hair), and a Motion switch on a rig.
+                // Damping / Gravity (hair), and a Motion switch on a rig. A body rig with a
+                // travel range adds Travel in degrees (channel 4) just above the switch.
                 auto physics_sliders=[&](bool modal) {
                     const bool spring=control.kind==ControlKind::Spring;
                     const bool body=!hair_rig && (body_rig_control(control) || spring || physics_region(control)!=PhysicsRegion::none);
-                    const int fields=spring?(control.spring_clamp || modal?3:2):3;
+                    const bool travel=body_travel_control(control);
+                    const int fields=spring?(control.spring_clamp || modal?3:2):travel?4:3;
                     const int stops=fields+(rig?1:0)+(modal?1:0);
                     const int focus=modal?physics_modal_channel_%stops:channel_%(fields+(rig?1:0));
                     const char* names[]={body?"Bounce":"Stiffness",body?"Settle":"Damping",spring?"Travel":body?"Amount":"Gravity"};
-                    for(int field=0;field<fields;++field) {
+                    for(int slot=0;slot<fields;++slot) {
+                        const int field=physics_slot_channel(control,slot);
+                        // The slot goes with the action so a drag focuses this slider, not the channel's position.
+                        auto base=channel_base(field); base[modal?"ui_channel":"ui_slot"]=slot;
+                        if(field==4) {
+                            const auto range=control_channel(control,4);
+                            const float degrees=travel_of(control).value_or(range.value);
+                            const bool ready=travel_ready();
+                            slider("Travel",degrees,range.minimum,range.maximum,range.step,slider_text(degrees,true)+"°",focus==slot,base,true,
+                                   "°",step_action(base,-1),step_action(base,1),ready);
+                            if(!ready) note("This outfit's rig predates Travel");
+                            continue;
+                        }
                         const auto range=control_channel(control,field);
                         std::string readout=spring&&field==1?std::to_string(int(std::lround(value[1]*100)))+"%"
                                            :slider_text(value[field],true)+(field==0&&body?" Hz":spring&&field==2?" cm":"");
-                        auto base=channel_base(field); if(modal) base["ui_channel"]=field;
-                        slider(names[field],value[field],range.minimum,range.maximum,range.step,readout,focus==field,base,true,
+                        slider(names[field],value[field],range.minimum,range.maximum,range.step,readout,focus==slot,base,true,
                                spring&&field==1?"%":field==0&&body?" Hz":spring&&field==2?" cm":"",step_action(base,-1),step_action(base,1));
                     }
                     if(rig) {
@@ -959,13 +991,15 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     action_button("tertiary","Reset all",confirm_reset_all,2);
                 } else if(physics && !presets.empty() && physics_modal_control_!=control.id) {
                     // Presets: one selector for the whole set, its description underneath.
-                    const auto pid=matching_physics_preset(control,value);
+                    const auto pid=matching_physics_preset(control,value,travel_of(control));
                     std::string name="Custom sliders", about="Your own values. Customize sliders tunes them, a preset replaces them.";
                     for(const auto& p:presets) if(pid==p.id) { name=p.name; about=p.description; }
                     detail(control.name,worn->name,hair_rig
                         ?"Choose a hair motion preset. Customize sliders tunes stiffness, damping and gravity yourself."
                         :control.kind==ControlKind::Spring
                         ?"Choose a motion preset. Customize sliders tunes bounce, settling and travel yourself."
+                        :body_travel_control(control)
+                        ?"Choose a motion preset. Customize sliders tunes bounce, settling, amount and travel yourself."
                         :"Choose a motion preset. Customize sliders tunes bounce, settling and amount yourself.");
                     option("Preset",name,true,rows_[row_].previous,rows_[row_].next);
                     if(!about.empty()) note(about);
@@ -982,6 +1016,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const bool spring=control.kind==ControlKind::Spring;
                     detail(control.name,worn->name,spring
                         ?"Bounce is how quickly this part moves, Settle how quickly it stops, Travel how far it swings. If it keeps moving after you stop, turn Settle up."
+                        :body_travel_control(control)
+                        ?"Bounce sets the speed, Settle how quickly it calms, Amount how strongly it answers your movement. Travel sets how far it may swing, in degrees."
                         :!hair_rig && (body_rig_control(control) || physics_region(control)!=PhysicsRegion::none)
                         ?"Bounce sets the speed, Settle how quickly it calms, Amount how strongly it answers your movement."
                         :"Stiffness pulls this part back toward its rest direction, Damping calms it, Gravity pulls it down; negative values pull up.");
@@ -1494,8 +1530,9 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,4); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; physics_modal_control_.clear(); if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
     if(name=="ui_press") { auto result=press(action.value("binding",""),state); return result?*result:Json{}; }
     if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); physics_modal_control_.clear(); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
-    // The channel count comes from the page, because a spring has two and a colour three.
-    if(name=="ui_channel") { channel_=(channel_+1)%std::clamp(action.value("count",3),1,4); dirty_=true; return {}; }
+    // The channel count comes from the page, because a spring has two, a colour three and a
+    // body rig with travel five.
+    if(name=="ui_channel") { channel_=(channel_+1)%std::clamp(action.value("count",3),1,5); dirty_=true; return {}; }
     if(name=="ui_tint_field") { tint_field_index_=(tint_field_index_+1)%3; dirty_=true; return {}; }
     if(name=="ui_exact") { exact_color_=!exact_color_; dirty_=true; return {}; }
     if(name=="ui_toggle_light") { light_toggle(); return {}; }
@@ -2149,7 +2186,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
                 const auto field=slider.action.at("field").get<std::string>();
                 tint_field_index_=field=="hue"?0:field=="saturation"?1:2;
             } else if(slider.action.contains("channel")) {
-                const int channel=slider.action.value("ui_channel",slider.action.at("channel").get<int>());
+                const int channel=slider.action.value("ui_channel",slider.action.value("ui_slot",slider.action.at("channel").get<int>()));
                 if(slider.action.contains("ui_channel")) physics_modal_channel_=channel; else channel_=channel;
             }
             auto action=slider.action; action["value"]=v; return action;
@@ -2194,7 +2231,8 @@ std::optional<Json> InventoryUI::press(const std::string& key,const State& state
     }
     if(!physics_modal_control_.empty()) {
         if(key=="close") return dispatch({{"action","ui_physics_modal_close"}},state);
-        // Stops: the sliders, a Motion switch on a rig, then Reset part defaults.
+        // Stops: the sliders (Travel last on a body rig that has it), a Motion switch on a
+        // rig, then Reset part defaults.
         const Control* ctrl=nullptr; const Selection* worn_selection=nullptr; const Outfit* worn_outfit=nullptr;
         if(catalog_ && appearance_) if(auto sel=state.selections.find(appearance_selection_key(state,*catalog_,appearance_->shell));sel!=state.selections.end()) {
             worn_selection=&sel->second;
@@ -2203,14 +2241,19 @@ std::optional<Json> InventoryUI::press(const std::string& key,const State& state
         }
         if(!ctrl) return dispatch({{"action","ui_physics_modal_close"}},state);
         const bool rig=ctrl->kind==ControlKind::Rig;
-        const int fields=3, motion=rig?fields:-1, reset=fields+(rig?1:0), stops=reset+1;
+        const int fields=body_travel_control(*ctrl)?4:3, motion=rig?fields:-1, reset=fields+(rig?1:0), stops=reset+1;
         const int focus=physics_modal_channel_%stops;
         if(key=="up" || key=="down") {
             physics_modal_channel_=(focus+(key=="down"?1:stops-1))%stops;
             dirty_=true; return Json{};
         }
         const bool sideways=key=="left" || key=="right";
-        if(sideways && focus<fields) return dispatch({{"action","control"},{"control",physics_modal_control_},{"channel",focus},{"ui_channel",focus},{"delta",key=="right"?1:-1}},state);
+        if(sideways && focus<fields) {
+            const int channel=physics_slot_channel(*ctrl,focus);
+            // A disabled Travel slider: the worn rig predates the inputs.
+            if(channel==4 && appearance_ && !appearance_->body_travel_supported().value_or(true)) return Json{};
+            return dispatch({{"action","control"},{"control",physics_modal_control_},{"channel",channel},{"ui_channel",focus},{"delta",key=="right"?1:-1}},state);
+        }
         // Left/Right on the Motion switch flips it, like Accept.
         if(key=="accept" || (sideways && focus==motion)) {
             if(focus==motion) {

@@ -138,6 +138,12 @@ struct SpringAxes {
 SpringAxes spring_axes(const Control&, SpringAxes authored);
 int control_channel_count(const Control&);
 SliderRange control_channel(const Control&, int channel);
+// The details window lists a physics part's settings top to bottom: its sliders, then a
+// rig's Motion switch. A body rig with travel shows Travel (channel 4) before the switch
+// (channel 3), so position 3 is channel 4 and position 4 is channel 3. Every other part
+// lists its channels in order. The map swaps two entries, so it also turns a channel back
+// into its position.
+int physics_slot_channel(const Control&, int slot);
 struct DynamicsSettings {
     float angular_spring=0, linear_damping=.7f, angular_damping=.7f, gravity=1;
     bool spring_enabled=false, override_linear=false, override_angular=false, gravity_override=false;
