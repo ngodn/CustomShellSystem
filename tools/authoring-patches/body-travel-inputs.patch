@@ -1,16 +1,16 @@
 diff --git a/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl b/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl
 --- a/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl
 +++ b/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl
-@@ -9,7 +9,7 @@ FString UCSSControlRigLibrary::EvaluateCombinedProbe(UAnimBlueprint* Blueprint,
+@@ -9,7 +9,7 @@
          TEXT("reset"),TEXT("reenable"),TEXT("reinitialize"),TEXT("repeat"),
          TEXT("body_frequency"),TEXT("body_damping"),TEXT("body_motion"),TEXT("body_gravity"),TEXT("hair_stiffness"),
          TEXT("region_defaults"),TEXT("region_frequency"),TEXT("region_damping"),TEXT("region_motion"),
 -        TEXT("region_off"),TEXT("region_reenable"),TEXT("body_only_reset"),TEXT("hair_only_reset")};
-+        TEXT("region_off"),TEXT("region_reenable"),TEXT("body_only_reset"),TEXT("hair_only_reset"),TEXT("region_travel")};
++        TEXT("region_off"),TEXT("region_reenable"),TEXT("body_only_reset"),TEXT("hair_only_reset"),TEXT("region_travel"),TEXT("region_soft_zone")};
      const FString ProductionFolder=Mesh ? FPackageName::GetLongPackagePath(Mesh->GetOutermost()->GetName()).Replace(
          TEXT("/Game/CSSAuthoring/"),TEXT("/Game/CSS/")) : FString();
      const bool Production=Blueprint && FPackageName::GetLongPackagePath(Blueprint->GetOutermost()->GetName())==ProductionFolder &&
-@@ -167,6 +167,24 @@ FString UCSSControlRigLibrary::EvaluateCombinedProbe(UAnimBlueprint* Blueprint,
+@@ -167,6 +167,40 @@
              Inner->SetPropertyValue(Values.GetRawPtr(0),Mode!=TEXT("region_off") &&
                  !(Mode==TEXT("region_reenable") && Frame>=Fps && Frame<3*Fps/2));
          }
@@ -32,10 +32,26 @@ diff --git a/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl b/Source/CSSAuth
 +                    Mode==TEXT("region_travel") ? float(2+Index+(Frame>=Fps ? 10 : 0)) : 0.f);
 +            GlobalTravel->SetPropertyValue_InContainer(Instance,Mode==TEXT("region_travel") ? (Frame>=Fps ? 7.5f : 3.5f) : 0.f);
 +        }
++        // Soft limit band pair, the same facts. Other modes leave the authored defaults.
++        auto* RegionZones=FindFProperty<FArrayProperty>(Instance->GetClass(),TEXT("CSSBodyRegionSoftZones"));
++        auto* GlobalZone=FindFProperty<FFloatProperty>(Instance->GetClass(),TEXT("CSSBodySoftZone"));
++        if ((RegionZones==nullptr)!=(GlobalZone==nullptr) ||
++            (RegionZones && (RegionZones->ArrayDim!=1 || !CastField<FFloatProperty>(RegionZones->Inner))))
++            return Fail(TEXT("Body soft zone inputs do not match the native contract"));
++        if (Mode==TEXT("region_soft_zone") && !RegionZones) return Fail(TEXT("Soft zone fixture requires the soft zone contract"));
++        if (RegionZones && Mode==TEXT("region_soft_zone"))
++        {
++            FScriptArrayHelper Values(RegionZones,RegionZones->ContainerPtrToValuePtr<void>(Instance));
++            if (Values.Num()!=7) return Fail(TEXT("Invalid region soft zone count"));
++            for (int32 Index=0;Index<7;++Index)
++                CastField<FFloatProperty>(RegionZones->Inner)->SetPropertyValue(Values.GetRawPtr(Index),
++                    Frame>=Fps ? .8f-.1f*Index : .1f*(1+Index));
++            GlobalZone->SetPropertyValue_InContainer(Instance,Frame>=Fps ? .6f : .3f);
++        }
          *Gravity->ContainerPtrToValuePtr<FVector>(Instance)=Mode==TEXT("body_gravity") ? FVector(0,0,-200) : FVector::ZeroVector;
          if (Frame==Fps)
          {
-@@ -236,6 +254,19 @@ FString UCSSControlRigLibrary::EvaluateCombinedProbe(UAnimBlueprint* Blueprint,
+@@ -236,6 +270,30 @@
                      return Fail(TEXT("Combined body array transfer differs"));
                  Inputs->SetStringField(Name,BodyRig->GetVariableAsString(Name));
              }
@@ -52,13 +68,24 @@ diff --git a/Source/CSSAuthoring/CSSControlRigCombinedProbe.inl b/Source/CSSAuth
 +                Inputs->SetStringField(TEXT("SoftZone"),BodyRig->GetVariableAsString(TEXT("SoftZone")));
 +                Inputs->SetStringField(TEXT("ClampContacts"),BodyRig->GetVariableAsString(TEXT("ClampContacts")));
 +            }
++            if (RegionZones)
++            {
++                auto* Variable=FindFProperty<FArrayProperty>(BodyRig->GetClass(),TEXT("RegionSoftZones"));
++                auto* Scalar=FindFProperty<FFloatProperty>(BodyRig->GetClass(),TEXT("SoftZone"));
++                if (!Variable || !Scalar || !RegionZones->SameType(Variable) ||
++                    !RegionZones->Identical(RegionZones->ContainerPtrToValuePtr<void>(Instance),Variable->ContainerPtrToValuePtr<void>(BodyRig),PPF_None) ||
++                    GlobalZone->GetPropertyValue_InContainer(Instance)!=Scalar->GetPropertyValue_InContainer(BodyRig))
++                    return Fail(TEXT("Combined body soft zone transfer differs"));
++                Inputs->SetStringField(TEXT("RegionSoftZones"),BodyRig->GetVariableAsString(TEXT("RegionSoftZones")));
++                Inputs->SetStringField(TEXT("SoftZone"),BodyRig->GetVariableAsString(TEXT("SoftZone")));
++            }
              const bool Active=BodyRig->GetVariableAsString(TEXT("UseRegionSettings")).Equals(TEXT("True"),ESearchCase::IgnoreCase);
              if (Active!=RegionMode) return Fail(TEXT("Combined region switch transfer differs"));
              Sample->SetBoolField(TEXT("region_settings"),Active);
 diff --git a/Source/CSSAuthoring/CSSControlRigLibrary.cpp b/Source/CSSAuthoring/CSSControlRigLibrary.cpp
 --- a/Source/CSSAuthoring/CSSControlRigLibrary.cpp
 +++ b/Source/CSSAuthoring/CSSControlRigLibrary.cpp
-@@ -248,6 +248,26 @@ static UAnimBlueprint* CreatePostProcessGraph(USkeletalMesh* Mesh,
+@@ -248,6 +248,46 @@
                      return Fail(TEXT("Cannot export complete body region defaults"));
                  BodyInputs.Add({FName(Name),FName(*(FString(TEXT("CSSBody"))+Name)),Category,Default,true});
              }
@@ -81,6 +108,26 @@ diff --git a/Source/CSSAuthoring/CSSControlRigLibrary.cpp b/Source/CSSAuthoring/
 +                if (!FMath::IsFinite(Global) || Global<0) return Fail(TEXT("Invalid body travel default"));
 +                BodyInputs.Add({TEXT("RegionTravel"),TEXT("CSSBodyRegionTravel"),UEdGraphSchema_K2::PC_Real,Default,true});
 +                BodyInputs.Add({TEXT("Travel"),TEXT("CSSBodyTravel"),UEdGraphSchema_K2::PC_Real,FString::SanitizeFloat(Global)});
++            }
++            // Soft limit band (RegionSoftZones/SoftZone, a fraction of the travel), the same
++            // rules: both or neither, defaults copied from the rig so an untouched AnimBP
++            // runs the rig's own band.
++            auto* RegionZones=FindFProperty<FArrayProperty>(BodyBlueprint->GeneratedClass.Get(),TEXT("RegionSoftZones"));
++            auto* Zone=FindFProperty<FFloatProperty>(BodyBlueprint->GeneratedClass.Get(),TEXT("SoftZone"));
++            if (RegionZones && !Zone) return Fail(TEXT("Body soft zone inputs must exist together"));
++            if (RegionZones)
++            {
++                if (RegionZones->ArrayDim!=1 || !CastField<FFloatProperty>(RegionZones->Inner))
++                    return Fail(TEXT("Body region soft zones must be a float array"));
++                FScriptArrayHelper Values(RegionZones,RegionZones->ContainerPtrToValuePtr<void>(Defaults));
++                if (Values.Num()!=BodyNames.Num()) return Fail(TEXT("Body region soft zones must contain seven values"));
++                FString Default;
++                if (!RegionZones->ExportText_InContainer(0,Default,Defaults,nullptr,Defaults,PPF_None) || Default.IsEmpty())
++                    return Fail(TEXT("Cannot export body region soft zone defaults"));
++                const float Global=Zone->GetPropertyValue_InContainer(Defaults);
++                if (!FMath::IsFinite(Global) || Global<0 || Global>.9f) return Fail(TEXT("Invalid body soft zone default"));
++                BodyInputs.Add({TEXT("RegionSoftZones"),TEXT("CSSBodyRegionSoftZones"),UEdGraphSchema_K2::PC_Real,Default,true});
++                BodyInputs.Add({TEXT("SoftZone"),TEXT("CSSBodySoftZone"),UEdGraphSchema_K2::PC_Real,FString::SanitizeFloat(Global)});
 +            }
          }
      }

@@ -3,7 +3,8 @@
 Copied from CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/tools/
 controlrig_body_step.py (sha256 40a8326c...6d6) and extended for BodyAngularV11:
 the travel input (RegionTravel[7] / Travel, degrees) and the soft limit
-(SoftZone) from docs/research/2026-10-19-body-motion-travel-channel.md. With
+(SoftZone / RegionSoftZones[7]) from
+docs/research/2026-10-19-body-motion-travel-channel.md. With
 travel_input and soft off, it builds the same nodes as the V10 step.
 
 State is owned by the graph. A partial display step is safe to discard only when
@@ -19,6 +20,11 @@ from build_controlrig_body_probe import loop, log_rotation, difference, qmul, ex
 ZONE_DAMPING = .7
 ZONE_STIFFNESS_CAP = 1.5 * 120
 ZONE_MAXIMUM = .9
+# Cubic push (4/3) wL^2 d^3 / w^2: the 4/3 keeps the quadratic's energy to the limit.
+PUSH_SCALE = 4/3
+# Default band width, a fraction of the limit (Fable, 19 Oct 2026). The
+# Earthquake template asks for 0.6 through the per-region input.
+SOFT_ZONE_DEFAULT = .5
 TRAVEL_CEILING_DEGREES = 45
 
 
@@ -46,19 +52,24 @@ def requested_limit(g, i, authored, regions):
         IfTrue=radians, IfFalse=authored)
 
 
-def soft_zone(g, old, target, omega, target_omega, force, limit, wn, dt):
+def soft_zone(g, old, target, omega, target_omega, force, limit, wn, dt, zone):
     """Spring-back band over the outer SoftZone fraction of the limit.
 
     Against the committed orientation: theta = |log(old * target^-1)|, u its axis,
-    s = (1 - z) L. Above s a restoring acceleration wL^2 (theta - s)^2 / (z L)
-    pushes back along -u; it is zero with zero slope at the knee. The outward
+    s = (1 - z) L, w = z L. Above s a restoring acceleration
+    (4/3) wL^2 (theta - s)^3 / w^2 pushes back along -u. It is zero, with zero
+    slope and zero curvature, at the knee, and absorbs wL^2 w^2 / 3 (per unit
+    inertia) between knee and limit: the same energy budget as the first
+    design's quadratic push, which this cubic replaces (Fable, 19 Oct 2026), so
+    the wL sizing still stops a full-amplitude swing before L. The outward
     component of the relative angular velocity is damped at 2 zetaL wL x, where
     x is the depth fraction. That damping is integrated exactly over the step
     (the same exponential form the main damping uses), so a large wL dt cannot
-    reverse the velocity. SoftZone 0 selects the incoming omega and force
-    unchanged, which is today's hard clamp exactly.
+    reverse the velocity. A zone of 0 selects the incoming omega and force
+    unchanged, which is today's hard clamp exactly. `zone` is the SoftZone
+    input, per region when region settings are on.
     """
-    zone = g.math('FloatClamp', Value=g.get('SoftZone'), Minimum=0, Maximum=ZONE_MAXIMUM)
+    zone = g.math('FloatClamp', Value=zone, Minimum=0, Maximum=ZONE_MAXIMUM)
     active = g.math('FloatGreater', A=zone, B=0)
     relative = log_rotation(g, difference(g, old, target))
     theta = g.length(relative)
@@ -75,8 +86,9 @@ def soft_zone(g, old, target, omega, target_omega, force, limit, wn, dt):
     retained = g.math('FloatExponential', Value=g.math('FloatMul', A=g.math('FloatMul',
         A=g.math('FloatMul', A=stiffness, B=-2*ZONE_DAMPING), B=fraction), B=dt))
     damped = g.sub(omega, g.scale(axis, g.math('FloatMul', A=outward, B=g.math('FloatSub', A=1, B=retained))))
+    cube = g.math('FloatMul', A=g.math('FloatMul', A=depth, B=depth), B=depth)
     push = g.math('FloatDiv', A=g.math('FloatMul', A=g.math('FloatMul', A=stiffness, B=stiffness),
-        B=g.math('FloatMul', A=depth, B=depth)), B=width)
+        B=g.math('FloatMul', A=cube, B=PUSH_SCALE)), B=g.math('FloatMul', A=width, B=width))
     restored = g.sub(force, g.scale(axis, push))
     omega = g.math('VectorSelectBool', Condition=active, IfTrue=damped, IfFalse=omega)
     force = g.math('VectorSelectBool', Condition=active, IfTrue=restored, IfFalse=force)
@@ -126,7 +138,8 @@ def step(g, start, committed=True, travel=False, planes=False, scaled_accelerati
     if travel_input:
         limit = requested_limit(g, i, limit, regions)
     if soft:
-        omega, force = soft_zone(g, old, target, omega, target_omega, force, limit, wn, dt)
+        omega, force = soft_zone(g, old, target, omega, target_omega, force, limit, wn, dt,
+                                 setting('SoftZone', 'RegionSoftZones'))
     omega = g.add(omega, g.scale(force, dt))
     proposed = qmul(g, exp_rotation(g, g.scale(omega, dt)), old)
     relative = log_rotation(g, difference(g, proposed, target))

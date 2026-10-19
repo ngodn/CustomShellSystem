@@ -2407,7 +2407,10 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(!body_rig_original_) body_rig_original_=inputs.capture();
                 // A rig without CSSBodyRegionTravel captures has_travel=false, so travel is
                 // left to its cooked limits; the other channels still apply.
-                const auto tuning=body_rig_settings(options.controls,values,*body_rig_original_,travel);
+                // The soft limit band follows each part's matched template (Earthquake wider);
+                // a rig without CSSBodyRegionSoftZones keeps its own.
+                const auto tuning=body_rig_settings(options.controls,values,*body_rig_original_,travel,
+                                                    physics_soft_zones(options.controls,values,travel));
                 if(body_rig_applied_!=tuning) inputs.apply(tuning);
                 body_rig_applied_=tuning;
             } else if(anim) {
@@ -2758,7 +2761,11 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         material_debug=material_snapshot(component,applied_.Get());
         material_debug["controls"]=last_values_;
         material_debug["travel"]=last_travel_;
-        if(body_rig_applied_) material_debug["body_travel_supported"]=body_rig_applied_->has_travel;
+        if(body_rig_applied_) {
+            material_debug["body_travel_supported"]=body_rig_applied_->has_travel;
+            material_debug["body_soft_zone_supported"]=body_rig_applied_->has_soft_zone;
+            if(body_rig_applied_->has_soft_zone) material_debug["body_soft_zone"]=body_rig_applied_->soft_zone;
+        }
         material_debug["dye_targets"]=dye_targets_.size();
         remember_materials();
         step("snapshot");

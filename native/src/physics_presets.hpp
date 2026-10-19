@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -31,6 +32,14 @@ std::optional<float> physics_preset_travel(const Control&, const PhysicsPreset&)
 // `travel` (the part's current travel) a preset that sets travel must match it as well.
 std::string matching_physics_preset(const Control&, const ControlValue& value,
                                     std::optional<float> travel = std::nullopt);
+
+// The soft limit band (rig SoftZone) for every body rig part that has a value or a travel
+// override: the band of the preset its sliders match, else body_soft_zone_default. A
+// built-in template carries its band; a package preset or a hand-tuned part gets the
+// default. Derived, not saved: a look keeps its four numbers and travel per part.
+std::map<std::string,float> physics_soft_zones(const std::vector<Control>&,
+                                               const std::map<std::string,ControlValue>& values,
+                                               const std::map<std::string,float>& travel);
 
 // The `physics_preset` request: one part's preset, or with an empty control id every part
 // that has a preset of that id. Writes the three channels and, on a part with a travel

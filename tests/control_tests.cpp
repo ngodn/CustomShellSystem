@@ -8,6 +8,11 @@ using namespace css;
 unsigned checks;
 void expect(bool condition,const char* message) { ++checks; if(!condition) throw std::runtime_error(message); }
 template<class F> void rejects(F action) { bool rejected=false; try { action(); } catch(const std::exception&) { rejected=true; } expect(rejected,"Invalid colors accepted"); }
+css::Control hair_rig_fixture() {
+    return css::ControlSet::parse(nlohmann::json::parse(R"({"schema":1,"controls":[{"id":"hair-motion","name":"Hair motion","kind":"rig",
+      "stiffness":{"min":100,"max":250,"default":150},"damping":{"min":12,"max":24,"default":18},
+      "gravity":{"min":-0.2,"max":0.2,"default":0}}]})")).controls.at(0);
+}
 int main() {
     try {
         {
@@ -344,6 +349,43 @@ int main() {
                                  BodyTravelFields{true,true,6,true,true},BodyTravelFields{true,false,0,true,true},
                                  BodyTravelFields{true,true,7,true,false}})
                 rejects([&]{body_travel_support(bad);});
+
+            // Soft limit band: each built-in carries its own (Earthquake wider), springs and hair none.
+            const float zone_expected[]={.5f,.5f,.5f,.5f,.6f};
+            for(size_t i=0;i<5;++i) expect(presets[i].soft_zone==zone_expected[i],"Built-in soft zone wrong");
+            for(const auto& preset:physics_presets(hair_rig_fixture())) expect(!preset.soft_zone && preset.builtin && !preset.travel,
+                "Hair presets must be built-in without travel or soft zone");
+            // The band follows the matched template; hand-tuned parts and package presets get the default.
+            const auto quake=apply_physics_preset(model,{},"earthquake","");
+            auto zones=physics_soft_zones(model.controls,control_values(model,quake),control_travel(model,quake));
+            expect(zones.at("chest-motion")==.6f && zones.at("glute-motion")==.6f,"Earthquake must ask for its wider band");
+            zones=physics_soft_zones(model.controls,control_values(model,firm),control_travel(model,firm));
+            expect(zones.at("chest-motion")==.5f,"Firm band wrong");
+            auto tuned=quake; tuned.values["chest-motion"][0]+=.3f;
+            zones=physics_soft_zones(model.controls,control_values(model,tuned),control_travel(model,tuned));
+            expect(zones.at("chest-motion")==body_soft_zone_default && zones.at("glute-motion")==.6f,
+                   "A part moved off its template must fall back to the default band");
+            expect(physics_soft_zones(model.controls,{},{}).empty(),"Untouched parts must leave the rig band alone");
+            expect(physics_soft_zones(studio.controls,{{"chest-motion",{3,.9f,.5f,1}}},{{"chest-motion",16}}).at("chest-motion")==
+                   body_soft_zone_default,"A package preset must use the default band");
+            // Composition: the band reaches the owned regions only, and only on a rig with the inputs.
+            auto banded=authored; banded.has_soft_zone=true; banded.soft_zone.fill(.5f);
+            auto band=body_rig_settings(model.controls,{{"chest-motion",{2,.7f,1,1}}},banded,{},{{"chest-motion",.6f}});
+            expect(band.soft_zone[0]==.6f && band.soft_zone[1]==.6f && band.soft_zone[2]==.5f,"Soft zone must reach exactly the owned regions");
+            auto unbanded=authored; unbanded.has_soft_zone=false; unbanded.soft_zone.fill(.25f);
+            expect(body_rig_settings(model.controls,{{"chest-motion",{2,.7f,1,1}}},unbanded,{},{{"chest-motion",.6f}}).soft_zone==unbanded.soft_zone,
+                   "A rig without soft zone inputs must keep its own band");
+            auto seeded=banded; seeded.use_regions=false; seeded.global_soft_zone=.4f; seeded.soft_zone.fill(.9f);
+            auto seeded_out=body_rig_settings(model.controls,{{"chest-motion",{2,.7f,1,1}}},seeded,{},{{"chest-motion",.6f}});
+            expect(seeded_out.soft_zone[0]==.6f && seeded_out.soft_zone[3]==.4f,"Global mode must seed the band from the global input");
+            expect(body_rig_settings(model.controls,{},banded,{},{{"chest-motion",.6f}})==banded,"A band alone must not activate a part");
+            for(float bad:{-.1f,.95f,std::numeric_limits<float>::quiet_NaN()})
+                rejects([&]{body_rig_settings(model.controls,{{"chest-motion",{2,.7f,1,1}}},banded,{},{{"chest-motion",bad}});});
+            expect(body_soft_zone_support({})==BodyTravelSupport::Absent,"A rig without the band inputs must be accepted");
+            expect(body_soft_zone_support({true,true,7,true,true})==BodyTravelSupport::Ready,"Complete band inputs refused");
+            for(const auto& bad:{BodyTravelFields{true,true,7,false,false},BodyTravelFields{false,false,0,true,true},
+                                 BodyTravelFields{true,true,6,true,true},BodyTravelFields{true,false,7,true,true}})
+                rejects([&]{body_soft_zone_support(bad);});
         }
         {
             auto recipe=Json::parse(R"({"schema":1,"controls":[{"id":"hair-motion","name":"Hair motion","kind":"rig",

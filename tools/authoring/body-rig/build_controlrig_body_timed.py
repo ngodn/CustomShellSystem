@@ -2,8 +2,9 @@
 
 Copied from the SeduXtress authoring library (build_controlrig_body_timed.py,
 sha256 cb145424...e969). -CSSBodyTravelInput authors BodyAngularV11: V10 plus
-RegionTravel[7]/Travel (degrees, 0 keeps Limits/MaxTravel), SoftZone (default
-0.25, 0 is the hard clamp) and the ClampContacts counter. The report goes to
+RegionTravel[7]/Travel (degrees, 0 keeps Limits/MaxTravel), SoftZone and
+RegionSoftZones[7] (default 0.5, 0 is the hard clamp, cubic push) and the
+ClampContacts counter. The report goes to
 CSS_BODY_RIG_STAGE; the saved rig goes to the editor project's content.
 """
 import json
@@ -19,7 +20,7 @@ from body_rig_paths import HERE, MEASURED, stage
 # Before the library helpers: build_controlrig_body_probe puts the library
 # directory first on sys.path, which would shadow this copy of the step.
 import controlrig_body_step
-from controlrig_body_step import step
+from controlrig_body_step import step, SOFT_ZONE_DEFAULT, PUSH_SCALE
 from build_controlrig_chain_probe import Graph, Pin, TYPES
 from build_controlrig_body_probe import H, COUNT, MESH, loop, difference, log_rotation
 
@@ -188,7 +189,10 @@ def main():
         # defaults and the compiled CDO carry the same values.
         g.member('RegionTravel', 'TArray<float>', pack('0' for _ in layout), True)
         g.member('Travel', 'float', '0', True)
-        g.member('SoftZone', 'float', '.25', True)
+        g.member('SoftZone', 'float', repr(SOFT_ZONE_DEFAULT), True)
+        # Per region, read when UseRegionSettings is on, like the other region
+        # inputs: the physics templates set the band per part (Earthquake 0.6).
+        g.member('RegionSoftZones', 'TArray<float>', pack(repr(SOFT_ZONE_DEFAULT) for _ in layout), True)
         g.member('ClampContacts', 'int32', '0', True)
 
     either = lambda a, b: g.math('BoolOr', A=a, B=b)
@@ -296,7 +300,10 @@ def main():
         ellipsoid_support_planes=VERSION >= 9,
         independent_region_settings=VERSION >= 10,
         hierarchy_from=HIERARCHY_FROM or MESH, kept_members=sorted(kept),
-        travel_input_degrees=VERSION >= 11, soft_zone_default=.25 if VERSION >= 11 else None,
+        travel_input_degrees=VERSION >= 11, soft_zone_default=SOFT_ZONE_DEFAULT if VERSION >= 11 else None,
+        soft_zone_push='(4/3) wL^2 d^3 / w^2' if VERSION >= 11 else None,
+        soft_zone_push_scale=PUSH_SCALE if VERSION >= 11 else None,
+        region_soft_zones=VERSION >= 11,
         scope='Authored timed body graph; execution, timing, scale, contacts and live acceptance pending.'), indent=2)+'\n')
 
 

@@ -1,18 +1,20 @@
-"""Author a combined body/hair AnimBP on BodyAngularV11 and check the travel pair.
+"""Author a combined body/hair AnimBP on BodyAngularV11 and check the travel and soft zone pairs.
 
 Needs the CSSAuthoring editor module built with
 tools/authoring-patches/body-travel-inputs.patch (run_stage.py --module). It
-creates /Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeCombinedV4 in the
+creates /Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeCombinedV5 in the
 stage, then checks:
 
 - the generated class has CSSBodyRegionTravel (seven zeros) and CSSBodyTravel
-  (0), with the region and contact inputs of the V3 combined graph;
+  (0), CSSBodyRegionSoftZones (seven 0.5) and CSSBodySoftZone (0.5), with the
+  region and contact inputs of the V3 combined graph;
 - the existing component fixtures still run on it;
 - region_travel: distinct per-region values and a global value, changed at
   one second, reach the live body rig every frame (the C++ fixture fails on
-  any mismatch and on any property shape the native adapter would refuse).
+  any mismatch and on any property shape the native adapter would refuse);
+- region_soft_zone: the same for the soft zone pair.
 
-Writes combined-v4-travel.json to CSS_BODY_RIG_STAGE.
+Writes combined-v5-travel.json to CSS_BODY_RIG_STAGE.
 """
 import json
 from pathlib import Path
@@ -23,7 +25,7 @@ import unreal
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from body_rig_paths import stage
 
-PACKAGE = '/Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeCombinedV4'
+PACKAGE = '/Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeCombinedV5'
 MESH = '/Game/CSSAuthoring/CSS_SeduXtress_eins0fx_P/SK_SeduXtress_StockingUVV40'
 HAIR = '/Game/CSS/CSS_SeduXtress_eins0fx_P/CR_SeduXtress_HairV37'
 BODY = '/Game/CSSAuthoring/TransientProbes/CR_CSS_BodyAngularV11'
@@ -31,7 +33,7 @@ OLD_BODY = '/Game/CSSAuthoring/TransientProbes/CR_CSS_BodyAngularV10'
 
 
 def main():
-    output = stage()/'combined-v4-travel.json'
+    output = stage()/'combined-v5-travel.json'
     if output.exists() or unreal.EditorAssetLibrary.does_asset_exist(PACKAGE):
         raise FileExistsError('Preserve the previous combined candidate')
     mesh, hair, body = [unreal.load_asset(p) for p in (MESH, HAIR, BODY)]
@@ -45,10 +47,14 @@ def main():
     report['defaults'] = dict(
         CSSBodyRegionTravel=list(defaults.get_editor_property('CSSBodyRegionTravel')),
         CSSBodyTravel=defaults.get_editor_property('CSSBodyTravel'),
+        CSSBodyRegionSoftZones=list(defaults.get_editor_property('CSSBodyRegionSoftZones')),
+        CSSBodySoftZone=defaults.get_editor_property('CSSBodySoftZone'),
         CSSBodyUseRegionSettings=defaults.get_editor_property('CSSBodyUseRegionSettings'),
         CSSBodyRegionFrequencies=list(defaults.get_editor_property('CSSBodyRegionFrequencies')))
     if report['defaults']['CSSBodyRegionTravel'] != [0.]*7 or report['defaults']['CSSBodyTravel'] != 0:
         raise ValueError('Unexpected travel defaults on the combined AnimBP')
+    if report['defaults']['CSSBodyRegionSoftZones'] != [.5]*7 or report['defaults']['CSSBodySoftZone'] != .5:
+        raise ValueError('Unexpected soft zone defaults on the combined AnimBP')
     # An older body rig must still author, without the pair.
     old = unreal.CSSControlRigLibrary.create_post_process_combined_probe(
         mesh, hair, unreal.load_asset(OLD_BODY), PACKAGE + 'Legacy')
@@ -63,7 +69,8 @@ def main():
     if report['legacy_has_travel']:
         raise ValueError('A V10 body rig must not get travel inputs')
     for mode, fps in [('both', 60), ('region_defaults', 60), ('region_motion', 60), ('body_only_reset', 60),
-                      ('region_travel', 30), ('region_travel', 60), ('region_travel', 120)]:
+                      ('region_travel', 30), ('region_travel', 60), ('region_travel', 120),
+                      ('region_soft_zone', 30), ('region_soft_zone', 60), ('region_soft_zone', 120)]:
         raw = unreal.CSSControlRigLibrary.evaluate_combined_probe(blueprint, mesh, mode, fps)
         if not raw:
             raise RuntimeError(f'Combined component fixture failed: {mode} {fps}')
@@ -76,6 +83,9 @@ def main():
             global_first=inputs[0].get('Travel') if inputs else None,
             global_last=inputs[-1].get('Travel') if inputs else None,
             soft_zone=inputs[-1].get('SoftZone') if inputs else None,
+            soft_zones_first=inputs[0].get('RegionSoftZones') if inputs else None,
+            soft_zones_last=inputs[-1].get('RegionSoftZones') if inputs else None,
+            zone_transferred_frames=sum(1 for i in inputs if 'RegionSoftZones' in i),
             clamp_contacts=inputs[-1].get('ClampContacts') if inputs else None,
             transferred_frames=sum(1 for i in inputs if 'RegionTravel' in i)))
         unreal.log(f'Combined travel fixture completed: {mode} {fps}')

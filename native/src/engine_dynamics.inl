@@ -211,10 +211,37 @@ struct BodyRigInputs {
     // travel channel; such a rig keeps its own Limits/MaxTravel and nothing fails.
     FArrayProperty* travel=nullptr;
     FFloatProperty* global_travel=nullptr;
+    // CSSBodyRegionSoftZones and CSSBodySoftZone, the soft limit band. Null on a rig
+    // cooked without them; that rig keeps its own SoftZone.
+    FArrayProperty* soft_zone=nullptr;
+    FFloatProperty* global_soft_zone=nullptr;
     static bool same_owned(const BodyRigSettings& a,const BodyRigSettings& b) {
         return a.frequency==b.frequency && a.damping==b.damping && a.motion==b.motion &&
                a.enabled==b.enabled && a.use_regions==b.use_regions &&
-               (!a.has_travel || !b.has_travel || a.travel==b.travel);
+               (!a.has_travel || !b.has_travel || a.travel==b.travel) &&
+               (!a.has_soft_zone || !b.has_soft_zone || (a.soft_zone==b.soft_zone && a.global_soft_zone==b.global_soft_zone));
+    }
+    // Seven floats from a region array plus the global scalar, as captured from the instance.
+    void read_pair(FArrayProperty* array,FFloatProperty* global,std::array<float,7>& values,float& scalar,const char* what) const {
+        FScriptArrayHelper items(array,reinterpret_cast<std::byte*>(instance)+array->GetOffset_Internal());
+        if(items.Num()!=7 || !items.GetRawPtr(0)) throw std::runtime_error(std::string("Body rig requires seven region ")+what+" values");
+        for(int32_t i=0;i<7;++i) {
+            float v{};std::memcpy(&v,items.GetRawPtr(i),sizeof(v));
+            if(!std::isfinite(v)) throw std::runtime_error(std::string("Non-finite body ")+what+" input");
+            values[size_t(i)]=v;
+        }
+        std::memcpy(&scalar,reinterpret_cast<std::byte*>(instance)+global->GetOffset_Internal(),sizeof(float));
+        if(!std::isfinite(scalar)) throw std::runtime_error(std::string("Non-finite global body ")+what);
+    }
+    void write_pair(FArrayProperty* array,FFloatProperty* global,const std::array<float,7>& values,float scalar,float ceiling,const char* what) const {
+        for(float v:values) if(!std::isfinite(v) || v<0 || v>ceiling)
+            throw std::runtime_error(std::string("Body ")+what+" outside supported range");
+        if(!std::isfinite(scalar) || scalar<0 || scalar>ceiling)
+            throw std::runtime_error(std::string("Global body ")+what+" outside supported range");
+        FScriptArrayHelper items(array,reinterpret_cast<std::byte*>(instance)+array->GetOffset_Internal());
+        if(items.Num()!=7) throw std::runtime_error(std::string("Body rig requires seven region ")+what+" values");
+        for(int32_t i=0;i<7;++i) array->GetInner()->CopyCompleteValue(items.GetRawPtr(i),&values[size_t(i)]);
+        std::memcpy(reinterpret_cast<std::byte*>(instance)+global->GetOffset_Internal(),&scalar,sizeof(float));
     }
     BodyRigSettings capture() const {
         BodyRigSettings value;
@@ -239,17 +266,12 @@ struct BodyRigInputs {
         }
         value.use_regions=use_regions->GetPropertyValueInContainer(instance);
         if(travel) {
-            FScriptArrayHelper values(travel,reinterpret_cast<std::byte*>(instance)+travel->GetOffset_Internal());
-            if(values.Num()!=7) throw std::runtime_error("Body rig requires seven region travel values");
-            if(!values.GetRawPtr(0)) throw std::runtime_error("Body travel array has no storage");
-            for(int32_t i=0;i<7;++i) {
-                float v{};std::memcpy(&v,values.GetRawPtr(i),sizeof(v));
-                if(!std::isfinite(v)) throw std::runtime_error("Non-finite body travel input");
-                value.travel[size_t(i)]=v;
-            }
-            std::memcpy(&value.global_travel,reinterpret_cast<std::byte*>(instance)+global_travel->GetOffset_Internal(),sizeof(float));
-            if(!std::isfinite(value.global_travel)) throw std::runtime_error("Non-finite global body travel");
+            read_pair(travel,global_travel,value.travel,value.global_travel,"travel");
             value.has_travel=true;
+        }
+        if(soft_zone) {
+            read_pair(soft_zone,global_soft_zone,value.soft_zone,value.global_soft_zone,"soft zone");
+            value.has_soft_zone=true;
         }
         return value;
     }
@@ -273,16 +295,10 @@ struct BodyRigInputs {
         }
         // Travel only when both sides know it: settings captured from an older rig (or a
         // preview instance without the inputs) leave the other side's travel alone.
-        if(travel && value.has_travel) {
-            for(float v:value.travel) if(!std::isfinite(v) || v<0 || v>body_travel_ceiling)
-                throw std::runtime_error("Body travel outside supported range");
-            if(!std::isfinite(value.global_travel) || value.global_travel<0 || value.global_travel>body_travel_ceiling)
-                throw std::runtime_error("Global body travel outside supported range");
-            FScriptArrayHelper values(travel,reinterpret_cast<std::byte*>(instance)+travel->GetOffset_Internal());
-            if(values.Num()!=7) throw std::runtime_error("Body rig requires seven region travel values");
-            for(int32_t i=0;i<7;++i) travel->GetInner()->CopyCompleteValue(values.GetRawPtr(i),&value.travel[size_t(i)]);
-            std::memcpy(reinterpret_cast<std::byte*>(instance)+global_travel->GetOffset_Internal(),&value.global_travel,sizeof(float));
-        }
+        if(travel && value.has_travel)
+            write_pair(travel,global_travel,value.travel,value.global_travel,body_travel_ceiling,"travel");
+        if(soft_zone && value.has_soft_zone)
+            write_pair(soft_zone,global_soft_zone,value.soft_zone,value.global_soft_zone,body_soft_zone_ceiling,"soft zone");
         if(auto* ep=instance->GetClassPrivate()->GetPropertyByNameInChain(L"CSSBodyEnabled"); ep && ep->IsA<FBoolProperty>()) {
             static_cast<FBoolProperty*>(ep)->SetPropertyValueInContainer(instance, true);
         }
@@ -315,6 +331,9 @@ BodyRigInputs body_rig_inputs(UObject* instance) {
     // Optional: absent on every rig cooked before the travel channel.
     const std::array<FName,2> travel_names={FName(L"CSSBodyRegionTravel"),FName(L"CSSBodyTravel")};
     std::array<FProperty*,2> travel_fields{};
+    // Optional too: absent on every rig cooked before the soft limit band was an input.
+    const std::array<FName,2> zone_names={FName(L"CSSBodyRegionSoftZones"),FName(L"CSSBodySoftZone")};
+    std::array<FProperty*,2> zone_fields{};
     unsigned depth=0,count=0;
     for(UStruct* type=owner;type;type=type->GetSuperStruct()) {
         if(++depth>64) throw std::runtime_error("Body rig hierarchy exceeds bound");
@@ -327,6 +346,10 @@ BodyRigInputs body_rig_inputs(UObject* instance) {
             for(size_t i=0;i<travel_names.size();++i) if(property->GetFName()==travel_names[i]) {
                 if(travel_fields[i] && travel_fields[i]!=property) throw std::runtime_error("Ambiguous body travel input");
                 travel_fields[i]=property;
+            }
+            for(size_t i=0;i<zone_names.size();++i) if(property->GetFName()==zone_names[i]) {
+                if(zone_fields[i] && zone_fields[i]!=property) throw std::runtime_error("Ambiguous body soft zone input");
+                zone_fields[i]=property;
             }
         }
     }
@@ -356,32 +379,40 @@ BodyRigInputs body_rig_inputs(UObject* instance) {
     auto* epoch=control_rig_reset_epoch(instance,L"CSSBodyResetEpoch");
     if(!epoch) throw std::runtime_error("Body rig requires an independent reset epoch");
     BodyRigInputs inputs{instance,arrays,static_cast<FBoolProperty*>(fields[4]),globals,epoch};
-    // Travel: the same layout checks as the other inputs, reduced to facts for
-    // body_travel_support(), which accepts an absent pair and refuses a half-built one.
-    BodyTravelFields facts;
-    for(auto* p:travel_fields)
-        if(p && (p->GetArrayDim()!=1 || p->GetElementSize()<=0 || p->GetOffset_Internal()<0 ||
-                 p->GetOffset_Internal()>owner->GetPropertiesSize()-p->GetElementSize()))
-            throw std::runtime_error("Body travel input layout mismatch");
-    if(auto* p=travel_fields[0]) {
-        facts.array=true;
-        if(p->IsA<FArrayProperty>() && p->GetElementSize()==sizeof(TArray<float>)) {
-            auto* inner=static_cast<FArrayProperty*>(p)->GetInner();
-            facts.array_float=inner && inner->GetArrayDim()==1 && inner->GetOffset_Internal()==0 &&
-                              inner->IsA<FFloatProperty>() && inner->GetElementSize()==sizeof(float);
-            if(facts.array_float) {
-                FScriptArrayHelper values(static_cast<FArrayProperty*>(p),reinterpret_cast<std::byte*>(instance)+p->GetOffset_Internal());
-                facts.count=values.Num();
+    // Travel and the soft limit band: the same layout checks as the other inputs, reduced
+    // to facts for body_travel_support()/body_soft_zone_support(), which accept an absent
+    // pair and refuse a half-built one.
+    auto facts_of=[&](const std::array<FProperty*,2>& pair,const char* what) {
+        BodyTravelFields facts;
+        for(auto* p:pair)
+            if(p && (p->GetArrayDim()!=1 || p->GetElementSize()<=0 || p->GetOffset_Internal()<0 ||
+                     p->GetOffset_Internal()>owner->GetPropertiesSize()-p->GetElementSize()))
+                throw std::runtime_error(std::string("Body ")+what+" input layout mismatch");
+        if(auto* p=pair[0]) {
+            facts.array=true;
+            if(p->IsA<FArrayProperty>() && p->GetElementSize()==sizeof(TArray<float>)) {
+                auto* inner=static_cast<FArrayProperty*>(p)->GetInner();
+                facts.array_float=inner && inner->GetArrayDim()==1 && inner->GetOffset_Internal()==0 &&
+                                  inner->IsA<FFloatProperty>() && inner->GetElementSize()==sizeof(float);
+                if(facts.array_float) {
+                    FScriptArrayHelper values(static_cast<FArrayProperty*>(p),reinterpret_cast<std::byte*>(instance)+p->GetOffset_Internal());
+                    facts.count=values.Num();
+                }
             }
         }
-    }
-    if(auto* p=travel_fields[1]) {
-        facts.global=true;
-        facts.global_float=p->IsA<FFloatProperty>() && p->GetElementSize()==sizeof(float);
-    }
-    if(body_travel_support(facts)==BodyTravelSupport::Ready) {
+        if(auto* p=pair[1]) {
+            facts.global=true;
+            facts.global_float=p->IsA<FFloatProperty>() && p->GetElementSize()==sizeof(float);
+        }
+        return facts;
+    };
+    if(body_travel_support(facts_of(travel_fields,"travel"))==BodyTravelSupport::Ready) {
         inputs.travel=static_cast<FArrayProperty*>(travel_fields[0]);
         inputs.global_travel=static_cast<FFloatProperty*>(travel_fields[1]);
+    }
+    if(body_soft_zone_support(facts_of(zone_fields,"soft zone"))==BodyTravelSupport::Ready) {
+        inputs.soft_zone=static_cast<FArrayProperty*>(zone_fields[0]);
+        inputs.global_soft_zone=static_cast<FFloatProperty*>(zone_fields[1]);
     }
     return inputs;
 }

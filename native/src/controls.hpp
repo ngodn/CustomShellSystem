@@ -20,6 +20,9 @@ struct PhysicsPreset {
     // Body rig only: the preset's travel, the largest angle in degrees a region may swing
     // from its animated pose. Unset leaves the part's travel alone.
     std::optional<float> travel;
+    // Body rig only: the soft limit band, as a fraction of the travel (SoftZone). Unset
+    // uses body_soft_zone_default. Built-in templates set it; see physics_presets.cpp.
+    std::optional<float> soft_zone;
     bool builtin=false;
 };
 struct ColorSwatch {
@@ -77,6 +80,10 @@ struct DynamicsControl {
 // The widest travel a body region may be given, in degrees. Past this an angular helper
 // stops reading as tissue and starts reading as a broken joint, whatever the garment.
 inline constexpr float body_travel_ceiling=45;
+// The soft limit band (rig SoftZone): the outer fraction of the travel where the rig
+// pushes back instead of clamping. 0 is the hard clamp; the rig clamps above 0.9.
+inline constexpr float body_soft_zone_default=.5f;
+inline constexpr float body_soft_zone_ceiling=.9f;
 struct RigControl {
     // CSS ControlRig positional stiffness, exponential damping, gravity scale.
     std::array<SliderRange,3> channels;
@@ -165,11 +172,17 @@ struct BodyRigSettings {
     std::array<bool,7> enabled{};
     // Degrees. Zero (the cooked default) keeps the rig's own Limits/MaxTravel envelope.
     std::array<float,7> travel{};
+    // Soft limit band per region (CSSBodyRegionSoftZones), a fraction of the travel.
+    std::array<float,7> soft_zone{};
     float global_frequency=2, global_damping=.7f, global_motion=1, global_travel=0;
+    float global_soft_zone=body_soft_zone_default;
     bool use_regions=false;
     // The AnimBP exposes CSSBodyRegionTravel and CSSBodyTravel. False on every rig cooked
     // before the travel channel: travel is then left to the rig and nothing fails.
     bool has_travel=false;
+    // The AnimBP exposes CSSBodyRegionSoftZones and CSSBodySoftZone. False on a rig cooked
+    // without them: the rig keeps its own SoftZone.
+    bool has_soft_zone=false;
     bool operator==(const BodyRigSettings&) const = default;
 };
 bool body_rig_control(const Control&);
@@ -177,9 +190,12 @@ bool body_travel_control(const Control&);
 // `travel` holds the player's travel overrides (Customization::travel, or control_travel()).
 // A control counts as active when it has a value or a travel override; travel is written
 // only when the authored settings say the rig can take it.
+// `soft_zones` holds the soft limit band per control id (physics_soft_zones()); a control
+// without an entry leaves its regions' band where the rig had it.
 BodyRigSettings body_rig_settings(const std::vector<Control>&, const std::map<std::string,ControlValue>&,
                                   const BodyRigSettings& authored,
-                                  const std::map<std::string,float>& travel = {});
+                                  const std::map<std::string,float>& travel = {},
+                                  const std::map<std::string,float>& soft_zones = {});
 // What the reflected AnimBP offers for travel, reduced to plain facts so the decision is
 // testable without the engine. Absent: an older rig, travel disabled. Ready: both inputs
 // have the contract's layout. Anything in between is an authoring error and throws.
@@ -190,6 +206,8 @@ struct BodyTravelFields {
 };
 enum class BodyTravelSupport { Absent, Ready };
 BodyTravelSupport body_travel_support(const BodyTravelFields&);
+// The same decision for the soft limit pair, CSSBodyRegionSoftZones and CSSBodySoftZone.
+BodyTravelSupport body_soft_zone_support(const BodyTravelFields&);
 // A hue rotation in degrees plus saturation and brightness multipliers, applied to a whole
 // group on top of the palette and any per-part override.
 struct ColorTint {

@@ -18,6 +18,9 @@ struct BodyPreset {
     const char* id; const char* name; const char* description;
     std::array<std::array<float,3>,4> rig, spring;   // chest, glute, thigh, belly
     std::array<float,4> travel;                      // chest, glute, thigh, belly
+    // Soft limit band, a fraction of the travel (rig SoftZone). The lightly damped
+    // Earthquake row gets a wider band to spread its stop (Fable, 19 Oct 2026).
+    float soft_zone=body_soft_zone_default;
 };
 constexpr BodyPreset body_presets[]={
     {"firm","Firm","High stiffness & damping, perky sculpted look",
@@ -39,7 +42,7 @@ constexpr BodyPreset body_presets[]={
     {"earthquake","OMG! Earthquake!","Maximum exaggerated comedic jiggle & wobble",
      {{{.85f,.06f,4.20f},{.85f,.08f,4.20f},{.95f,.10f,3.50f},{.90f,.08f,3.80f}}},
      {{{.85f,.06f,14.0f},{.85f,.08f,14.0f},{.95f,.10f,10.0f},{.90f,.08f,13.0f}}},
-     {20,18,10,12}},
+     {20,18,10,12},.6f},
 };
 // Positional hair rig: {stiffness, damping, gravity scale}.
 struct HairPreset { const char* id; const char* name; const char* description; std::array<float,3> values; };
@@ -106,14 +109,18 @@ std::vector<PhysicsPreset> physics_presets(const Control& c) {
         return values;
     };
     if(hair_rig(c)) {
-        for(const auto& p:hair_presets) out.push_back({p.id,p.name,p.description,clamp_to(p.values),true});
+        // Designated: a positional `true` here would land in `travel`, not `builtin`.
+        for(const auto& p:hair_presets)
+            out.push_back({.id=p.id,.name=p.name,.description=p.description,.channels=clamp_to(p.values),.travel=std::nullopt,.soft_zone=std::nullopt,.builtin=true});
     } else if((c.kind==ControlKind::Rig && c.rig && c.rig->body) || c.kind==ControlKind::Spring) {
         const auto region=physics_region(c);
         if(region!=PhysicsRegion::none) {
             const bool spring=c.kind==ControlKind::Spring;
             for(const auto& p:body_presets)
-                out.push_back({p.id,p.name,p.description,clamp_to((spring?p.spring:p.rig)[size_t(region)]),
-                               spring?std::nullopt:clamp_travel(c,p.travel[size_t(region)]),true});
+                out.push_back({.id=p.id,.name=p.name,.description=p.description,
+                               .channels=clamp_to((spring?p.spring:p.rig)[size_t(region)]),
+                               .travel=spring?std::nullopt:clamp_travel(c,p.travel[size_t(region)]),
+                               .soft_zone=spring?std::nullopt:std::optional<float>(p.soft_zone),.builtin=true});
         }
     }
     out.insert(out.end(),c.presets.begin(),c.presets.end());
@@ -151,6 +158,25 @@ std::string matching_physics_preset(const Control& c,const ControlValue& value,s
         if(same) return preset.id;
     }
     return {};
+}
+
+std::map<std::string,float> physics_soft_zones(const std::vector<Control>& controls,
+                                               const std::map<std::string,ControlValue>& values,
+                                               const std::map<std::string,float>& travel) {
+    std::map<std::string,float> out;
+    for(const auto& c:controls) {
+        if(!body_rig_control(c)) continue;
+        const auto value=values.find(c.id);
+        const auto degrees=travel.find(c.id);
+        if(value==values.end() && degrees==travel.end()) continue;
+        float zone=body_soft_zone_default;
+        const auto held=value!=values.end()?value->second:c.value;
+        const auto id=matching_physics_preset(c,held,degrees!=travel.end()?std::optional<float>(degrees->second):std::nullopt);
+        if(!id.empty()) for(const auto& preset:physics_presets(c))
+            if(preset.id==id) { if(preset.soft_zone) zone=*preset.soft_zone; break; }
+        out[c.id]=std::clamp(zone,0.f,body_soft_zone_ceiling);
+    }
+    return out;
 }
 
 Customization apply_physics_preset(const ControlSet& options,Customization custom,const std::string& requested,

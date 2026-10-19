@@ -2,29 +2,33 @@
 """Gates for the V11 travel input and soft limit, fixed before the run.
 
 Reads from STAGE:
-  controlrig-body-angular-v10-timing-v10.json   V10 rerun, 37 fixtures
-  controlrig-body-angular-v11-timing-sz0.json   V11, SoftZone 0, travel 0
-  controlrig-body-angular-v11-timing-sz25.json  V11, SoftZone 0.25, travel 0
-  controlrig-body-angular-v11-softlimit.json    soft-limit fixtures
+  controlrig-body-angular-v10-timing-v10.json      V10 rerun, 37 fixtures
+  controlrig-body-angular-v11-timing-sz0.json      V11, SoftZone 0, travel 0
+  controlrig-body-angular-v11-timing-<zone>.json   V11, default SoftZone, travel 0
+  controlrig-body-angular-v11-softlimit.json       soft-limit fixtures
 and, when present, the archived 20 Sep V10 timing run (--archived).
 
-Gates (docs/research/2026-10-19-body-motion-travel-channel.md):
+Gates (docs/research/2026-10-19-body-motion-travel-channel.md), with the pass
+criteria Fable set on 19 Oct 2026 for the cubic push and SoftZone 0.5/0.6:
   1 theta <= L + 1e-6 rad on every frame and helper of every V11 run, with L
     the requested travel or the authored Limits/MaxTravel cap.
-  2 Unchanged tolerances: review_controlrig_body_timing.py on both V11 runs
-    (run separately), and here for the soft fixtures 0.25 deg piecewise/bounce
-    and 0.3 deg smooth against the 120 FPS twin, 0.05 deg at aligned times,
-    zero pivot and scale drift, preview checks present above 120 FPS.
+  2 Unchanged tolerances: 0.25 deg piecewise/bounce and 0.3 deg smooth against
+    the 120 FPS twin, 0.05 deg at aligned times, zero pivot and scale drift,
+    preview checks present above 120 FPS. Reported, not part of the verdict:
+    the large-motion rows fail it with the hard clamp as well.
   3 SoftZone 0 with travel 0 equals the V10 rerun on all 37 fixtures: every
     output rotation bit for bit, and within 0.001 deg.
   4 At 120 FPS, on fixtures whose SoftZone 0 twin hits the hard clamp, the
     largest one-frame change of radial angular speed d|theta|/dt on frames in
-    the outer 25 percent band is at most a quarter of the twin's.
-  5 ClampContacts is 0 on Firm and Natural smooth translation with SoftZone
-    0.25 at every rate. Other counts are reported, not gated.
-  6 At 120 FPS with SoftZone 0.25, the largest one-frame change of radial
+    the outer 25 percent band, as a ratio of the twin's. Passes when the ratio
+    is under 0.6 on all but at most two of those fixtures (10 of 12).
+  5 ClampContacts at or near zero (at most NEAR_ZERO contacts in the 6 s,
+    about 0.1 percent of committed helper steps) on Firm, Natural and Bouncy
+    smooth translation with the template zone, at every rate.
+  6 At 120 FPS with the template zone, the largest one-frame change of radial
     angular acceleration in the three frames after a knee crossing is no larger
-    than the largest one produced on frames entirely below the knee.
+    than the largest one on frames entirely below the knee. Gated on the
+    non-Earthquake fixtures, reported for Earthquake.
 Settle time (to 0.1 deg after the input stops at 2 s) is reported.
 """
 import argparse
@@ -36,6 +40,9 @@ from pathlib import Path
 
 H = 1/120
 SETTLE = math.radians(.1)
+NEAR_ZERO = 5
+GATE4_RATIO = .6
+GATE4_MISSES = 2
 
 
 def multiply(a, b):
@@ -131,13 +138,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('stage', type=Path)
     parser.add_argument('--archived', type=Path)
+    parser.add_argument('--zone-label', default='sz50', help='label of the default-zone timing run')
     args = parser.parse_args()
     output = args.stage/'controlrig-body-angular-v11-softlimit-review.json'
     if output.exists():
         raise FileExistsError(output)
+    zone_label = args.zone_label
     paths = dict(v10=args.stage/'controlrig-body-angular-v10-timing-v10.json',
                  sz0=args.stage/'controlrig-body-angular-v11-timing-sz0.json',
-                 sz25=args.stage/'controlrig-body-angular-v11-timing-sz25.json',
+                 zone=args.stage/f'controlrig-body-angular-v11-timing-{zone_label}.json',
                  soft=args.stage/'controlrig-body-angular-v11-softlimit.json')
     data = {k: json.loads(p.read_text()) for k, p in paths.items()}
     checks = {}
@@ -147,7 +156,7 @@ def main():
         checks[name] = dict(passed=bool(passed), **values)
 
     # Gate 1
-    for run in ('sz0', 'sz25', 'soft'):
+    for run in ('sz0', 'zone', 'soft'):
         excess, frames = -math.inf, 0
         for case in data[run]['cases']:
             for s in case['samples']:
@@ -157,7 +166,7 @@ def main():
         check(f'1/{run}/theta_within_limit', excess <= 1e-6, maximum_excess_radians=excess, frames=frames)
 
     # Gate 3
-    if len(data['v10']['cases']) != 37 or len(data['sz0']['cases']) != 37 or len(data['sz25']['cases']) != 37:
+    if len(data['v10']['cases']) != 37 or len(data['sz0']['cases']) != 37 or len(data['zone']['cases']) != 37:
         raise ValueError('Expected 37 fixtures in each timing run')
     reference = {c['name']: c for c in data['v10']['cases']}
     identical = differing = 0
@@ -187,12 +196,12 @@ def main():
             largest_degrees=largest_archived, source=str(args.archived),
             source_sha256=hashlib.sha256(args.archived.read_bytes()).hexdigest())
     # Default SoftZone on the 37 fixtures with travel 0: how far it moves output.
-    sz25 = {c['name']: c for c in data['sz25']['cases']}
-    metrics['sz25_vs_sz0_largest_degrees'] = max(angle(x['rotation'], y['rotation'])
-        for case in data['sz0']['cases'] for a, b in zip(case['samples'], sz25[case['name']]['samples'])
+    zoned = {c['name']: c for c in data['zone']['cases']}
+    metrics[zone_label+'_vs_sz0_largest_degrees'] = max(angle(x['rotation'], y['rotation'])
+        for case in data['sz0']['cases'] for a, b in zip(case['samples'], zoned[case['name']]['samples'])
         for x, y in zip(a['body_pose'], b['body_pose']))
-    for run in ('sz0', 'sz25'):
-        metrics[run+'_clamp_contacts'] = {c['name']: c['samples'][-1]['clamp_contacts'] for c in data[run]['cases']}
+    for run in ('sz0', 'zone'):
+        metrics[(zone_label if run == 'zone' else run)+'_clamp_contacts'] = {c['name']: c['samples'][-1]['clamp_contacts'] for c in data[run]['cases']}
 
     # Soft fixtures
     soft = {c['name']: c for c in data['soft']['cases']}
@@ -224,57 +233,57 @@ def main():
     metrics['soft_fixtures'] = table
 
     # Gates 4 and 6 at 120 FPS, gate 5
+    twin_of = lambda case: f"{case['template']}_{case['motion_kind']}_sz0_{case['fps']}"
+    ratios = {}
     for name, case in soft.items():
         if case['soft_zone'] == 0 or case['fps'] != 120:
             continue
-        twin = soft[name.replace('_sz25_', '_sz0_')]
+        twin = soft[twin_of(case)]
         hit = twin['samples'][-1]['clamp_contacts'] > 0
         soft_change = max(speed_change_in_band(case, i) for i in range(7))
         hard_change = max(speed_change_in_band(twin, i) for i in range(7))
-        table[name]['band_speed_change'] = dict(soft=soft_change, hard=hard_change, hard_clamp_hit=hit)
+        table[name]['band_speed_change'] = dict(soft=soft_change, hard=hard_change, hard_clamp_hit=hit,
+                                                ratio=soft_change/hard_change if hard_change else None)
         if hit:
-            check(f'4/{name}/band_speed_change_quarter_of_hard', soft_change <= .25*hard_change,
-                  soft_rad_per_s=soft_change, hard_rad_per_s=hard_change,
-                  ratio=soft_change/hard_change if hard_change else None)
+            ratios[name] = soft_change/hard_change if hard_change else math.inf
         knees = [knee_continuity(case, i, case['soft_zone']) for i in range(7)]
         table[name]['knee'] = knees
         crossing = max(k['crossing_jump'] for k in knees)
         below = max(k['below_knee_jump'] for k in knees)
         if any(k['crossings'] for k in knees):
-            check(f'6/{name}/knee_acceleration_step', crossing <= below,
-                  crossing_rad_per_s2=crossing, below_knee_rad_per_s2=below)
+            values = dict(crossing_rad_per_s2=crossing, below_knee_rad_per_s2=below)
+            if case['template'] == 'earthquake':
+                table[name]['knee_reported'] = dict(passed=crossing <= below, **values)
+            else:
+                check(f'6/{name}/knee_acceleration_step', crossing <= below, **values)
+    misses = sorted(name for name, ratio in ratios.items() if not ratio < GATE4_RATIO)
+    check('4/band_speed_ratio_under_0.6', len(ratios) > 0 and len(misses) <= GATE4_MISSES,
+          applicable=len(ratios), under=len(ratios)-len(misses), misses=misses,
+          ratios=dict(sorted(ratios.items())))
     for name, case in soft.items():
-        if case['template'] in ('firm', 'natural') and case['motion_kind'] == 'smooth' and case['soft_zone'] > 0:
-            check(f'5/{name}/no_clamp_contacts', case['samples'][-1]['clamp_contacts'] == 0,
-                  clamp_contacts=case['samples'][-1]['clamp_contacts'])
-
-    # Not a gate: SoftZone 0.5 at 120 FPS (probe -CSSBodySoftZones=0.5
-    # -CSSBodyRates=120 -CSSBodyLabel=wide), measured with the gate 4 and 6
-    # metrics against the same SoftZone 0 twins, to size the band for a retune.
-    wide_path = args.stage/'controlrig-body-angular-v11-softlimit-wide.json'
-    if wide_path.exists():
-        wide = {}
-        for case in json.loads(wide_path.read_text())['cases']:
-            twin = soft[case['name'].replace('_sz50_', '_sz0_')]
-            knees = [knee_continuity(case, i, case['soft_zone']) for i in range(7)]
-            wide[case['name']] = dict(clamp_contacts=case['samples'][-1]['clamp_contacts'],
-                twin_clamp_contacts=twin['samples'][-1]['clamp_contacts'],
-                band_speed_change=max(speed_change_in_band(case, i) for i in range(7)),
-                twin_band_speed_change=max(speed_change_in_band(twin, i) for i in range(7)),
-                knee_crossing_jump=max(k['crossing_jump'] for k in knees),
-                below_knee_jump=max(k['below_knee_jump'] for k in knees),
-                settle_seconds=settle_seconds(case))
-        metrics['exploratory_soft_zone_0_5'] = wide
-        paths['wide'] = wide_path
+        if case['template'] in ('firm', 'natural', 'bouncy') and case['motion_kind'] == 'smooth' and case['soft_zone'] > 0:
+            contacts = case['samples'][-1]['clamp_contacts']
+            check(f'5/{name}/clamp_contacts_near_zero', contacts <= NEAR_ZERO, clamp_contacts=contacts,
+                  limit=NEAR_ZERO)
     failures = sorted(k for k, v in checks.items() if not v['passed'])
-    report = dict(passed=not failures, checks=checks, failures=failures, metrics=metrics,
+    # Gate 2 is reported; the verdict is gates 1, 3, 4, 5 and 6.
+    gated = sorted(k for k in failures if not k.startswith('2/'))
+    summary = {}
+    for gate in '123456':
+        names = [k for k in checks if k.startswith(gate+'/')]
+        summary[gate] = dict(checks=len(names), passed=sum(checks[k]['passed'] for k in names),
+                             gated=gate != '2')
+    report = dict(passed=not gated, summary=summary, gated_failures=gated, checks=checks, failures=failures, metrics=metrics,
         sources={k: hashlib.sha256(p.read_bytes()).hexdigest() for k, p in paths.items()},
         scope='Direct timed V11 rig, synthetic fixtures. No AnimBP, cook, clip or live acceptance.')
     output.write_text(json.dumps(report, indent=1)+'\n')
     print(f'{len(checks)-len(failures)}/{len(checks)} checks passed')
-    for name in failures[:60]:
+    for gate, row in summary.items():
+        print(f"gate {gate}: {row['passed']}/{row['checks']}" + ('' if row['gated'] else ' (reported)'))
+    for name in failures[:80]:
         print('FAIL', name, json.dumps({k: v for k, v in checks[name].items() if k != 'passed'}))
-    raise SystemExit(1 if failures else 0)
+    print('verdict', 'pass' if not gated else 'fail')
+    raise SystemExit(1 if gated else 0)
 
 
 if __name__ == '__main__':

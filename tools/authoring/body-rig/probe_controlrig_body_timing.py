@@ -6,7 +6,8 @@ SoftZone, the ClampContacts counter, per-region tuning, a precise per-frame
 angle and limit, extra motions and lean samples for the soft-limit fixtures.
 The 37 original fixtures and their sample format are unchanged.
 
--CSSBodyVersion=10|11, -CSSBodySoftZone=<z> (V11, default 0.25),
+-CSSBodyVersion=10|11, -CSSBodySoftZone=<z> (V11, default 0.5, written to
+SoftZone and to all seven RegionSoftZones),
 -CSSBodyLabel=<suffix> for the output name. Output goes to CSS_BODY_RIG_STAGE.
 """
 import hashlib
@@ -31,7 +32,7 @@ if VERSION not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
     raise ValueError('Unknown timed body version')
 PACKAGE = f'/Game/CSSAuthoring/TransientProbes/CR_CSS_BodyAngularV{VERSION}'
 STATE = ('Orientation', 'Omega', 'LinearVelocity', 'PreviousTargets', 'PreviousStepSeconds')
-SOFT_ZONE = float(next((a.split('=',1)[1] for a in ARGS if a.startswith('-CSSBodySoftZone=')), '.25'))
+SOFT_ZONE = float(next((a.split('=',1)[1] for a in ARGS if a.startswith('-CSSBodySoftZone=')), '.5'))
 LABEL = next((a.split('=',1)[1] for a in ARGS if a.startswith('-CSSBodyLabel=')), '')
 if not re.fullmatch(r'[-a-z0-9]*', LABEL):
     raise ValueError('Label must be lowercase letters, digits and dashes')
@@ -83,9 +84,13 @@ def evaluate(bp, names, case):
         if len(travel_inputs['region_travel']) != 7:
             raise ValueError('Expected seven region travel values')
         set_value(rig, 'SoftZone', travel_inputs['soft_zone'])
+        # The per-region zone is read when region settings are on; both carry
+        # the case's zone so either mode runs the requested band.
+        set_value(rig, 'RegionSoftZones', '('+','.join(repr(travel_inputs['soft_zone']) for _ in range(7))+')')
         set_value(rig, 'RegionTravel', '('+','.join(repr(v) for v in travel_inputs['region_travel'])+')')
         set_value(rig, 'Travel', travel_inputs['travel'])
         travel_inputs['read_back'] = dict(SoftZone=rig.get_variable_as_string('SoftZone'),
+            RegionSoftZones=rig.get_variable_as_string('RegionSoftZones'),
             RegionTravel=rig.get_variable_as_string('RegionTravel'), Travel=rig.get_variable_as_string('Travel'))
     authored = None
     if VERSION >= 5:

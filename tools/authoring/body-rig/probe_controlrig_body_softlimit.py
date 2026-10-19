@@ -1,7 +1,8 @@
 """Soft-limit fixtures for BodyAngularV11 (-CSSBodyVersion=11).
 
-Each fixture runs with SoftZone 0 (today's hard clamp) and 0.25 at 15, 30, 60,
-120, 144 and 240 FPS, with region settings on so RegionTravel applies:
+Each fixture runs with SoftZone 0 (today's hard clamp) and with its template's
+zone (0.5, Earthquake 0.6; named sz50/sz60) at 15, 30, 60, 120, 144 and 240
+FPS, with region settings on so RegionTravel and RegionSoftZones apply:
 
 - tight: 2 degrees on every region, default tuning (2 Hz, 0.7, motion 1);
 - each built-in template (Firm, Natural, Bouncy, Soft, Earthquake) with its
@@ -14,9 +15,9 @@ Motions: piecewise translation (10 cm triangle over 2 s), smooth translation
 (5 cm, 2.5 cycles/s). Each case lasts 6 s so the 4 s after the input stops
 measure settling. Samples are lean: angles, limits, counters and rotations.
 
--CSSBodySoftZones=0,0.5 and -CSSBodyRates=120 run another zone set (named
-sz<percent>) into controlrig-body-angular-v11-softlimit-<label>.json, with
--CSSBodyLabel naming it; the default run is unchanged.
+-CSSBodySoftZones=0,0.25 and -CSSBodyRates=120 run a fixed zone set instead
+(named sz<percent>) into controlrig-body-angular-v11-softlimit-<label>.json,
+with -CSSBodyLabel naming it.
 """
 import json
 from pathlib import Path
@@ -42,7 +43,10 @@ TEMPLATES = {
 }
 MOTIONS = {'piecewise': {}, 'smooth': dict(smooth=True), 'bounce': dict(bounce=2.5, amplitude=5, axis=2)}
 RATES = (15, 30, 60, 120, 144, 240)
-ZONES = {'sz0': 0., 'sz25': .25}
+# Template band widths (fraction of the limit). The test-only rows use the
+# default. Must match native/src/physics_presets.cpp.
+SOFT_ZONES = {'earthquake': .6}
+SOFT_ZONE_DEFAULT = .5
 
 
 def option(name, default):
@@ -50,13 +54,15 @@ def option(name, default):
 
 
 def cases():
-    zones = ZONES
+    fixed = None
     if option('SoftZones', ''):
-        zones = {f'sz{round(float(z)*100)}': float(z) for z in option('SoftZones', '').split(',')}
+        fixed = {f'sz{round(float(z)*100)}': float(z) for z in option('SoftZones', '').split(',')}
     rates = tuple(int(r) for r in option('Rates', '').split(',')) if option('Rates', '') else None
     result = []
     for template, (tuning, travel) in TEMPLATES.items():
         expand = lambda column: [tuning[r][column] for r in REGIONS]
+        own = SOFT_ZONES.get(template, SOFT_ZONE_DEFAULT)
+        zones = fixed or {'sz0': 0., f'sz{round(own*100)}': own}
         for motion, extra in MOTIONS.items():
             for zone, value in zones.items():
                 for fps in rates or ((60, 120, 240) if template == 'stiff' else RATES):

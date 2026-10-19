@@ -367,3 +367,44 @@ Exploratory, not a gate: SoftZone 0.5 at 120 FPS on the same fixtures gives a ba
 - Per-outfit recooks: Eve's `CR_Body`/`ABP_Secondary`, Unholy Genessa, Commander White and tHorny Proxima each need the rig rebuilt from their current rig with `-CSSBodyHierarchyFrom`, the AnimBP rebuilt with the patched builder (or their own library, for example Commander White's), a `travel` range in their recipes, and the live read-back probe (`sample_secondary_rigs.py` with `RegionTravel`/`Travel` added).
 - Frame cost of the 114 extra nodes is unmeasured (`measure_body_graph_cost.py`).
 - The UI uses a degree sign in the readout; the game font has not been checked for it.
+
+## Status after pass three (19 Oct 2026, night)
+
+Fable's decision: SoftZone default 0.5, a cubic push from the knee, and the band per template (Earthquake 0.6). Built and measured in `work/body-travel-softlimit2` (fixtures, logs, reviews) and `work/body-travel-softlimit2-module` (AnimBP check). `run-all.sh` and `run-module.sh` in those stages are the exact command sequences.
+
+### What changed
+
+| Part | Change |
+| --- | --- |
+| Rig step | Push `(4/3) wL^2 d^3 / w^2` above the knee (d the depth, w = zL). Zero value, slope and curvature at the knee; the 4/3 keeps the quadratic's energy to the limit (`wL^2 w^2 / 3`), so the wL sizing is unchanged. The outward damping is still integrated exactly. The zone is read per region (`RegionSoftZones[7]`) when region settings are on, else `SoftZone`; both default 0.5. 1290 nodes (V11 pass two: 1276). |
+| Templates | `soft_zone` on each built-in body preset: 0.5, Earthquake 0.6 (`physics_presets.cpp`). `physics_soft_zones()` gives each active body part the band of the preset its sliders match, else 0.5. It is derived, not saved; a package preset or a hand-tuned part gets 0.5. |
+| AnimBP | `body-travel-inputs.patch` also adds `CSSBodyRegionSoftZones` (seven floats) and `CSSBodySoftZone`, defaulted from the rig, wired when the rig has both. The combined fixture gains `region_soft_zone`. |
+| Native | Optional soft zone pair beside the travel pair: absent is accepted (the rig keeps its own band), a half pair is refused (`body_soft_zone_support`). Values are bounded to 0..0.9 before writing and read back. |
+| Fixtures | The soft-limit set runs each template at SoftZone 0 and at its own zone (`sz50`, Earthquake `sz60`). The review applies the new pass criteria below; gate 2 is reported, not part of the verdict. |
+
+### Gate results (pass criteria fixed before the run)
+
+| Gate | Criterion | Result |
+| --- | --- | --- |
+| 1 | theta <= L + 1e-6 every frame | Pass. Largest excess 4.6e-7 rad (SoftZone 0, 13417 frames x 7 helpers), 8.7e-9 rad on the 146898 soft-limit frames, below the limit on the SoftZone 0.5 timing run. |
+| 2 | Timing tolerances (reported) | The 37 timing fixtures pass 27566 of 27566 checks at SoftZone 0 and at 0.5. Soft-limit fixtures: 1064 of 1100; the 36 failures are 20 at SoftZone 0 and 16 with the zone, the same large-motion rows as pass two (bounce at 144/240, smooth at 15/30). |
+| 3 | SoftZone 0 bit-identical | Pass. 93919 of 93919 output transforms identical to a V10 rerun and to the archived 20 Sep V10 run. |
+| 4 | Band speed ratio < 0.6 on 10 of 12 | **Fail: 5 of 12.** Under: Bouncy smooth 0.20, tight smooth 0.28, Bouncy piecewise 0.45, Natural bounce 0.48, tight piecewise 0.54. Over: tight bounce 0.63, Soft smooth 0.64, Soft bounce 0.64, Soft piecewise 0.87, Earthquake smooth 0.93, Bouncy bounce 1.18, Earthquake bounce 1.21. |
+| 5 | ClampContacts near zero (<= 5), Firm/Natural/Bouncy smooth | Pass. 0 at every rate on all 18 fixtures. |
+| 6 | Knee continuity, non-Earthquake | **Fail: 13 of 14.** Tight bounce 332 vs 294 rad/s^2 below the knee. Earthquake (reported): smooth passes, piecewise 898 vs 751 and bounce 2751 vs 2255 fail. |
+
+Hard contacts: 126 to 0 on the 37 timing fixtures; 5726 to 954 over all soft-limit fixtures. At 120 FPS: tight smooth 325 to 0, Bouncy smooth 76 to 0, Soft smooth 121 to 5, Natural bounce 17 to 0, tight bounce 236 to 65, Earthquake bounce 101 to 22. Settle times are the same or shorter except Soft bounce (2.58 to 2.83 s). On the 37 timing fixtures with travel 0, SoftZone 0.5 moves the output by up to 1.72 degrees against SoftZone 0, which is the band acting on helpers that enter the outer half.
+
+The cubic changes almost nothing against the quadratic at the same width. Gate 4 ratios at 0.5, cubic vs pass two's exploratory quadratic: Bouncy smooth 0.20 vs 0.20, tight smooth 0.28 vs 0.24, Natural bounce 0.48 vs 0.45, Soft smooth 0.64 vs 0.76, Bouncy bounce 1.18 vs 1.03. What decides gate 4 is which rows still reach the limit: every row over 0.6 except Earthquake smooth peaks at 1.00 of L and still makes hard contacts. On those rows the input outruns the band's energy budget, so the stop happens at the hard projection anyway, and the band's stiffer final push (the cubic peaks 4/3 higher at L) adds to the speed change rather than spreading it. The bounce motion (2.5 Hz piecewise, a velocity reversal every 0.2 s) and the lightly damped Soft and Earthquake rows are those cases.
+
+Not run: a different curve. The open options stay the ones listed in pass two (a band with more energy, such as a linear push matched at the limit, or the output soft clip). They need Fable's call and a rebuild.
+
+### AnimBP check
+
+`check_combined_travel_inputs.py` on V11 pass three (`ABP_CSS_ControlRigProbeCombinedV5`): defaults `CSSBodyRegionTravel` seven zeros, `CSSBodyTravel` 0, `CSSBodyRegionSoftZones` seven 0.5, `CSSBodySoftZone` 0.5; the V10 rig still authors without either pair; all ten fixtures transfer every frame (241, 241, 241, 241, then 121/241/481 for `region_travel` and for `region_soft_zone`, whose distinct per-region values change at one second).
+
+### Open
+
+- Gates 4 and 6 do not pass. The decision on the curve or the width goes back to Fable, with the numbers above.
+- Frame cost of the soft zone is still unmeasured (`measure_body_graph_cost.py`).
+- The live check, the trace comparison and the template retune, as before.

@@ -235,13 +235,17 @@ bool body_travel_control(const Control& control) {
     return body_rig_control(control) && control.rig->travel.has_value();
 }
 BodyRigSettings body_rig_settings(const std::vector<Control>& controls,const std::map<std::string,ControlValue>& values,
-                                  const BodyRigSettings& authored,const std::map<std::string,float>& travel) {
+                                  const BodyRigSettings& authored,const std::map<std::string,float>& travel,
+                                  const std::map<std::string,float>& soft_zones) {
     auto result=authored;
     bool active=false;
     for(const auto& control:controls) if(body_rig_control(control)) {
         const auto value=values.find(control.id);
         const auto degrees=travel.find(control.id);
         if(degrees!=travel.end()) valid_travel(control,degrees->second);
+        const auto zone=soft_zones.find(control.id);
+        if(zone!=soft_zones.end() && !(std::isfinite(zone->second) && zone->second>=0 && zone->second<=body_soft_zone_ceiling))
+            throw std::runtime_error("Body soft zone outside supported range");
         // On a rig without the travel inputs a travel-only override changes nothing at all,
         // not even the region switch.
         if(value==values.end() && (degrees==travel.end() || !authored.has_travel)) continue;
@@ -252,6 +256,7 @@ BodyRigSettings body_rig_settings(const std::vector<Control>& controls,const std
             result.motion.fill(authored.global_motion);
             result.enabled.fill(true);
             result.travel.fill(authored.global_travel);
+            result.soft_zone.fill(authored.global_soft_zone);
         }
         active=true;
         for(auto region:control.rig->regions) {
@@ -264,10 +269,19 @@ BodyRigSettings body_rig_settings(const std::vector<Control>& controls,const std
             }
             // A rig cooked before the travel channel keeps its own envelope.
             if(degrees!=travel.end() && authored.has_travel) result.travel[region]=degrees->second;
+            // The band follows the part's template; a rig without the inputs keeps its own.
+            if(zone!=soft_zones.end() && authored.has_soft_zone) result.soft_zone[region]=zone->second;
         }
     }
     if(active) result.use_regions=true;
     return result;
+}
+BodyTravelSupport body_soft_zone_support(const BodyTravelFields& fields) {
+    if(!fields.array && !fields.global) return BodyTravelSupport::Absent;
+    if(!fields.array || !fields.global) throw std::runtime_error("Body soft zone needs both CSSBodyRegionSoftZones and CSSBodySoftZone");
+    if(!fields.array_float || !fields.global_float) throw std::runtime_error("Body soft zone inputs must be float");
+    if(fields.count!=7) throw std::runtime_error("Body soft zone requires seven region values");
+    return BodyTravelSupport::Ready;
 }
 BodyTravelSupport body_travel_support(const BodyTravelFields& fields) {
     if(!fields.array && !fields.global) return BodyTravelSupport::Absent;
