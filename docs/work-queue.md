@@ -1439,3 +1439,12 @@ that can use a straightforward adaptation like Merrick; inspect and validate
 each before exposing it. Defer bosses requiring substantial repairs like
 Zhirelle to CSS v1.0.1, recording the reason individually. This expands the
 previous NPC scope. No public release while current-scope work is unfinished.
+
+## October 19: UUEPBS compatibility and body motion feel
+
+Nexus feedback (questman): transitions much smoother; asks for UUEPBS compatibility, finds chest parameters limited, and says the new physics feels stiff even after tuning. Findings and plan: `docs/research/2026-10-19-uuepbs-compatibility-and-motion-feel.md`.
+
+- Bone naming: SKEL_Base chest helpers `brust001/002` never bind UUEPBS's Breasts slider (its patterns are breast/boob/bust...). Ship the `BodyGroups` snippet for `MortalShell2.json` in the CSS and package READMEs; propose `brust` upstream to XTGMods.
+- Morph depth: each eins0fx body carries six morphs; expand with a chest shaping set and more regions per package (Astra lanes, brief `aaa-prompts/ASTRA_UUEPBS_BODY_SLIDERS_BRIEF.md`), decide which join the measured solver corners.
+- Motion feel: the Eve 1.5.0 angle/travel limits are rig defaults the sliders cannot exceed; add a live `travel` channel to `angular_body` controls, soften the clamp, retune the four templates from measured traces, recook rigs; CSS 1.0.2 (branch `feature/uuepbs-body-sliders`).
+- Live UUEPBS test beside CSS on all four outfits once the user approves installing it; then a doc section "Using UUEPBS with CSS outfits".
