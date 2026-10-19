@@ -83,11 +83,13 @@ def main():
         for node in list(controller.get_graph().get_nodes()):
             if not controller.remove_node(node, setup_undo_redo=False):
                 raise RuntimeError('Cannot clear the duplicated graph')
-        for variable in list(rig.get_member_variables()):
-            if not rig.remove_member_variable(variable.name):
-                raise RuntimeError('Cannot clear duplicated member: ' + str(variable.name))
-        if controller.get_graph().get_nodes() or rig.get_member_variables():
+        if controller.get_graph().get_nodes():
             raise RuntimeError('Duplicated graph was not cleared')
+        # Members are kept with their saved defaults. Several were computed
+        # from the hierarchy and written with 12 digits at the time; rebuilding
+        # them today changes the chest by one float ulp, so SoftZone 0 would no
+        # longer reproduce the source rig exactly. New members are added below.
+        kept = {str(v.name): str(v.cpp_type) for v in rig.get_member_variables()}
     else:
         rig = unreal.ControlRigBlueprintFactory.create_new_control_rig_asset(PACKAGE)
         rig.set_auto_vm_recompile(False)
@@ -97,6 +99,20 @@ def main():
         rig.set_preview_mesh(mesh, False)
     TYPES['FQuat'] = '/Script/CoreUObject.Quat'
     g = Graph(rig)
+    if HIERARCHY_FROM:
+        add_member = g.member
+
+        def member(name, kind, default, public=False):
+            if name not in kept:
+                return add_member(name, kind, default, public)
+            element = kind[7:-1] if kind.startswith('TArray<') else kind
+            if (element.lstrip('F') not in kept[name].replace('double', 'float')
+                    or kind.startswith('TArray<') != kept[name].startswith('TArray<')):
+                raise TypeError(f'Kept member {name} is {kept[name]}, expected {kind}')
+            g.types[name] = kind
+        g.member = member
+    else:
+        kept = {}
     for name, kind, default in [
         ('Initialized', 'bool', 'False'), ('Enabled', 'bool', 'True'),
         ('ValidScale', 'bool', 'True'), ('PoseChanged', 'bool', 'False'),
@@ -279,7 +295,7 @@ def main():
         weighted_mesh_travel_clamp=VERSION >= 5, center_halfspaces=VERSION >= 6,
         ellipsoid_support_planes=VERSION >= 9,
         independent_region_settings=VERSION >= 10,
-        hierarchy_from=HIERARCHY_FROM or MESH,
+        hierarchy_from=HIERARCHY_FROM or MESH, kept_members=sorted(kept),
         travel_input_degrees=VERSION >= 11, soft_zone_default=.25 if VERSION >= 11 else None,
         scope='Authored timed body graph; execution, timing, scale, contacts and live acceptance pending.'), indent=2)+'\n')
 
