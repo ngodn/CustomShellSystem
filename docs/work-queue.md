@@ -1440,6 +1440,10 @@ each before exposing it. Defer bosses requiring substantial repairs like
 Zhirelle to CSS v1.0.1, recording the reason individually. This expands the
 previous NPC scope. No public release while current-scope work is unfinished.
 
+## October 19: Commander White frame-rate regression (Nexus, kojinzx and Chicksei)
+
+Players measure 74 fps on Eve against 49 to 50 fps on Commander White in the same scene; 0.0.6 was fine, 0.1.0 and 0.1.1 drop. Disk diff (`CSS_CommanderWhite_eins0fx_P/work/perf/`): textures unchanged (about 980 MB of 4K maps in both), growth is six skeletal meshes instead of one (three 188 MB bodies, three 206 MB facial variants with the expression morphs), control rigs 1.1 to 2.7 MB (CR_Strands1 new, belt rig grown), AnimBPs 3 to 12. Research doc in progress: `CSS_CommanderWhite_eins0fx_P/docs/research/2026-10-19-fps-regression.md` (static decode, engine-source cost model, measurement plan, ranked fixes). Then a measurement session with the user (stat unit / gpu / anim, isolating toggles), then the fix in the Commander White lane.
+
 ## October 19: UUEPBS compatibility and body motion feel
 
 Nexus feedback (questman): transitions much smoother; asks for UUEPBS compatibility, finds chest parameters limited, and says the new physics feels stiff even after tuning. Findings and plan: `docs/research/2026-10-19-uuepbs-compatibility-and-motion-feel.md`.
