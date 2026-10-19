@@ -61,3 +61,9 @@ Eve (CSS_SeduXtress_eins0fx), Unholy Genessa, Commander White, tHorny Proxima:
 - Chest-support displacement at 1.0 (Eve, max / weighted RMS, cm): Implants 3.65 / 2.51, Cleavage 2.42 / 1.57, Underbust 1.60 / 0.50, Diameter 1.15 / 0.77, Natural 1.11 / 0.52, ChestWidth 1.09 / 0.40, the rest under 0.85 / 0.50. Genessa and Commander White measure the same order.
 - Decision (Fable): the measured solver corner set grows from six to eight axes, adding `PBMBreastsImplants` and `PBMBreastsCleavage` (256 corners instead of 64). The other new morphs stay outside the model; their support error is within the envelope inflation already measured (about 1 cm), documented as tolerance. `build_body_runtime_geometry.py` and the geometry packer take the axis list from the recipe instead of a fixed six; the solver reads the corner count from the JSON.
 - Core: travel channel and presets coded (b2c89a5); rig builder soft zone, AnimBP arrays, fixtures and the UI slider in progress.
+
+## Decisions 19 Oct 2026, night (Fable)
+
+- Soft limit: pass two measured the 25 percent band as too narrow at 120 Hz (crossed in about two steps; speed-change ratio 0.45 to 1.32) while 0.5 measured 0.20 to 0.54. Default SoftZone becomes 0.5 with a cubic push curve, Earthquake 0.6; gates re-run in pass three. Firm and Natural already show zero hard contacts at every frame rate; SoftZone 0 stays a bit-identical rollback.
+- Rig and AnimBP: every outfit must be recooked with the V11 rig (RegionTravel, Travel, SoftZone, ClampContacts) and the AnimBP travel inputs before the Travel slider does anything; until then the UI dims it with "This outfit's rig predates Travel".
+- Order to the live check: core 1.0.2 candidate plus Eve recook first (Eve lane, step 6, after pass three), user installs and judges the feel against the four presets, then templates retune from the traces, then Genessa, Commander White and tHorny Proxima recook with the same builder.
