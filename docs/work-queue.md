@@ -10,13 +10,26 @@ InstalledSnapshot archives as the mod updates. Keep existing product names and
 stable package IDs. CSSX 1.3.1 and Traverse 1.0.2 retain their versions unless a
 code change warrants another release. No public publication is authorized.
 
-Full-container packaging preserves every unchanged chunk and package-store
-entry, updates the embedded version and container checksums, and refreshes
-Shared Assets' revision references. Reconcile the installed compatibility overlay
-only after the replacement packages pass verification. Continue to respect the
-user's desktop focus. Body-motion feel, Genessa's additional cloth deformation
-and the controlled CW frame-rate comparison remain open; do not describe them
-as resolved by the material repair.
+Completed locally: 20 new verified ZIPs (CSS, Shared Assets, 17 outfits and
+the optional UUEPBS profile), plus unchanged CSSX/Traverse archives. Each mod
+update has its BBCode changelog beside the archive. `dist/DELIVERY.md` is the
+current index; `dist/coordinated-v1.0.2.json` records hashes. The old diagnostic
+overlays moved to `dist/withdrawn/update-26073152-overlays`.
+
+CSS 1.0.2 was built from annotated tag `v1.0.2`, commit `279d941`. All 29 native
+test suites pass. Full outfit containers preserve all 2,292 unchanged chunks
+and package-store entries; the 377 repaired chunks span 17 outfits. The complete
+mount passes all 2,105 packages and 620 material exports. Shared Assets 1.0.2
+adds 17 references for the new outfit revisions.
+
+The tagged runtime, Shared Assets and 17 full outfit updates are installed,
+with backups at `work/update-26073152/full-release-install`. The diagnostic
+overlay is retired and CSS state is byte-identical. The game was left closed;
+there was no additional live test of the final tagged runtime and full packages.
+Earlier runtime checks used core rc3 and identical repaired material chunks.
+Continue to respect the user's desktop focus. Body-motion feel, Genessa's
+additional cloth deformation and the controlled CW frame-rate comparison remain
+open; do not describe them as resolved by the material repair.
 
 ## October 22: game-update compatibility and resumed body work
 

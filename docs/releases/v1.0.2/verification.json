@@ -1,0 +1,175 @@
+{
+  "game_build": "26073152",
+  "source_commit": "279d94101132d9277bfc0c6cec14d2e845beddf1",
+  "verification": {
+    "packages": 2105,
+    "materials": 620,
+    "repaired_materials": 377,
+    "affected_outfits": 17,
+    "native_tests_passed": 29,
+    "cssx_tests_passed": 11,
+    "zip_payloads_verified": true,
+    "new_full_packages_installed": true,
+    "saved_css_state_unchanged": true,
+    "diagnostic_overlay_retired": true,
+    "game_left_closed": true
+  },
+  "published": false,
+  "remaining": [
+    "Subjective body-motion feel and matched motion traces",
+    "Genessa simulated skirt following additional morphs",
+    "Controlled Commander White frame-rate comparison"
+  ],
+  "archives": [
+    {
+      "name": "CSS",
+      "version": "1.0.2",
+      "archive": "v1.0.2/MSII-CSS-v1.0.2.zip",
+      "sha256": "ad461e008a9ef536f1f5b453d8dc8fa8315be1bcf6a584e03d6ee4b4ef9e948f",
+      "bytes": 3169630
+    },
+    {
+      "name": "BH Proxima",
+      "version": "1.0.1",
+      "archive": "erase-bhproxima-v1.0.1/CSS_BHProxima_Erase_P-v1.0.1.zip",
+      "sha256": "9d35a1b517b70ba319741f63557de2add9eab2d69928a08b7ccc59f1b5429a8b",
+      "bytes": 68756233
+    },
+    {
+      "name": "BeauteKnightPROXIMA",
+      "version": "1.0.1",
+      "archive": "dantemk2-beauteknightproxima-v1.0.1/CSS_BeauteKnightPROXIMA_dantemk2_P-v1.0.1.zip",
+      "sha256": "13a5ec1bd7e44e79df7025c4c338e8947df9cee852d8313aeb55030fdacfa2c2",
+      "bytes": 184046383
+    },
+    {
+      "name": "BigTittyGothGirlfriend",
+      "version": "1.0.1",
+      "archive": "area24k-bigtittygothgirlfriend-v1.0.1/CSS_BigTittyGothGirlfriend_area24k_P-v1.0.1.zip",
+      "sha256": "d0d56906124305a81e70d77a87b9e2d6a92f9bfc381228f6d4c858cca73af2a7",
+      "bytes": 154190017
+    },
+    {
+      "name": "Commander White",
+      "version": "0.1.2",
+      "archive": "commanderwhite-v0.1.2/CSS_CommanderWhite_eins0fx_P-v0.1.2.zip",
+      "sha256": "57744654d03cab23ad2c818a77b4ad838d56455e143b1def379f3ff177337fd7",
+      "bytes": 638315204
+    },
+    {
+      "name": "Curvy and Cute Proxima",
+      "version": "1.0.1",
+      "archive": "calcalmon-curvyandcuteproxima-v1.0.1/CSS_CurvyAndCutePROXIMA_CalCalMon_P-v1.0.1.zip",
+      "sha256": "59dc53960e8cc7639bbe1e8b07d68a23b36a79b7b6f14792cf437046abb86806",
+      "bytes": 222726602
+    },
+    {
+      "name": "Eve (Stellar Blade)",
+      "version": "1.5.1",
+      "archive": "eve-v1.5.1/CSS_EveStellarBlade_eins0fx_P-v1.5.1.zip",
+      "sha256": "6e0ddcaf4fd4f9aae080ee39bb834b131a3937d6ea98f4db8b7beb106e817058",
+      "bytes": 637733786
+    },
+    {
+      "name": "GeneXXa",
+      "version": "1.0.1",
+      "archive": "eins0fx-genexxa-v1.0.1/CSS_GeneXXa_eins0fx_P-v1.0.1.zip",
+      "sha256": "9059e3bb100fb9d256d699cca74deb90f547d9f971308fd6726cc21164a7c401",
+      "bytes": 153226116
+    },
+    {
+      "name": "Genessa Skin",
+      "version": "1.0.16",
+      "archive": "genessa-skin-v1.0.16/CSS_GenessaSkin_P-v1.0.16.zip",
+      "sha256": "7bb88ec4c3e8653627c6a8a5ac2e1ec842833b7b8a80817df451cffa0c9ad825",
+      "bytes": 176888086
+    },
+    {
+      "name": "HIT2 DE Scyther",
+      "version": "1.1.1",
+      "archive": "xtgmods-hit2_de_scyther-v1.1.1/CSS_HIT2_DE_Scyther_XTGMods_P-v1.1.1.zip",
+      "sha256": "87e645e1a865ca081bd5669aa1e4119dbc39cb9ee17af32a4bcea00b468dc435",
+      "bytes": 46274222
+    },
+    {
+      "name": "Long Hair Proxima",
+      "version": "1.0.1",
+      "archive": "ducttus-longhairproxima-v1.0.1/CSS_LongHairProxima_Ducttus_P-v1.0.1.zip",
+      "sha256": "58a5bc9df65fdbaa187cba518318e6b6c6078a3a69f4e2a83ee2ebf5bf4df48e",
+      "bytes": 165355912
+    },
+    {
+      "name": "MoreBeauteGenessa",
+      "version": "1.0.1",
+      "archive": "dantemk2-morebeautegenessa-v1.0.1/CSS_MoreBeauteGenessa_dantemk2_P-v1.0.1.zip",
+      "sha256": "7c1441a5aa4da919503343ac023551dcb15be34544b9831b59be8e5409708a22",
+      "bytes": 93717487
+    },
+    {
+      "name": "Proxi Skimpy",
+      "version": "1.0.1",
+      "archive": "rotomanr1-proxiskimpy-v1.0.1/CSS_ProxiSkimpy_rotomanr1_P-v1.0.1.zip",
+      "sha256": "ce6e947b5f31f4bdefbd3af26a1d46f5165706584387ef6d8fa03ce726e0f5fa",
+      "bytes": 89173682
+    },
+    {
+      "name": "Scarlet",
+      "version": "1.2.1",
+      "archive": "tdontran-scarlet-v1.2.1/CSS_Scarlet_TDonTran_P-v1.2.1.zip",
+      "sha256": "7fc5b62a62817f16e4dd630701585e3b8c297058cad933687ad2f51ece035e38",
+      "bytes": 335221361
+    },
+    {
+      "name": "Seductress",
+      "version": "1.0.1",
+      "archive": "eins0fx-seductress-v1.0.1/CSS_Seductress_eins0fx_P-v1.0.1.zip",
+      "sha256": "a54e7b499e6be51576916a12531a549a0decb2607fc53bece19c141b9264f782",
+      "bytes": 243534264
+    },
+    {
+      "name": "Seductress v2.0.2",
+      "version": "2.0.3",
+      "archive": "eins0fx-seductressv2-v2.0.3/CSS_Seductress_v202_eins0fx_P-v2.0.3.zip",
+      "sha256": "910a73614bd636d5cd53588d0ace3840bfa64fde7123b40e577c7af2591be81b",
+      "bytes": 216600353
+    },
+    {
+      "name": "Unholy Genessa",
+      "version": "0.3.1",
+      "archive": "unholygenessa-v0.3.1/CSS_UnholyGenessa_eins0fx_P-v0.3.1.zip",
+      "sha256": "df4003b1de33804c3c13102400b58dfad26f667f6f226d51c9a996a34eba4db6",
+      "bytes": 106762917
+    },
+    {
+      "name": "tHorny Proxima",
+      "version": "1.0.1",
+      "archive": "eins0fx-thornyproxima-v1.0.1/CSS_tHornyProxima_eins0fx_P-v1.0.1.zip",
+      "sha256": "35f27d837b8479ce9815598bf2aee151714c94a6e405c1a8e4a68ebaf436c4f9",
+      "bytes": 360262801
+    },
+    {
+      "name": "CSS Shared Assets",
+      "version": "1.0.2",
+      "archive": "shared-assets-v1.0.2/CSS_SharedAssets_P-v1.0.2.zip",
+      "sha256": "b2d6925065289e24496dc3e841b2e45b5e971ae4a4dfa846a490a5d2cb2769b3",
+      "bytes": 48735792
+    },
+    {
+      "name": "CSS UUEPBS profile",
+      "version": "1.0.2",
+      "archive": "uuepbs-profile-v1.0.2/CSS-UUEPBS-Profile-v1.0.2.zip",
+      "sha256": "0e268a29aa5ee0017d3eaef561b67fbd725f69e22e6437635285a9fcc846b551",
+      "bytes": 1513
+    },
+    {
+      "archive": "cssx-v1.3.1/MSII-CSSX-v1.3.1.zip",
+      "sha256": "af5f118de56f54f225c1972a28e4be0fae8a4f4823929e205c591e6f41f33c42",
+      "bytes": 1374201
+    },
+    {
+      "archive": "cssx-traverse-v1.0.2/MSII-Traverse-v1.0.2.zip",
+      "sha256": "78d0e23a23df32cfc4b1c10163f1e48da63a6c6572e653a455f76060e6cbe2e2",
+      "bytes": 187518
+    }
+  ]
+}
