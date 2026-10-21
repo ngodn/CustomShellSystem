@@ -14,9 +14,17 @@ Recognition is corrected and all 31 native host suites pass. All 24 native
 shades pass active-slot coverage and 112 material shader checks. The companion
 passes packed readback against all four current-game packages, retaining only
 the prior seal-transform change. The full repaired mount passes 17,036
-dependency packages. Refresh the tagged release and full Genessa Skin ZIP;
-final in-game shade rendering and unlock acceptance remain pending. See
+dependency packages. Final in-game shade rendering and unlock acceptance
+remain pending. See
 [shade audit](research/2026-10-22-native-shades.md).
+
+Delivered locally from annotated `v1.0.2`, commit `b21e7d4`: the refreshed CSS
+ZIP and Genessa Skin 1.0.16 ZIP include these changes and updated BBCode. Their
+installed payloads match the ZIPs, and CSS saved state is byte-identical.
+Only the core DLL, release metadata and two companion container files changed.
+The preceding archives are under `dist/withdrawn/before-shades-*`, and the old
+tag target is preserved as `archive/css-1.0.2-before-shades`. No game launch or
+desktop input was used. Receipt: `work/shades-26073152/install/receipt.json`.
 
 ## October 22: non-CSS and native appearance compatibility
 

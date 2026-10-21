@@ -1,12 +1,12 @@
 {
   "game_build": "26073152",
-  "source_commit": "3f8ebc300eb8922c81698ff1d0b57abba54dc543",
+  "source_commit": "b21e7d4ad7b7f6a96cb115f988c7668f7e731255",
   "verification": {
     "packages": 2105,
     "materials": 620,
     "repaired_materials": 377,
     "affected_outfits": 17,
-    "native_tests_passed": 30,
+    "native_tests_passed": 31,
     "cssx_tests_passed": 11,
     "zip_payloads_verified": true,
     "new_full_packages_installed": true,
@@ -20,15 +20,16 @@
     "Genessa simulated skirt following additional morphs",
     "Controlled Commander White frame-rate comparison",
     "Visual acceptance of native ghost materials and the refreshed CSS catalog",
-    "Phoenix archive missing 13 material packages; intact archive or source assets needed"
+    "Phoenix archive missing 13 material packages; intact archive or source assets needed",
+    "Visual and native unlock acceptance of the eight new Regal shades"
   ],
   "archives": [
     {
       "name": "CSS",
       "version": "1.0.2",
       "archive": "v1.0.2/MSII-CSS-v1.0.2.zip",
-      "sha256": "bfff94b9c5ca27a96611d10c89111fe549e93ec56784cc4d167a0baf588f31c9",
-      "bytes": 3171992
+      "sha256": "0a961355f91bbc61d269c925ba09bc1f1c6046ff36210735564fa1ae5f723de4",
+      "bytes": 3172383
     },
     {
       "name": "BH Proxima",
@@ -83,8 +84,8 @@
       "name": "Genessa Skin",
       "version": "1.0.16",
       "archive": "genessa-skin-v1.0.16/CSS_GenessaSkin_P-v1.0.16.zip",
-      "sha256": "7bb88ec4c3e8653627c6a8a5ac2e1ec842833b7b8a80817df451cffa0c9ad825",
-      "bytes": 176888086
+      "sha256": "c7eea941d9e93fe7f383ce9b0cb5bb33ab62b4717fa52dbee89db825fc04b995",
+      "bytes": 176888421
     },
     {
       "name": "HIT2 DE Scyther",
@@ -189,5 +190,19 @@
     "phoenix_affected_triangles": 450,
     "phoenix_installed": false,
     "native_ghost_visual_acceptance_pending": true
+  },
+  "native_shades": {
+    "game_build": "26073152",
+    "default_shells": 10,
+    "shades": 24,
+    "new_regal_shades": 8,
+    "shade_materials": 112,
+    "material_slot_checks_passed": true,
+    "shader_checks_passed": true,
+    "final_dependency_packages": 17036,
+    "genessa_companion_packages_rebased": 4,
+    "genessa_seal_transform_preserved": true,
+    "native_unlock_check_preserved": true,
+    "live_acceptance_pending": true
   }
 }
