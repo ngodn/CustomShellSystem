@@ -9,7 +9,7 @@ Installation
 4. Install CSS outfit packages separately under MortalShell2/Content/Paks/~mods/.
    Install the matching CSS Shared Assets download there for Peony, shared
    animations, facial playback, customized Genessa doubles and shoulder support.
-   Shoulder support requires CSS Shared Assets 1.0.1 or later.
+   The updated outfit packages require CSS Shared Assets 1.0.2 or later.
    Replace CSS_SharedAssets_P and remove the superseded CSS_AstralSharedAssets_P
    and CSS_LocomotionSharedAssets_P folders if present. Keep one shared pack.
 5. Launch the game, enter the game world, open Inventory, and select CSS.
@@ -59,6 +59,12 @@ The matching CSS_SharedAssets_P download combines the shared support. Do not
 leave the older separate Astral or Locomotion shared packs installed beside it.
 Full cloth physics stays enabled. Fresh cloth-heavy doubles can briefly hitch;
 cached Faithful doubles reuse their cloth. Further optimization is planned.
+
+October 20 game update
+Update affected outfit packages to their latest full releases to restore gray
+materials on game build 26073152. Shared Assets provides shared animations and
+compatibility support; outfit material repairs are included in those outfits.
+Remove superseded standalone CSS shader-fix overlays after updating the outfits.
 
 Settings and updates
 CSS creates state/state.json on first initialization with clean defaults.

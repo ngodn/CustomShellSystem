@@ -1,0 +1,381 @@
+{
+  "game_build": "26073152",
+  "css_version": "1.0.2",
+  "shared_assets_version": "1.0.2",
+  "outfits": [
+    {
+      "id": "erase.bhproxima",
+      "name": "BH Proxima",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_BHProxima_Erase_P",
+      "source_files": {
+        "CSS_BHProxima_Erase_P.utoc": "b9c2c34ad90d1716a5934229f90e8418fefd769e2ccb3d953444dada748ed52a",
+        "CSS_BHProxima_Erase_P.ucas": "359eaaaf24f61dc8422019dd2ddca911ab2ab5d9674dbc3eb129a4268e476979",
+        "CSS_BHProxima_Erase_P.pak": "8e4b42d5c74a0c3fe7658c03ed71ed76f4061a99056be3f1837eb0f7f204ca2d"
+      },
+      "files": {
+        "CSS_BHProxima_Erase_P.utoc": "ca3054d6606bbeae64ea75a148f888b78f330dea5c955a6af06b6f1643297d4c",
+        "CSS_BHProxima_Erase_P.ucas": "71263f1b79916aefaf37d17cc0bad0564ff0b63132d62bd83bf1f0ece5d5c23c",
+        "CSS_BHProxima_Erase_P.pak": "fb02888c8712074bb95475d493c854dc30cf0297a0e069773496ccd3c9c63b1e"
+      },
+      "replaced_materials": 36,
+      "directory": "erase-bhproxima-v1.0.1",
+      "archive": "CSS_BHProxima_Erase_P-v1.0.1.zip",
+      "changelog": "erase-bhproxima-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_BHProxima_Erase_P/trio"
+    },
+    {
+      "id": "dantemk2.beauteknightproxima",
+      "name": "BeauteKnightPROXIMA",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_BeauteKnightPROXIMA_dantemk2_P",
+      "source_files": {
+        "CSS_BeauteKnightPROXIMA_dantemk2_P.pak": "43d2f3721f0a1dac5282cf7c8ef8f0f0dd07586b240537f97398474b5fbb71b7",
+        "CSS_BeauteKnightPROXIMA_dantemk2_P.ucas": "b6bfa19db962e9bb5ce82b22c7bc72ac45c38aa7d832eb2d3e03f415aad6ece9",
+        "CSS_BeauteKnightPROXIMA_dantemk2_P.utoc": "62a64db5107c5d637a5abb36dab8e3665e443ed71af084fa7c4e4a9422634a77"
+      },
+      "files": {
+        "CSS_BeauteKnightPROXIMA_dantemk2_P.utoc": "0c51e6914de2dcfb27a6c52b293a4aa390da54d8e161160bfc87d530fba903d1",
+        "CSS_BeauteKnightPROXIMA_dantemk2_P.ucas": "d428a94b63de2133fbce2f36b0b0c81a0d67069ac7eac2b6474885321621451b",
+        "CSS_BeauteKnightPROXIMA_dantemk2_P.pak": "8ee15d33f717d09633410b0f028a9437dca8c15dcec104e6fbc99bfd441334a4"
+      },
+      "replaced_materials": 23,
+      "directory": "dantemk2-beauteknightproxima-v1.0.1",
+      "archive": "CSS_BeauteKnightPROXIMA_dantemk2_P-v1.0.1.zip",
+      "changelog": "dantemk2-beauteknightproxima-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_BeauteKnightPROXIMA_dantemk2_P/trio"
+    },
+    {
+      "id": "area24k.bigtittygothgirlfriend",
+      "name": "BigTittyGothGirlfriend",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_BigTittyGothGirlfriend_area24k_P",
+      "source_files": {
+        "CSS_BigTittyGothGirlfriend_area24k_P.pak": "a09f2981668e531dcf9ec6272910d3e633c4dc4860b92f9e1da677769cc0456a",
+        "CSS_BigTittyGothGirlfriend_area24k_P.ucas": "fa6a27df97099cbffb80726bc4742256b7972a34f83d24d8e9191881021c5023",
+        "CSS_BigTittyGothGirlfriend_area24k_P.utoc": "1ba5c89591ec8276a34b4aa28c0b28b1060ed4a9bddb2cc3f2b34d24272b7cf8"
+      },
+      "files": {
+        "CSS_BigTittyGothGirlfriend_area24k_P.utoc": "a8f9ee90939e5605f1185866c1a40c7be2a2df2a1193adf6991bd7390897cca1",
+        "CSS_BigTittyGothGirlfriend_area24k_P.ucas": "1b6bd228d248c971ffa646f0808d0c9d24e1abccd8fe64d87af244795ce64fb3",
+        "CSS_BigTittyGothGirlfriend_area24k_P.pak": "b22f621a7f236aed19b7fde7d81249e4601248c9e844f712b3ddf655f756d69f"
+      },
+      "replaced_materials": 6,
+      "directory": "area24k-bigtittygothgirlfriend-v1.0.1",
+      "archive": "CSS_BigTittyGothGirlfriend_area24k_P-v1.0.1.zip",
+      "changelog": "area24k-bigtittygothgirlfriend-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_BigTittyGothGirlfriend_area24k_P/trio"
+    },
+    {
+      "id": "eins0fx.commanderwhite",
+      "name": "Commander White",
+      "version": "0.1.2",
+      "previous_version": "0.1.2-bodyfeel.1",
+      "stem": "CSS_CommanderWhite_eins0fx_P",
+      "source_files": {
+        "CSS_CommanderWhite_eins0fx_P.ucas": "2d34850e8bb2df4205c7665886a2ec8aedcf1ac747b5d78b3bbf5a192edd24a7",
+        "CSS_CommanderWhite_eins0fx_P.pak": "e6cc6826e109ff5ec8b0517697478a1d39a1f73695a7eb282f470d29c28db091",
+        "CSS_CommanderWhite_eins0fx_P.utoc": "220bb1190f120bfbd7881139d13fa43587494f7b69d406764cff55fd57b906e6"
+      },
+      "files": {
+        "CSS_CommanderWhite_eins0fx_P.utoc": "a0a3521d015ef2eb0e53df06434d3855d86c0297306b52dccdb748895ade4cc1",
+        "CSS_CommanderWhite_eins0fx_P.ucas": "079ffe0e17918eb74c97b9caabbb1b8035f48f5d83460dc4be816334aa33ce0d",
+        "CSS_CommanderWhite_eins0fx_P.pak": "f4e804ad4deea38a4e58d8d0157dc8f02632787e5f92b36350ec5731ad65ef41"
+      },
+      "replaced_materials": 37,
+      "directory": "commanderwhite-v0.1.2",
+      "archive": "CSS_CommanderWhite_eins0fx_P-v0.1.2.zip",
+      "changelog": "commanderwhite-v0.1.2-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_CommanderWhite_eins0fx_P/trio"
+    },
+    {
+      "id": "calcalmon.curvyandcuteproxima",
+      "name": "Curvy and Cute Proxima",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_CurvyAndCutePROXIMA_CalCalMon_P",
+      "source_files": {
+        "CSS_CurvyAndCutePROXIMA_CalCalMon_P.pak": "732e07ff5a4a230d232ee5ee9e76cb8676e1b9d8cf06dcc3e8c444ad58b614ab",
+        "CSS_CurvyAndCutePROXIMA_CalCalMon_P.utoc": "ff86aca368ff2687b265664ee8aea49ee2986e3c9ef13b483d4ef5fea59989d2",
+        "CSS_CurvyAndCutePROXIMA_CalCalMon_P.ucas": "ba8a098c93fc9ff3927117e6c68d2dab98813c642509a05942ba1c6bfb966bc6"
+      },
+      "files": {
+        "CSS_CurvyAndCutePROXIMA_CalCalMon_P.utoc": "9de99bd3ac81fbcb7c31b5af0aca028859deb46522ebd579c5a2cb4886bef71f",
+        "CSS_CurvyAndCutePROXIMA_CalCalMon_P.ucas": "c331b444ec74b8e7f9cebc872a3a67dd37379401519bf157d94aa297585462bc",
+        "CSS_CurvyAndCutePROXIMA_CalCalMon_P.pak": "42931b8c73c2c36093a13b11a6030d0c09b106cbc2fd7374a38bad6d545b546b"
+      },
+      "replaced_materials": 30,
+      "directory": "calcalmon-curvyandcuteproxima-v1.0.1",
+      "archive": "CSS_CurvyAndCutePROXIMA_CalCalMon_P-v1.0.1.zip",
+      "changelog": "calcalmon-curvyandcuteproxima-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_CurvyAndCutePROXIMA_CalCalMon_P/trio"
+    },
+    {
+      "id": "eins0fx.seduxtress",
+      "name": "Eve (Stellar Blade)",
+      "version": "1.5.1",
+      "previous_version": "1.5.1-bodyfeel.1",
+      "stem": "CSS_EveStellarBlade_eins0fx_P",
+      "source_files": {
+        "CSS_EveStellarBlade_eins0fx_P.utoc": "b4b4307d00ff3135c7f86b0fa3d85dd43b7c6aac8c97d963fe2979ed43126a50",
+        "CSS_EveStellarBlade_eins0fx_P.pak": "29230cc90dab23a800d603b000b951ad29b82e0f6387818c3b4e24c5ced5e884",
+        "CSS_EveStellarBlade_eins0fx_P.ucas": "2237de91cef14091fbe5f9606d7af3a118df85395be046c37090ff975eb0dae8"
+      },
+      "files": {
+        "CSS_EveStellarBlade_eins0fx_P.utoc": "6d69299628308ab4f84ec9bff2380d6248a848c45b7142abb8870239f923b4c6",
+        "CSS_EveStellarBlade_eins0fx_P.ucas": "73a18b38fa663d59053f55f9803639c6b43126fdcef2034da99efdf049566816",
+        "CSS_EveStellarBlade_eins0fx_P.pak": "a5acbb54bcf7126b9e9c4a8c25f8b6338bde62f4ca4e55f6a42b9924783b8243"
+      },
+      "replaced_materials": 66,
+      "directory": "eve-v1.5.1",
+      "archive": "CSS_EveStellarBlade_eins0fx_P-v1.5.1.zip",
+      "changelog": "eve-v1.5.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_EveStellarBlade_eins0fx_P/trio"
+    },
+    {
+      "id": "eins0fx.genexxa",
+      "name": "GeneXXa",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_GeneXXa_eins0fx_P",
+      "source_files": {
+        "CSS_GeneXXa_eins0fx_P.pak": "06a0506fce1ad2e396ccd8ecdb1f7ddb14c4a38f8c211fdb069892ea68e0ef65",
+        "CSS_GeneXXa_eins0fx_P.ucas": "ca1869230e28d227b4eb7ff301534aed602b41dc3a5a1a65517da809bd50f591",
+        "CSS_GeneXXa_eins0fx_P.utoc": "72bfb701a0de6cd00bfe97408fbd2d4b5b6232e56468d69261d4abaaf3777bd6"
+      },
+      "files": {
+        "CSS_GeneXXa_eins0fx_P.utoc": "e7ad80775f3956b22f1add46b4896f6c5aeed7077b8062641395df4511143de3",
+        "CSS_GeneXXa_eins0fx_P.ucas": "b0ff5c8f9353723f14d86f882ff328193acf2056a7daa10d59dc5c9005734057",
+        "CSS_GeneXXa_eins0fx_P.pak": "47fc9e2612fa23d68567f4bb373de66ba8039686b6066fa378d7a069c7a9b7d0"
+      },
+      "replaced_materials": 65,
+      "directory": "eins0fx-genexxa-v1.0.1",
+      "archive": "CSS_GeneXXa_eins0fx_P-v1.0.1.zip",
+      "changelog": "eins0fx-genexxa-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_GeneXXa_eins0fx_P/trio"
+    },
+    {
+      "id": "genessa.skin",
+      "name": "Genessa Skin",
+      "version": "1.0.16",
+      "previous_version": "1.0.15",
+      "stem": "CSS_GenessaSkin_P",
+      "source_files": {
+        "CSS_GenessaSkin_P.pak": "d3d9244112cf7cb4c839a8546527939ad934b3e847e609582c9519e3817ce1a9",
+        "CSS_GenessaSkin_P.utoc": "aa5792915f5f783b0a7544b09f6a47cf2e0fce8a8398df87a0e54a2556e3aa43",
+        "CSS_GenessaSkin_P.ucas": "6ee485b59dd4aa1f379bfce2cb474d2185e689948a33bea197998d9709e7d7fe"
+      },
+      "files": {
+        "CSS_GenessaSkin_P.utoc": "df0784d1889e7e2defc71000bed62ea12f543b106b718a888caaaaa544390afa",
+        "CSS_GenessaSkin_P.ucas": "6dde4fd962f352829649c2a000ce4279de656fd077d5d9f5b89155e066e89e65",
+        "CSS_GenessaSkin_P.pak": "505c02410b65523e075a1e98a7a06307bbafbdbfb0595a93903363a589540d8e"
+      },
+      "replaced_materials": 12,
+      "directory": "genessa-skin-v1.0.16",
+      "archive": "CSS_GenessaSkin_P-v1.0.16.zip",
+      "changelog": "genessa-skin-v1.0.16-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_GenessaSkin_P/trio"
+    },
+    {
+      "id": "xtgmods.hit2_de_scyther",
+      "name": "HIT2 DE Scyther",
+      "version": "1.1.1",
+      "previous_version": "1.1.0",
+      "stem": "CSS_HIT2_DE_Scyther_XTGMods_P",
+      "source_files": {
+        "CSS_HIT2_DE_Scyther_XTGMods_P.utoc": "6ed741ea6de9ed80ad04d1f332d20cf2b5ef6d2150d101fa3c667c85d7943792",
+        "CSS_HIT2_DE_Scyther_XTGMods_P.pak": "8826da5cccb67a4f97308452377cb932c37389691b71a018f84956d7ef9b64c4",
+        "CSS_HIT2_DE_Scyther_XTGMods_P.ucas": "5cc6c4376f730f3ee89eb2ec0650be4cc3f34592d81d3b1b5d3de95ac5ba1d6c"
+      },
+      "files": {
+        "CSS_HIT2_DE_Scyther_XTGMods_P.utoc": "669d69e05dfa593a7bdf6251edd3cc29db546b72647559413398715c322ec43b",
+        "CSS_HIT2_DE_Scyther_XTGMods_P.ucas": "cf0b6212f2e355abb3c3556f2a781bfa3378102dea3a4939b36111d522b56885",
+        "CSS_HIT2_DE_Scyther_XTGMods_P.pak": "d51cf64e8f9ce6e661a361c85a88d9678f9ddf7c03bedaf7631d9ef0a09f1b30"
+      },
+      "replaced_materials": 3,
+      "directory": "xtgmods-hit2_de_scyther-v1.1.1",
+      "archive": "CSS_HIT2_DE_Scyther_XTGMods_P-v1.1.1.zip",
+      "changelog": "xtgmods-hit2_de_scyther-v1.1.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_HIT2_DE_Scyther_XTGMods_P/trio"
+    },
+    {
+      "id": "ducttus.longhairproxima",
+      "name": "Long Hair Proxima",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_LongHairProxima_Ducttus_P",
+      "source_files": {
+        "CSS_LongHairProxima_Ducttus_P.pak": "9491f32174df5f312cb81e7aaf04b417fc4e1a930ad33daad8e9cebb387c92d8",
+        "CSS_LongHairProxima_Ducttus_P.utoc": "6b464c377e47063888a55b11b2e24b791538318c2d04400a6754bf95a921ac23",
+        "CSS_LongHairProxima_Ducttus_P.ucas": "6985fd9ed697d0138609a3f2a4d93e866913a4b49837728ca5f5945a2474e1e5"
+      },
+      "files": {
+        "CSS_LongHairProxima_Ducttus_P.utoc": "77b2b58745b581e3befceb94d8edd06cbb54519f81ebcbebcb9004f0fba32ef7",
+        "CSS_LongHairProxima_Ducttus_P.ucas": "8f68371566f34958d2108b9960252515e0f2eddbaaac31ce34f50ee0a34b8019",
+        "CSS_LongHairProxima_Ducttus_P.pak": "de9f58e22f880c1b05561861703a61abbb80bb5130894153cb699fe152c00aed"
+      },
+      "replaced_materials": 7,
+      "directory": "ducttus-longhairproxima-v1.0.1",
+      "archive": "CSS_LongHairProxima_Ducttus_P-v1.0.1.zip",
+      "changelog": "ducttus-longhairproxima-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_LongHairProxima_Ducttus_P/trio"
+    },
+    {
+      "id": "dantemk2.morebeautegenessa",
+      "name": "MoreBeauteGenessa",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_MoreBeauteGenessa_dantemk2_P",
+      "source_files": {
+        "CSS_MoreBeauteGenessa_dantemk2_P.utoc": "af5cf3c3358d894005d5918641fe8e9a3ec9c9b4abe0f6e4e366e4454dadd933",
+        "CSS_MoreBeauteGenessa_dantemk2_P.ucas": "e54d3687d9bdb7afd43930acd0d1345e5e2be4dd59b184987fe355b41768ce0b",
+        "CSS_MoreBeauteGenessa_dantemk2_P.pak": "a4c64a06739f163e243204ba088094ea8eb2378a7af0d43fd23eafe4fecc4374"
+      },
+      "files": {
+        "CSS_MoreBeauteGenessa_dantemk2_P.utoc": "9784b7a25457f55387345aeeb9dbefda95fccafda29a5e7a138f741dd9adf27d",
+        "CSS_MoreBeauteGenessa_dantemk2_P.ucas": "a84249f1c09a70497079b1d5cc1628af3e35f370d1b86d610cde92f72fc38db2",
+        "CSS_MoreBeauteGenessa_dantemk2_P.pak": "924e5ace97f8af9e1b3b72dc77e41be8ca3a2f3bf440f53d14d9948820be528b"
+      },
+      "replaced_materials": 6,
+      "directory": "dantemk2-morebeautegenessa-v1.0.1",
+      "archive": "CSS_MoreBeauteGenessa_dantemk2_P-v1.0.1.zip",
+      "changelog": "dantemk2-morebeautegenessa-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_MoreBeauteGenessa_dantemk2_P/trio"
+    },
+    {
+      "id": "rotomanr1.proxiskimpy",
+      "name": "Proxi Skimpy",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_ProxiSkimpy_rotomanr1_P",
+      "source_files": {
+        "CSS_ProxiSkimpy_rotomanr1_P.ucas": "a813d005f174752ade447001b22a79a7ec8e7c19702b661c3dc786275246e6f9",
+        "CSS_ProxiSkimpy_rotomanr1_P.utoc": "d8c9aef8abc0d7b302d9b80557ca6f3ea58073f1aec6b1de76234062d499e501",
+        "CSS_ProxiSkimpy_rotomanr1_P.pak": "7f656d62b90ce934496e62a035ecc791fef86c18ec537a6082c0d82e01d02676"
+      },
+      "files": {
+        "CSS_ProxiSkimpy_rotomanr1_P.utoc": "46c11a1a72f9686f7f676f99676f9d7aab2de5645d10d4af37d1567e86afae96",
+        "CSS_ProxiSkimpy_rotomanr1_P.ucas": "9255bdece61453b33966f97bfe5345c709fae28ae6cce61f4295f208b2148fdd",
+        "CSS_ProxiSkimpy_rotomanr1_P.pak": "0585afc43952ce72f41d388cc2d961463fe992a36aabb53f55d34563667a627e"
+      },
+      "replaced_materials": 4,
+      "directory": "rotomanr1-proxiskimpy-v1.0.1",
+      "archive": "CSS_ProxiSkimpy_rotomanr1_P-v1.0.1.zip",
+      "changelog": "rotomanr1-proxiskimpy-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_ProxiSkimpy_rotomanr1_P/trio"
+    },
+    {
+      "id": "tdontran.scarlet",
+      "name": "Scarlet",
+      "version": "1.2.1",
+      "previous_version": "1.2.0",
+      "stem": "CSS_Scarlet_TDonTran_P",
+      "source_files": {
+        "CSS_Scarlet_TDonTran_P.ucas": "6f3b5676eb7e305c2344d2d68ef8eae5219d0e88909349e40ba5b06627ee719d",
+        "CSS_Scarlet_TDonTran_P.utoc": "6c7ff28b62d2db7be77c3bb079e25add519863950889953c8fb273929ba0cd67",
+        "CSS_Scarlet_TDonTran_P.pak": "54a70e88363cec5e5ed39fb6b56271bd74c270fd75f40c5137b661f2fb0270b0"
+      },
+      "files": {
+        "CSS_Scarlet_TDonTran_P.utoc": "6840bdcbef6d1cec68e9c6564783b485a1c2254fe8fb852ad0ff0283a1ab7931",
+        "CSS_Scarlet_TDonTran_P.ucas": "10994606b88355fab8d63f8e89032b4d35e4f2474af27fade63b8015e20219ca",
+        "CSS_Scarlet_TDonTran_P.pak": "fd13c5fe46dcc7488bfb13ae3cbf84e05f387255d0173d915a79d936d151f97d"
+      },
+      "replaced_materials": 3,
+      "directory": "tdontran-scarlet-v1.2.1",
+      "archive": "CSS_Scarlet_TDonTran_P-v1.2.1.zip",
+      "changelog": "tdontran-scarlet-v1.2.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_Scarlet_TDonTran_P/trio"
+    },
+    {
+      "id": "eins0fx.seductress",
+      "name": "Seductress",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_Seductress_eins0fx_P",
+      "source_files": {
+        "CSS_Seductress_eins0fx_P.utoc": "eea843ea0cdd406aefc2cb8241edaf19bce95316119cf54c6e0f5e6244ee40ae",
+        "CSS_Seductress_eins0fx_P.pak": "46e301f6260ede1716d4ecd238a11b07e5fe78f23e4a6dd927ba8ce766e399d1",
+        "CSS_Seductress_eins0fx_P.ucas": "372a276beb2d11a922e72b50a90febce073a45529a6ae6aae20f8eb3e87054e4"
+      },
+      "files": {
+        "CSS_Seductress_eins0fx_P.utoc": "129b637c984289241ba4332e08a39b8965296a03fde841f343f3de2fb5535832",
+        "CSS_Seductress_eins0fx_P.ucas": "1b8c3d35c51ba1a09003f8db4b3994b2946c59413b0cd4687e6b1f584dd87e76",
+        "CSS_Seductress_eins0fx_P.pak": "c1faee5f776bb67b980d16a982815ca0cb59c3b3be1096e8469ea5fd2667fd4d"
+      },
+      "replaced_materials": 53,
+      "directory": "eins0fx-seductress-v1.0.1",
+      "archive": "CSS_Seductress_eins0fx_P-v1.0.1.zip",
+      "changelog": "eins0fx-seductress-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_Seductress_eins0fx_P/trio"
+    },
+    {
+      "id": "eins0fx.seductressv2",
+      "name": "Seductress v2.0.2",
+      "version": "2.0.3",
+      "previous_version": "2.0.2",
+      "stem": "CSS_Seductress_v202_eins0fx_P",
+      "source_files": {
+        "CSS_Seductress_v202_eins0fx_P.pak": "297e3d06eb6281d50f1e22626efdda84f170833167d1752cce5f2acbbf675132",
+        "CSS_Seductress_v202_eins0fx_P.utoc": "1400c5c8acc05f4a1a453db06beacfb59cb18bdd0d70fdc30bdd9b294d7ce951",
+        "CSS_Seductress_v202_eins0fx_P.ucas": "9eb710e802d8091694f32f03cb97c382ebf5d6347fe02032a34838d2361036a0"
+      },
+      "files": {
+        "CSS_Seductress_v202_eins0fx_P.utoc": "d7573ffba11f520fe3c8be746f42f2d2d312eb0965017bf59ca063c342414a22",
+        "CSS_Seductress_v202_eins0fx_P.ucas": "1448b7f368eb53ab07bfb76b9a69e0b210d9fd109bf5ee64e5ee25152829346b",
+        "CSS_Seductress_v202_eins0fx_P.pak": "1a3a6ba2314aa3458f6206b2b39afd94f2e035d5af1770c6e5417dfa4d0a09f1"
+      },
+      "replaced_materials": 7,
+      "directory": "eins0fx-seductressv2-v2.0.3",
+      "archive": "CSS_Seductress_v202_eins0fx_P-v2.0.3.zip",
+      "changelog": "eins0fx-seductressv2-v2.0.3-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_Seductress_v202_eins0fx_P/trio"
+    },
+    {
+      "id": "eins0fx.unholygenessa",
+      "name": "Unholy Genessa",
+      "version": "0.3.1",
+      "previous_version": "0.3.1-bodyfeel.1",
+      "stem": "CSS_UnholyGenessa_eins0fx_P",
+      "source_files": {
+        "CSS_UnholyGenessa_eins0fx_P.ucas": "5318a5d17d4ff496913caf0dd07133f5bcf2096c85328ac1db253015719b069b",
+        "CSS_UnholyGenessa_eins0fx_P.utoc": "85e9a3b7facc3cf602f93eef1373993c25921f72a8c035cadee57375e0870779",
+        "CSS_UnholyGenessa_eins0fx_P.pak": "03677bd202e7f7cb995764745695cf604e056aa1aab60c9050a308daa143f3ad"
+      },
+      "files": {
+        "CSS_UnholyGenessa_eins0fx_P.utoc": "698448725b6450874d81239881cc8d954d7e0c4607b8a2e2dd839965d1dbc722",
+        "CSS_UnholyGenessa_eins0fx_P.ucas": "fd2eee3e933627393bf899bd102c1302ea215c9fab5da1b7f44edcbc0bbcde5a",
+        "CSS_UnholyGenessa_eins0fx_P.pak": "73743938685a0aae9877740b24f4bfd3c1e2898ff4b58188306c7e1ca5bda2a4"
+      },
+      "replaced_materials": 18,
+      "directory": "unholygenessa-v0.3.1",
+      "archive": "CSS_UnholyGenessa_eins0fx_P-v0.3.1.zip",
+      "changelog": "unholygenessa-v0.3.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_UnholyGenessa_eins0fx_P/trio"
+    },
+    {
+      "id": "eins0fx.thornyproxima",
+      "name": "tHorny Proxima",
+      "version": "1.0.1",
+      "previous_version": "1.0.0",
+      "stem": "CSS_tHornyProxima_eins0fx_P",
+      "source_files": {
+        "CSS_tHornyProxima_eins0fx_P.ucas": "67d1c724ed4eff66fe49a5ba5cd9f924642a343c7cdb6e40244367ac3a81232e",
+        "CSS_tHornyProxima_eins0fx_P.pak": "dae830d334a3c0633fc29de0567dae5cdb7b85fedf0eb1f84e5ba37b5fe07d19",
+        "CSS_tHornyProxima_eins0fx_P.utoc": "f8e88be49c4bd54334e020cca85c8a44da05a309986ceab9bc65ede11f3b89f7"
+      },
+      "files": {
+        "CSS_tHornyProxima_eins0fx_P.utoc": "62b157102bbf6aa86741617094ee3be3fe16857f6c97636909a8d52c06a09a2b",
+        "CSS_tHornyProxima_eins0fx_P.ucas": "60bb0d187ffadf47a7f67124358ffc690fdfb0097b0f72899878cce8505de8d1",
+        "CSS_tHornyProxima_eins0fx_P.pak": "f4a1d7b20065d04a0938c44a2b3163c6ecbe2c53f8412e5ffc1c86b64a4c8a88"
+      },
+      "replaced_materials": 1,
+      "directory": "eins0fx-thornyproxima-v1.0.1",
+      "archive": "CSS_tHornyProxima_eins0fx_P-v1.0.1.zip",
+      "changelog": "eins0fx-thornyproxima-v1.0.1-changelog.bbcode",
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_tHornyProxima_eins0fx_P/trio"
+    }
+  ]
+}

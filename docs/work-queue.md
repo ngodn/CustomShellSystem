@@ -1,5 +1,23 @@
 # Current work queue
 
+## October 22: full versioned releases
+
+The user corrected the delivery format: ship CSS 1.0.2 and each affected mod's
+own next version, with integrated repairs, full ZIPs and matching BBCode
+changelogs. The supplied Eve shader patch is a diagnostic reference, not the
+release naming or packaging convention. Do not deliver additive ShaderFix or
+InstalledSnapshot archives as the mod updates. Keep existing product names and
+stable package IDs. CSSX 1.3.1 and Traverse 1.0.2 retain their versions unless a
+code change warrants another release. No public publication is authorized.
+
+Full-container packaging preserves every unchanged chunk and package-store
+entry, updates the embedded version and container checksums, and refreshes
+Shared Assets' revision references. Reconcile the installed compatibility overlay
+only after the replacement packages pass verification. Continue to respect the
+user's desktop focus. Body-motion feel, Genessa's additional cloth deformation
+and the controlled CW frame-rate comparison remain open; do not describe them
+as resolved by the material repair.
+
 ## October 22: game-update compatibility and resumed body work
 
 Active priority: investigate gray materials reported after the October 20 update
@@ -15,7 +33,7 @@ StateFlags 4. Audits use a stable snapshot of the new base containers. The Eve
 patch passes on this build and the original fails. Complete shader-only repairs
 also pass packed readback and dependency checks for Genessa (18 materials), CW
 (37), HIT2 (3) and both archived Seductress releases (6 each). The broader scan
-covers all 24 installed mod folders: 377 materials in 18 outfits have missing
+covers all 24 installed mod folders: 377 materials in 17 outfits have missing
 shared shaders. The expanded repair is installed and passes all 2,105 package headers and 620
 material exports. Steam screenshots verify representative appearances, with
 original appearance and saved CSS state restored. CSS/CSSX/Traverse cold-start

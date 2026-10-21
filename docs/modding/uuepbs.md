@@ -2,7 +2,7 @@
 
 [UUEPBS](https://github.com/XTGMods/UUEPBS) (Universal Unreal Engine Player Body Sliders, by XTGMods) adds bone and morph sliders to the player character. It works beside CSS: it edits the final pose after the animation and CSS physics have run, so CSS springs, body motion controls and customization keep working, and its edits sit on top of them.
 
-Status: UUEPBS 2.7.1 loads beside CSS core 1.0.2 on this machine with the profile below (one custom bone group, 24 morph groups parsed, pose hook confirmed). The per-outfit slider checks and the feel verdict are in progress.
+Status: UUEPBS 2.7.1 loads beside CSS core 1.0.2 on this machine with the profile below (one custom bone group, 24 morph groups parsed, pose hook confirmed). The October 22 live checks resolve both chest bones and all 24 profile morphs on Eve Peony, Unholy Genessa and Commander White on build 26073152. Motion-feel evaluation remains open.
 
 ## What binds on a CSS body
 
@@ -28,7 +28,7 @@ The chest helpers are named `brust` (German), which UUEPBS's dictionary does not
 
 ## Morph sliders
 
-The Detailed Panel > Morphs tab lists every morph target the worn mesh carries. Eve, Unholy Genessa and Commander White are gaining a 24-morph body set (the six originals plus a chest set: cleavage, diameter, perk side, upward slope, natural, implants, nipple size and depth, areola size, chest width, underbust depth; and glute width, glutes up/down, hip bone size, thigh size, calf size, shoulder size, waist depth). To get them as Simplified Panel sliders, one per morph, use the ready profile `docs/research/uuepbs/MortalShell2.profile.json` from the CSS repo as your `GameProfiles/MortalShell2.json`; it carries the Breasts bone group above and a `MorphGroups` block like:
+The Detailed Panel > Morphs tab lists every morph target the worn mesh carries. Eve 1.5.1, Unholy Genessa 0.3.1 and Commander White 0.1.2 carry a 24-morph body set (the six originals plus a chest set: cleavage, diameter, perk side, upward slope, natural, implants, nipple size and depth, areola size, chest width, underbust depth; and glute width, glutes up/down, hip bone size, thigh size, calf size, shoulder size, waist depth). To get them as Simplified Panel sliders, one per morph, use the ready profile `docs/research/uuepbs/MortalShell2.profile.json` from the CSS repo as your `GameProfiles/MortalShell2.json`; it carries the Breasts bone group above and a `MorphGroups` block like:
 
 ```json
 "MorphGroups": {

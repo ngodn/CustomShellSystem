@@ -1,3 +1,22 @@
+### CSS 1.0.2
+
+#### Added
+
+- Adjust body-motion Travel on supported outfits.
+- Support 24 body-shape controls in the updated Eve, Unholy Genessa and Commander White packages, with an optional UUEPBS profile.
+
+#### Fixed
+
+- Apply the Travel value shown by each motion preset, including older saved looks.
+- Reduce redundant facial-animation updates.
+
+#### Upgrading
+
+Install CSS Shared Assets 1.0.2 and the updated outfit packages. Texture repairs
+are included in each outfit. Remove superseded standalone shader overlays and
+keep your settings and profiles. Motion-feel and CW frame-rate follow-up remain
+open.
+
 ### CSS 1.0.0
 
 #### Added
