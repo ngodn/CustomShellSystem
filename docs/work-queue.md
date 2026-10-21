@@ -1,5 +1,22 @@
 # Current work queue
 
+## October 22: Proxima Slayer Armor compatibility
+
+Audit the user-supplied `Proxima - Slayer Armor 571 1.0 2026-10-19T12-10Z vE77wqoFN.rar`
+against game build 26073152 and the current CSS 1.0.2 catalog. Check the armor
+and separate weapon containers, effective dependencies, shaders, mesh rig and
+active materials, recognition and conflicts. Keep the original unmodified and
+uninstalled, and preserve desktop focus. Evidence: `work/slayer-26073152/`.
+
+Offline audit complete. CSS recognizes the armor without changes; its native
+bone hierarchy and 32 inline-shader materials pass. Four missing texture packages
+cause 19 unresolved imports across 17 materials, reproduced with armor and weapon
+separately against the base game. They are also absent from the retained older
+inventory. Do not mark this archive fully compatible or substitute guessed
+textures. Await a complete archive/source for repair and later visual acceptance.
+Slayer and Phoenix override the same Proxima mesh and should not be combined.
+CSS 1.0.2 remains unchanged. [Full findings](research/2026-10-22-proxima-slayer-compatibility.md).
+
 ## October 22: locked native shade confirmation
 
 User request: show all supported native shades, including locked ones. Selecting
