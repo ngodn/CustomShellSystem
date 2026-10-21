@@ -1,5 +1,50 @@
 # Current work queue
 
+## October 22: game-update compatibility and resumed body work
+
+Active priority: investigate gray materials reported after the October 20 update
+across released CSS outfits. Supplied reference patch:
+`/home/eins0fx/Downloads/CSS_Eve_ShaderFix_26073152.zip` (SHA-256
+`12258146f1fba3b879fed0e53238151bb453414c4ea8422ff5cbb67590c71822`).
+Its author reports 66 Eve 1.5.0 material instances repaired and an in-game pass;
+that runtime claim has not yet been reproduced here. Investigation outputs:
+`work/update-26073152/`.
+
+The user completed the update. Steam app 2584270 now reports build 26073152,
+StateFlags 4. Audits use a stable snapshot of the new base containers. The Eve
+patch passes on this build and the original fails. Complete shader-only repairs
+also pass packed readback and dependency checks for Genessa (18 materials), CW
+(37), HIT2 (3) and both archived Seductress releases (6 each). The broader scan
+covers all 24 installed mod folders: 377 materials in 18 outfits have missing
+shared shaders. The expanded repair is installed and passes all 2,105 package headers and 620
+material exports. Steam screenshots verify representative appearances, with
+original appearance and saved CSS state restored. CSS/CSSX/Traverse cold-start
+checks pass. Preserve the October 19 body-feel candidates. The user is working;
+use Steam screenshots and do not change desktop focus or inject OS input.
+
+Then continue the October 19 UUEPBS/body-feel work below. The selected local
+core is already 1.0.2-rc3; preserve the installed outfit candidates and shared
+revision pins. The earlier Claude session is
+`7bf4f7ad-6c1f-4b73-a2cd-412f646cddfb`; its final rc3 performance verification
+waiter never completed. The Codex thread was `Build CSS Next-Gen v1.0.0`
+(`01a0b8d0-0ce4-7903-91f2-e0fee8f0224a`).
+
+October 22 runtime continuation: all three V11 candidates pass twelve live
+Travel/Soft Zone configuration checks; UUEPBS sees both chest bones and all 24
+profile morphs. Original appearance and saved CSS state are restored. tHorny
+currently exposes eight shape controls. Hard-limit contacts remain frequent on
+CW/Genessa in the sampled idle motions; resume the soft-limit fixture and matched
+motion-trace work before claiming stiffness fixed. The five new nonzero Genessa
+skirt morphs also need new mesh attribute buffers alongside a graph update.
+Evidence and exact limits: [updated-game investigation](research/2026-10-22-update-26073152.md).
+
+Also audit CSSX and Traverse. The Traverse reporter withdrew the startup-crash
+report and said it works; retain it as an unconfirmed regression check, not a
+reproduced defect. No public upload or response to reporters is requested. Final save verification
+restored one outfit-wide Genessa memory after graceful exit; the complete CSS
+state matches the pre-sweep snapshot. The game is closed, with the shader overlay
+installed.
+
 ## October 17: Vista sitting animation and local skin releases
 
 The user requested an in-game inspection of the sitting interaction, a separate
