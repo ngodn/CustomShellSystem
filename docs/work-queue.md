@@ -16,8 +16,16 @@ maps remain untouched. Normal unlock status is queried again on selection or
 list opening, and does not change the appearance ID. The Windows build and
 31 host suites pass. In-game dialog layout and an actual unlock objective
 while wearing the shade remain pending. Evidence:
-`work/locked-shades-26073152/`. Refresh the full CSS ZIP with this change and
-the completed new-character roster work, preserving CSS 1.0.2.
+`work/locked-shades-26073152/`.
+
+Delivered and installed locally from annotated `v1.0.2`, commit `aeb99bf`.
+The full CSS 1.0.2 ZIP includes this flow and the new-character roster, with
+updated BBCode. Archive SHA-256:
+`9b5e36f211390334ee21edd4968fb402c3bf71ee4a42e7a579018194c77f1cdf`.
+The installed core, two catalog files and release metadata match the ZIP;
+saved CSS state remains byte-identical and the game remains closed. The
+previous ZIP is under `dist/withdrawn/css-1.0.2-before-roster-and-shade-access`.
+Receipt: `work/locked-shades-26073152/install/receipt.json`.
 
 ## October 22: new NPC, enemy and boss appearances
 
@@ -35,8 +43,8 @@ package headers were indexed; no further NPC body meshes were found. All
 78 variants pass material-slot checks, 77 meshes pass dependency checks, and
 31 host suites pass. Recognition now covers 55 folders and 9,366 packages.
 Final in-game movement and appearance acceptance remains pending. The new
-entries will ship with the queued locked-shade flow in the refreshed CSS
-1.0.2 ZIP. [Coverage and exclusions](research/2026-10-22-new-native-characters.md).
+entries are included in the refreshed CSS 1.0.2 ZIP with the locked-shade flow
+described above. [Coverage and exclusions](research/2026-10-22-new-native-characters.md).
 
 ## October 22: updated native shell shades
 

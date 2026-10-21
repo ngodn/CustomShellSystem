@@ -1,6 +1,6 @@
 {
   "game_build": "26073152",
-  "source_commit": "b21e7d4ad7b7f6a96cb115f988c7668f7e731255",
+  "source_commit": "aeb99bfddce430b1fb50beeac06671f1ae09a0ed",
   "verification": {
     "packages": 2105,
     "materials": 620,
@@ -21,15 +21,16 @@
     "Controlled Commander White frame-rate comparison",
     "Visual acceptance of native ghost materials and the refreshed CSS catalog",
     "Phoenix archive missing 13 material packages; intact archive or source assets needed",
-    "Visual and native unlock acceptance of the eight new Regal shades"
+    "In-game movement and appearance acceptance of the four new roster entries",
+    "Native locked-shade confirmation dialog and completing a shade-unlock objective while wearing that shade"
   ],
   "archives": [
     {
       "name": "CSS",
       "version": "1.0.2",
       "archive": "v1.0.2/MSII-CSS-v1.0.2.zip",
-      "sha256": "0a961355f91bbc61d269c925ba09bc1f1c6046ff36210735564fa1ae5f723de4",
-      "bytes": 3172383
+      "sha256": "9b5e36f211390334ee21edd4968fb402c3bf71ee4a42e7a579018194c77f1cdf",
+      "bytes": 3181113
     },
     {
       "name": "BH Proxima",
@@ -189,7 +190,8 @@
     "phoenix_missing_material_packages": 13,
     "phoenix_affected_triangles": 450,
     "phoenix_installed": false,
-    "native_ghost_visual_acceptance_pending": true
+    "native_ghost_visual_acceptance_pending": true,
+    "scope": "Earlier baseline audit before the four roster additions; see native_roster_update for current roster and recognition counts."
   },
   "native_shades": {
     "game_build": "26073152",
@@ -203,6 +205,30 @@
     "genessa_companion_packages_rebased": 4,
     "genessa_seal_transform_preserved": true,
     "native_unlock_check_preserved": true,
+    "live_acceptance_pending": true,
+    "all_shades_visible": true,
+    "locked_shade_confirmation": true,
+    "profile_confirmation": true,
+    "accepted_selection_persists": true,
+    "native_unlock_state_modified": false,
+    "live_mission_acceptance_pending": true
+  },
+  "native_roster_update": {
+    "added": [
+      "Tarsus, the Frostbound Martyr",
+      "Halberd Bro",
+      "Twin Sword Bro",
+      "Laughing Flayer"
+    ],
+    "variants": 78,
+    "unique_meshes": 77,
+    "dependency_packages": 1452,
+    "material_slot_checks_passed": true,
+    "new_mesh_shader_materials": 17,
+    "override_shader_materials": 6,
+    "added_package_headers_indexed": 4066,
+    "recognition_folders": 55,
+    "recognition_packages": 9366,
     "live_acceptance_pending": true
   }
 }
