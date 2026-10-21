@@ -1,4 +1,5 @@
 #include "engine.hpp"
+#include "original_shades.hpp"
 #include <windows.h>
 #include "startup.hpp"
 #include "physics_presets.hpp"

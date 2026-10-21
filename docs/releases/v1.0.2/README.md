@@ -28,8 +28,13 @@ beside their ZIPs under `dist`. `dist/DELIVERY.md` is the current download index
 | Unholy Genessa | 0.3.1 | 18 |
 | tHorny Proxima | 1.0.1 | 1 |
 
-UUEPBS 2.7.1 remains an optional separate mod. The supplied MortalShell2 profile
-is CSS configuration, not a renamed or repackaged UUEPBS release.
+CSS owns the expanded body-shape controls, motion controls and presets. The
+outfit packages supply their morphs and rigs. These features do not require
+UUEPBS or the UUEPBS profile download.
+
+The separate MortalShell2 profile configures UUEPBS for players who choose to
+use that third-party editor. It maps CSS morph and bone names into UUEPBS's
+panels and requires UUEPBS 2.7.1 installed separately.
 
 Validation and limitations are in [the game-update investigation](../../research/2026-10-22-update-26073152.md). Runtime checks used the preceding core candidate and
 identical material chunks. Packaging verifies complete container contents and
@@ -42,3 +47,8 @@ The unpublished CSS archive also incorporates the expanded non-CSS audit:
 updated recognition including Merrick, plus native ghost material assignments
 for William and Ball Boy's second look. The latter still need final in-game
 visual acceptance. [Coverage and Phoenix findings](../../research/2026-10-22-non-css-compatibility.md).
+
+CSS also recognizes the eight new Regal shades. Genessa Skin 1.0.16 includes
+a refreshed seal-position companion that preserves the updated native shade
+map. The 24 native shades pass material-slot and shader checks; final in-game
+visual and unlock acceptance remains pending. [Shade audit](../../research/2026-10-22-native-shades.md).

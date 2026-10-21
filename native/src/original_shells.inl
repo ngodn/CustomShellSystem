@@ -104,10 +104,10 @@ static std::vector<Variant> original_shades(UObject* data,const Variant& base,
         auto* pair=static_cast<std::byte*>(map->GetData(i,layout));
         const auto tag=narrow(reinterpret_cast<FName*>(pair)->ToString());
         try {
-            std::string suffix,label;
-            if(tag=="Sparta.Item.Skin.Shell.Shared.Alternative") {suffix="AltSkin";label="Alternative";}
-            else if(tag=="Sparta.Item.Skin.Shell.Shared.Obsidian") {suffix="Obsidian";label="Obsidian";}
-            else {skipped.push_back(base.name+" unsupported shade: "+tag);continue;}
+            const auto definition=original_shade_definition(tag);
+            if(!definition) {skipped.push_back(base.name+" unsupported shade: "+tag);continue;}
+            const std::string suffix(definition->suffix);
+            std::string label(definition->fallback_label);
             Variant shade=base;shade.shade_tag=tag;shade.id=base.id+".shade."+suffix;
             std::transform(shade.id.begin(),shade.id.end(),shade.id.begin(),[](unsigned char c){return std::tolower(c);});
             FScriptArrayHelper materials(array,pair+layout.ValueOffset+defaults->GetOffset_Internal());

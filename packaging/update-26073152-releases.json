@@ -177,7 +177,18 @@
       "directory": "genessa-skin-v1.0.16",
       "archive": "CSS_GenessaSkin_P-v1.0.16.zip",
       "changelog": "genessa-skin-v1.0.16-changelog.bbcode",
-      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_GenessaSkin_P/trio"
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_GenessaSkin_P/trio",
+      "rebased_companion": {
+        "stem": "GenessaHipSealFit_P",
+        "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/shades-26073152/genessa-rebased",
+        "game_build": "26073152",
+        "files": {
+          "GenessaHipSealFit_P.pak": "75e7144577253917f6da7312ef5e585b12fb728226a22b0938323751a6b555cd",
+          "GenessaHipSealFit_P.ucas": "e5972bed0584f1ddfd13acb9223f0813187703986474e78354a62139226eee83",
+          "GenessaHipSealFit_P.utoc": "38e23d93daeb8d3cadbd239cdea0e4457518163f26af8e340502631327e0619b"
+        },
+        "evidence": "docs/research/2026-10-22-native-shades.md"
+      }
     },
     {
       "id": "xtgmods.hit2_de_scyther",

@@ -1,5 +1,23 @@
 # Current work queue
 
+## October 22: updated native shell shades
+
+Audit the updated game's shades and preserve native unlock checks. Build
+26073152 adds eight Regal item definitions. CSS's two-tag allowlist rejects
+them, and GenessaHipSealFit_P overrides CD_Genessa with a pre-update shade map.
+Update shade discovery and rebase that companion on current game data while
+retaining its exact seal socket adjustment. Keep unpublished CSS 1.0.2 and
+Genessa Skin 1.0.16 versioning; refresh ZIPs and BBCode. Evidence:
+`work/shades-26073152/`. Preserve desktop focus and saved state.
+
+Recognition is corrected and all 31 native host suites pass. All 24 native
+shades pass active-slot coverage and 112 material shader checks. The companion
+passes packed readback against all four current-game packages, retaining only
+the prior seal-transform change. The full repaired mount passes 17,036
+dependency packages. Refresh the tagged release and full Genessa Skin ZIP;
+final in-game shade rendering and unlock acceptance remain pending. See
+[shade audit](research/2026-10-22-native-shades.md).
+
 ## October 22: non-CSS and native appearance compatibility
 
 Extend the updated-game audit to every installed non-CSS container, all official

@@ -12,6 +12,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 
+if (args.Length == 5 && args[0] == "--socket-slices") {
+    SocketAdjustmentSlices.Run(args[1..]);
+    return;
+}
+
 if (args is ["--check-vertex-attributes"]) {
     try { VertexAttributeReadbackCheck.Run(); }
     catch (InvalidDataException error) { Console.Error.WriteLine(error.Message); Environment.ExitCode = 1; }
