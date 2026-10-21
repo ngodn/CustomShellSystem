@@ -8,7 +8,8 @@ CSS cannot read folder names out of it. This table lets the runtime turn those i
 "this mod touches the Knight Lady folder" with one lookup per chunk and no decompression.
 
 Inputs
-- work/research/list/files.txt: every file in the game's containers (GameDump tool, `list` mode).
+- --files: every file in the current game's containers, one project-relative path per line.
+- --game-build: the Steam build ID corresponding to that file list.
 - packaging/catalog/npc-appearances.css.json: the Use NPC / Enemy roster, one mesh per variant.
 - OFFICIAL_SHELLS below: the official shells' default meshes, as the game reports them at
   runtime (runtime/status.json, catalog.original_shell_choices). CSS discovers those live; this
@@ -22,15 +23,15 @@ many characters at once and no single look would be honest to list.
 
 Rebuild after a game patch that adds or moves character assets, then re-run the tests.
 """
-import json, re, sys
+import argparse, hashlib, json, re, sys
 from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FILE_LIST = ROOT / 'work/research/list/files.txt'
+FILE_LIST = ROOT / 'work/non-css-26073152/base-files.txt'
 ROSTER = ROOT / 'packaging/catalog/npc-appearances.css.json'
 OUTPUT = ROOT / 'packaging/catalog/replacement-targets.json'
-GAME_BUILD = 'CL93241'   # from the UE4SS usmap name; bump when files.txt is regenerated
+GAME_BUILD = '26073152'
 
 OFFICIAL_SHELLS = [
     '/Game/Sparta/Characters/Shells/Tiel/Art/Mesh/SK_Tiel',
@@ -255,7 +256,8 @@ def main() -> int:
     document = {
         'schema': 1,
         'generated': date.today().isoformat(),
-        'source': {'file_list': str(FILE_LIST.relative_to(ROOT)), 'game_build': GAME_BUILD},
+        'source': {'file_list': str(FILE_LIST.relative_to(ROOT)), 'game_build': GAME_BUILD,
+                   'file_list_sha256': hashlib.sha256(FILE_LIST.read_bytes()).hexdigest()},
         'id': 'CityHash64 of the lowercase UTF-16LE package path, 16 hex digits each, concatenated',
         'folders': {folder: ''.join(f'{pid:016x}' for pid in sorted(ids)) for folder, ids in folders.items()},
         'shared': dict(sorted(shared.items())),
@@ -269,4 +271,12 @@ def main() -> int:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--files', type=Path, required=True, help='Current game container file list')
+    parser.add_argument('--game-build', required=True, help='Steam build ID for that file list')
+    parser.add_argument('--output', type=Path, default=OUTPUT)
+    args = parser.parse_args()
+    FILE_LIST = args.files.absolute()
+    GAME_BUILD = args.game_build
+    OUTPUT = args.output.absolute()
     sys.exit(main())

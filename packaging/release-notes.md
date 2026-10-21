@@ -9,6 +9,8 @@
 
 - Apply the Travel value shown by each motion preset, including older saved looks.
 - Reduce redundant facial-animation updates.
+- Recognize Merrick replacement mods and refresh non-CSS character detection for the October 20 game update.
+- Assign native ghost materials to William and Ball Boy's second look in Use NPC / Enemy.
 
 #### Upgrading
 

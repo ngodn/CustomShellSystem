@@ -119,6 +119,12 @@ GROUPS = {'bosses': ('Bosses', 'Wear a boss appearance while keeping your shell 
           'enemies': ('Enemies', 'Wear an enemy the way the game draws it. Your shell keeps its abilities; the enemy keeps its default materials.'),
           'people': ('People', "Wear one of the game's people. Your shell keeps its abilities."),
           'harbinger': ('Harbinger forms', 'Wear a Harbinger form while you still have a shell.')}
+# These meshes rely on actor-owned ghost materials, which a mesh-only swap omits.
+# Sources: BP_BallBoy_Miniboss_Memory and William's BP_NPC_Ghost/BPC_GhostFX chain.
+MATERIAL_OVERRIDES = {
+    'sk_ballboy_02': {'0': '/Game/Sparta/Characters/Shared/Materials/MI_Ghost_CharacterHostile.MI_Ghost_CharacterHostile'},
+    'sk_willam': {str(i): '/Game/Sparta/Characters/Shared/Materials/MI_Ghost_Material_V5_Character.MI_Ghost_Material_V5_Character' for i in range(3)},
+}
 outfits = {g: {'id': f'css.npc.{g}', 'name': name, 'author': 'Cold Symmetry', 'description': desc,
                'compatibility': 'same_skeleton', 'shells': ['CharacterId.Player.Shell.Genessa'], 'variants': []}
            for g, (name, desc) in GROUPS.items()}
@@ -131,6 +137,8 @@ for rel, (group, name) in ROSTER.items():
     if len(found) != 1: missing.append((rel, found)); continue
     vid = re.sub(r'[^a-z0-9]+', '_', base).strip('_')
     outfits[group]['variants'].append({'id': vid, 'name': name, 'mesh': game_path(found[0])})
+    if vid in MATERIAL_OVERRIDES:
+        outfits[group]['variants'][-1]['materials'] = MATERIAL_OVERRIDES[vid]
     if vid in boss_scales:
         outfits[group]['variants'][-1]['mesh_scale'] = boss_scales[vid]
 doc = {'schema': 1, 'outfits': list(outfits.values())}

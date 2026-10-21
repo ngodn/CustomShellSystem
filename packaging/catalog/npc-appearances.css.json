@@ -60,7 +60,10 @@
     {
      "id": "sk_ballboy_02",
      "name": "Ball Boy, second look",
-     "mesh": "/Game/Sparta/Characters/Enemies/BallBoy/Art/Mesh/SK_BallBoy_02.SK_BallBoy_02"
+     "mesh": "/Game/Sparta/Characters/Enemies/BallBoy/Art/Mesh/SK_BallBoy_02.SK_BallBoy_02",
+     "materials": {
+      "0": "/Game/Sparta/Characters/Shared/Materials/MI_Ghost_CharacterHostile.MI_Ghost_CharacterHostile"
+     }
     },
     {
      "id": "sk_ballistahead",
@@ -362,7 +365,12 @@
     {
      "id": "sk_willam",
      "name": "William",
-     "mesh": "/Game/Sparta/Characters/NPCs/William/Art/Mesh/SK_Willam.SK_Willam"
+     "mesh": "/Game/Sparta/Characters/NPCs/William/Art/Mesh/SK_Willam.SK_Willam",
+     "materials": {
+      "0": "/Game/Sparta/Characters/Shared/Materials/MI_Ghost_Material_V5_Character.MI_Ghost_Material_V5_Character",
+      "1": "/Game/Sparta/Characters/Shared/Materials/MI_Ghost_Material_V5_Character.MI_Ghost_Material_V5_Character",
+      "2": "/Game/Sparta/Characters/Shared/Materials/MI_Ghost_Material_V5_Character.MI_Ghost_Material_V5_Character"
+     }
     },
     {
      "id": "sk_hilga",

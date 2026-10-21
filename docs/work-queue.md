@@ -1,5 +1,33 @@
 # Current work queue
 
+## October 22: non-CSS and native appearance compatibility
+
+Extend the updated-game audit to every installed non-CSS container, all official
+shell appearances and the NPC/enemy/boss roster. Include the user-supplied
+`/home/eins0fx/Downloads/Phoenix Proxima 2 P 531 1 2026-09-25T11-55Z 3CRRmKTmx.rar`.
+Check recognition, asset dependencies, shaders, shared-asset conflicts and
+appearance support. Record exact tested coverage instead of claiming every
+third-party mod works. Preserve the separate CW frame-rate and body-feel tasks.
+No desktop focus changes or OS input injection while the user is working.
+Evidence: `work/non-css-26073152/`.
+
+The user confirmed 1.0.2 is unpublished. Fold the corrected recognition table
+into that version and withdraw the earlier local ZIP. The table now covers 52
+folders and 9,117 packages, including Merrick. A production scanner/synthesis
+regression fails with the old table and passes with the correction; 30 host
+suites pass. All 84 roster/default-shell meshes pass cooked dependency checks.
+The additional section-material check found empty slots on William and Ball
+Boy's second look. The catalog now assigns their native ghost materials; all 74
+roster variants pass active-slot coverage and both material shader checks pass.
+Visual acceptance of those two catalog corrections is still pending.
+The three installed non-CSS containers pass their 22 package roots and 16,648
+transitive dependencies. Phoenix is recognized as Proxima, but has 13 missing
+material dependencies used by 450 triangles. Those packages are absent from both
+retained old and current game inventories. Do not call Phoenix fully compatible
+or invent replacement materials. It remains uninstalled. Live acceptance and
+the previous FPS/physics tasks remain open. See
+[expanded compatibility audit](research/2026-10-22-non-css-compatibility.md).
+
 ## October 22: full versioned releases
 
 The user corrected the delivery format: ship CSS 1.0.2 and each affected mod's

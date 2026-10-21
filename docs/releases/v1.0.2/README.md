@@ -37,3 +37,8 @@ metadata separately. Do not present those checks as exhaustive gameplay testing
 or as resolution of the remaining physics-feel and CW frame-rate reports.
 
 Nothing in this delivery publishes a release, sends a message or uploads media.
+
+The unpublished CSS archive also incorporates the expanded non-CSS audit:
+updated recognition including Merrick, plus native ghost material assignments
+for William and Ball Boy's second look. The latter still need final in-game
+visual acceptance. [Coverage and Phoenix findings](../../research/2026-10-22-non-css-compatibility.md).

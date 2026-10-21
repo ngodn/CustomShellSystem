@@ -42,6 +42,29 @@ static Outfit roster(const std::string& id,const std::vector<std::pair<std::stri
     return outfit;
 }
 int main(int argc,char** argv) {
+    if(argc==3 && std::string(argv[1])=="--shipped-catalog") {
+        const auto root=fs::temp_directory_path()/("css-merrick-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        try {
+            fs::create_directories(root);
+            const auto table=ReplacementTable::load(argv[2]);
+            // The current Merrick mesh was absent from the old recognition table.
+            write_utoc(root/"Merrick_p.utoc",{{0xbe860ceed5c00a20,1}});
+            std::ofstream(root/"Merrick_p.pak")<<"replacement fixture";
+            Catalog catalog;
+            catalog.replacements=scan_replacements({root/"Merrick_p.pak"},table,nullptr);
+            catalog.replacement_folders=table.folders;
+            catalog.outfits.push_back(roster("css.npc.people",{{"sk_shopkeeper_mh","/Game/Sparta/Characters/NPCs/Shopkeeper/Art/Mesh/MH/SK_Shopkeeper_MH.SK_Shopkeeper_MH"}}));
+            rebuild_replacement_outfits(catalog);
+            const auto found=std::find_if(catalog.outfits.begin(),catalog.outfits.end(),[](const Outfit& outfit){return outfit.id=="css.mod.merrick_p";});
+            expect(found!=catalog.outfits.end() && found->variants.size()==1 && found->variants[0].id=="sk_shopkeeper_mh","Merrick replacement missing from Use Non-CSS Mod");
+            fs::remove_all(root);
+            std::cout<<"Shipped recognition catalog passed\n";
+            return 0;
+        } catch(const std::exception& error) {
+            fs::remove_all(root);
+            std::cerr<<error.what()<<'\n'; return 1;
+        }
+    }
     if(argc>=3) {
         try {
             const auto table=ReplacementTable::load(argv[1]);
