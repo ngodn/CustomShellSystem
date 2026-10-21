@@ -28,6 +28,14 @@ or invent replacement materials. It remains uninstalled. Live acceptance and
 the previous FPS/physics tasks remain open. See
 [expanded compatibility audit](research/2026-10-22-non-css-compatibility.md).
 
+Completed local refresh: annotated `v1.0.2` now points to `3f8ebc3`, with
+ZIP SHA-256 `bfff94b9c5ca27a96611d10c89111fe549e93ec56784cc4d167a0baf588f31c9`.
+The old ZIP and tag target are preserved for rollback. The current ZIP and
+BBCode are under `dist/v1.0.2`; both catalog files and release metadata are
+installed and match it. Runtime DLLs are unchanged. The game remains closed,
+CSS state is byte-identical, and Phoenix is not installed. Receipt:
+`work/non-css-26073152/install/receipt.json`.
+
 ## October 22: full versioned releases
 
 The user corrected the delivery format: ship CSS 1.0.2 and each affected mod's

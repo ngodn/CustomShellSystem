@@ -1,12 +1,12 @@
 {
   "game_build": "26073152",
-  "source_commit": "279d94101132d9277bfc0c6cec14d2e845beddf1",
+  "source_commit": "3f8ebc300eb8922c81698ff1d0b57abba54dc543",
   "verification": {
     "packages": 2105,
     "materials": 620,
     "repaired_materials": 377,
     "affected_outfits": 17,
-    "native_tests_passed": 29,
+    "native_tests_passed": 30,
     "cssx_tests_passed": 11,
     "zip_payloads_verified": true,
     "new_full_packages_installed": true,
@@ -18,15 +18,17 @@
   "remaining": [
     "Subjective body-motion feel and matched motion traces",
     "Genessa simulated skirt following additional morphs",
-    "Controlled Commander White frame-rate comparison"
+    "Controlled Commander White frame-rate comparison",
+    "Visual acceptance of native ghost materials and the refreshed CSS catalog",
+    "Phoenix archive missing 13 material packages; intact archive or source assets needed"
   ],
   "archives": [
     {
       "name": "CSS",
       "version": "1.0.2",
       "archive": "v1.0.2/MSII-CSS-v1.0.2.zip",
-      "sha256": "ad461e008a9ef536f1f5b453d8dc8fa8315be1bcf6a584e03d6ee4b4ef9e948f",
-      "bytes": 3169630
+      "sha256": "bfff94b9c5ca27a96611d10c89111fe549e93ec56784cc4d167a0baf588f31c9",
+      "bytes": 3171992
     },
     {
       "name": "BH Proxima",
@@ -171,5 +173,21 @@
       "sha256": "78d0e23a23df32cfc4b1c10163f1e48da63a6c6572e653a455f76060e6cbe2e2",
       "bytes": 187518
     }
-  ]
+  ],
+  "expanded_compatibility": {
+    "native_meshes": 84,
+    "native_dependency_packages": 1548,
+    "native_roster_material_slots_passed": 74,
+    "installed_non_css_containers": 3,
+    "installed_non_css_root_packages": 22,
+    "installed_non_css_dependency_packages": 16648,
+    "recognition_folders": 52,
+    "recognition_packages": 9117,
+    "phoenix_recognized": true,
+    "phoenix_shader_audit_passed": true,
+    "phoenix_missing_material_packages": 13,
+    "phoenix_affected_triangles": 450,
+    "phoenix_installed": false,
+    "native_ghost_visual_acceptance_pending": true
+  }
 }
