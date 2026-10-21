@@ -633,7 +633,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             }
         } else if(row_==2) {
             detail("Use Original Shell",original_worn?originals->variants[original_index].name:"Appearance only",
-                "Wear an official shell's appearance. Choose shade lists this save's unlocked shades. Your current shell keeps its abilities and progress.");
+                "Wear an official shell's appearance. All shades are listed; locked shades ask for confirmation. Your current shell keeps its abilities and unlock progress.");
             if(!originals) note("Official shell appearances are unavailable in this session.");
             else {
                 std::vector<Choice> choices;
@@ -1530,6 +1530,14 @@ void InventoryUI::animate(uint64_t now) {
 Json InventoryUI::dispatch(Json action,const State& state) {
     if(action.is_null()) return {};
     auto name=action.value("action","");
+    if(catalog_ && appearance_) {
+        const auto* shade=shade_command_variant(action,*catalog_,state,appearance_->shell);
+        if(shade_confirmation_needed(shade,false,action)) {
+            bool unlocked=false,known=true;
+            try {unlocked=original_shade_available(controller_.Get(),*shade);} catch(...) {known=false;}
+            if(!unlocked) return dispatch(shade_confirmation(action,*shade,known),state);
+        }
+    }
     if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,4); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; physics_modal_control_.clear(); if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
     if(name=="ui_press") { auto result=press(action.value("binding",""),state); return result?*result:Json{}; }
     if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); physics_modal_control_.clear(); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
@@ -1562,26 +1570,28 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         return {};
     }
     if(name=="ui_confirm") {
-        confirm_form_pawn_=nullptr;
-        if(action.at("target").value("action",std::string{})=="genessa_form") {
-            confirm_form_pawn_=inventory_object(controller_.Get(),L"Pawn");
-            if(!confirm_form_pawn_.Get()) throw std::runtime_error("No player for Genessa form confirmation");
+        confirm_pawn_=nullptr;
+        if(action.at("target").value("action",std::string{})=="genessa_form" ||
+           action.at("target").value("allow_locked_shade",false)) {
+            confirm_pawn_=inventory_object(controller_.Get(),L"Pawn");
+            if(!confirm_pawn_.Get()) throw std::runtime_error("No player for appearance confirmation");
         }
         confirm_action_={
             {"action",action.at("target")},
             {"title",action.value("title",std::string("Confirm action"))},
+            {"primary",action.value("primary",std::string("Confirm"))},
             {"message",action.value("message",std::string("Are you sure you want to proceed?"))}
         };
         dirty_=true; return {};
     }
-    if(name=="ui_confirm_cancel") { confirm_action_=nullptr; confirm_form_pawn_=nullptr; dirty_=true; return {}; }
+    if(name=="ui_confirm_cancel") { confirm_action_=nullptr; confirm_pawn_=nullptr; dirty_=true; return {}; }
     if(name=="ui_confirm_proceed") {
         auto target=confirm_action_.value("action",Json{});
         confirm_action_=nullptr; dirty_=true;
-        auto* confirmed_pawn=confirm_form_pawn_.Get();confirm_form_pawn_=nullptr;
-        if(target.value("action",std::string{})=="genessa_form" &&
+        auto* confirmed_pawn=confirm_pawn_.Get();confirm_pawn_=nullptr;
+        if((target.value("action",std::string{})=="genessa_form" || target.value("allow_locked_shade",false)) &&
             (!confirmed_pawn || confirmed_pawn!=inventory_object(controller_.Get(),L"Pawn")))
-            throw std::runtime_error("Genessa form switch cancelled: player changed during confirmation");
+            throw std::runtime_error("Appearance change cancelled: the player changed during confirmation. Please choose again.");
         return dispatch(target,state);
     }
     if(name=="ui_browse_shells" && catalog_) {
@@ -1630,16 +1640,12 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         const Variant* current=nullptr;
         for(const auto& variant:originals->variants) if(variant.id==selected->second.variant) current=&variant;
         if(!current) return {};
-        Json choices=Json::array();
+        const auto choices=shade_picker_choices(*originals,*current,[&](const Variant& shade)->std::optional<bool> {
+            try {return original_shade_available(controller_.Get(),shade);} catch(...) {return std::nullopt;}
+        });
         size_t current_index=0;
-        for(const auto& shade:originals->variants) {
-            if(shade.original_shell!=current->original_shell) continue;
-            bool available=false;
-            try {available=original_shade_available(controller_.Get(),shade);} catch(...) {}
-            if(!available) continue;
-            if(shade.id==current->id) current_index=choices.size();
-            choices.push_back({{"id",originals->id+"/"+shade.id},{"label",shade.original_shade}});
-        }
+        for(size_t i=0;i<choices.size();++i)
+            if(choices[i].at("id")==originals->id+"/"+current->id) current_index=i;
         native_options_.reset(choices);
         native_options_.selected=current_index;
         native_picker_=true;native_picker_title_="Choose shade";
@@ -1713,11 +1719,11 @@ Json InventoryUI::dispatch(Json action,const State& state) {
             const std::string outfit_id=val.get<std::string>();
             std::string variant_id;
             if(catalog_) for(const auto& o:catalog_->outfits) if(o.id==outfit_id && !o.variants.empty()) { variant_id=o.variants.front().id; break; }
-            return {{"action","select"},{"outfit",outfit_id},{"variant",variant_id}};
+            return dispatch({{"action","select"},{"outfit",outfit_id},{"variant",variant_id}},state);
         } else if(native_picker_kind_=="npc") {
             const auto id=val.get<std::string>(); const auto slash=id.find('/');
             if(slash==std::string::npos) return {};
-            return {{"action","select"},{"outfit",id.substr(0,slash)},{"variant",id.substr(slash+1)}};
+            return dispatch({{"action","select"},{"outfit",id.substr(0,slash)},{"variant",id.substr(slash+1)}},state);
         } else if(native_picker_kind_=="choice") {
             int idx=val.is_number()?val.get<int>():std::stoi(val.get<std::string>());
             return {{"action","control"},{"control",native_picker_target_},{"channel",0},{"value",double(idx)}};

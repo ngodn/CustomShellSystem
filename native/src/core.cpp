@@ -1,6 +1,7 @@
 #include "api.hpp"
 #include "cssx_service.h"
 #include "data.hpp"
+#include "shade_access.hpp"
 #include "physics_presets.hpp"
 #include "engine.hpp"
 #include "recovery.hpp"
@@ -546,7 +547,15 @@ struct Core {
         custom.expression=id;
         return custom;
     }
+    void require_shade_confirmation(const Json& command) {
+        const auto* variant=shade_command_variant(command,catalog,state,appearance.shell);
+        if(!shade_confirmation_needed(variant,false,command)) return;
+        bool unlocked=false;
+        try {unlocked=original_shade_available(appearance.player(current_engine),*variant);} catch(...) {}
+        if(!unlocked) throw std::runtime_error("Confirm wearing this locked shade before applying it.");
+    }
     Json customize_api(const Json& command) {
+        require_shade_confirmation(command);
         const auto action=command.at("action").get<std::string>();
         if(action=="performances") {
             const auto skeleton=appearance.animation_skeleton();
@@ -606,8 +615,6 @@ struct Core {
             const auto variant=command.at("variant").get<std::string>();
             const auto* requested_variant=catalog.find(outfit,variant);
             if(!requested_variant) throw std::runtime_error("Outfit or variant is not installed");
-            if(!original_shade_available(appearance.player(current_engine),*requested_variant))
-                throw std::runtime_error("This shade is not unlocked in the current save.");
             if(!catalog.compatible(outfit,appearance.shell)) throw std::runtime_error("This outfit does not support the current shell: "+appearance.shell);
             std::optional<Customization> custom;
             if(command.contains("customize")) {
@@ -688,6 +695,7 @@ struct Core {
     }
     void save() { atomic_json(root / "state/state.json", state.json()); dirty = false; status_dirty = true; }
     void request(const Json& command) {
+        require_shade_confirmation(command);
         const auto action = command.at("action").get<std::string>();
 #ifdef CSS_INVENTORY_DEV
         if(action=="frame_profile") {
@@ -1009,8 +1017,6 @@ struct Core {
             const auto variant = command.at("variant").get<std::string>();
             const auto* requested_variant=catalog.find(outfit,variant);
             if(!requested_variant) throw std::runtime_error("Outfit or variant is not installed");
-            if(!original_shade_available(appearance.player(current_engine),*requested_variant))
-                throw std::runtime_error("This shade is not unlocked in the current save.");
             selected_outfit = outfit; selected_variant = variant; apply_pending = true;
             pending_custom.reset(); custom_only=false;
         }
@@ -1408,11 +1414,6 @@ struct Core {
                 if (!requested.outfit.empty()) {
                     if(pending_custom) { requested.custom=*pending_custom; pending_custom.reset(); }
                     auto* variant = catalog.find(requested.outfit, requested.variant);
-                    if(variant && !original_shade_available(appearance.player(engine),*variant)) {
-                        requested.variant=variant->original_shell;
-                        variant=catalog.find(requested.outfit,requested.variant);
-                        report("This save has not unlocked the selected shade. Using the shell's original appearance.");
-                    }
                     if (!variant || !catalog.compatible(requested.outfit, shell)) {
                         // A stale saved look whose package or variant is no longer installed.
                         // Show this shell's default quietly and settle, instead of failing and

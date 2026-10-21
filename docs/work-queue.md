@@ -1,6 +1,6 @@
 # Current work queue
 
-## Queued: locked native shade confirmation
+## October 22: locked native shade confirmation
 
 User request: show all supported native shades, including locked ones. Selecting
 a locked shade should offer a confirmation that CSS permits the appearance but
@@ -8,6 +8,16 @@ encourages earning the shade through normal play. Keep native unlock/save state
 untouched and handle the shade becoming legitimately unlocked while worn.
 Finish the active new-character roster audit first, then implement and verify
 this flow in the unpublished CSS 1.0.2 release.
+
+Implementation and offline checks are complete. All shades stay visible;
+manual selection and profile recall confirm locked/unknown access. The saved
+CSS appearance is retained through automatic reapplication; native unlock
+maps remain untouched. Normal unlock status is queried again on selection or
+list opening, and does not change the appearance ID. The Windows build and
+31 host suites pass. In-game dialog layout and an actual unlock objective
+while wearing the shade remain pending. Evidence:
+`work/locked-shades-26073152/`. Refresh the full CSS ZIP with this change and
+the completed new-character roster work, preserving CSS 1.0.2.
 
 ## October 22: new NPC, enemy and boss appearances
 

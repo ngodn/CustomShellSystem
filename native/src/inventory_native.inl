@@ -577,7 +577,8 @@ void InventoryUI::native_finish(NativeStack& stack) {
 void InventoryUI::native_dialog() {
     const auto title=confirm_action_.value("title",std::string("Confirm"));
     const auto text=confirm_action_.value("message",std::string("Are you sure?"));
-    const auto key=title+"\n"+text;
+    const auto primary=confirm_action_.value("primary",std::string("Confirm"));
+    const auto key=title+"\n"+text+"\n"+primary;
     auto* dialog=dialog_.Get();
     if(!dialog || dialog_shown_!=key) {
         native_dialog_close();
@@ -585,7 +586,7 @@ void InventoryUI::native_dialog() {
         dialog=inventory_create(pc,native_class(native_dialog_class));
         dialog_=dialog; dialog_shown_=key; dialog_focus_=0; dialog_focus_shown_=-1;
         native_text_property(dialog,L"PromptText",title);
-        native_text_property(dialog,L"PrimaryOptionText","Confirm");
+        native_text_property(dialog,L"PrimaryOptionText",primary);
         native_text_property(dialog,L"SecondaryOptionText","Cancel");
         native_text_property(dialog,L"OptionalDescription",text);
         invoke(dialog,L"InitData");
@@ -618,7 +619,7 @@ void InventoryUI::native_dialog() {
             invoke(name_slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});
             native_padding(name_slot,Margin{12,0,0,0});
         };
-        glyph_label(dialog_primary_.Get(),"Confirm","accept",3);
+        glyph_label(dialog_primary_.Get(),primary,"accept",3);
         glyph_label(dialog_secondary_.Get(),"Cancel","close",5);
         Call all(find(L"/Script/UMG.Default__WidgetBlueprintLibrary"),L"GetAllWidgetsOfClass",4);
         all.set(L"WorldContextObject",pc); all.set(L"WidgetClass",native_class(native_listener_class)); all.set(L"TopLevelOnly",false); all.run();

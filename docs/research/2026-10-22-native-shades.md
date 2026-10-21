@@ -3,7 +3,8 @@
 The October update adds eight Regal shades. CSS's old Alternative/Obsidian
 allowlist rejected their gameplay tag. CSS 1.0.2 now accepts safe leaf names
 under the native shared-shade namespace, retaining the existing Alternative
-ID (`altskin`), localized item names and native `IsSkinUnlocked` check.
+ID (`altskin`) and localized item names. The native `IsSkinUnlocked` query
+now supplies the lock label and confirmation, rather than hiding the shade.
 
 | Shell | New shade |
 | --- | --- |
@@ -17,8 +18,8 @@ ID (`altskin`), localized item names and native `IsSkinUnlocked` check.
 | Tiel | Red Kingsnake |
 
 The current character data supplies 24 shades across eight shells. Together
-with the ten default shells, that gives 34 appearance definitions before
-native unlock filtering. Harros and Solomon have no populated shade map;
+with the ten default shells, that gives 34 appearance definitions. All are
+listed regardless of native unlock status. Harros and Solomon have no populated shade map;
 an unused Harros Obsidian item definition alone does not enable a shade.
 
 ## Genessa companion
@@ -61,3 +62,39 @@ Evidence is retained under `work/shades-26073152/`:
 Final in-game rendering and locked/unlocked behavior still need acceptance.
 The game has been kept closed to preserve desktop focus. These checks do not
 resolve the separate Commander White FPS or body-motion tuning reports.
+
+## Locked shade confirmation
+
+The user requested appearance access before normal unlock progression. The
+shade list includes locked entries with `(Locked)` appended. Selecting one
+opens the existing native confirmation dialog with **Wear anyway** and
+**Cancel**. The message explains that this is appearance-only and encourages
+earning the shade through normal play. A failed unlock query keeps the shade
+visible with an unknown-status label and a corresponding confirmation.
+
+Profile recall checks its resolved shade before changing any CSS settings,
+with **Load anyway** as the confirmation action. If the player object changes
+while either confirmation is open, the pending action is cancelled. Direct
+`select`/`wear` requests and profile commands require `allow_locked_shade: true`
+when the native query says locked or cannot be read.
+
+The accepted choice is saved only as the existing CSS outfit/variant selection.
+Automatic reapplication does not recheck the native lock or replace the choice
+with the default shade. This covers reloads, shell transitions and material
+resets through CSS's existing recovery path. Reopening the shade list queries
+the current save again; a normal unlock removes the locked label and future
+confirmation without changing the selected variant ID.
+
+The new code does not call native skin-equipping or unlock-writing functions.
+The retained `IsSkinUnlocked` query is Blueprint-pure; decoded bytecode reads
+the current player's save maps and native requirement checks. CSS leaves those
+functions and the save data untouched. Existing quest/teleport/traversal guards
+continue to defer mesh/material recovery during those transitions.
+
+`work/locked-shades-26073152/` retains the Windows build, 31 passing host suites,
+and decoded native unlock query. The production helper tests cover locked and
+unknown list entries, confirmation, profile validation before mutation,
+CSS-state round trips and the locked-to-unlocked transition. These are offline
+checks. The native dialog layout, moving new characters and completing an
+actual shade-unlock objective while wearing that shade still need in-game
+acceptance; the game remains closed to preserve the user's desktop focus.

@@ -52,3 +52,12 @@ CSS also recognizes the eight new Regal shades. Genessa Skin 1.0.16 includes
 a refreshed seal-position companion that preserves the updated native shade
 map. The 24 native shades pass material-slot and shader checks; final in-game
 visual and unlock acceptance remains pending. [Shade audit](../../research/2026-10-22-native-shades.md).
+
+The roster now has 78 appearances, including the new Tarsus, Halberd Bro,
+Twin Sword Bro and Laughing Flayer. Non-CSS recognition includes their folders.
+[New character coverage](../../research/2026-10-22-new-native-characters.md).
+
+Locked shades stay visible. Choosing one or loading a profile that uses one
+asks for confirmation; accepted choices persist in CSS settings without
+granting a native unlock. Normal unlock progression remains under the game's
+control. Live confirmation-dialog and mission-unlock acceptance is pending.

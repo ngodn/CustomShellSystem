@@ -411,7 +411,7 @@ class InventoryUI {
     float camera_fov_before_=0;
     std::array<double,3> camera_actor_location_before_{};
     Json confirm_action_;
-    WeakObject confirm_form_pawn_;
+    WeakObject confirm_pawn_;
     bool native_picker_=false;
     std::string native_picker_title_, native_picker_kind_, native_picker_target_;
     std::string physics_modal_control_;
