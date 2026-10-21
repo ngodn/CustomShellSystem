@@ -1,0 +1,48 @@
+{
+  "game_build": "26073152",
+  "evidence": "docs/research/2026-10-22-new-native-characters.md",
+  "variants": [
+    {
+      "group": "bosses",
+      "skeleton": "/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton",
+      "variant": {
+        "id": "sk_tarsus",
+        "name": "Tarsus, the Frostbound Martyr",
+        "mesh": "/Game/Sparta/Characters/Bosses/Tarsus/Art/Mesh/SK_Tarsus.SK_Tarsus"
+      }
+    },
+    {
+      "group": "enemies",
+      "skeleton": "/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton",
+      "variant": {
+        "id": "sk_halberdbro",
+        "name": "Halberd Bro",
+        "mesh": "/Game/Sparta/Characters/Enemies/HalberdBro/Art/Mesh/SK_HalberdBro.SK_HalberdBro"
+      }
+    },
+    {
+      "group": "enemies",
+      "skeleton": "/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton",
+      "variant": {
+        "id": "sk_twinswordbro",
+        "name": "Twin Sword Bro",
+        "mesh": "/Game/Sparta/Characters/Enemies/TwinSwordBro/Art/Mesh/SK_TwinSwordBro.SK_TwinSwordBro"
+      }
+    },
+    {
+      "group": "enemies",
+      "skeleton": "/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton",
+      "variant": {
+        "id": "sk_sicario_killer",
+        "name": "Laughing Flayer",
+        "mesh": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/SK_Sicario.SK_Sicario",
+        "materials": {
+          "0": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/Textures/MI_SicarioBase_LimbsWeapon_Dissolve.MI_SicarioBase_LimbsWeapon_Dissolve",
+          "1": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/Textures/MI_SicarioBase_UpperArmor_Dissolve.MI_SicarioBase_UpperArmor_Dissolve",
+          "2": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/Textures/MI_SicarioBase_Body_Dissolve.MI_SicarioBase_Body_Dissolve",
+          "3": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/Textures/MI_SicarioBase_Skirt_Dissolve.MI_SicarioBase_Skirt_Dissolve"
+        }
+      }
+    }
+  ]
+}

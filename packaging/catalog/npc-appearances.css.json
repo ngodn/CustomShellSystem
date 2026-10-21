@@ -34,6 +34,11 @@
      "name": "Sir Isaac, the Scholar-Prince",
      "mesh": "/Game/CSS/eins0fx/Bosses/mothknight/Mesh__________/SK_MothKnight.SK_MothKnight",
      "mesh_scale": 0.6523
+    },
+    {
+     "id": "sk_tarsus",
+     "name": "Tarsus, the Frostbound Martyr",
+     "mesh": "/Game/Sparta/Characters/Bosses/Tarsus/Art/Mesh/SK_Tarsus.SK_Tarsus"
     }
    ]
   },
@@ -304,6 +309,27 @@
      "id": "sk_offspring",
      "name": "Offspring",
      "mesh": "/Game/Sparta/Characters/Bosses/Offspring/Art/Mesh/SK_Offspring.SK_Offspring"
+    },
+    {
+     "id": "sk_halberdbro",
+     "name": "Halberd Bro",
+     "mesh": "/Game/Sparta/Characters/Enemies/HalberdBro/Art/Mesh/SK_HalberdBro.SK_HalberdBro"
+    },
+    {
+     "id": "sk_twinswordbro",
+     "name": "Twin Sword Bro",
+     "mesh": "/Game/Sparta/Characters/Enemies/TwinSwordBro/Art/Mesh/SK_TwinSwordBro.SK_TwinSwordBro"
+    },
+    {
+     "id": "sk_sicario_killer",
+     "name": "Laughing Flayer",
+     "mesh": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/SK_Sicario.SK_Sicario",
+     "materials": {
+      "0": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/Textures/MI_SicarioBase_LimbsWeapon_Dissolve.MI_SicarioBase_LimbsWeapon_Dissolve",
+      "1": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/Textures/MI_SicarioBase_UpperArmor_Dissolve.MI_SicarioBase_UpperArmor_Dissolve",
+      "2": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/Textures/MI_SicarioBase_Body_Dissolve.MI_SicarioBase_Body_Dissolve",
+      "3": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/Textures/MI_SicarioBase_Skirt_Dissolve.MI_SicarioBase_Skirt_Dissolve"
+     }
     }
    ]
   },

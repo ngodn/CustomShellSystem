@@ -1,5 +1,33 @@
 # Current work queue
 
+## Queued: locked native shade confirmation
+
+User request: show all supported native shades, including locked ones. Selecting
+a locked shade should offer a confirmation that CSS permits the appearance but
+encourages earning the shade through normal play. Keep native unlock/save state
+untouched and handle the shade becoming legitimately unlocked while worn.
+Finish the active new-character roster audit first, then implement and verify
+this flow in the unpublished CSS 1.0.2 release.
+
+## October 22: new NPC, enemy and boss appearances
+
+Compare the updated base inventory with the retained pre-update inventory,
+including newly added character meshes and native appearance variants. Check
+the rig, bind pose, materials and native assembly against CSS's supported
+animation paths before adding entries. The three new mesh packages discovered
+so far are Tarsus (separate from the older MS1 adaptation), HalberdBro and
+TwinSwordBro. Evidence: `work/npc-update-26073152/`. Preserve the user's desktop
+focus and the separate pending FPS, motion-feel and cloth work.
+
+Roster work is verified: three new human-rig meshes and Laughing Flayer's
+native material variant bring the roster to 78 entries. All 4,066 added
+package headers were indexed; no further NPC body meshes were found. All
+78 variants pass material-slot checks, 77 meshes pass dependency checks, and
+31 host suites pass. Recognition now covers 55 folders and 9,366 packages.
+Final in-game movement and appearance acceptance remains pending. The new
+entries will ship with the queued locked-shade flow in the refreshed CSS
+1.0.2 ZIP. [Coverage and exclusions](research/2026-10-22-new-native-characters.md).
+
 ## October 22: updated native shell shades
 
 Audit the updated game's shades and preserve native unlock checks. Build

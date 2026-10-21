@@ -12,6 +12,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 
+if (args.Length == 5 && args[0] == "--export-index") {
+    ExportIndex.Run(args[1..]);
+    return;
+}
+
 if (args.Length == 5 && args[0] == "--socket-slices") {
     SocketAdjustmentSlices.Run(args[1..]);
     return;

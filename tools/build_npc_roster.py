@@ -141,6 +141,18 @@ for rel, (group, name) in ROSTER.items():
         outfits[group]['variants'][-1]['materials'] = MATERIAL_OVERRIDES[vid]
     if vid in boss_scales:
         outfits[group]['variants'][-1]['mesh_scale'] = boss_scales[vid]
+additions = json.loads((ROOT / 'packaging/npc-roster-additions.json').read_text())
+known_ids = {v['id'] for outfit in outfits.values() for v in outfit['variants']}
+for row in additions['variants']:
+    variant = row['variant']
+    if row['skeleton'] != '/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton':
+        raise ValueError('Updated roster entry needs a separate rig adaptation: ' + variant['id'])
+    if variant['id'] in known_ids:
+        raise ValueError('Duplicate roster entry: ' + variant['id'])
+    known_ids.add(variant['id'])
+    outfits[row['group']]['variants'].append(variant)
+if missing:
+    raise ValueError('Roster meshes missing from skeleton inventory: ' + repr(missing))
 doc = {'schema': 1, 'outfits': list(outfits.values())}
 out = ROOT / 'packaging/catalog/npc-appearances.css.json'
 out.parent.mkdir(parents=True, exist_ok=True)

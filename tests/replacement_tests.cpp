@@ -47,16 +47,28 @@ int main(int argc,char** argv) {
         try {
             fs::create_directories(root);
             const auto table=ReplacementTable::load(argv[2]);
-            // The current Merrick mesh was absent from the old recognition table.
-            write_utoc(root/"Merrick_p.utoc",{{0xbe860ceed5c00a20,1}});
-            std::ofstream(root/"Merrick_p.pak")<<"replacement fixture";
-            Catalog catalog;
-            catalog.replacements=scan_replacements({root/"Merrick_p.pak"},table,nullptr);
-            catalog.replacement_folders=table.folders;
-            catalog.outfits.push_back(roster("css.npc.people",{{"sk_shopkeeper_mh","/Game/Sparta/Characters/NPCs/Shopkeeper/Art/Mesh/MH/SK_Shopkeeper_MH.SK_Shopkeeper_MH"}}));
-            rebuild_replacement_outfits(catalog);
-            const auto found=std::find_if(catalog.outfits.begin(),catalog.outfits.end(),[](const Outfit& outfit){return outfit.id=="css.mod.merrick_p";});
-            expect(found!=catalog.outfits.end() && found->variants.size()==1 && found->variants[0].id=="sk_shopkeeper_mh","Merrick replacement missing from Use Non-CSS Mod");
+            const auto check_replacement=[&](const char* stem,std::uint64_t package,
+                                            const char* group,const char* id,const char* mesh) {
+                const auto filename=std::string(stem)+"_p";
+                write_utoc(root/(filename+".utoc"),{{package,1}});
+                std::ofstream(root/(filename+".pak"))<<"replacement fixture";
+                Catalog catalog;
+                catalog.replacements=scan_replacements({root/(filename+".pak")},table,nullptr);
+                catalog.replacement_folders=table.folders;
+                catalog.outfits.push_back(roster(group,{{id,mesh}}));
+                rebuild_replacement_outfits(catalog);
+                const auto found=std::find_if(catalog.outfits.begin(),catalog.outfits.end(),[&](const Outfit& outfit){return outfit.id=="css.mod."+filename;});
+                expect(found!=catalog.outfits.end() && found->variants.size()==1 && found->variants[0].id==id,
+                       "Native replacement missing from Use Non-CSS Mod");
+            };
+            check_replacement("merrick",0xbe860ceed5c00a20,"css.npc.people","sk_shopkeeper_mh",
+                "/Game/Sparta/Characters/NPCs/Shopkeeper/Art/Mesh/MH/SK_Shopkeeper_MH.SK_Shopkeeper_MH");
+            check_replacement("tarsus",13676292771240956738ULL,"css.npc.bosses","sk_tarsus",
+                "/Game/Sparta/Characters/Bosses/Tarsus/Art/Mesh/SK_Tarsus.SK_Tarsus");
+            check_replacement("halberdbro",17673751982575692780ULL,"css.npc.enemies","sk_halberdbro",
+                "/Game/Sparta/Characters/Enemies/HalberdBro/Art/Mesh/SK_HalberdBro.SK_HalberdBro");
+            check_replacement("twinswordbro",8194683375113157207ULL,"css.npc.enemies","sk_twinswordbro",
+                "/Game/Sparta/Characters/Enemies/TwinSwordBro/Art/Mesh/SK_TwinSwordBro.SK_TwinSwordBro");
             fs::remove_all(root);
             std::cout<<"Shipped recognition catalog passed\n";
             return 0;
