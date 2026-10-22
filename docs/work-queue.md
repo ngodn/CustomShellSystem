@@ -1,5 +1,22 @@
 # Current work queue
 
+## October 22: reported UE4SS startup allocator crash, queued
+
+SamFisher91 reports startup failure after the game update, with an access
+violation reading `0x00000000000d0003` in `FMallocBinned2::Free()` followed by
+UE4SS. Removing UE4SS permits startup. User requests a later investigation and
+a fix or prevention if supported by evidence; this does not interrupt existing
+release work. Exact reporter runtime, configuration, full stack and dump are
+missing. Removing the loader also disables its mods, so attribution is open.
+
+Initial read-only triage finds the installed runtime/proxy/settings match the
+September NO AOB package and no matching signature in 62 local crash contexts.
+An older StaticConstructObject override remains installed and was used during
+the successful local startup. Preserve that distinction in comparisons.
+No reproduced failure, runtime replacement or release bump. Continue with a
+failed-launch log/dump and isolated loader-versus-mod startup tests on the
+affected configuration. [Evidence and next steps](research/2026-10-22-startup-crash-triage.md).
+
 ## October 22: sidearm audit and reusable game input, complete
 
 The vague report "All sidearms weapons have bugs" is not reproduced on the
