@@ -5,6 +5,10 @@ outfit, CSS version or reproduction. The installed CSS 1.0.2 passes the checks
 below. This does not establish what happened on the reporter's installation,
 and no new release or runtime fix follows from this audit.
 
+Later supplied screenshots identify a raised support arm on Eve Skin Suit.
+The [focused visual follow-up](2026-10-22-reporter-visual-check.md) checks that
+symptom separately. Draw/fire/stow success below does not prove correct hand pose.
+
 Evidence: `work/sidearms-update-26073152/verification.json`, backed by request
 receipts, recipes and native game screenshots in the same directory. The core
 loaded by the game is `css_core-1.0.2.dll`, SHA-256

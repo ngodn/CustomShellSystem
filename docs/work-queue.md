@@ -1,5 +1,22 @@
 # Current work queue
 
+## October 22: reporter screenshots and older outfit textures, checked locally
+
+Check the supplied Eve Skin Suit sidearm screenshots for the raised left arm
+and incorrect support-hand pose. Prior draw/fire/stow checks do not establish
+correct pose. Compare the exact installed release visually, preserving focus.
+Also recheck madeofnapalm's grey-texture report for Dark Elf, Goth Girlfriend,
+and "Genessa with a big cake", which the user identifies as Genessa Skin.
+Nine outfit variants render textured in fresh front/back captures. The raised
+arm is not reproduced in 16 aim combinations covering four sidearms, original
+Genessa, Eve Skin Suit, Eve idle and hidden stowed weapons. Outfit files match
+their prepared releases. Local Shared Assets metadata has subsequently changed
+to 1.0.4 with two tHorny adapters; asset containers remain byte-identical to
+1.0.2. Preserve that existing change. No new mod fix or release follows from
+this check. Reporter versions and reproduction steps remain needed.
+[Findings](research/2026-10-22-reporter-visual-check.md), with evidence under
+`work/reporter-visual-26073152/`.
+
 ## October 22: reported UE4SS startup allocator crash, queued
 
 SamFisher91 reports startup failure after the game update, with an access
