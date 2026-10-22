@@ -1,5 +1,25 @@
 # Current work queue
 
+## October 22: sidearm audit and reusable game input, complete
+
+The vague report "All sidearms weapons have bugs" is not reproduced on the
+installed CSS 1.0.2/game build 26073152. Runtime checks cover 32 appearance/weapon
+combinations, all eight visibility sequences, and four idle/aim interruptions.
+Equipment, unlocks, appearance, settings, resources and cheat values restore.
+Position/view changes and incomplete damage coverage are recorded rather than
+claimed away. No runtime or release change follows from this report alone.
+See [the audit](research/2026-10-22-sidearm-audit.md) and its evidence directory
+`work/sidearms-update-26073152/`. Further reproduction needs reporter symptoms,
+versions and a clip or steps; a suggested reply is in the audit.
+
+The user asks to retain the successful background game-input technique across
+Codex, Claude and Gemini/Antigravity. The shared `ue-modding` skill now routes to
+`GAME-CONTROL.md`, covering explicit X11 window targeting, process validation,
+paired input cleanup, native screenshots and gameplay readback. Codex and Claude
+already share the source through their installed links; Gemini CLI and both
+Antigravity global locations now point to that same source. Local link/hash
+receipts are in `skill-installation.json` beside the audit evidence.
+
 ## October 22: CSSX Cheat Menu update check
 
 User requests checking CSSX Cheat Menu after the current fixes. Audit installed
