@@ -1,0 +1,13 @@
+Unholy Genessa v0.3.1
+
+Full CSS outfit package for Mortal Shell II build 26073152.
+Original package author: eins0fx
+
+Close the game. Extract the CSS_UnholyGenessa_eins0fx_P folder into
+MortalShell2/Content/Paks/~mods/, replacing its previous version.
+Keep all container files together. Install CSS 1.0.2 and CSS Shared Assets 1.0.2
+for the current shared animation and appearance support.
+Remove superseded standalone CSS shader-fix overlays for this outfit.
+Keep your CSS settings and saved profiles.
+
+See changelog.bbcode for changes and remaining limitations.

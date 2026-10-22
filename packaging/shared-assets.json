@@ -3,12 +3,12 @@
   "container": "CSS_SharedAssets_P",
   "required_for": "shared_animations_facial_playback_customized_genessa_doubles_and_npc_appearances_shoulder_support",
   "files": {
-    "CSS_SharedAssets_P.pak": "6f42bdac59652e83a6d9b5395be0a16d3149e5260dff44e584551d75b06c8d25",
-    "CSS_SharedAssets_P.ucas": "135f8089780fc549fe34b776f158f7ee3d06e4219746f69ef93fdabd2bcbdaeb",
-    "CSS_SharedAssets_P.utoc": "fde7763d895231785c611144a85a64146884431fa09264ce70f2f6d690fdd830"
+    "CSS_SharedAssets_P.pak": "bffac6d7b5a958c3de2b997eb45d77b77d97a1d095497d545cd8c8b6efb321e3",
+    "CSS_SharedAssets_P.utoc": "76fa5b5d60faec2721b4e7d0dc6e8deaa5decc57a622d0c5a38465725baad863",
+    "CSS_SharedAssets_P.ucas": "dc11ff2678ba201413cb06d4ee1caf7283ce9b4c6372fecf98d42310c79458e0"
   },
-  "source_candidate": "update-26073152/full-shared-final",
+  "source_candidate": "cloth-expanded-26073152/assembly/shared-final",
   "asset_containers_identical_to_accepted": false,
   "existing_assets_preserved": true,
-  "asset_count": 294
+  "asset_count": 296
 }

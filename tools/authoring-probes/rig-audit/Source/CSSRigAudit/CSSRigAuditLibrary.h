@@ -27,17 +27,18 @@ public:
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static class USkeletalMesh* CloneClothBasisMeshStudy(class USkeletalMesh* Source, const FString& OutputPackage,
         bool bAllShapes = false, class UMeshDeformerCollection* DeformerCollection = nullptr,
-        class UMeshDeformer* RuntimeDeformer = nullptr);
+        class UMeshDeformer* RuntimeDeformer = nullptr, bool bExpanded = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static class UObject* CloneClothBasisGraphStudy(class UObject* Source, const FString& OutputPackage,
-        bool bAllShapes = false, bool bRuntimeBindings = false);
+        bool bAllShapes = false, bool bRuntimeBindings = false, bool bExpanded = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static bool CompileClothRuntimeGraph(class UObject* Graph);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
-    static FString CheckClothBasisBuffers(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots);
+    static FString CheckClothBasisBuffers(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,
+        bool bExpanded = false);
 
     UFUNCTION(BlueprintCallable, Category = "CSS Rig Audit")
     static FString SnapshotVertexAttributeStorage(class USkeletalMesh* Mesh);

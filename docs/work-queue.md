@@ -1,5 +1,83 @@
 # Current work queue
 
+## October 22: CSSX Cheat Menu update check
+
+User requests checking CSSX Cheat Menu after the current fixes. Audit installed
+1.1.1 against game build 26073152 and CSSX 1.3.1, including the game functions
+its controls call. Opening its extension page alone does not establish feature
+compatibility. Fix reproduced issues and prepare a separately versioned release
+with BBCode changelog if an update is needed. Keep the current cloth and
+motion/performance work ahead of this queued check.
+
+While cloth shaders compile: the existing `cssx-v1.3.1` release already contains
+Cheat Menu 1.1.2 under `extensions/core/dist/cssx-v1.3.1/`, but the coordinated
+install retained 1.1.1. Archive verification and the host cheat-menu suite pass.
+Copied that existing archive, checksum and BBCode into
+`dist/cssx-cheat-menu-v1.1.2/`. Installed the exact existing archive after validation. The user confirms 1.1.2
+was already publicly released; the previous local installation was outdated.
+Do not repackage or describe it as a new release. Updated-game feature checks
+continue against that published binary.
+
+## October 22: install and validate the coordinated releases in-game
+
+User authorizes installing all current releases, running the game checks and
+fixing reproduced issues before recommending publication. Keep CSS at unpublished
+1.0.2. Verify archive and installed hashes, back up settings and saves, and test
+the actual release binaries. Preserve desktop focus using background control and
+game-only capture. The optional UUEPBS profile and incomplete third-party
+Phoenix/Slayer downloads are outside the coordinated install. Record exact live
+coverage and remaining failures in `work/release-acceptance-26073152/`.
+
+Current live checkpoint: all 75 installed outfit variants and 116 native/non-CSS
+appearances selected successfully with no runtime errors; this is a load sweep,
+not acceptance of every animation. The locked Sapphire Herald dialog passes
+Cancel, Wear anyway, menu reentry and native unlock-map preservation (24 entries).
+Actual mission unlock is not yet exercised. The timing sampler responds to a
+20 FPS cap, but repeated appearance windows vary too much to establish an FPS
+improvement. Original look and console variables restore after each probe.
+
+Installation and the focused live pass are complete. All 86 installed payloads
+match their archives; settings match the pre-install backup and the game is
+closed. Traverse meteor/plain/cancel, CSSX extension pages, six native movement
+cases and 12 body-control configurations pass their stated checks. Frequent
+body-limit contacts and noisy FPS repeats prevent closing those reports. Continue
+with the Genessa cloth channels and matched motion/performance investigation.
+[Live report](research/2026-10-22-release-acceptance.md).
+
+Playtest handoff: the game was reopened through Steam and Continue Game for the
+user, with Commander White equipped on workspace 2. Gameplay capture:
+`work/release-acceptance-26073152/screenshots/user-playtest-ready.png`.
+The private cloth editor and shader workers are suspended while the user plays;
+see `work/cloth-expanded-26073152/paused-for-user-playtest.json`. Resume only
+after the user finishes, and preserve any settings they change during testing.
+
+The user reports the installed motion "seems smooth" and explicitly directs
+continuing work. Record this as subjective acceptance of their playtest, without
+assuming which presets/outfits they exercised. The private cloth test resumed;
+the game was closed through its normal QuitGame function to free resources.
+Preserve the user's current settings. No further permission is needed to resume
+the authorized fixes and subsequent Cheat Menu check.
+
+## October 22: Genessa expanded cloth candidate
+
+Continue the five pending skirt channels in an isolated UE 5.6.1 authoring stage,
+`work/cloth-expanded-26073152/`. The baseline reproduces missing buffers on all
+four current meshes. The private candidate adds fifteen buffers (thirty total)
+and a ten-channel graph while preserving existing render geometry, morphs,
+weights and cloth data. The original fifteen buffers match exactly. Creation, fresh reload, 32 GPU comparison pairs, Windows cook and independent
+cooked preservation/dependency/shader checks pass. Full Genessa and Shared
+candidates are installed. Four normal/facial meshes pass the five individual
+controls, combined shapes, menu reentry and reset. Archive refresh is pending.
+Keep the original graph for older Genessa revisions.
+
+## October 22: installed Naughty Nun experiment
+
+The user confirmed Naughty Nun Modular Liturgy 2.0.0 is an unfinished local
+experiment, not a published release. Live captures show severe deformation and
+a static outstretched pose. Keep it outside the coordinated release verdict;
+record the asset issue for its own authoring work. Do not package it as a release.
+Evidence: `work/release-acceptance-26073152/screenshots/front-human_base.png`.
+
 ## October 22: Proxima Slayer Armor compatibility
 
 Audit the user-supplied `Proxima - Slayer Armor 571 1.0 2026-10-19T12-10Z vE77wqoFN.rar`
@@ -1660,3 +1738,21 @@ Nexus feedback (questman): transitions much smoother; asks for UUEPBS compatibil
 - Follow-up (core side): the Shared Assets cloth DeformerGraph reapplies only the five original morph deltas (`CSS_Morph_PBMGlutesSize/PBMHipSize/PBMThighsTone/PBMWaistWidth/FBMBodyTone`) after cloth simulation, so the 18 new shapes do not move cloth-simulated garments (Genessa skirt). Extend the graph to the 24 morphs in a Shared Assets recook (Linux editor) once the morph set is final across the four outfits.
 - 19 Oct 22:20: installed with the user's go: core 1.0.2-rc2 (effective travel rule; rc1 kept), Genessa 0.3.1-bodyfeel.1, Commander White step 6 trio, Shared Assets 1.0.2 pak with Eve, Genessa and Commander White pins (`work/shared-assets-1.0.2/eve-genessa-cw`). All three recooked outfits plus UUEPBS are live for the user's check; tHorny Proxima waits for its user-driven session. Backups in `work/body-feel-install-20261019/backup/`.
 - Staged for the live check: `docs/research/uuepbs/MortalShell2.profile.json` (Breasts = brust001/002, one morph slider per CSS morph); it goes to `ue4ss/Mods/UUEPBS/Scripts/GameProfiles/` with the install go.
+
+## October 22: final Cheat Menu and timing follow-up
+
+The published Cheat Menu 1.1.2 ZIP is now installed. God draft/discard/apply,
+movement multiplier and time dilation apply/restore, six numeric action
+parameters, 79 pickup entries and 89 Tarstones pass live checks. Reflected
+progression functions remain available; no unlock/grant was executed. No
+reproduced compatibility defect requires 1.1.3. If a code fix becomes necessary,
+use 1.1.3, as the user explicitly confirmed.
+
+The corrected Commander White ABBA timing pass holds camera, position, outfit
+and render settings constant, with separate eight-second windows after fifteen
+seconds settling. Plain idle spans 49.8 to 59.9 engine Hz, Iris Out spans 41.9
+to 51.4. These are game-thread intervals, not GPU presentation FPS. Both groups
+drift with time; the test supports extra animation cost, not a measured upgrade
+improvement. The existing morph-call reduction is included in CSS 1.0.2. Do not
+claim the FPS complaint is completely fixed. User motion-feel acceptance remains
+recorded separately. Evidence: `work/cloth-expanded-26073152/performance/`.

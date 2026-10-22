@@ -26,18 +26,46 @@ def differences(a, b, path=''):
     return [] if a == b else [path + ': value changed']
 
 
+def normalize_reader_names(exports):
+    # Tagged properties retain editor FName spelling; mapped properties use the
+    # game's spelling and qualify these enum members. Keep their values intact.
+    enum_types = dict(TerminationCriterion='SkeletalMeshTerminationCriterion',
+                      ReductionMethod='SkeletalMeshOptimizationType')
+    enum_types.update(dict.fromkeys(('SilhouetteImportance', 'TextureImportance',
+                                    'ShadingImportance', 'SkinningImportance'),
+                                   'SkeletalMeshOptimizationImportance'))
+    for export in exports:
+        props = export.get('Properties', {})
+        if export['Type'] == 'ClothingAssetCommon' and 'LODData' in props:
+            assert 'LodData' not in props
+            props['LodData'] = props.pop('LODData')
+        if export['Type'] == 'SkeletalMesh':
+            for lod in props['LODInfo']:
+                reduction = lod['ReductionSettings']
+                for field, enum in enum_types.items():
+                    reduction[field] = reduction[field].removeprefix(enum + '::')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('baseline', 'candidate', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--expanded', action='store_true', help='Upgrade the existing five-channel cloth basis to ten channels.')
     args = parser.parse_args()
     before = json.loads(args.baseline.read_text())
     after = json.loads(args.candidate.read_text())
     assert before.keys() == after.keys() and len(before) == 4
     expected = {f'CSS_Cloth{s}{axis}' for s in SHAPES for axis in 'XYZ'}
+    original_names = set(expected)
+    if args.expanded:
+        expected |= {f'CSS_Cloth{s}{axis}' for s in ('GluteWidth', 'GluteLift', 'HipBone', 'ThighSize', 'CalfSize')
+                     for axis in 'XYZ'}
     records, errors = [], {}
     for package in before:
         original, candidate = copy.deepcopy(before[package]), copy.deepcopy(after[package])
+        if args.expanded:
+            normalize_reader_names(original)
+            normalize_reader_names(candidate)
         old, = [r for r in original if r['Type'] == 'SkeletalMesh']
         new, = [r for r in candidate if r['Type'] == 'SkeletalMesh']
         old_lod, = old['LODModels']
@@ -45,7 +73,12 @@ def main():
         old_digest, = old['OfflineMeshDigest']['lods']
         digest, = new['OfflineMeshDigest']['lods']
         buffers = lod['VertexAttributeBuffers']
-        assert not old_lod['VertexAttributeBuffers']
+        if args.expanded:
+            assert set(old_lod['VertexAttributeBuffers']) == original_names
+            assert {k: buffers[k] for k in original_names} == old_lod['VertexAttributeBuffers']
+            assert digest['half_edge'] == old_digest['half_edge']
+        else:
+            assert not old_lod['VertexAttributeBuffers']
         assert set(buffers) == set(digest['attribute_buffers']) == expected
         values = {}
         for name, buffer in buffers.items():
@@ -62,18 +95,28 @@ def main():
         props, old_props = new['Properties'], old['Properties']
         for field, cls, name in [('DefaultMeshDeformer', 'OptimusDeformer', 'DG_ClothMorphBody'),
                                  ('TargetMeshDeformers', 'MeshDeformerCollection', 'MDC_ClothMorphBody')]:
-            assert field not in old_props
-            reference = props.pop(field)
+            if args.expanded:
+                reference = props[field]
+                assert old_props[field]['ObjectName'] == f"{cls}'{name}'"
+                assert old_props[field]['ObjectPath'].rsplit('.', 1)[0] == '/Game/CSS/eins0fx/Shared/Deformers/' + name
+                props[field] = copy.deepcopy(old_props[field])
+                name += 'V2'
+            else:
+                assert field not in old_props
+                reference = props.pop(field)
             assert reference['ObjectName'] == f"{cls}'{name}'"
             assert reference['ObjectPath'].rsplit('.', 1)[0] == '/Game/CSS/eins0fx/Shared/Deformers/' + name
         info, = props['LODInfo']
-        assert not old_props['LODInfo'][0]['VertexAttributes']
+        if args.expanded:
+            assert {v['Name'] for v in old_props['LODInfo'][0]['VertexAttributes']} == original_names
+        else:
+            assert not old_props['LODInfo'][0]['VertexAttributes']
         attributes = info['VertexAttributes']
-        assert len(attributes) == 15 and {v['Name'] for v in attributes} == expected
+        assert len(attributes) == len(expected) and {v['Name'] for v in attributes} == expected
         assert all(v['EnabledForRender']['Value'] and
                    v['DataType'] == 'ESkeletalMeshVertexAttributeDataType::Float' for v in attributes)
-        info['VertexAttributes'] = []
-        lod['VertexAttributeBuffers'] = {}
+        info['VertexAttributes'] = copy.deepcopy(old_props['LODInfo'][0]['VertexAttributes'])
+        lod['VertexAttributeBuffers'] = copy.deepcopy(old_lod['VertexAttributeBuffers'])
         for key in ('attributes_sha256', 'attribute_buffers', 'half_edge'):
             digest[key] = copy.deepcopy(old_digest[key])
         for obj in (old, new):

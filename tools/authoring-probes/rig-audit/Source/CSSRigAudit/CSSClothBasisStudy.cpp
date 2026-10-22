@@ -68,7 +68,8 @@ FString UCSSRigAuditLibrary::SnapshotVertexAttributeStorage(USkeletalMesh* Mesh)
     return Output;
 }
 
-FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots)
+FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,
+    bool bExpanded)
 {
     if (!IsRunningCommandlet() || !IsInGameThread() || !Mesh || MaterialSlots.IsEmpty())
         return TEXT("ERROR: commandlet mesh and cloth slots required");
@@ -94,7 +95,7 @@ FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const T
     }
     if (Found.Num() != Requested.Num()) return TEXT("ERROR: missing cloth section");
     TArray<TSharedPtr<FJsonValue>> Rows;
-    for (const auto& Shape : CSSClothBasisStudy::Shapes)
+    for (const auto& Shape : CSSClothBasisStudy::SelectShapes(bExpanded))
     {
         const auto* Morph = Mesh->FindMorphTarget(Shape.Morph);
         if (!Morph || Morph->GetMorphLODModels().Num() != 1) return TEXT("ERROR: missing shape render morph");
@@ -104,7 +105,7 @@ FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const T
         {
             if (Delta.SourceIdx >= Lod.GetNumVertices() || Delta.PositionDelta.ContainsNaN())
                 return TEXT("ERROR: invalid render morph delta");
-            if (Selected[Delta.SourceIdx]) Expected[Delta.SourceIdx] = Delta.PositionDelta;
+            Expected[Delta.SourceIdx] = Delta.PositionDelta;
         }
         for (int32 Axis = 0; Axis != 3; ++Axis)
         {
@@ -116,13 +117,21 @@ FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const T
                 Cpu.Data->GetNumVertices() != Lod.GetNumVertices() || !Cpu.Data->GetDataPointer())
                 return TEXT("ERROR: invalid basis render buffer format");
             float MaximumError = 0.f;
+            uint32 SharedNonClothValues = 0;
             FJsonAuditArray Values(true);
             for (uint32 Index = 0; Index < Lod.GetNumVertices(); ++Index)
             {
                 float Value;
                 FMemory::Memcpy(&Value, Cpu.Data->GetDataPointer() + Index * sizeof(float), sizeof(float));
                 if (!FMath::IsFinite(Value)) return TEXT("ERROR: nonfinite basis render value");
-                if (!Selected[Index] && Value != 0.f) return TEXT("ERROR: basis affects a non-cloth vertex");
+                // A shared source vertex carries the attribute into both render sections.
+                // The graph applies it only where cloth disables the normal morph input.
+                if (!Selected[Index] && Value == 0.f)
+                {
+                    Values.Add(MakeShared<FJsonValueNumber>(Value));
+                    continue;
+                }
+                if (!Selected[Index]) ++SharedNonClothValues;
                 MaximumError = FMath::Max(MaximumError, FMath::Abs(Value - Expected[Index][Axis]));
                 Values.Add(MakeShared<FJsonValueNumber>(Value));
             }
@@ -131,6 +140,7 @@ FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const T
             auto Row = MakeShared<FJsonObject>();
             Row->SetStringField(TEXT("name"), Name.ToString());
             Row->SetNumberField(TEXT("maximum_render_morph_error_cm"), MaximumError);
+            Row->SetNumberField(TEXT("non_cloth_morph_values"), SharedNonClothValues);
             Row->SetField(TEXT("values"), Values.Finish());
             Rows.Add(MakeShared<FJsonValueObject>(Row));
         }
@@ -148,14 +158,16 @@ FString UCSSRigAuditLibrary::CheckClothBasisBuffers(USkeletalMesh* Mesh, const T
 bool UCSSRigAuditLibrary::CompileClothRuntimeGraph(UObject* Graph)
 {
     auto* Deformer = Cast<UOptimusDeformer>(Graph);
+    const FString Path = GetPathNameSafe(Deformer);
     if (!IsRunningCommandlet() || !IsInGameThread() || !Deformer ||
-        Deformer->GetPathName() != TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphBody.DG_ClothMorphBody"))
+        (Path != TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphBody.DG_ClothMorphBody") &&
+         Path != TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphBodyV2.DG_ClothMorphBodyV2")))
         return false;
     return Deformer->Compile();
 }
 
 USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Source, const FString& OutputPackage,
-    bool bAllShapes, UMeshDeformerCollection* DeformerCollection, UMeshDeformer* RuntimeDeformer)
+    bool bAllShapes, UMeshDeformerCollection* DeformerCollection, UMeshDeformer* RuntimeDeformer, bool bExpanded)
 {
     const auto Fail = [](const TCHAR* Reason) -> USkeletalMesh*
     {
@@ -169,9 +181,12 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
         SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/SK_GenessaW3") ||
         SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_EveW3_Face") ||
         SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_GenessaW3_Face");
-    const FString ExpectedOutput = SourcePackage + (RuntimeDeformer ? TEXT("_BasisStudy3") :
+    const FString ExpectedOutput = SourcePackage + (bExpanded ? TEXT("_BasisStudy4") : RuntimeDeformer ? TEXT("_BasisStudy3") :
         bAllShapes ? TEXT("_BasisStudy2") : TEXT("_BasisStudy1"));
-    const bool bBindingsAllowed = bPeony ?
+    const bool bBindingsAllowed = bExpanded ?
+        !bPeony && bAllShapes && DeformerCollection && RuntimeDeformer &&
+        DeformerCollection->GetPathName() == TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy6.MDC_ClothMorphStudy6") &&
+        RuntimeDeformer->GetPathName() == TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy6.DG_ClothMorphStudy6") : bPeony ?
         bAllShapes && DeformerCollection && RuntimeDeformer &&
         DeformerCollection->GetPathName() == TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphBody.MDC_ClothMorphBody") &&
         RuntimeDeformer->GetPathName() == TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphBody.DG_ClothMorphBody") :
@@ -232,17 +247,26 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
     {
         return Fail(TEXT("missing skirt vertices"));
     }
-    const int32 ShapeCount = bAllShapes ? UE_ARRAY_COUNT(CSSClothBasisStudy::Shapes) : 1;
+    const auto Shapes = CSSClothBasisStudy::SelectShapes(bExpanded);
+    const int32 ShapeCount = bAllShapes ? Shapes.Num() : 1;
     TArray<FName> AttributeNames;
     for (int32 ShapeIndex = 0; ShapeIndex != ShapeCount; ++ShapeIndex)
     {
-        const auto& Shape = CSSClothBasisStudy::Shapes[ShapeIndex];
+        const auto& Shape = Shapes[ShapeIndex];
         const auto ShapeMorph = Attributes.GetVertexMorphPositionDelta(Shape.Morph);
         if (!ShapeMorph.IsValid()) return Fail(TEXT("missing shape morph"));
         for (int32 Axis = 0; Axis != 3; ++Axis)
         {
             const FName Name(*FString::Printf(TEXT("%s%c"), Shape.Attribute, TEXT('X') + Axis));
-            if (Description->VertexAttributes().HasAttribute(Name)) return Fail(TEXT("basis already exists"));
+            if (Description->VertexAttributes().HasAttribute(Name))
+            {
+                if (!bExpanded || ShapeIndex >= UE_ARRAY_COUNT(CSSClothBasisStudy::Shapes))
+                    return Fail(TEXT("basis already exists"));
+                AttributeNames.Add(Name);
+                continue;
+            }
+            if (bExpanded && ShapeIndex < UE_ARRAY_COUNT(CSSClothBasisStudy::Shapes))
+                return Fail(TEXT("expanded mesh must retain the existing basis"));
             auto Values = Description->VertexAttributes().RegisterAttribute<float>(Name, 1, 0.f, EMeshAttributeFlags::Lerpable);
             for (const auto Vertex : Skirt)
             {
@@ -276,9 +300,12 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
 }
 
 UObject* UCSSRigAuditLibrary::CloneClothBasisGraphStudy(UObject* Source, const FString& OutputPackage,
-    bool bAllShapes, bool bRuntimeBindings)
+    bool bAllShapes, bool bRuntimeBindings, bool bExpanded)
 {
-    if (bRuntimeBindings && (!bAllShapes || OutputPackage != TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy5")))
+    if (bExpanded && (!bAllShapes || !bRuntimeBindings)) return nullptr;
+    const FString ExpectedPackage = bExpanded ? TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy6") :
+        TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy5");
+    if (bRuntimeBindings && (!bAllShapes || OutputPackage != ExpectedPackage))
         return nullptr;
     auto* Copy = Cast<UOptimusDeformer>(CloneClothMorphStudy(Source, OutputPackage));
     if (!Copy) return nullptr;
@@ -316,11 +343,12 @@ UObject* UCSSRigAuditLibrary::CloneClothBasisGraphStudy(UObject* Source, const F
                     }
                 return false;
             };
-            const int32 ShapeCount = bAllShapes ? UE_ARRAY_COUNT(CSSClothBasisStudy::Shapes) : 1;
+            const auto Shapes = CSSClothBasisStudy::SelectShapes(bExpanded);
+            const int32 ShapeCount = bAllShapes ? Shapes.Num() : 1;
             FString BasisCode;
             for (int32 ShapeIndex = 0; ShapeIndex != ShapeCount; ++ShapeIndex)
             {
-                const auto& Shape = CSSClothBasisStudy::Shapes[ShapeIndex];
+                const auto& Shape = Shapes[ShapeIndex];
                 const FString PinPrefix = bAllShapes ? FString::Printf(TEXT("Basis%d"), ShapeIndex) : TEXT("Basis");
                 for (int32 Axis = 0; Axis != 3; ++Axis)
                 {

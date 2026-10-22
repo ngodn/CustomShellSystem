@@ -1,0 +1,7 @@
+CSS Shared Assets v1.0.2
+
+Companion download for CSS 1.0.2 and the updated outfit packages.
+Close the game. Replace CSS_SharedAssets_P under MortalShell2/Content/Paks/~mods/.
+Keep one Shared Assets folder. Remove superseded Astral/Locomotion shared folders.
+Install the affected outfits' own full updates for their texture repairs.
+Keep your CSS settings and profiles.

@@ -356,15 +356,15 @@
         "CSS_UnholyGenessa_eins0fx_P.pak": "03677bd202e7f7cb995764745695cf604e056aa1aab60c9050a308daa143f3ad"
       },
       "files": {
-        "CSS_UnholyGenessa_eins0fx_P.utoc": "698448725b6450874d81239881cc8d954d7e0c4607b8a2e2dd839965d1dbc722",
-        "CSS_UnholyGenessa_eins0fx_P.ucas": "fd2eee3e933627393bf899bd102c1302ea215c9fab5da1b7f44edcbc0bbcde5a",
-        "CSS_UnholyGenessa_eins0fx_P.pak": "73743938685a0aae9877740b24f4bfd3c1e2898ff4b58188306c7e1ca5bda2a4"
+        "CSS_UnholyGenessa_eins0fx_P.utoc": "b402608b9ca76976f3d170b45fedcc99a11f7ebcfd193e235d2e000968dbe82c",
+        "CSS_UnholyGenessa_eins0fx_P.ucas": "7a1c3f09a76c9b5e82bb8ec3876d32c6b1a6d34be12c932773bcf7b701aa9fd1",
+        "CSS_UnholyGenessa_eins0fx_P.pak": "30d05e57fbfa55793a706801f888b00114662b5bd5fb4dc172a945fc0ff2000b"
       },
       "replaced_materials": 18,
       "directory": "unholygenessa-v0.3.1",
       "archive": "CSS_UnholyGenessa_eins0fx_P-v0.3.1.zip",
       "changelog": "unholygenessa-v0.3.1-changelog.bbcode",
-      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/update-26073152/full-releases/CSS_UnholyGenessa_eins0fx_P/trio"
+      "source": "/run/media/eins0fx/theark/CSS/CustomShellSystem-work/cloth-expanded-26073152/assembly/CSS_UnholyGenessa_eins0fx_P/trio"
     },
     {
       "id": "eins0fx.thornyproxima",
