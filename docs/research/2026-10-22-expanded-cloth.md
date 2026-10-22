@@ -1,6 +1,7 @@
 # Expanded Genessa cloth channels
 
-Installed full candidate; release archive refresh is pending. Evidence lives in
+The full Genessa 0.3.1 and Shared Assets 1.0.2 updates are installed and packaged.
+Evidence lives in
 `work/cloth-expanded-26073152/`.
 
 The current Genessa source meshes contain the new garment morphs, but the shared

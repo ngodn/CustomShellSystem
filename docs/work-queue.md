@@ -1756,3 +1756,16 @@ drift with time; the test supports extra animation cost, not a measured upgrade
 improvement. The existing morph-call reduction is included in CSS 1.0.2. Do not
 claim the FPS complaint is completely fixed. User motion-feel acceptance remains
 recorded separately. Evidence: `work/cloth-expanded-26073152/performance/`.
+
+## October 22: coordinated delivery verified
+
+Full Genessa 0.3.1 and Shared Assets 1.0.2 ZIPs now include the accepted cloth
+correction. Their previous unpublished copies are retained under
+`dist/withdrawn/before-expanded-genessa-cloth/`. CSS remains 1.0.2 with unchanged
+runtime and archive. Final verification passes 23 ZIPs, 22 installed releases
+and 95 installed payloads. The optional UUEPBS profile was skipped. Current
+user settings and original appearance are restored; normal autosaves remain.
+The game is closed. Compatibility and cloth updates are ready within the
+documented live scope. FPS is not claimed fully fixed. The already-published
+Cheat Menu 1.1.2 is installed and needs no new version from the tested results.
+No public upload was performed. `dist/DELIVERY.md` is the current release list.
