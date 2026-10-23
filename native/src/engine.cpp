@@ -1432,6 +1432,7 @@ void Appearance::set_ground_offset(double offset) {
 bool Appearance::restore() {
     ++appearance_revision;
     hand_support_.release();
+    try {native_foot_ik_.release();} catch(const std::exception&) {}   // never blocks the outfit restore; status says "restore failed"
     restore_expression();
     menu_overlay_controls_.release(); overlay_controls_.release();
     restore_visual_scale(false);visual_scale_=1;
@@ -1827,6 +1828,7 @@ std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
 }
 #include "facial_runtime.inl"
 #include "hand_support.inl"
+#include "native_foot_ik.inl"
 void WornItems::release() {
     for(auto& worn:worn_) if(auto* component=worn.component.Get()) {
         Call owner(component,L"GetOwner",1); owner.run();

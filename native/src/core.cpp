@@ -210,6 +210,18 @@ struct Core {
             hand_support_after=now+1000;
         }
     }
+    std::string native_foot_ik_error;
+    uint64_t native_foot_ik_after=0;
+    void sync_native_foot_ik_safely(uint64_t now) {
+        if(now<native_foot_ik_after) return;
+        try {appearance.sync_native_foot_ik();native_foot_ik_error.clear();}
+        catch(const std::exception& error) {
+            if(native_foot_ik_error!=error.what()) {
+                native_foot_ik_error=error.what();host.log(("Foot IK leg lengths deferred: "+native_foot_ik_error).c_str());
+            }
+            native_foot_ik_after=now+1000;
+        }
+    }
     AutomaticIdlePlayback automatic_idle;
     AnimationTrace animation_trace;
     bool traced_idle_engaged=false;
@@ -666,6 +678,8 @@ struct Core {
             out["expression"]=appearance.expression_status();
             out["hand_support"]=appearance.hand_support_status();
             out["hand_support"]["error"]=hand_support_error;
+            out["native_foot_ik"]=appearance.native_foot_ik_status();
+            out["native_foot_ik"]["error"]=native_foot_ik_error;
             return out;
         }
         if(action!="apply") throw std::runtime_error("Unknown customize action");
@@ -1117,7 +1131,7 @@ struct Core {
             finish_performance_face();
         });
         measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
-        measured(FrameProfile::attachments,[&] { sync_hand_support_safely(now); });
+        measured(FrameProfile::attachments,[&] { sync_hand_support_safely(now); sync_native_foot_ik_safely(now); });
         if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
         measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
         if(!restore_performance_face && !apply_pending && !restore_pending && !appearance.performance.active())

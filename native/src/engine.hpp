@@ -35,6 +35,7 @@
 #include "performance_session.hpp"
 #include "animation_trace.hpp"
 #include "hand_support_catalog.hpp"
+#include "native_foot_ik.hpp"
 
 namespace css {
 fs::path engine_content_directory();
@@ -107,6 +108,24 @@ class HandSupport {
 public:
     std::string configure(const fs::path& path);
     void sync(RC::Unreal::UObject* component,bool enabled,RC::Unreal::UObject* pawn);
+    void release();
+    Json status() const;
+};
+// Sets the game's foot IK node to take its leg lengths from the worn mesh while a CSS body with
+// other proportions is worn (native_foot_ik.hpp). The rig's own initial bone transforms are
+// captured before the first change and written back, with a reconstruction, when the body no
+// longer needs it, so stock shells and every other look keep the rig exactly as authored.
+class NativeFootIk {
+    WeakObject instance_, rig_, mesh_;
+    int32_t node_offset_=-1;
+    bool original_=false, applied_=false;
+    std::vector<std::pair<std::vector<std::byte>,std::vector<std::byte>>> snapshot_;   // bone key, initial local transform
+    native_foot_ik::Lengths rig_lengths_{};
+    std::optional<double> difference_;
+    std::string state_="inactive";
+    void restore_rig();
+public:
+    void sync(RC::Unreal::UObject* component,bool worn);
     void release();
     Json status() const;
 };
@@ -927,6 +946,7 @@ class Appearance {
     std::map<std::string,AttachmentOffset> fit_offsets_;
     bool fit_defaults_=true, fit_stale_=false;
     HandSupport hand_support_;
+    NativeFootIk native_foot_ik_;
     std::string fit_shell_, fit_error_;
     std::map<std::string,std::string> shell_data_;   // CharacterId -> its character data asset
     WeakObject fit_worn_data_;
@@ -982,6 +1002,8 @@ public:
     std::string configure_hand_support(const fs::path& path) {return hand_support_.configure(path);}
     void sync_hand_support();
     Json hand_support_status() const { return hand_support_.status(); }
+    void sync_native_foot_ik();
+    Json native_foot_ik_status() const { return native_foot_ik_.status(); }
     // MISC visibility. `set_misc_rules` copies the player's choices in; `sync_misc` re-hides
     // the world pawn's accessories when locomotion changes (called from the tick); the menu
     // pass runs inside sync_menu against the wardrobe preview character.
