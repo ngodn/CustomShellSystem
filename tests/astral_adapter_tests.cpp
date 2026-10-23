@@ -134,7 +134,8 @@ int main(int argc,char** argv) {
         }
         ++checked;
     }
-    check(checked==23,"Material catalog coverage changed without updating acceptance");
+    // 23 shipped entries plus Profane Proxima's seven (two additive glow overlays, blend 3).
+    check(checked==30,"Material catalog coverage changed without updating acceptance");
     std::cout<<"Astral adapter policy passed for "<<checked<<" source graphs\n";
     if(argc==2) {
         std::ifstream input(argv[1]);

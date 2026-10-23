@@ -52,7 +52,7 @@ for spec in manifest:
         int(word, 16)
     blend_name = properties.get("BlendMode", "BLEND_Opaque").rsplit("::", 1)[-1]
     blend = {"BLEND_Opaque": 0, "BLEND_Masked": 1, "BLEND_Translucent": 2,
-             "BLEND_TranslucentGreyTransmittance": 2}[blend_name]
+             "BLEND_TranslucentGreyTransmittance": 2, "BLEND_Additive": 3}[blend_name]
     switches = []
     for info, value in zip(cached["RuntimeEntries[8]"]["ParameterInfoSet"], cached["StaticSwitchValues"], strict=True):
         if info["Association"].rsplit("::", 1)[-1] != "GlobalParameter" or info["Index"] != -1:
