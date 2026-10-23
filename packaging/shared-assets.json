@@ -1,14 +1,14 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "container": "CSS_SharedAssets_P",
   "required_for": "shared_animations_facial_playback_customized_genessa_doubles_and_npc_appearances_shoulder_support",
   "files": {
-    "CSS_SharedAssets_P.pak": "bffac6d7b5a958c3de2b997eb45d77b77d97a1d095497d545cd8c8b6efb321e3",
+    "CSS_SharedAssets_P.pak": "505f9684ac453967938634f2216d8d2287cbb4e877231fed73d45657b53a77fd",
     "CSS_SharedAssets_P.utoc": "76fa5b5d60faec2721b4e7d0dc6e8deaa5decc57a622d0c5a38465725baad863",
     "CSS_SharedAssets_P.ucas": "dc11ff2678ba201413cb06d4ee1caf7283ce9b4c6372fecf98d42310c79458e0"
   },
-  "source_candidate": "cloth-expanded-26073152/assembly/shared-final",
-  "asset_containers_identical_to_accepted": false,
+  "source_candidate": "shared-assets-release-1.0.3 (released 1.0.2 containers plus metadata pak: final pin for eins0fx.thornyproxima 319aa8c1efe8, superseded candidate pins removed)",
+  "asset_containers_identical_to_accepted": true,
   "existing_assets_preserved": true,
   "asset_count": 296
 }
