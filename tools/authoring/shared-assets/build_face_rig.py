@@ -58,6 +58,8 @@ def main():
     ap.add_argument('--from-rig', required=True)
     ap.add_argument('--rig', required=True)
     ap.add_argument('--facial-handoff', required=True, type=Path)
+    ap.add_argument('--revision-handoff', type=Path,
+                    help='shared-adapter-handoff.json of the final outfit trio; supplies source_toc_sha256 and source_bulk_bytes')
     ap.add_argument('--drop', action='append', default=[], help='expression name suffix to drop, e.g. look-down')
     ap.add_argument('--replace', action='store_true', help='replace the rig if it already exists')
     ap.add_argument('--version')
@@ -71,6 +73,24 @@ def main():
     shared = a.shared.resolve(strict=True)
     files = {s: shared / (SHARED + s) for s in ('.pak', '.utoc', '.ucas')}
     hand = json.loads(a.facial_handoff.read_text())
+    # Accept the outfit lane's field names too (facial_mesh / facial_morphs) and bare package
+    # paths; the core wants full object paths, /Game/Path/Name.Name.
+    def object_path(path):
+        return path if '.' in path.rsplit('/', 1)[-1] else path + '.' + path.rsplit('/', 1)[-1]
+    for v in hand['variants']:
+        v.setdefault('target_mesh', v.get('facial_mesh'))
+        v.setdefault('morphs', v.get('facial_morphs'))
+        if not isinstance(v['morphs'], list):
+            sys.exit(f'variant {v.get("variant")} lists no morph names')
+        for key in ('source_mesh', 'target_mesh', 'skeleton'):
+            v[key] = object_path(v[key])
+    if a.revision_handoff:
+        rev = json.loads(a.revision_handoff.read_text())['expected_adapters'][0]['adapter']
+        if rev['source_outfit'] != hand['outfit']:
+            sys.exit('revision handoff is for another outfit')
+        hand['source_toc_sha256'], hand['source_bulk_bytes'] = rev['source_toc_sha256'], rev['source_bulk_bytes']
+    if 'source_toc_sha256' not in hand:
+        sys.exit('no outfit revision: pass --revision-handoff')
 
     info = run(out, 'pak-info', [REPAK, 'info', files['.pak']])
     mount = next(l.split(': ', 1)[1] for l in info.splitlines() if l.startswith('mount point: '))
