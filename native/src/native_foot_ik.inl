@@ -50,6 +50,30 @@ std::optional<double> mesh_length(UObject* component,const wchar_t* bone) {
 }
 }
 
+// The full-body IK unit (RigUnit_PBIK) reads its bone lengths from the rig's initial pose only
+// when it initialises, and re-initialises only when its effector list changes. A new initial pose
+// therefore needs a VM re-init, or the solver keeps solving with the lengths it started with
+// (measured live: the thigh still stretched 17 to 19 mm per step until RequestInit).
+void NativeFootIk::reinitialise(UObject* rig) {
+    Call init(rig,L"RequestInit",0);init.run();
+}
+std::optional<double> NativeFootIk::rig_calf_length(UObject* rig) {
+    auto* bones=foot_ik_runtime::hierarchy(rig);
+    for(const auto& [key,transform]:snapshot_) {
+        Call get(bones,L"GetLocalTransform",3);
+        auto* key_param=get.param(L"InKey");
+        if(size_t(key_param->GetElementSize())!=key.size()) throw std::runtime_error("Foot IK bone key layout mismatch");
+        auto* name_field=foot_ik_runtime::field(static_cast<FStructProperty*>(key_param)->GetStruct().Get(),L"Name");
+        FName name;std::memcpy(&name,key.data()+name_field->GetOffset_Internal(),sizeof name);
+        if(name!=FName(native_foot_ik::segment_bones[0],FNAME_Add)) continue;
+        key_param->CopyCompleteValue(get.data(key_param),key.data());
+        get.set(L"bInitial",true);get.run();
+        auto* value=get.param(L"ReturnValue");
+        return foot_ik_runtime::translation_length(static_cast<FStructProperty*>(value)->GetStruct().Get(),
+                                                   static_cast<const std::byte*>(get.data(value)));
+    }
+    return std::nullopt;
+}
 void NativeFootIk::restore_rig() {
     auto* rig=rig_.Get();
     if(!rig || snapshot_.empty()) return;
@@ -65,8 +89,9 @@ void NativeFootIk::restore_rig() {
         set.set(L"bSetupUndo",false);set.set(L"bPrintPythonCommands",false);set.run();
     }
     // The engine cleared the rig's reset-before-construction switch when it took the mesh pose,
-    // so construction keeps the initial transforms written back above.
-    Call construct(rig,L"RequestConstruction",0);construct.run();
+    // so construction keeps the initial transforms written back above; the re-init makes the
+    // solver read them again.
+    reinitialise(rig);
 }
 void NativeFootIk::release() {
     try {
@@ -84,7 +109,7 @@ void NativeFootIk::release() {
         applied_=false;instance_=nullptr;rig_=nullptr;mesh_=nullptr;node_offset_=-1;snapshot_.clear();
         state_="restore failed";throw;
     }
-    applied_=false;instance_=nullptr;rig_=nullptr;mesh_=nullptr;node_offset_=-1;snapshot_.clear();
+    applied_=false;reinit_wait_=0;instance_=nullptr;rig_=nullptr;mesh_=nullptr;node_offset_=-1;snapshot_.clear();
     rig_lengths_={};difference_.reset();state_="inactive";
 }
 void NativeFootIk::sync(UObject* component,bool worn) {
@@ -116,7 +141,20 @@ void NativeFootIk::sync(UObject* component,bool worn) {
     auto* rig=foot_ik_runtime::object(node,foot_ik_runtime::field(type,L"ControlRig"));
     if(!rig) {state_="waiting for native foot IK";return;}
     auto* mesh=mesh_asset(component);
-    if(rig_.Get()==rig && mesh_.Get()==mesh) return;   // every frame after the first: two compares
+    if(rig_.Get()==rig && mesh_.Get()==mesh) {   // every frame after the first: two compares
+        if(applied_ && reinit_wait_>0) {
+            // Wait for the engine's Update to write the worn mesh's pose into the rig, then
+            // re-initialise once. Two seconds of ticks at most; then re-init anyway.
+            const auto body_calf=rig_lengths_[0]?foot_ik_runtime::mesh_length(component,native_foot_ik::segment_bones[0]):std::nullopt;
+            hand_runtime::barrier(instance);
+            const auto rig_calf=rig_calf_length(rig);
+            if(--reinit_wait_==0 || (body_calf && rig_calf && std::abs(*body_calf-*rig_calf)<.01)) {
+                reinitialise(rig);reinit_wait_=0;
+                state_="leg lengths from the worn body";
+            }
+        }
+        return;
+    }
     hand_runtime::barrier(instance);
     if(rig_.Get()!=rig) {
         // Capture the rig as authored. A rig recreated while the flag is set starts from its
@@ -163,17 +201,20 @@ void NativeFootIk::sync(UObject* component,bool worn) {
     auto* flag=foot_ik_runtime::flag_field(type);
     if(want && !applied_) {
         original_=flag->GetPropertyValueInContainer(node);
-        if(!original_) {flag->SetPropertyValueInContainer(node,true);applied_=true;}
+        if(!original_) {flag->SetPropertyValueInContainer(node,true);applied_=true;reinit_wait_=120;}
     } else if(!want && applied_) {
         flag->SetPropertyValueInContainer(node,original_);
         restore_rig();applied_=false;
     }
-    // While applied, a new mesh is picked up by the engine itself: its pose hash includes the mesh.
+    // While applied, a new mesh is picked up by the engine itself (its pose hash includes the
+    // mesh); the solver still needs a re-init once that pose has landed.
+    else if(want && applied_ && mesh_.Get() && mesh_.Get()!=mesh) reinit_wait_=120;
     mesh_=mesh;
-    state_=applied_?"leg lengths from the worn body":want?"game rig already uses mesh lengths":"rig as authored";
+    state_=applied_?(reinit_wait_>0?"waiting for the worn body's pose":"leg lengths from the worn body"):
+           want?"game rig already uses mesh lengths":"rig as authored";
 }
 Json NativeFootIk::status() const {
-    Json out{{"state",state_},{"applied",applied_},{"captured_bones",snapshot_.size()}};
+    Json out{{"state",state_},{"applied",applied_},{"captured_bones",snapshot_.size()},{"reinit_pending",reinit_wait_>0}};
     if(difference_) out["largest_leg_difference_cm"]=*difference_;
     return out;
 }

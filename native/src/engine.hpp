@@ -119,11 +119,14 @@ class NativeFootIk {
     WeakObject instance_, rig_, mesh_;
     int32_t node_offset_=-1;
     bool original_=false, applied_=false;
+    int reinit_wait_=0;   // ticks left to see the engine's mesh pose land before re-initialising the solver
     std::vector<std::pair<std::vector<std::byte>,std::vector<std::byte>>> snapshot_;   // bone key, initial local transform
     native_foot_ik::Lengths rig_lengths_{};
     std::optional<double> difference_;
     std::string state_="inactive";
     void restore_rig();
+    std::optional<double> rig_calf_length(RC::Unreal::UObject* rig);
+    void reinitialise(RC::Unreal::UObject* rig);
 public:
     void sync(RC::Unreal::UObject* component,bool worn);
     void release();
