@@ -123,7 +123,8 @@ void NativeFootIk::sync(UObject* component,bool worn) {
         // defaults again, so its capture is just as clean.
         snapshot_.clear();rig_lengths_={};
         auto* bones=foot_ik_runtime::hierarchy(rig);
-        Call list(bones,L"GetBones",2);list.set(L"bTraverse",true);list.run();
+        // UFUNCTION name; "GetBones" is only its script name.
+        Call list(bones,L"GetBoneKeys",2);list.set(L"bTraverse",true);list.run();
         auto* result=list.param(L"ReturnValue");
         if(!result->IsA<FArrayProperty>()) throw std::runtime_error("Foot IK bone list is not an array");
         auto* inner=static_cast<FArrayProperty*>(result)->GetInner();
