@@ -8,7 +8,8 @@ Usage:
 A handoff file is what a package lane writes after a recook
 (`work/uuepbs/step6/shared-adapter-handoff.json`): `expected_adapters`, a list of
 {"pointer": "/catalog/animation_library/adapters/0", "adapter": {...row...}}.
-The pointer names the array the row belongs to; its index is ignored. Rows are
+The pointer names the array the row belongs to; its index is ignored. With --prune, rows of one outfit whose revision is not listed are removed first
+(superseded development builds; the core accepts at most 32 rows per list). Rows are
 appended, never replaced: the core keys performance adapters by (outfit, revision
 hash, source class) and facial adapters by (outfit, revision hash, source mesh), so
 the previous revision keeps resolving and rollback is a trio swap only.
@@ -31,7 +32,7 @@ CSS = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(CSS / 'tools'))
 from css_facial_resources import encode  # noqa: E402
 
-REPAK = CSS / 'build/repak/release/repak'
+REPAK = Path(os.environ.get('CSS_REPAK', CSS / 'build/repak/release/repak'))
 SHARED = 'CSS_SharedAssets_P'
 RELATIVE = Path('MortalShell2/Content/CSS/Packages/css.locomotion/manifest.json')
 KEYS = {'adapters': 'source_class', 'faces': 'source_mesh'}
@@ -65,7 +66,9 @@ def to_bytes(value):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--shared', required=True, type=Path)
-    ap.add_argument('--handoff', action='append', required=True, type=Path)
+    ap.add_argument('--handoff', action='append', default=[], type=Path)
+    ap.add_argument('--prune', action='append', default=[], metavar='OUTFIT=HASH[,HASH...]',
+                    help='drop every row of OUTFIT whose revision hash does not start with one of HASH (12+ hex chars)')
     ap.add_argument('--out', required=True, type=Path)
     ap.add_argument('--version', default='1.0.2')
     ap.add_argument('--allow-new', action='store_true', help='allow a row whose outfit/source has no earlier revision in the array')
@@ -99,7 +102,22 @@ def main():
 
     candidate = copy.deepcopy(original)
     library = candidate['catalog']['animation_library']
-    appended, skipped = [], []
+    appended, skipped, pruned = [], [], []
+    for rule in a.prune:
+        outfit, _, hashes = rule.partition('=')
+        keep = [h for h in hashes.split(',') if h]
+        if not outfit or not keep or any(len(h) < 12 or any(c not in '0123456789abcdef' for c in h) for h in keep):
+            sys.exit(f'bad --prune {rule}')
+        def kept(row):
+            return row['source_outfit'] != outfit or any(row['source_toc_sha256'].startswith(h) for h in keep)
+        arrays = [('adapters', library['adapters'])] + [(f'faces/{i} ({r["id"]})', r['adapters']) for i, r in enumerate(library.get('faces', []))]
+        for where, array in arrays:
+            drop = [r for r in array if not kept(r)]
+            pruned += [dict(array=where, source_outfit=r['source_outfit'], source_toc_sha256=r['source_toc_sha256']) for r in drop]
+            array[:] = [r for r in array if kept(r)]
+        for h in keep:
+            if not any(r['source_outfit'] == outfit and r['source_toc_sha256'].startswith(h) for _, arr in arrays for r in arr) and not a.handoff:
+                print(f'note: no remaining row for {outfit} {h}')
     for hp in a.handoff:
         hand = json.loads(hp.read_text())
         recorded = hand.get('source_manifest_sha256')
@@ -141,8 +159,8 @@ def main():
             sys.exit(f'more than 32 facial adapters on {rig["id"]}')
     candidate['version'] = a.version
     library['version'] = a.version
-    if not appended:
-        sys.exit('nothing to append; every row is already pinned')
+    if not appended and not pruned:
+        sys.exit('nothing to change; every row is already pinned and nothing was pruned')
 
     data = to_bytes(candidate)
     if len(data) > 256 * 1024:
@@ -174,11 +192,13 @@ def main():
                   handoffs=[str(p) for p in a.handoff],
                   appended=[dict(array=w, source_outfit=i[0], source_toc_sha256=i[1], source=i[2], source_bulk_bytes=b) for w, i, b in appended],
                   already_pinned=[dict(array=w, source_outfit=i[0], source_toc_sha256=i[1], source=i[2]) for w, i in skipped],
+                  pruned=pruned,
                   adapters=len(library['adapters']), facial=[(r['id'], len(r['adapters'])) for r in library.get('faces', [])],
                   trio=after)
     (out / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     shutil.rmtree(out / 'readback')
-    print(json.dumps(dict(appended=len(appended), already_pinned=len(skipped), manifest_bytes=len(data), pak=after[SHARED + '.pak']), indent=1))
+    print(json.dumps(dict(appended=len(appended), pruned=len(pruned), already_pinned=len(skipped), adapters=len(library['adapters']),
+                          manifest_bytes=len(data), pak=after[SHARED + '.pak']), indent=1))
 
 
 if __name__ == '__main__':
