@@ -177,6 +177,7 @@ Json NativeFootIk::status() const {
     if(difference_) out["largest_leg_difference_cm"]=*difference_;
     return out;
 }
-void Appearance::sync_native_foot_ik() {
-    native_foot_ik_.sync(active()?component_.Get():nullptr,active());
+void Appearance::sync_native_foot_ik(bool eligible) {
+    const bool worn=eligible && active();
+    native_foot_ik_.sync(worn?component_.Get():nullptr,worn);
 }

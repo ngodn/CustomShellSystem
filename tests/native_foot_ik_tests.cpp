@@ -34,6 +34,12 @@ int main() try {
     expect(!needs_mesh_lengths(css_skeleton,rig,nan_mesh),"Non-finite lengths must never trigger the correction");
     expect(!needs_mesh_lengths(css_skeleton,rig,Lengths{45.93+.5,45.50,12.,45.93,45.50,12.}),"Exactly the threshold stays as authored");
 
+    const auto listed=opt_in({"eins0fx.thornyproxima"});
+    expect(listed.contains("eins0fx.thornyproxima") && !listed.contains("eins0fx.seduxtress"),"Only listed outfits opt in");
+    expect(opt_in({}).empty(),"An empty catalog opts nothing in");
+    bool rejected=false; try { opt_in({"bad id/.."}); } catch(const std::exception&) { rejected=true; }
+    expect(rejected,"An invalid outfit id must be rejected");
+
     std::cout<<checks<<" native foot IK checks passed\n";
     return 0;
 } catch(const std::exception& error) {

@@ -212,9 +212,17 @@ struct Core {
     }
     std::string native_foot_ik_error;
     uint64_t native_foot_ik_after=0;
+    std::set<std::string> native_foot_ik_outfits;   // catalog/native-foot-ik.json; empty = feature off
     void sync_native_foot_ik_safely(uint64_t now) {
         if(now<native_foot_ik_after) return;
-        try {appearance.sync_native_foot_ik();native_foot_ik_error.clear();}
+        try {
+            bool eligible=false;
+            if(!native_foot_ik_outfits.empty() && appearance.active()) {
+                const auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
+                eligible=selected!=state.selections.end() && native_foot_ik_outfits.contains(selected->second.outfit);
+            }
+            appearance.sync_native_foot_ik(eligible);native_foot_ik_error.clear();
+        }
         catch(const std::exception& error) {
             if(native_foot_ik_error!=error.what()) {
                 native_foot_ik_error=error.what();host.log(("Foot IK leg lengths deferred: "+native_foot_ik_error).c_str());
@@ -393,6 +401,14 @@ struct Core {
         inventory.assets(root);
         if(const auto error=appearance.configure_hand_support(root/"catalog/hand-support.json"); !error.empty())
             host.log(("Hand support catalog unavailable: "+error).c_str());
+        try {
+            const auto foot_ik=read_json(root/"catalog/native-foot-ik.json");
+            if(foot_ik.at("schema").get<int>()!=1) throw std::runtime_error("Unsupported schema");
+            native_foot_ik_outfits=native_foot_ik::opt_in(foot_ik.at("outfits").get<std::vector<std::string>>());
+        } catch(const std::exception& error) {
+            native_foot_ik_outfits.clear();   // off: every look keeps the game rig as authored
+            host.log(("Foot IK leg-length catalog unavailable: "+std::string(error.what())).c_str());
+        }
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
         std::error_code trace_error;

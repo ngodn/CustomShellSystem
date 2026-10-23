@@ -1002,7 +1002,7 @@ public:
     std::string configure_hand_support(const fs::path& path) {return hand_support_.configure(path);}
     void sync_hand_support();
     Json hand_support_status() const { return hand_support_.status(); }
-    void sync_native_foot_ik();
+    void sync_native_foot_ik(bool eligible);
     Json native_foot_ik_status() const { return native_foot_ik_.status(); }
     // MISC visibility. `set_misc_rules` copies the player's choices in; `sync_misc` re-hides
     // the world pawn's accessories when locomotion changes (called from the tick); the menu

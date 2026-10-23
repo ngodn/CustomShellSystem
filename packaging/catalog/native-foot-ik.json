@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "_note": "Outfits whose body legs differ from the game foot IK rig so much that the slow walk breaks. CSS lets the rig take the worn body leg lengths for these only; every other look keeps the rig as authored.",
+  "outfits": ["eins0fx.thornyproxima"]
+}
