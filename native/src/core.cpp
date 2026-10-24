@@ -144,6 +144,9 @@ struct Core {
     bool in_tick = false;
     DWORD game_thread = 0;
     bool custom_only = false, refresh_custom = true;
+    // The change on its way is a transient one (persist false, a CINE take): it is worn, but
+    // not remembered as that look's customization.
+    bool pending_transient = false;
     uint64_t save_after = 0, last_player_revision = 0, maintenance_after = 0, maintenance_next = 0;
     Recovery recovery;
 #ifdef CSS_TRANSITION_TESTS
@@ -276,7 +279,9 @@ struct Core {
             const auto selection_key=appearance_selection_key(state,catalog,appearance.shell);
             const auto selected=state.selections.find(selection_key);
             bool selected_animations=false;
-            if(state.enabled && appearance.active() && !apply_pending && !restore_pending && selected!=state.selections.end()) {
+            // A palette or control change (custom_only) keeps the worn mesh, so her animations
+            // keep playing through it; dropping them here restarted the idle on every change.
+            if(state.enabled && appearance.active() && (!apply_pending || custom_only) && !restore_pending && selected!=state.selections.end()) {
                 const auto& selection=selected->second;
                 if(applied_id==selection.outfit+"/"+selection.variant) {
                     selected_animations=true;
@@ -652,6 +657,7 @@ struct Core {
             pending_custom=std::move(custom); custom_only=false;
             apply_pending=true; ui_refresh=true;
             const auto now=GetTickCount64();
+            pending_transient=!command.value("persist",true);
             if(command.value("persist",true)) save_after=now+600;
             else save_after=std::max(save_after,now+30*60*1000);   // a transient look; the caller's last wear saves
             return {{"shell",appearance.shell},{"outfit",outfit},{"variant",variant},{"busy",true}};
@@ -714,6 +720,7 @@ struct Core {
         pending_custom=custom; custom_only=true; refresh_custom=true;
         apply_pending=true; ui_refresh=true;
         const auto now=GetTickCount64();
+        pending_transient=!command.value("persist",true);
         if(command.value("persist",true)) save_after=now+600;
         else save_after=std::max(save_after,now+30*60*1000);   // a transient look; the restore saves
         return result(custom);
@@ -1039,7 +1046,7 @@ struct Core {
             control_values(options,custom);
             selected->second.custom=custom;
             pending_custom=std::move(custom); custom_only=true; refresh_custom=command.value("refresh",true);
-            apply_pending=true; save_after=GetTickCount64()+600;
+            apply_pending=true; pending_transient=false; save_after=GetTickCount64()+600;
             ui_refresh=true;
         }
         else if (action == "select") {
@@ -1047,7 +1054,7 @@ struct Core {
             const auto variant = command.at("variant").get<std::string>();
             const auto* requested_variant=catalog.find(outfit,variant);
             if(!requested_variant) throw std::runtime_error("Outfit or variant is not installed");
-            selected_outfit = outfit; selected_variant = variant; apply_pending = true;
+            selected_outfit = outfit; selected_variant = variant; apply_pending = true; pending_transient = false;
             pending_custom.reset(); custom_only=false;
         }
 #ifdef CSS_INVENTORY_DEV
@@ -1516,8 +1523,11 @@ struct Core {
                                 state.selections[last_living_shell] = requested;
                             }
                             const std::string custom_key = requested.outfit + "/" + requested.variant;
-                            state.remembered_custom[custom_key]=requested.custom;
-                            state.remembered_custom[requested.outfit]=requested.custom;
+                            if(!pending_transient) {
+                                state.remembered_custom[custom_key]=requested.custom;
+                                state.remembered_custom[requested.outfit]=requested.custom;
+                            }
+                            pending_transient=false;
                             state.enabled = true; dirty = true; ui_refresh = !custom_only || refresh_custom;
                             applied_id = requested.outfit + "/" + requested.variant;
                             host.log(("Appearance verified: " + applied_id + " in " + std::to_string(int(last_apply_ms+0.5)) + " ms: " + laps).c_str());
