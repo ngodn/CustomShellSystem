@@ -1,5 +1,32 @@
 # Current work queue
 
+## October 24: Profane Proxima glow across lighting, in progress (0.2.1)
+
+The user reports Profane Proxima's glow needs re-tuning per condition (fine in
+CoreWorld day, wrong at night, in dungeons, Marrow Keep and interiors), while
+Unholy Genessa and Peony read fine everywhere. Light presets (`LP_*`, pushed by
+`WEATHER_*`) set exposure per area and a `CharacterEmissiveIntensity` the game's
+own Uber shader reads from `MPC_SpartaLightingCharacter` (0.004 to 17 across
+presets). None of our glow shaders read it. A same-spot capture in Marrow Keep
+(native Hub, pushed day/night/dungeon) shows Profane swinging from solid green
+to invisible; Genessa's sparse bright streaks and Peony's thin saturated trims
+hold up. Direction (user agreed): Profane's glow follows Genessa's native eye
+shader, which compensates exposure with UE's EyeAdaptation node, calibrated to
+the current day look. Fix lives in the Profane Proxima build, release 0.2.1.
+Astra runs the UE renders and builds the candidate; Fable runs the in-game A/B.
+Open: restore `remembered_custom` for eins0fx.unholygenessa and
+eins0fx.seduxtress from `work/research/lighting/live/run2/state-before.json`
+with the game closed (the capture's persist:false wear overwrote them).
+Evidence: `work/research/lighting/`.
+
+## October 24: Eve hair goes wild during a dash attack, queued
+
+Nexus comment by Yaminoshisyatoshiaki (24 Oct 2026, 4:56 PM): "Hair goes wild
+during a dash attack." Queued by the user for after Profane Proxima 0.2.1, with
+"anything related to it" on Eve. Not yet reproduced; start with the hair spring
+response to the dash-attack root motion and compare against Eve's other
+attacks.
+
 ## October 22: reporter screenshots and older outfit textures, checked locally
 
 Check the supplied Eve Skin Suit sidearm screenshots for the raised left arm
