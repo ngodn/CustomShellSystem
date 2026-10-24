@@ -19,7 +19,17 @@ eins0fx.unholygenessa and eins0fx.seduxtress; restored from the pre-capture
 snapshot with the game closed, and the whole state file now equals it.
 Evidence: `work/research/lighting/`.
 
-## October 24: Eve hair goes wild during a dash attack, queued
+## October 24: Eve hair goes wild during a dash attack, in progress (Eve 1.5.2)
+
+Reproduced in Marrow Keep with Eve Black Pearl and the Hadern Sword running
+attack (`PlayAnimMontage`): a 4.1 m lunge at about 7.3 m/s leaves the
+ponytail sticking straight out behind her. `CR_Hair` integrates strand points
+in world space with nothing removing her own root motion. Fix brief for Astra:
+`aaa-prompts/ASTRA_EVE_HAIR_DASH_FIX.md` (InertiaScale 0.25, MaxPointSpeed 600,
+Commander White checked for the same solver). Needs Shared Assets 1.0.6 pins.
+Evidence: `work/eve-hair-dash/`.
+
+### Original report
 
 Nexus comment by Yaminoshisyatoshiaki (24 Oct 2026, 4:56 PM): "Hair goes wild
 during a dash attack." Queued by the user for after Profane Proxima 0.2.1, with
