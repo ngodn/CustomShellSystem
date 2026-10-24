@@ -14,9 +14,9 @@ hold up. Direction (user agreed): Profane's glow follows Genessa's native eye
 shader, which compensates exposure with UE's EyeAdaptation node, calibrated to
 the current day look. Fix lives in the Profane Proxima build, release 0.2.1.
 Astra runs the UE renders and builds the candidate; Fable runs the in-game A/B.
-Open: restore `remembered_custom` for eins0fx.unholygenessa and
-eins0fx.seduxtress from `work/research/lighting/live/run2/state-before.json`
-with the game closed (the capture's persist:false wear overwrote them).
+The capture's persist:false wear overwrote `remembered_custom` for
+eins0fx.unholygenessa and eins0fx.seduxtress; restored from the pre-capture
+snapshot with the game closed, and the whole state file now equals it.
 Evidence: `work/research/lighting/`.
 
 ## October 24: Eve hair goes wild during a dash attack, queued
