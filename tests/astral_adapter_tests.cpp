@@ -48,10 +48,10 @@ int main(int argc,char** argv) {
           "Canonical-only companion was invented in the legacy pack");
     check(astral_companion_namespace(peony_companion,"unknown").empty(),
           "Canonical companion accepted an unknown pose");
-    std::set<std::string_view> roots;
+    std::set<std::pair<std::string_view,std::array<uint32_t,4>>> roots;
     size_t checked=0;
     for(const auto& spec:astral_material_definitions) {
-        check(roots.insert(spec.root).second,"Duplicate material root");
+        check(roots.insert({spec.root,spec.state_id}).second,"Duplicate material root revision");
         const bool canonical=spec.companion.starts_with(authored_astral_root);
         const auto companion_root=canonical ? authored_astral_root : legacy_astral_root;
         check(spec.companion.starts_with(companion_root) && spec.alternate.starts_with(companion_root),

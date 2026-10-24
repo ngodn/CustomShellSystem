@@ -147,11 +147,17 @@ void AstralMaterialAdapters::prepare(UObject* owner,std::span<UObject* const> so
         }
         if(!root->IsA(material_type)) throw std::runtime_error("Astral source has no material root");
         const auto path=narrow(root->GetPathName());
-        const auto spec=std::find_if(astral_material_definitions.begin(),astral_material_definitions.end(),
-            [&](const auto& value){return astral_material_root_matches(value.root,path);});
-        if(spec==astral_material_definitions.end()) throw std::runtime_error("No ghost adapter for "+path);
         const auto view=AstralStructView::object(root);
-        if(view.guid()!=spec->state_id) throw std::runtime_error("Ghost adapter graph revision differs: "+path);
+        const auto graph=view.guid();
+        // An outfit update can keep its material paths and change their graphs, so the table may
+        // carry several revisions of one root; the entry must match both path and graph identity.
+        const auto spec=std::find_if(astral_material_definitions.begin(),astral_material_definitions.end(),
+            [&](const auto& value){return astral_material_root_matches(value.root,path) && value.state_id==graph;});
+        if(spec==astral_material_definitions.end()) {
+            const bool known=std::any_of(astral_material_definitions.begin(),astral_material_definitions.end(),
+                [&](const auto& value){return astral_material_root_matches(value.root,path);});
+            throw std::runtime_error(known ? "Ghost adapter graph revision differs: "+path : "No ghost adapter for "+path);
+        }
         AstralMaterialState state;
         state.blend=view.number<uint8_t,FByteProperty>(L"BlendMode");state.two_sided=view.flag(L"TwoSided");
         state.clip=view.number<float,FFloatProperty>(L"OpacityMaskClipValue");state.switches=spec->defaults;
