@@ -1,14 +1,14 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "container": "CSS_SharedAssets_P",
   "required_for": "shared_animations_facial_playback_customized_genessa_doubles_and_npc_appearances_shoulder_support",
   "files": {
-    "CSS_SharedAssets_P.pak": "85be42e98ac6705b8d57cf5027db8bf8ce9bc23c89346c9f109de17f76b4e737",
+    "CSS_SharedAssets_P.pak": "50781e0e5f0f26a42fa688fb628026127163f09ba1367ffc1d4efed4a88185c8",
     "CSS_SharedAssets_P.utoc": "6866994dfc5a91fad3dea70ebf7f0ff04af2fb144d2ed96066d51b12eb785e0b",
     "CSS_SharedAssets_P.ucas": "87ad051bfc0513aca908703e8ae7125f25ee3040e2d60fa0a674ac77b25757c9"
   },
-  "source_candidate": "shared-assets-1.0.4-doubles1 (released 1.0.3 payloads plus 14 Profane Proxima ghost materials; metadata: pin c3f1eaf869f9 for eins0fx.thornyproxima v0.2.0 and face rig css.profaneproxima.face)",
-  "asset_containers_identical_to_accepted": false,
+  "source_candidate": "shared-assets-1.0.5 (released 1.0.4 containers unchanged; metadata pak adds Profane Proxima 0.2.1 pins 28e0b5dbe13c to the animation and css.profaneproxima.face adapters)",
+  "asset_containers_identical_to_accepted": true,
   "existing_assets_preserved": true,
   "asset_count": 310
 }

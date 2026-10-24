@@ -9,7 +9,7 @@ Installation
 4. Install CSS outfit packages separately under MortalShell2/Content/Paks/~mods/.
    Install the matching CSS Shared Assets download there for Peony, shared
    animations, facial playback, customized Genessa doubles and shoulder support.
-   The updated outfit packages require CSS Shared Assets 1.0.4 or later.
+   The updated outfit packages require CSS Shared Assets 1.0.5 or later.
    Replace CSS_SharedAssets_P and remove the superseded CSS_AstralSharedAssets_P
    and CSS_LocomotionSharedAssets_P folders if present. Keep one shared pack.
 5. Launch the game, enter the game world, open Inventory, and select CSS.
