@@ -1,6 +1,6 @@
 # Current work queue
 
-## October 24: Profane Proxima glow across lighting, in progress (0.2.1 with CSS 1.0.5 and Shared Assets 1.0.5; 1.0.4 is on Nexus)
+## October 24: Profane Proxima glow across lighting, released 0.2.1 with CSS 1.0.5 and Shared Assets 1.0.5 (tags pushed; Nexus upload by the user)
 
 The user reports Profane Proxima's glow needs re-tuning per condition (fine in
 CoreWorld day, wrong at night, in dungeons, Marrow Keep and interiors), while
