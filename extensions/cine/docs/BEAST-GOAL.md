@@ -109,8 +109,8 @@ narration, the title cards, and the intercut of the climax.
 
 | take | song | who | what |
 | --- | --- | --- | --- |
-| beast-p0 | 0 to 54 | original Proxima | narration; kneels on the bell at 29.5 (Kneel, then Kneel loop) under the title |
-| beast-g0 | 0 to 54 | original Genessa | the same, intercut |
+| beast-p0 | 0 to 54 | original Proxima, Profane Proxima from 41.2 | narration; kneels on the bell at 29.5 (CSS Kneeling Bow) under the title; wears Profane Proxima on her name slam |
+| beast-g0 | 0 to 54 | original Genessa, Unholy Genessa from 49.5 | the same, intercut; wears Unholy Genessa on her name slam |
 | beast-p1 | 54 to 96 | Profane Proxima | After Brute Battle on the groove's entry, then Low Lean and Side Kneel with the glow cooling; ATOOL 7 at 80; the Reach pose on the accent at 92.6 |
 | beast-g1 | 96 to 150.8 | Unholy Genessa | After Brute Battle in the arena, like Proxima; the quiet on her knees from 109.6 (Deep Kneeling Bow, look-down); rises into Performance 801 at 123; ember on the accent at 138; ATOOL 3 at 142 |
 | beast-p2 | 150.8 to 177.7 | Profane Proxima | the hunt: block, parry, riposte, Slayer Seal, Biosampler on the double-time beats; then the breath: Reclining in the Human skin, cameras above the grass, daydream, kiss |

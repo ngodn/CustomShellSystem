@@ -106,12 +106,19 @@ def intro(t, mirror, shell):
     """The narration over the game's own shell (a CSS look), then the kneel under the title.
     `mirror` flips the sides so the two intros intercut without repeating an angle."""
     m = -1 if mirror else 1
+    crown = shell == 'genessa'    # her crown of thorns fills a close shot from behind or above: keep those wider and to the side
     t.look(0.0, outfit=ORIGINAL, variant=shell)
-    t.shot(0.0, pose(m * 205, 220, 55, -4), pose(m * 190, 200, 40, -2), 'head', 60, 2.0, fixed=True)      # the horns, from high behind
+    if crown:
+        t.shot(0.0, pose(m * 205, 300, 35, -6), pose(m * 190, 270, 25, -4), 'neck', 100, 2.0, fixed=True)  # the crown against the sky, with her shoulders
+    else:
+        t.shot(0.0, pose(m * 205, 220, 55, -4), pose(m * 190, 200, 40, -2), 'head', 60, 2.0, fixed=True)   # the horns, from high behind
     t.shot(5.1, pose(-6 * m, 150, 4, 0), pose(0, 135, 3, 0), 'head', 36, 1.8)                             # "the Beast": the face
     t.shot(7.1, pose(95 * m, 150, 0, 0, 4 * m), pose(80 * m, 140, 0, 0, 2 * m), 'head', 34, 1.8)          # "the Man of Sin": profile
-    t.shot(9.4, pose(170 * m, 180, 70, -6), pose(160 * m, 170, 50, -4), 'neck', 50, 2.0, fixed=True)       # "Son of Perdition": from above
-    t.shot(11.6, pose(12 * m, 120, 2, 0, -3 * m), pose(4 * m, 105, 2, 0, 0), 'head', 26, 1.8)             # "the Antichrist": the eyes
+    if crown:
+        t.shot(9.4, pose(135 * m, 200, 30, -6), pose(120 * m, 185, 20, -4), 'neck', 60, 2.0, fixed=True)   # "Daughter of Perdition": the crown in profile, from high
+    else:
+        t.shot(9.4, pose(170 * m, 180, 70, -6), pose(160 * m, 170, 50, -4), 'neck', 50, 2.0, fixed=True)   # "Daughter of Perdition": from above
+    t.shot(11.6, pose(12 * m, 120, 2, 0, -3 * m), pose(4 * m, 105, 2, 0, 0), 'head', 26, 1.8, fixed=True)  # "the Antichrist": the eyes
     t.shot(13.9, pose(180, 700, -10, 0), pose(180, 420, -6, 0), 'body', 200, fixed=True)                   # "getting closer": the long push
     t.shot(24.3, pose(-20 * m, 140, 2, 0, -5 * m), pose(-8 * m, 128, 2, 0, -2 * m), 'head', 32, 1.8)     # "deliverance"
     # The bell: she kneels, and stays kneeling under the title (the CSS kneeling idle: the
@@ -119,7 +126,13 @@ def intro(t, mirror, shell):
     t.look(29.5, idle='css.eve.idle.kneeling_bow')
     t.shot(29.5, pose(150 * m, 300, 10, -10), pose(115 * m, 260, -20, -8), 'body', 160, fixed=True)
     t.shot(36.0, pose(-60 * m, 200, 20, -14), pose(-30 * m, 180, 10, -10), 'head', 60, 2.4)              # the bowed crown from the side
-    t.shot(41.2, pose(0, 260, 30, -20), pose(0, 200, 24, -16), 'head', 50, 2.0)                           # the name card: the bowed crown from above the grass
+    t.shot(41.2, pose(0, 260, 30, -20), pose(0, 200, 24, -16), 'head', 70 if crown else 50, 2.0)          # the name card: the bowed crown from above the grass
+    # Her name card lands on her own look, not the game's shell: Profane Proxima on the Proxima
+    # slam, Unholy Genessa on the Genessa slam. Uncovered, the slam's white flash hides the change.
+    if crown:
+        t.look(49.5, outfit=UG, variant='genessa', palette='moon', idle='css.eve.idle.kneeling_bow', expression=GX + 'serious', cover=False, wipe=0.01, hold=0.12)
+    else:
+        t.skin(41.2, 'proxima', 'devout_embers', idle='css.eve.idle.kneeling_bow', expression=PX + 'serious')
     t.shot(49.5, pose(-150 * m, 240, 20, -6), pose(-175 * m, 230, 10, -4), 'body', 170, fixed=True)
     t.look(52.5, idle=IDLE)                                                                                 # up before the groove
 

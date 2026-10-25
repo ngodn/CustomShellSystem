@@ -58,6 +58,7 @@ def main():
     if not ended and any(word in status for word in ('Rolling', 'Preparing', 'Building', 'Checking', 'Get ready', 'Closing')):
         raise SystemExit('A take is already running.')
     own = r.css({'action': 'describe'})
+    r.event('reload'); time.sleep(1.0)   # the preset on disk, never CINE's cached copy of an older one
     out = Path.home() / 'Videos' / f"{preset}-{time.strftime('%Y-%m-%d_%H-%M-%S')}.mp4"
     recorder = subprocess.Popen(['gpu-screen-recorder', '-w', 'region', '-region', f'{w}x{h}+{x}+{y}', '-f', '60', '-fm', 'content', '-k', 'h264', '-q', 'ultra',
                                  '-cursor', 'no', '-a', 'default_output', '-o', str(out)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)

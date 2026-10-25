@@ -130,7 +130,8 @@
    "ease": "smooth",
    "track": "head",
    "fit": 26,
-   "fstop": 1.8
+   "fstop": 1.8,
+   "fixed": true
   },
   {
    "at": 6.3457,
@@ -280,6 +281,17 @@
   {
    "at": 12.3452,
    "idle": "css.eve.idle.kneeling_bow"
+  },
+  {
+   "at": 16.8448,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
+   "palette": "devout_embers",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12,
+   "idle": "css.eve.idle.kneeling_bow",
+   "expression": "css.profaneproxima.face.serious"
   },
   {
    "at": 21.1906,

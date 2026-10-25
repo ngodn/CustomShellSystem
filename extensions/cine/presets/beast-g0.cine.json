@@ -19,23 +19,23 @@
    "at": 1.0,
    "from": {
     "azimuth": -205,
-    "distance": 220,
-    "height": 55,
-    "aim": -4,
+    "distance": 300,
+    "height": 35,
+    "aim": -6,
     "fov": 40,
     "roll": 0
    },
    "to": {
     "azimuth": -190,
-    "distance": 200,
-    "height": 40,
-    "aim": -2,
+    "distance": 270,
+    "height": 25,
+    "aim": -4,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
-   "track": "head",
-   "fit": 60,
+   "track": "neck",
+   "fit": 100,
    "fstop": 2.0,
    "fixed": true
   },
@@ -88,24 +88,24 @@
   {
    "at": 4.6151,
    "from": {
-    "azimuth": -170,
-    "distance": 180,
-    "height": 70,
+    "azimuth": -135,
+    "distance": 200,
+    "height": 30,
     "aim": -6,
     "fov": 40,
     "roll": 0
    },
    "to": {
-    "azimuth": -160,
-    "distance": 170,
-    "height": 50,
+    "azimuth": -120,
+    "distance": 185,
+    "height": 20,
     "aim": -4,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
    "track": "neck",
-   "fit": 50,
+   "fit": 60,
    "fstop": 2.0,
    "fixed": true
   },
@@ -130,7 +130,8 @@
    "ease": "smooth",
    "track": "head",
    "fit": 26,
-   "fstop": 1.8
+   "fstop": 1.8,
+   "fixed": true
   },
   {
    "at": 6.3457,
@@ -244,7 +245,7 @@
    },
    "ease": "smooth",
    "track": "head",
-   "fit": 50,
+   "fit": 70,
    "fstop": 2.0
   },
   {
@@ -280,6 +281,17 @@
   {
    "at": 12.3452,
    "idle": "css.eve.idle.kneeling_bow"
+  },
+  {
+   "at": 20.0369,
+   "outfit": "eins0fx.unholygenessa",
+   "variant": "genessa",
+   "palette": "moon",
+   "idle": "css.eve.idle.kneeling_bow",
+   "expression": "css.unholygenessa.face.serious",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
   },
   {
    "at": 21.1906,

@@ -105,6 +105,17 @@ def distress(mask, seed):
     return Image.fromarray((a * 255).astype(np.uint8))
 
 
+def fit_size(font_path, size, lines, max_w):
+    """The largest size at or under `size` at which every line fits `max_w` pixels: a title that
+    is set from the frame height alone clips at the edges of a 9:16 frame."""
+    while size > 8:
+        font = ImageFont.truetype(str(font_path), size)
+        if max(font.getlength(line) for line in lines) <= max_w:
+            break
+        size = int(size * 0.96)
+    return size
+
+
 class Text:
     """Rendered text as alpha masks: one per line, with a soft glow mask."""
 
@@ -179,11 +190,11 @@ class Film:
         big = int(h * 0.19)
         self.cards = {}
         for i, (a, b, lines, kind) in enumerate(CARDS):
-            size = {'small': int(h * 0.045), 'tiny': int(h * 0.03)}.get(kind, big)
+            size = fit_size(font, {'small': int(h * 0.045), 'tiny': int(h * 0.03)}.get(kind, big), lines, w * 0.9)
             self.cards[i] = Text(font, size, lines, worn=kind not in ('small', 'tiny'), seed=10 + i)
         # The narration: each line wrapped into rows that fit the frame, each word with its time.
         self.narration = []
-        size = int(h * 0.095)
+        size = int(min(h * 0.095, w * 0.11))
         font = ImageFont.truetype(str(font), size)
         self.narration_font = font
         for i, (a, b, text) in enumerate(NARRATION):
@@ -207,6 +218,10 @@ class Film:
                 rendered.append((mask, spans))
             self.narration.append((a, b, rendered))
         self.vignette = self._vignette()
+        # The intro's gradient: black at the bottom edge, where the take's CINE caption sits,
+        # clear by 60 percent of the way up. The narration reads on it.
+        y = np.arange(h, dtype=np.float32)[:, None, None]
+        self.bottom = np.clip((y - h * 0.60) / (h * 0.40), 0, 1) ** 1.4
 
     def _vignette(self):
         y, x = np.mgrid[0:self.h, 0:self.w].astype(np.float32)
@@ -225,7 +240,8 @@ class Film:
             fade = 1.0 if t < b else max(0.0, min(1.0, (until - t) / 0.25, 1 - (t - b) / 1.2))
             pad = int(self.narration_font.size * 0.4)
             row_h = int(self.narration_font.size * 1.25)
-            top = int(self.h * 0.76 - row_h * (len(rows) - 1) / 2)
+            # The block is centred on the frame, its rows stacked around the middle.
+            top = int(self.h * 0.5 - row_h * (len(rows) - 1) / 2)
             for r, ((ink, soft), spans) in enumerate(rows):
                 h, w = ink.shape
                 shown = np.zeros(w, np.float32)
@@ -241,6 +257,9 @@ class Film:
 
     def cards_at(self, img, t, rng):
         stack_y = {}
+        # The title block is centred on the frame; its small lines hang under the big text.
+        centre = int(self.h * 0.47)
+        below = int(self.h * 0.60)
         for i, (a, b, lines, kind) in enumerate(CARDS):
             if not (a <= t < b + 0.8):
                 continue
@@ -248,26 +267,45 @@ class Film:
             if kind == 'rise':
                 alpha = smooth((t - a) / 1.6) * (1.0 if t < b else max(0.0, 1 - (t - b) / 0.8))
                 img *= 1 - 0.5 * alpha
-                draw_lines(img, text, int(self.h * 0.42), alpha, 1 + 0.03 * smooth((t - a) / 8), glow=1.0)
+                draw_lines(img, text, centre, alpha, 1 + 0.03 * smooth((t - a) / 8), glow=1.0)
+                below = centre + text.height // 2 + int(self.h * 0.012)
             elif kind == 'slam':
                 e = decay(t, a, 0.07)
                 alpha = 1.0 if t < b else max(0.0, 1 - (t - b) / 0.8)
                 shake = 14 * e
                 jitter = (int(rng.normal(0, shake)), int(rng.normal(0, shake * 0.6))) if shake > 0.5 else (0, 0)
                 img *= 1 - 0.45 * alpha
-                draw_lines(img, text, int(self.h * 0.42) + jitter[1], alpha, 1 + 0.3 * e, glow=1 + 1.4 * e, centre_x=self.w // 2 + jitter[0])
-                img += (255 - np.clip(img, 0, 255)) * 0.7 * e
+                # The hit goes white and stays white for a third of a second, then clears: her
+                # own outfit lands under it (she is not drawn for a few frames while it loads).
+                white = 1.0 if t - a < 0.3 else math.exp(-(t - a - 0.3) / 0.12)
+                if 0 <= t - a and white > 0.005:
+                    img += (255 - np.clip(img, 0, 255)) * 0.85 * white
+                draw_lines(img, text, centre + jitter[1], alpha, 1 + 0.3 * e, glow=1 + 1.4 * e, centre_x=self.w // 2 + jitter[0])
+                below = centre + text.height // 2 + int(self.h * 0.012)
             elif kind == 'tiny':
                 alpha = smooth((t - a) / 1.0) * (1.0 if t < b else max(0.0, 1 - (t - b) / 0.8))
                 draw_lines(img, text, int(self.h * 0.86), alpha * 0.75, glow=0.0, colour=FAINT)
             else:
                 alpha = smooth((t - a) / 1.0) * (1.0 if t < b else max(0.0, 1 - (t - b) / 0.8))
-                y = int(self.h * 0.62) + stack_y.get('small', 0)
+                y = below + text.height // 2 + stack_y.get('small', 0)
                 draw_lines(img, text, y, alpha * 0.9, glow=0.0, colour=FAINT)
                 stack_y['small'] = stack_y.get('small', 0) + text.height + int(self.h * 0.012)
 
+    def quiet(self, t):
+        """Nothing to draw at t: the frame goes out as it came in (most of the film)."""
+        if t < 54.0 or t >= 262.0:
+            return False
+        if any(a <= t < b + 0.8 for a, b, _, _ in CARDS):
+            return False
+        return not any(decay(t, at, 0.07) > 0.005 for at, _ in FLASHES)
+
     def frame(self, t, frame, rng):
+        if self.quiet(t):
+            return frame
         img = frame.astype(np.float32)
+        # The gradient covers the whole intro, narration and name cards, and is gone by the groove.
+        if t < 54.0:
+            img *= 1 - self.bottom * (1.0 if t < 53.0 else max(0.0, 1 - (t - 53.0) / 1.0))
         if t < 27.0:
             self.narrate(img, t)
         self.cards_at(img, t, rng)
@@ -342,7 +380,7 @@ def main():
     audio = f'atrim=start={opts.start}:end={opts.stop},asetpts=PTS-STARTPTS,afade=t=out:st={max(0.0, length - 1.0)}:d=1.0'
     writer = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{w}x{h}', '-r', str(FPS), '-i', '-',
                                '-i', opts.song, '-map', '0:v', '-map', '1:a', '-af', audio,
-                               '-c:v', 'libx264', '-preset', 'slow', '-crf', '15', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+                               '-c:v', 'h264_nvenc', '-preset', 'p7', '-tune', 'hq', '-rc', 'vbr', '-cq', '17', '-b:v', '0', '-maxrate', '60M', '-bufsize', '120M', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
                                '-c:a', 'aac', '-b:a', '320k', '-t', f'{length:.4f}', opts.out], stdin=subprocess.PIPE)
     size = w * h * 3
     frame_index = 0
