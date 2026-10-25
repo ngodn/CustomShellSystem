@@ -215,6 +215,23 @@ static void prune_legacy_cache(const fs::path& cache) {
     }
     for(const auto& path:legacy) fs::remove_all(path,error);
 }
+// 1.0.6: a new package version gets a new folder, so every update used to leave the old masks
+// behind (2.3 GB after a few weeks of Eve and Genessa updates). Remove the folders no installed
+// package uses. Only after a scan that saw every folder: a skipped directory could hide a package
+// whose cache is still wanted. A pruned package that comes back is simply cached again.
+static void prune_unused_cache(const fs::path& cache,const std::set<fs::path>& used) {
+    std::error_code error;
+    fs::directory_iterator it(cache,error),end;
+    if(error) return;
+    std::vector<fs::path> unused;
+    for(;it!=end;it.increment(error)) {
+        if(error) break;
+        auto status=it->symlink_status(error);
+        if(error) { error.clear(); continue; }
+        if(fs::is_directory(status) && cache_folder_name(path_utf8(it->path().filename())) && !used.contains(it->path())) unused.push_back(it->path());
+    }
+    for(const auto& path:unused) fs::remove_all(path,error);
+}
 std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path& cache,Json* diagnostics) {
     std::vector<PackageCatalog> result;
     if(!cache.empty()) prune_legacy_cache(cache);
@@ -224,6 +241,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
         report["errors"].push_back({{"path",path_text(path)},{"reason",reason}});
     };
     std::vector<fs::path> paths, directories;
+    std::set<fs::path> used_cache;
     if(!paks.empty()) directories.push_back(paks);
     // Visit each directory independently so an inaccessible sibling cannot hide
     // healthy packages. Do not follow directory symlinks or junction loops.
@@ -373,6 +391,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                 }
             }
             result.push_back(package_document(manifest,manifest.at("catalog"),directory,path,revision));
+            used_cache.insert(directory);
         }
         if(result.size()>begin) { record["status"]="validated"; record.erase("reason"); }
         } catch(const std::exception& error) {
@@ -381,6 +400,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
         }
         report["files"].push_back(std::move(record));
     }
+    if(!cache.empty() && report["errors"].empty()) prune_unused_cache(cache,used_cache);
     if(diagnostics) *diagnostics=std::move(report);
     return result;
 }

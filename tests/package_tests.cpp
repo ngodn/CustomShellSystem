@@ -1,23 +1,37 @@
 #include "packages.hpp"
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 
 int main(int argc,char** argv) {
     using namespace css;
-    if(argc!=2) { std::cerr<<"package_tests PACKAGE_DIRECTORY\n"; return 2; }
+    if(argc!=2 && argc!=3) { std::cerr<<"package_tests PACKAGE_DIRECTORY [SHARED_ASSETS_DIRECTORY]\n"; return 2; }
+    // Outfits depend on CSS Shared Assets; without it Catalog::load rejects them. Default: the
+    // CSS_SharedAssets_P folder installed beside the outfit.
+    const fs::path shared=argc==3?fs::path(argv[2]):fs::absolute(argv[1]).parent_path()/"CSS_SharedAssets_P";
+    if(!fs::is_directory(shared)) { std::cerr<<"CSS Shared Assets folder not found: "<<shared<<'\n'; return 2; }
     auto root=fs::temp_directory_path()/"css-package-integration";
     if(fs::exists(root)) { std::cerr<<"Remove stale test directory first: "<<root<<'\n'; return 2; }
     fs::create_directories(root/"paks");
     try {
+        fs::path outfit_pak;
         for(const auto& file:fs::directory_iterator(argv[1])) {
-            if(file.path().extension()==".pak") fs::copy_file(file.path(),root/"paks"/file.path().filename());
+            if(file.path().extension()==".pak") { fs::copy_file(file.path(),root/"paks"/file.path().filename()); outfit_pak=root/"paks"/file.path().filename(); }
             else fs::create_symlink(fs::absolute(file.path()),root/"paks"/file.path().filename());
         }
+        for(const auto& file:fs::directory_iterator(shared))
+            fs::create_symlink(fs::absolute(file.path()),root/"paks"/file.path().filename());
         // A folder in the old <id>/<hash> layout is removed by the next scan.
         fs::create_directories(root/"cache/old.package.id/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+        // 1.0.6: so is the folder of a package version that is no longer installed.
+        fs::create_directories(root/"cache/0123456789abcdef");
+        std::ofstream(root/"cache/0123456789abcdef/dye-old.png",std::ios::binary)<<"old";
         auto packages=package_catalogs(root/"paks",root/"cache");
+        // Shared Assets is a CSS package too; test the outfit's entry.
+        std::erase_if(packages,[&](const auto& package) { return package.source!=outfit_pak; });
         if(packages.size()!=1 || !fs::exists(packages[0].artwork/"thumbnail.png")) throw std::runtime_error("Package metadata or thumbnail missing");
         if(fs::exists(root/"cache/old.package.id")) throw std::runtime_error("Old cache layout was not removed");
+        if(fs::exists(root/"cache/0123456789abcdef")) throw std::runtime_error("Unused package cache folder was not removed");
         // One short folder per package, directly under the cache, so Windows' 259-character
         // limit holds on a default Steam install (docs/css-packages.md).
         {
@@ -57,12 +71,15 @@ int main(int argc,char** argv) {
             package_catalogs(root/"paks",root/"cache");
             if(fs::file_size(texture)!=bytes) throw std::runtime_error("Corrupt color mask cache was not repaired");
         }
-        fs::path pak;
-        for(const auto& file:fs::directory_iterator(root/"paks")) if(file.path().extension()==".pak") pak=file.path();
-        std::fstream edit(pak,std::ios::in|std::ios::out|std::ios::binary);
+        std::fstream edit(outfit_pak,std::ios::in|std::ios::out|std::ios::binary);
         edit.seekp(-180,std::ios::end); edit.put('\xff'); edit.close();
         Json diagnostics;
-        if(!package_catalogs(root/"paks",root/"cache",&diagnostics).empty() || diagnostics["files"][0]["status"]!="rejected")
+        auto rescanned=package_catalogs(root/"paks",root/"cache",&diagnostics);
+        const auto outfit_path=outfit_pak.generic_u8string();
+        bool corrupt_reported=false;
+        for(const auto& file:diagnostics["files"])
+            if(file["path"]==std::string(outfit_path.begin(),outfit_path.end())) corrupt_reported=file["status"]=="rejected";
+        if(std::any_of(rescanned.begin(),rescanned.end(),[&](const auto& package) { return package.source==outfit_pak; }) || !corrupt_reported)
             throw std::runtime_error("Corrupt pak index was accepted or not reported");
         // 0.4: every colour control resolves to a group, a role and a hue lock,
         // declared by the package or read off the control id. A package written
