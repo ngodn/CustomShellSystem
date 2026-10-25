@@ -9,14 +9,14 @@ Shell System 1.0.5 or newer; without CSS the camera works and the look track is 
 
 Install
 1. Close the game.
-2. Put the eins0fx.cine folder into ue4ss/Mods/CSSX/extensions/. Its audio folder holds the
-   music of the scenes.
+2. Put the eins0fx.cine folder into ue4ss/Mods/CSSX/extensions/.
 3. Put the CSSX_CINE_eins0fx_P folder into MortalShell2/Content/Paks/~mods/.
    It holds the materials the breakdown draws with. Without it CINE still works, and a
    breakdown can only show physics bodies and the movement capsule.
 
 Updating from 1.0.0: replace the eins0fx.cine folder and add the CSSX_CINE_eins0fx_P folder.
-Presets you made yourself: copy them back into the new presets folder.
+Presets you made yourself: copy them back into the new presets folder. When you update CINE
+later, keep the presets and audio folders, or extract your scene packs again.
 
 Quick start
 1. Open CSSX (F6) and go to CINE.
@@ -50,27 +50,12 @@ the preset file (see Breakdown Turntable). Labels and arrows name what is on scr
 The look track is off while a breakdown runs.
 
 Music scenes
-Scene presets are timed to a piece of music in the audio folder: the camera cuts on the beat
-while CSS changes outfits, skins and palettes with the song, and the music plays from the
-roll. Set Breakdown track to "From the preset" for the ones that stage the rig, and Look
-track to "As set in CSS". Each scene puts your own look back when it ends.
-
-  Iris Out, Iris Out 2, Iris Out Static, Iris Out Static 1, Iris Out 9:16
-      The Iris Out dance four times: the bones alone, Eve, Unholy Genessa and Commander
-      White, each staged from wireframe to clay to the finished look before she dances.
-  Iris Out Eve + Rig, Iris Out Unholy Genessa + Rig, Iris Out Commander White + Rig
-      The dance twice: the outfit, then the bones alone.
-  Showreel 124, Showreel Finale
-      Unholy Genessa, Commander White and Eve split down the middle: wireframe on one side,
-      the finished look on the other.
-  Commander White Release (and 9:16), Commander White Walk
-      Commander White's palettes, pieces and rig.
-  Profane Proxima
-      A close 17 second cut: the glow colour and the Human / Proxima skin change on the
-      song's turning points, in Eve's default idle.
-
-The scenes need the outfits they show (Eve, Unholy Genessa, Commander White, Profane
-Proxima) and CSS Shared Assets for the dances. If one is missing, the scene's look changes
+Scene packs are separate downloads, one per song. Each one unzips into this folder: its
+presets go into presets/ and its music into audio/. A scene plays its music from the roll
+and cuts the camera on the beat while CSS changes outfits, skins and palettes with the song.
+Set Look track to "As set in CSS", and Breakdown track to "From the preset" for the scenes
+that stage the rig. Each scene puts your own look back when it ends. Scenes need the outfits
+they show and CSS Shared Assets for the dances; if an outfit is missing, the look changes
 turn off (the status line says why) and the camera and music still run.
 
 Presets
