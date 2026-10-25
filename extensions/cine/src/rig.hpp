@@ -50,6 +50,10 @@ public:
     // The game camera relative to her, for "use current view as final shot".
     FinalShot capture_final(Vec3 her_position, double her_yaw);
     Json css(const Json& request);                       // service css.customize v1 (throws why not)
+    // One of the game's own animation montages on her (an asset object path), through
+    // ACharacter::PlayAnimMontage; stopped by stop_montage and at the end of the take.
+    void play_montage(const std::string& path, double rate);
+    void stop_montage();
 
     // Action takes: who she fights, how the fight is going, and the take's own time and lens.
     Json locked_target();                                // the lock-on target actor, or null
@@ -107,6 +111,8 @@ private:
     bool time_scaled_ = false, shake_set_ = false;
     double shake_before_ = 1.0;
     std::vector<Json> cameras_;
+    std::map<std::string, Json> montages_;                 // loaded montage assets by path
+    bool montage_playing_ = false;
     std::vector<std::pair<Json, int>> hud_;
     bool hud_hidden_ = false, view_changed_ = false, speed_set_ = false, moving_ = false;
     int force_walk_sets_ = 0;

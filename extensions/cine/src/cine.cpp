@@ -551,8 +551,10 @@ void Extension::prepare() {
                 t.look_now = described;
                 t.seq_looks = !p.sequence.looks.empty();
             } catch (const std::exception& e) {
-                t.own_look = nullptr; t.seq_looks = false;
-                if (!p.sequence.looks.empty()) t.note = std::string("Looks off: ") + e.what() + ".";
+                // No CSS look to read (CSS off, or the game's own shell worn): steps that need it
+                // are off; steps that only play a game montage or set a title still run.
+                t.own_look = nullptr; t.seq_looks = !p.sequence.looks.empty() && !p.sequence.needs_css();
+                if (p.sequence.needs_css()) t.note = std::string("Looks off: ") + e.what() + ".";
             }
             // Outfit changes are covered by a frame pass, so the passes are built even when the
             // breakdown track itself is off.
@@ -564,7 +566,7 @@ void Extension::prepare() {
             if (t.many_looks) { Take::Prep begin; begin.begin = true; t.prep.push_back(begin); }
             if (t.seq_looks) for (const auto& [outfit, variant] : p.sequence.wardrobe()) { Take::Prep w; w.outfit = outfit; w.variant = variant; t.prep.push_back(w); }
             if (t.layers) { Take::Prep build; build.build = true; t.prep.push_back(build); }
-            if (t.seq_looks) {
+            if (t.seq_looks && t.own_look.is_object()) {   // no CSS look read (the game's own shell): nothing to open on
                 Take::Prep opening; opening.own = true;
                 for (const auto& look : p.sequence.looks) if (!look.outfit.empty() && look.at <= 1e-6) { opening.own = false; opening.outfit = look.outfit; opening.variant = look.variant; }
                 t.prep.push_back(opening);
@@ -868,7 +870,10 @@ Vec3 Extension::anchor_at(double time) const {
     const auto& shot = seq.shots[index];
     auto of = [&](Subject track) {
         const auto k = static_cast<size_t>(track);
-        return track == Subject::None || !t.track_ok[k] ? t.base : t.base + t.track_at[k];
+        // A tracked part is where she is now: a performance that carries her across the
+        // ground (After Brute Battle walks eleven metres) keeps the camera with her. The
+        // capsule reference stays the fixed point the take opened on.
+        return track == Subject::None || !t.track_ok[k] ? t.base : frame_.position + t.track_at[k];
     };
     if (!shot.cut && index > 0 && seq.shots[index - 1].track != shot.track && shot.length > 1e-6) {
         const double u = std::clamp((time - shot.at) / shot.length, 0.0, 1.0), s = u * u * (3 - 2 * u);
@@ -964,6 +969,25 @@ void Extension::apply_look(const SeqLook& look) {
         try { performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance); t.performance_resume = false; }
         catch (...) { t.performance_resume = true; t.performance_retry = t.seq_clock + 0.2; t.performance_give_up = t.seq_clock + 6.0; }
     }
+    if (!look.expression.empty()) {
+        // Before a performance on the same beat: a face change while the clip plays makes CSS
+        // interrupt it; this way the start waits for the face instead (a beat at most).
+        rig_.css({{"action", "apply"}, {"persist", false}, {"commands", Json::array({{{"action", "expression"}, {"expression", look.expression}}})}});
+        t.wore = true;   // her own face goes back with her look at the end
+    }
+    if (!look.performance_id.empty() && mode_ == Mode::Running) {
+        // Another performance from this beat: it is the take's performance now, so an
+        // interruption resumes this one, at the point the music has reached.
+        PerformanceChoice choice; choice.id = look.performance_id; choice.rate = look.performance_rate > 0 ? look.performance_rate : t.performance.rate;
+        if (performance_.owned()) { try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {} }
+        t.performance = choice; t.performance_at = t.seq_clock;
+        try { performance_.start([&](const Json& r) { return rig_.css(r); }, choice); t.performance_resume = false; }
+        catch (...) { t.performance_resume = true; t.performance_retry = t.seq_clock + 0.2; t.performance_give_up = t.seq_clock + 6.0; }
+    }
+    if (look.montage_set) {
+        try { if (look.montage.empty()) rig_.stop_montage(); else rig_.play_montage(look.montage, look.montage_rate); }
+        catch (const std::exception& e) { const std::string note = std::string("Montage: ") + e.what() + "."; t.note = t.note.empty() ? note : t.note + "  " + note; }
+    }
     if (!look.idle.empty()) { rig_.css({{"action", "idle"}, {"value", look.idle}}); t.idle_set = true; }
     if (look.reset && t.opening.is_object()) { rig_.css({{"action", "apply"}, {"persist", false}, {"commands", Json::array({{{"action", "restore"}, {"customize", t.opening}}})}}); t.wore = true; }
     if (!look.physics.empty()) {
@@ -1012,12 +1036,22 @@ void Extension::sequence_frame(const CssxFrame& f) {
         const double dt = std::clamp(f.seconds, 0.0, 0.25);
         t.wall_scale += (t.wall_target - t.wall_scale) * (1.0 - std::exp(-dt / 0.4));
         // The tracked parts of her body: eased between the tick's samples, then smoothed.
-        if (t.track_live) {
+        if (t.track_live && performance_.owned()) {
+            // A performance can carry her metres in a few frames (After Brute Battle leaps):
+            // the tick's ten samples a second trail her out of the frame, so while one plays
+            // the tracked parts are read every frame and the anchor is exact.
+            sample_tracks(true);
+        } else if (t.track_live) {
             t.track_age += dt;
-            const double ease = std::clamp(t.track_age / 0.1, 0.0, 1.0), follow = 1.0 - std::exp(-dt / 0.3);
+            const double ease = std::clamp(t.track_age / 0.1, 0.0, 1.0);
             for (size_t k = 1; k < Take::tracks; ++k) {
                 if (!t.track_used[k] || !t.track_ok[k]) continue;
                 const Vec3 target = t.track_before[k] + (t.track_now[k] - t.track_before[k]) * ease;
+                // A part that moves fast (a leap in a performance: metres in a fraction of a
+                // second) is followed tightly, or she leaves the frame; a slow one is smoothed.
+                const Vec3 step = t.track_now[k] - t.track_before[k];
+                const double speed = std::sqrt(step.x * step.x + step.y * step.y + step.z * step.z) / 0.1;
+                const double follow = 1.0 - std::exp(-dt / (speed > 250 ? 0.06 : 0.3));
                 t.track_at[k] = t.track_at[k] + (target - t.track_at[k]) * follow;
             }
         }

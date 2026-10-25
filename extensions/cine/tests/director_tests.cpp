@@ -26,6 +26,7 @@ struct Host {
     std::set<uint64_t> cameras, destroyed;
     uint64_t view = 1;                  // current view target ($object id); 1 = pawn
     int hud_visibility = 4, force_walk = 0, move_component = 0, speed_adjust_removed = 0, place_player = 0;
+    int montages = 0, montage_stops = 0; Json montage_last;   // the game's own montages played on her
     bool speed_adjusted = false, moving = false, fail_move = false, hit_walls = false;
     double speed_limit = 0;
     cine::Vec3 pos{0, 0, 100}, goal{0, 0, 100};
@@ -436,6 +437,8 @@ struct Host {
         if (fn == "GetCameraLocation") return {{"ReturnValue", vec(pos + cine::Vec3{0, 300, 0})}};
         if (fn == "GetCameraRotation") return {{"ReturnValue", {{"Pitch", 10.0}, {"Yaw", -90.0}, {"Roll", 0.0}}}};
         if (fn == "GetFOVAngle") return {{"ReturnValue", 70.0}};
+        if (fn == "PlayAnimMontage") { if (target != 1) throw std::runtime_error("montage on something other than her"); ++montages; montage_last = a; return {{"ReturnValue", 1.0}}; }
+        if (fn == "StopAnimMontage") { if (target != 1) throw std::runtime_error("montage stop on something other than her"); ++montage_stops; return Json::object(); }
         throw std::runtime_error("unexpected call " + fn);
     }
     // The game's side of one 0.1 s tick: path following moves her toward the goal.
@@ -1122,6 +1125,78 @@ int main(int argc, char** argv) {
             r.press("F9");
             expect(!h.css_wears.empty() && h.css_wears.back().at("outfit") == "own.outfit" && h.css_wears.back().value("persist", false),
                    "a cancelled sequence puts her own look back too: " + std::to_string(h.css_wears.size()) + " wears, last " + (h.css_wears.empty() ? std::string("none") : h.css_wears.back().dump()) + ", status " + r.status());
+        }
+        {   // Look steps that move her without a wardrobe change: a game montage, an expression, another performance.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = true;
+            std::ofstream(dir / "presets" / "test-moves.cine.json") << Json{
+                {"schema", 1}, {"id", "test-moves"}, {"name", "Test moves"}, {"kind", "sequence"}, {"reference", "capsule"},
+                {"tempo", {{"bpm", 120}, {"offset", 0.5}}}, {"end", 4}, {"performance", "off"},
+                {"shots", Json::array({{{"at", 1}, {"from", {{"azimuth", 0}, {"distance", 400}, {"height", 20}, {"aim", 10}, {"fov", 40}}}}})},
+                {"looks", Json::array({
+                    {{"at", 1.5}, {"montage", "/Game/Sparta/Kneel.Kneel"}, {"montage_rate", 0.8}},
+                    {{"at", 2}, {"expression", "css.face.happy"}},
+                    {{"at", 2.5}, {"performance", "css.test.pose"}, {"performance_rate", 0.5}},
+                    {{"at", 3}, {"montage", ""}}})}}.dump(2);
+            r.ext->event({{"id", "reload"}});
+            r.step();
+            const auto before = h.snapshot();
+            r.ext->event({{"id", "preset"}, {"value", "test-moves"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8");
+            for (int i = 0; i < 120 && !has(r.status(), "Rolling"); ++i) r.step();
+            expect(has(r.status(), "Rolling"), "a sequence of moves rolls: " + r.status());
+            const auto applies = h.css_applies.size();
+            const int starts = h.performance_starts;
+            r.step();
+            // 120 BPM, bar 1 at 0.5 s: bars 1.5, 2, 2.5, 3 are at 1.5, 2.5, 3.5, 4.5 s.
+            r.steps(21);   // about 2.0 s
+            expect(h.montages == 1 && h.montage_last.value("InPlayRate", 0.0) == 0.8 && h.montage_last.contains("AnimMontage"),
+                   "the montage is played on her at its rate on its beat: " + std::to_string(h.montages));
+            r.steps(10);   // about 2.9 s
+            expect(h.css_applies.size() == applies + 1 && h.css_applies.back()["commands"][0].value("expression", std::string()) == "css.face.happy",
+                   "the expression is applied on its beat");
+            r.steps(10);   // about 3.9 s
+            expect(h.performance_starts == starts + 1 && h.performance_start.value("id", std::string()) == "css.test.pose" && h.performance_start.value("rate", 0.0) == 0.5,
+                   "the step's performance starts on its beat at its rate: " + h.performance_start.dump());
+            r.steps(10);   // about 4.9 s
+            expect(h.montage_stops == 1, "an empty montage step stops the one playing: " + std::to_string(h.montage_stops));
+            r.steps(30);
+            expect(has(r.status(), "Take finished"), "the take ends: " + r.status());
+            expect(h.montage_stops == 1 && !h.performance_active, "nothing is stopped twice, and the performance is over");
+            expect(!h.css_wears.empty() && h.css_wears.back().contains("customize"), "her own look, face included, goes back");
+            const auto left = unrestored(before, h.snapshot());
+            expect(left.empty(), "and the world is as it was: " + left);
+            // A montage still playing when the take is cancelled is stopped with the take.
+            h.montage_stops = 0;
+            r.press("F8");
+            for (int i = 0; i < 120 && !has(r.status(), "Rolling"); ++i) r.step();
+            r.steps(24);
+            expect(h.montages == 2, "the montage plays again on the second roll");
+            r.press("F9");
+            expect(h.montage_stops == 1, "a cancelled take stops her montage: " + std::to_string(h.montage_stops));
+        }
+        {   // Without CSS (or on the game's own shell), a sequence whose steps only play a game montage still plays them.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = false;
+            std::ofstream(dir / "presets" / "test-kneel.cine.json") << Json{
+                {"schema", 1}, {"id", "test-kneel"}, {"name", "Test kneel"}, {"kind", "sequence"}, {"reference", "capsule"},
+                {"tempo", {{"bpm", 120}, {"offset", 0.5}}}, {"end", 3}, {"performance", "off"},
+                {"shots", Json::array({{{"at", 1}, {"from", {{"azimuth", 0}, {"distance", 400}, {"height", 20}, {"aim", 10}, {"fov", 40}}}}})},
+                {"looks", Json::array({{{"at", 1.5}, {"montage", "/Game/Sparta/Kneel.Kneel"}, {"title", "Kneel"}}})}}.dump(2);
+            r.ext->event({{"id", "reload"}});
+            r.step();
+            r.ext->event({{"id", "preset"}, {"value", "test-kneel"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8");
+            for (int i = 0; i < 120 && !has(r.status(), "Rolling"); ++i) r.step();
+            expect(has(r.status(), "Rolling") && !has(r.status(), "Looks off"), "a montage-only sequence rolls without CSS and does not report its looks off: " + r.status());
+            r.steps(22);
+            expect(h.montages >= 1, "and the montage plays on its beat without CSS: " + std::to_string(h.montages));
+            r.steps(40);
+            expect(has(r.status(), "Take finished") && h.montage_stops == 1, "the take ends and the montage is stopped with it: " + r.status());
         }
         {   // Walls all around at 150 cm: every shot is planned closer, and the take still plays and ends clean.
             Rig r(dir); r.host.populate(); auto& h = r.host;

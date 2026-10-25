@@ -151,11 +151,28 @@ Sequence Sequence::parse(const Json& j) {
                 }
             }
             if (item.contains("performance")) {
-                if (!item.at("performance").is_boolean()) throw std::invalid_argument("A look step's 'performance' is true (start the performance on this beat) or false (an outfit change that does not start it)");
-                look.restart = item.at("performance").get<bool>(); look.hold_performance = !look.restart;
+                if (item.at("performance").is_boolean()) { look.restart = item.at("performance").get<bool>(); look.hold_performance = !look.restart; }
+                else if (item.at("performance").is_string()) {
+                    look.performance_id = text(item, "performance", 96);
+                    if (look.performance_id.empty()) throw std::invalid_argument("A look step's 'performance' names the performance to start");
+                } else throw std::invalid_argument("A look step's 'performance' is true (start the performance on this beat), false (an outfit change that does not start it) or the id of a performance to start");
+            }
+            if (item.contains("performance_rate")) {
+                if (!item.at("performance_rate").is_number() || item.at("performance_rate").get<double>() < 0.1 || item.at("performance_rate").get<double>() > 4) throw std::invalid_argument("A look step's 'performance_rate' is 0.1 to 4");
+                look.performance_rate = item.at("performance_rate").get<double>();
+            }
+            look.expression = text(item, "expression", 96);
+            if (item.contains("montage")) {
+                if (!item.at("montage").is_string() || item.at("montage").get<std::string>().size() > 256) throw std::invalid_argument("A look step's 'montage' is an asset path, or \"\" to stop the one playing");
+                look.montage = item.at("montage").get<std::string>(); look.montage_set = true;
+            }
+            if (item.contains("montage_rate")) {
+                if (!item.at("montage_rate").is_number() || item.at("montage_rate").get<double>() < 0.1 || item.at("montage_rate").get<double>() > 4) throw std::invalid_argument("A look step's 'montage_rate' is 0.1 to 4");
+                look.montage_rate = item.at("montage_rate").get<double>();
             }
             if (item.contains("reset")) { if (!item.at("reset").is_boolean()) throw std::invalid_argument("A look step's 'reset' must be true or false"); look.reset = item.at("reset").get<bool>(); }
-            if (look.outfit.empty() && look.palette.empty() && look.controls.empty() && !look.titled && look.idle.empty() && !look.reset && look.physics.empty() && !look.restart) throw std::invalid_argument("A look step changes an outfit, a palette, controls, the idle or the title, or starts the performance");
+            if (look.outfit.empty() && look.palette.empty() && look.controls.empty() && !look.titled && look.idle.empty() && !look.reset && look.physics.empty() && !look.restart
+                && look.performance_id.empty() && look.expression.empty() && !look.montage_set) throw std::invalid_argument("A look step changes an outfit, a palette, controls, the idle, the expression or the title, or starts a performance or a montage");
             s.looks.push_back(std::move(look));
         }
     }
@@ -170,6 +187,13 @@ std::vector<std::pair<std::string, std::string>> Sequence::wardrobe() const {
         if (std::find(out.begin(), out.end(), key) == out.end()) out.push_back(key);
     }
     return out;
+}
+
+bool Sequence::needs_css() const {
+    for (const auto& look : looks)
+        if (!look.outfit.empty() || !look.palette.empty() || !look.controls.empty() || !look.physics.empty() || !look.idle.empty()
+            || look.reset || !look.expression.empty() || !look.performance_id.empty() || look.restart) return true;
+    return false;
 }
 
 ShotPlan choose_plan(const std::vector<double>& clear_by_turn) {

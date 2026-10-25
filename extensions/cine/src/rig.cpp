@@ -71,7 +71,7 @@ void Rig::forget() {
     time_scaled_ = shake_set_ = false;
     pawn_ = controller_ = movement_ = mesh_ = camera_manager_ = Json();
     statics_ = kismet_ = ai_ = widgets_ = player_lib_ = camera_class_ = Json();
-    cameras_.clear(); hud_.clear();
+    cameras_.clear(); hud_.clear(); montages_.clear(); montage_playing_ = false;
     hud_hidden_ = view_changed_ = speed_set_ = moving_ = false;
     force_walk_sets_ = 0;
 }
@@ -292,6 +292,21 @@ Vec3 Rig::socket_location(const Json& component, const std::string& socket) {
 bool Rig::asset_present(const std::string& path) const {
     try { return is_handle(host_.request({{"op", "load"}, {"path", path}})); } catch (...) { return false; }
 }
+void Rig::play_montage(const std::string& path, double rate) {
+    auto it = montages_.find(path);
+    if (it == montages_.end()) {
+        const auto asset = host_.request({{"op", "load"}, {"path", path}});
+        if (!is_handle(asset)) throw std::runtime_error("montage not found: " + path);
+        it = montages_.emplace(path, asset).first;
+    }
+    call(pawn_, "PlayAnimMontage", {{"AnimMontage", it->second}, {"InPlayRate", rate}, {"StartSectionName", "None"}});
+    montage_playing_ = true;
+}
+void Rig::stop_montage() {
+    if (!montage_playing_) return;
+    montage_playing_ = false;
+    call(pawn_, "StopAnimMontage", {{"AnimMontage", nullptr}});   // null: the one playing
+}
 bool Rig::view_point(Vec3& location, Rotator& rotation) {
     const auto reply = host_.request({{"op", "call"}, {"target", controller_}, {"function", "GetPlayerViewPoint"}, {"args", Json::object()}});
     if (!reply.is_object() || !reply.contains("Location") || !reply.contains("Rotation")) return false;
@@ -387,6 +402,7 @@ std::vector<std::string> Rig::restore_take() {
     auto step = [&](const char* what, auto&& fn) { try { fn(); } catch (const std::exception& e) { failures.push_back(std::string(what) + ": " + e.what()); } };
     for (auto& failure : restore_picture()) failures.push_back(std::move(failure));
     if (moving_) step("stop walking", [&] { stop_moving(); });
+    if (montage_playing_) step("montage", [&] { stop_montage(); });
     if (speed_set_) step("speed limit", [&] { call(movement_, "RemoveMaxSpeedAdjustment", {{"ID", {{"TagName", speed_tag}}}}); speed_set_ = false; });
     if (force_walk_sets_ > 0) step("force walk", [&] {
         // It may have been set more than once; clear until the game reports it off.

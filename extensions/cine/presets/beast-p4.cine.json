@@ -1,0 +1,171 @@
+{
+ "schema": 1,
+ "id": "beast-p4",
+ "name": "Beast P4",
+ "description": "Mark of the Beast, Profane Proxima: the drop-out on her face, the ending from the ground, then the Seated Recline. Song 246.6 to 269.4 s. Track: audio/beast-p4.wav in the CINE folder.",
+ "kind": "sequence",
+ "reference": "capsule",
+ "tempo": {
+  "bpm": 92.3,
+  "offset": 0.0,
+  "beats_per_bar": 4
+ },
+ "end": 9.7493,
+ "audio": "audio/beast-p4.wav",
+ "idle": "css.eve.idle.default",
+ "performance": "off",
+ "shots": [
+  {
+   "at": 1.0,
+   "from": {
+    "azimuth": 0,
+    "distance": 140,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": -2
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 118,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 30,
+   "fstop": 1.8
+  },
+  {
+   "at": 3.6921,
+   "from": {
+    "azimuth": 180,
+    "distance": 560,
+    "height": 10,
+    "aim": 12,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 500,
+    "height": 0,
+    "aim": 14,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 210,
+   "fixed": true
+  },
+  {
+   "at": 4.3301,
+   "from": {
+    "azimuth": 95,
+    "distance": 340,
+    "height": -20,
+    "aim": -30,
+    "fov": 40,
+    "roll": 3
+   },
+   "to": {
+    "azimuth": 70,
+    "distance": 300,
+    "height": -10,
+    "aim": -30,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 160,
+   "fstop": 2.8,
+   "fixed": true
+  },
+  {
+   "at": 5.7688,
+   "from": {
+    "azimuth": 25,
+    "distance": 170,
+    "height": 40,
+    "aim": -10,
+    "fov": 40,
+    "roll": -4
+   },
+   "to": {
+    "azimuth": 10,
+    "distance": 150,
+    "height": 30,
+    "aim": -10,
+    "fov": 40,
+    "roll": -1
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 36,
+   "fstop": 1.8
+  },
+  {
+   "at": 7.3072,
+   "from": {
+    "azimuth": -75,
+    "distance": 160,
+    "height": 10,
+    "aim": -4,
+    "fov": 40,
+    "roll": 4
+   },
+   "to": {
+    "azimuth": -50,
+    "distance": 140,
+    "height": 6,
+    "aim": -4,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 30,
+   "fstop": 2.0
+  }
+ ],
+ "looks": [
+  {
+   "at": 1.0,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "human",
+   "palette": "devout_embers",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12,
+   "idle": "css.eve.idle.default",
+   "expression": "css.profaneproxima.face.contempt"
+  },
+  {
+   "at": 2.3076,
+   "expression": "css.profaneproxima.face.smile"
+  },
+  {
+   "at": 3.6921,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
+   "palette": "devout_embers",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12,
+   "expression": "css.profaneproxima.face.serious"
+  },
+  {
+   "at": 4.3301,
+   "idle": "css.eve.idle.seated_recline",
+   "expression": "css.profaneproxima.face.daydream"
+  },
+  {
+   "at": 7.3072,
+   "expression": "css.profaneproxima.face.kiss"
+  }
+ ]
+}

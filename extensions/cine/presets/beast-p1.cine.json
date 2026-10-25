@@ -1,0 +1,299 @@
+{
+ "schema": 1,
+ "id": "beast-p1",
+ "name": "Beast P1",
+ "description": "Mark of the Beast, Profane Proxima: After Brute Battle on the groove, the glow cooling from embers to silver, Low Lean, Side Kneel, ATOOL 7, the Reach pose on the accent. Song 54.0 to 96.0 s. Track: audio/beast-p1.wav in the CINE folder.",
+ "kind": "sequence",
+ "reference": "capsule",
+ "tempo": {
+  "bpm": 92.3,
+  "offset": 0.0,
+  "beats_per_bar": 4
+ },
+ "end": 17.1525,
+ "audio": "audio/beast-p1.wav",
+ "idle": "css.eve.idle.default",
+ "performance": "off",
+ "shots": [
+  {
+   "at": 1.0,
+   "from": {
+    "azimuth": 200,
+    "distance": 520,
+    "height": 40,
+    "aim": 4,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 165,
+    "distance": 480,
+    "height": 20,
+    "aim": 6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 250,
+   "fixed": true
+  },
+  {
+   "at": 3.3075,
+   "from": {
+    "azimuth": 200,
+    "distance": 300,
+    "height": 40,
+    "aim": 0,
+    "fov": 40,
+    "roll": -4
+   },
+   "to": {
+    "azimuth": 165,
+    "distance": 280,
+    "height": 30,
+    "aim": 0,
+    "fov": 40,
+    "roll": -1
+   },
+   "ease": "smooth",
+   "track": "neck",
+   "fit": 110,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
+   "at": 4.8458,
+   "from": {
+    "azimuth": 150,
+    "distance": 420,
+    "height": -10,
+    "aim": -4,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 178,
+    "distance": 400,
+    "height": -30,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 220,
+   "fixed": true
+  },
+  {
+   "at": 6.3457,
+   "from": {
+    "azimuth": 180,
+    "distance": 260,
+    "height": 0,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 165,
+    "distance": 250,
+    "height": 14,
+    "aim": -4,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "neck",
+   "fit": 60,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
+   "at": 8.7301,
+   "from": {
+    "azimuth": -60,
+    "distance": 150,
+    "height": 6,
+    "aim": 0,
+    "fov": 40,
+    "roll": 5
+   },
+   "to": {
+    "azimuth": -45,
+    "distance": 138,
+    "height": 4,
+    "aim": 0,
+    "fov": 40,
+    "roll": 2
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 30,
+   "fstop": 1.8
+  },
+  {
+   "at": 9.4608,
+   "from": {
+    "azimuth": 190,
+    "distance": 300,
+    "height": 30,
+    "aim": -14,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 168,
+    "distance": 280,
+    "height": 24,
+    "aim": -12,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "pelvis",
+   "fit": 95,
+   "fstop": 4.0,
+   "fixed": true
+  },
+  {
+   "at": 10.9992,
+   "from": {
+    "azimuth": -170,
+    "distance": 330,
+    "height": -10,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -150,
+    "distance": 300,
+    "height": -14,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 185,
+   "fixed": true
+  },
+  {
+   "at": 12.5375,
+   "from": {
+    "azimuth": 20,
+    "distance": 150,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": -3
+   },
+   "to": {
+    "azimuth": 8,
+    "distance": 132,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 32,
+   "fstop": 1.8
+  },
+  {
+   "at": 14.422,
+   "from": {
+    "azimuth": 180,
+    "distance": 500,
+    "height": 10,
+    "aim": 12,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 440,
+    "height": 0,
+    "aim": 14,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 205,
+   "fixed": true
+  },
+  {
+   "at": 15.8449,
+   "from": {
+    "azimuth": -25,
+    "distance": 170,
+    "height": 10,
+    "aim": 0,
+    "fov": 40,
+    "roll": -6
+   },
+   "to": {
+    "azimuth": -12,
+    "distance": 150,
+    "height": 8,
+    "aim": 0,
+    "fov": 40,
+    "roll": -2
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 40,
+   "fstop": 2.0
+  }
+ ],
+ "looks": [
+  {
+   "at": 1.0,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
+   "palette": "devout_embers",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12,
+   "performance": "css.eve.performance.afterbrutebattle",
+   "expression": "css.profaneproxima.face.serious"
+  },
+  {
+   "at": 6.2688,
+   "idle": "css.eve.idle.low_lean",
+   "palette": "ember",
+   "expression": "css.profaneproxima.face.contempt"
+  },
+  {
+   "at": 8.7301,
+   "palette": "tiel_bronze",
+   "expression": "css.profaneproxima.face.sulk"
+  },
+  {
+   "at": 9.4608,
+   "idle": "css.eve.idle.side_kneel"
+  },
+  {
+   "at": 10.9992,
+   "performance": "css.eve.performance.atool7",
+   "idle": "css.eve.idle.default"
+  },
+  {
+   "at": 12.5375,
+   "expression": "css.profaneproxima.face.smile"
+  },
+  {
+   "at": 13.5759,
+   "palette": "proxima_silver",
+   "expression": "css.profaneproxima.face.serious"
+  },
+  {
+   "at": 15.8449,
+   "performance": "css.eve.photo.reach",
+   "expression": "css.profaneproxima.face.surprised"
+  }
+ ]
+}

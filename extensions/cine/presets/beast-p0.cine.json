@@ -1,0 +1,289 @@
+{
+ "schema": 1,
+ "id": "beast-p0",
+ "name": "Beast P0 Intro",
+ "description": "Mark of the Beast, the game's own Proxima: the narration, then the kneel under the title. Song 0.0 to 54.0 s. Track: audio/beast-p0.wav in the CINE folder.",
+ "kind": "sequence",
+ "reference": "capsule",
+ "tempo": {
+  "bpm": 92.3,
+  "offset": 0.0,
+  "beats_per_bar": 4
+ },
+ "end": 21.7675,
+ "audio": "audio/beast-p0.wav",
+ "idle": "css.eve.idle.default",
+ "performance": "off",
+ "shots": [
+  {
+   "at": 1.0,
+   "from": {
+    "azimuth": 205,
+    "distance": 220,
+    "height": 55,
+    "aim": -4,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 190,
+    "distance": 200,
+    "height": 40,
+    "aim": -2,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 60,
+   "fstop": 2.0,
+   "fixed": true
+  },
+  {
+   "at": 2.9614,
+   "from": {
+    "azimuth": -6,
+    "distance": 150,
+    "height": 4,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 135,
+    "height": 3,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 36,
+   "fstop": 1.8
+  },
+  {
+   "at": 3.7305,
+   "from": {
+    "azimuth": 95,
+    "distance": 150,
+    "height": 0,
+    "aim": 0,
+    "fov": 40,
+    "roll": 4
+   },
+   "to": {
+    "azimuth": 80,
+    "distance": 140,
+    "height": 0,
+    "aim": 0,
+    "fov": 40,
+    "roll": 2
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 34,
+   "fstop": 1.8
+  },
+  {
+   "at": 4.6151,
+   "from": {
+    "azimuth": 170,
+    "distance": 180,
+    "height": 70,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 160,
+    "distance": 170,
+    "height": 50,
+    "aim": -4,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "neck",
+   "fit": 50,
+   "fstop": 2.0,
+   "fixed": true
+  },
+  {
+   "at": 5.4612,
+   "from": {
+    "azimuth": 12,
+    "distance": 120,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": -3
+   },
+   "to": {
+    "azimuth": 4,
+    "distance": 105,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 26,
+   "fstop": 1.8
+  },
+  {
+   "at": 6.3457,
+   "from": {
+    "azimuth": 180,
+    "distance": 700,
+    "height": -10,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 420,
+    "height": -6,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 200,
+   "fixed": true
+  },
+  {
+   "at": 10.3454,
+   "from": {
+    "azimuth": -20,
+    "distance": 140,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": -5
+   },
+   "to": {
+    "azimuth": -8,
+    "distance": 128,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": -2
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 32,
+   "fstop": 1.8
+  },
+  {
+   "at": 12.3452,
+   "from": {
+    "azimuth": 150,
+    "distance": 300,
+    "height": 10,
+    "aim": -10,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 115,
+    "distance": 260,
+    "height": -20,
+    "aim": -8,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 160,
+   "fixed": true
+  },
+  {
+   "at": 14.845,
+   "from": {
+    "azimuth": -60,
+    "distance": 200,
+    "height": 20,
+    "aim": -14,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -30,
+    "distance": 180,
+    "height": 10,
+    "aim": -10,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 60,
+   "fstop": 2.4
+  },
+  {
+   "at": 16.8448,
+   "from": {
+    "azimuth": 0,
+    "distance": 260,
+    "height": 30,
+    "aim": -20,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 200,
+    "height": 24,
+    "aim": -16,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 50,
+   "fstop": 2.0
+  },
+  {
+   "at": 20.0369,
+   "from": {
+    "azimuth": -150,
+    "distance": 240,
+    "height": 20,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -175,
+    "distance": 230,
+    "height": 10,
+    "aim": -4,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 170,
+   "fixed": true
+  }
+ ],
+ "looks": [
+  {
+   "at": 1.0,
+   "outfit": "css.original_shells",
+   "variant": "knightlady"
+  },
+  {
+   "at": 12.3452,
+   "idle": "css.eve.idle.kneeling_bow"
+  },
+  {
+   "at": 21.1906,
+   "idle": "css.eve.idle.default"
+  }
+ ]
+}

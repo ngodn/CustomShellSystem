@@ -88,6 +88,14 @@ struct SeqLook {
     // beat; false keeps an outfit change from starting it the moment the look lands (a later
     // step will, after the change has been staged). Absent: an outfit change starts it on landing.
     bool restart = false, hold_performance = false;
+    // "performance" as a string: that CSS performance starts on this beat (the one playing
+    // stops) and is the take's performance from here on; "performance_rate" 0 keeps the rate.
+    std::string performance_id; double performance_rate = 0;
+    std::string expression;      // a facial expression id applied on this beat; her own face comes back with her look
+    // "montage": one of the game's own animation montages played on her (an asset object
+    // path) at "montage_rate"; "" stops the one playing. The game's kneel, sit, block, parry,
+    // riposte and so on, which no CSS library carries.
+    std::string montage; bool montage_set = false; double montage_rate = 1;
     std::map<std::string, std::string> physics;   // a motion control and the wardrobe's preset for it ("chest_motion": "natural")
 };
 
@@ -101,6 +109,9 @@ struct Sequence {
     static Sequence parse(const Json& preset);
     // Every distinct outfit/variant the take wears, in first-use order.
     std::vector<std::pair<std::string, std::string>> wardrobe() const;
+    // Whether any look step needs CSS (outfits, palettes, controls, idles, expressions,
+    // performances). Steps that only play a game montage or set a title run without it.
+    bool needs_css() const;
 };
 
 // What the world allows each shot, found by tracing before the take rolls. A shot is turned
