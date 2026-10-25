@@ -1,69 +1,65 @@
-[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/cine-v1.0.0/cine-header.jpg[/img][/center]
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/0a18bfc30623b53feb42548c8269362626b47a9d/docs/media/cine-v2.0.0/cine-v2.0.0-header.jpg[/img][/center]
 
-Hey everyone. CINE is a CSSX extension for making showcase videos of your character. You pick a camera preset, CINE moves the camera (and walks your character if the preset needs it), and you record it with whatever recorder you already use: OBS, ShadowPlay, Steam, anything. CINE doesn't record video itself.
+Hey everyone. CINE is a CSSX extension for making showcase videos of your character. You pick a preset, CINE moves the camera (and walks your character if the preset needs it), and you record it with whatever recorder you already use: OBS, ShadowPlay, Steam, anything. CINE doesn't record video itself.
 
-If you also run CSS (the wardrobe), CINE can flip through your outfit's palettes during the shot and put your own look back afterwards. Without CSS the camera still works fine, you just don't get the palette part.
+With CSS (the wardrobe) installed, CINE can also change your outfits, skins, palettes and pieces during the shot, timed to music, and put your own look back afterwards. Without CSS the camera still works fine.
 
-[size=4][b]What's in it[/b][/size]
+[size=4][b]Music scenes[/b][/size]
+CINE plays scenes: presets timed to a song that play the music from the roll and cut the camera on its beat while CSS changes the outfit, the skin, the palette and the pieces with the song. Your own look comes back when the scene ends. Scenes come as separate downloads, one per song, with the music included:
 [list]
-[*][b]Fashion Walk 360[/b]: she walks a route you recorded while the camera circles her once (front, right, behind, left, front again), then it settles on the last shot you framed yourself.
-[*][b]Pose Glide 3 / 5 / 7 / 10 s[/b]: for idle poses. One smooth arc from high behind her left shoulder round to her front-left. It's measured from her head, so it works for standing, sitting and kneeling poses. The longer ones start wider and higher.
-[*][b]Turntable[/b]: a slow 12 second circle at full-body distance, good for outfit showcases.
-[*][b]Photo Orbit[/b]: holds the camera on 7 angles, 2.5 seconds each, so you can grab stills with your own screenshot key.
-[*][b]Fight: Duel / Hero Orbit / Over the Shoulder[/b] (new in 1.1.0): for filming a fight you play yourself. More on that below.
-[*][b]Breakdown Turntable[/b] (new in 1.1.0): two slow circles while the picture gets taken apart layer by layer. More on that below too.
+[*][b]CINE Scenes: Iris Out[/b]: the Iris Out dance across the bones, Eve, Unholy Genessa and Commander White, in eight versions.
+[*][b]CINE Scenes: Something Ain't Right[/b]: Showreel 124, Showreel Finale and the Commander White release cut.
+[*][b]CINE Scenes: They Know Not What They Do[/b]: a close cut for Profane Proxima.
 [/list]
-
-Other stuff:
-[list]
-[*]Walk takes use the game's real walk, not the scripted jog. She starts slow, speeds up to walking pace, and slows down near the end.
-[*]The game HUD is hidden while you're in Cine World, and CINE draws nothing on screen during a take.
-[*]Frame guides (16:9, 9:16, 1:1, 2.39:1) to help you frame before you roll. They go away when the take starts.
-[*]Before a take, CINE checks the camera path for walls and pulls the camera in where it would clip through one (you can turn that off).
-[*]Distance, Height and Field of view sliders apply on top of any preset.
-[*]A countdown (0 to 10 s, shown small in a corner) before each take so you have time to hit record. Trim it out afterwards.
-[*]Presets are plain .cine.json files in the presets folder. Copy one, tweak it, hit Reload presets. A broken file gets skipped and named in the CSSX log.
-[/list]
+Each pack unzips into the CINE folder and lists the outfits it needs.
 
 [center][youtube]YOUTUBE_ID[/youtube][/center]
 
-[size=4][b]Clean scene (1.1.0)[/b][/size]
-Tired of clearing a whole camp before you can film? Set Clean scene > Hide to Enemies (or Enemies and NPCs) and they're gone from the picture while you're in Cine World. The world is not paused, so wind, lights and effects keep going. Hidden characters are frozen, can't be hit and can't hit you, and new ones don't spawn while it's on. When you leave Cine World everyone comes back the way they were. Nothing gets killed and nothing is saved.
+[size=4][b]Camera presets[/b][/size]
+[list]
+[*][b]Fashion Walk 360[/b]: she walks a route you recorded while the camera circles her once, then it settles on the last shot you framed yourself.
+[*][b]Pose Glide 3 / 5 / 7 / 10 s[/b]: one smooth arc for idle poses, measured from her head so it works standing, sitting and kneeling.
+[*][b]Turntable[/b]: a slow circle at full-body distance. [b]Photo Orbit[/b]: holds the camera on 7 angles so you can grab stills.
+[*][b]Fight: Duel[/b], [b]Fight: Hero Orbit[/b], [b]Fight: Over the Shoulder[/b]: film a fight you play yourself. A kill plays in slow motion, a parry or a hit pushes the camera in.
+[*][b]Breakdown Turntable[/b]: two slow circles while the picture is taken apart layer by layer.
+[/list]
 
-Bosses are left alone, and clean scene stays off while a boss fight is going.
+[size=4][b]Breakdown[/b][/size]
+Show any take in layers like a VFX breakdown reel: clay, wireframe, skeleton, virtual / IK / spring bones, sockets, physics bodies, the movement capsule and frame passes (base colour, normals, depth). The frame can split on the middle of her body, mesh and rig on one side and the finished look on the other, with labels and arrows. CSS outfits with physics get their spring bones marked.
 
-[size=4][b]Fight takes (1.1.0)[/b][/size]
-The Fight presets film a fight that you actually play. Lock on to an enemy, roll the take and fight. The camera frames you and your target, backs off when you move apart, plays a kill in slow motion and pushes in a little on a parry or a hit. The take ends when the target is down, when you press F9, or after 90 seconds.
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/0a18bfc30623b53feb42548c8269362626b47a9d/docs/media/cine-v2.0.0/cine-v2.0.0-split.jpg[/img]
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/0a18bfc30623b53feb42548c8269362626b47a9d/docs/media/cine-v2.0.0/cine-v2.0.0-rig.jpg[/img][/center]
 
-Want a clean one on one? Turn on Clean scene with [b]Keep my lock-on target[/b]. Everyone else goes, your target stays, and that fight is real, so it can hurt you.
+[size=4][b]Clean scene[/b][/size]
+Hide enemies, or enemies and NPCs, while you're in Cine World, without pausing the world. They're frozen and can't be hit, new ones don't spawn, and everyone comes back as they were when you leave. Bosses are left alone. "Keep my lock-on target" leaves the enemy you're locked on to, for a clean one on one.
 
-[size=4][b]Breakdown (1.1.0)[/b][/size]
-This one shows your take in layers like a VFX breakdown reel: clay, wireframe, skeleton, virtual bones, IK bones, spring bones, sockets, physics bodies, the movement capsule, and frame passes like base colour, normals and depth. Each layer wipes in across the screen, with a label and an arrow for what you're looking at.
-
-Set Breakdown track to [b]Built-in reel[/b] and it works on any preset, walks and fights included. [b]From the preset[/b] uses the steps written in the preset file, like Breakdown Turntable does. If your outfit is a CSS one with physics on it (chest, glutes and so on), those spring bones get their own markers and labels.
-
-Everything is put back when the take ends or gets cancelled. Your look track is off while a breakdown runs.
+[size=4][b]Other stuff[/b][/size]
+[list]
+[*]Walk takes use the game's real walk, not the scripted jog.
+[*]The game HUD is hidden in Cine World. Frame guides (16:9, 9:16, 1:1, 2.39:1) help you frame before you roll.
+[*]Before a take, CINE checks the camera path for walls and pulls the camera in where it would clip through one.
+[*]A countdown before each take so you have time to hit record.
+[*]Your look goes back even when a take gets cut off by a loading screen, travel or death.
+[*]Presets are plain .cine.json files in the presets folder. Copy one, tweak it, hit Reload presets.
+[/list]
 
 [size=4][b]How to use it[/b][/size]
 [list=1]
 [*]Open CSSX (F6, or the CSSX tab in the Player Menu) and go to CINE.
-[*]For a walk shot: Route > Record route. Walk the path you want (at least 3 m), then stand still for 3 seconds. It saves on its own.
-[*]Put her where the walk should end, frame her with the normal game camera, and use Route > Use the current view as final shot (or F7 in Cine World).
+[*]For a walk shot: Route > Record route. Walk the path you want, then stand still for 3 seconds.
+[*]Put her where you want the shot, frame her with the normal game camera, and use Route > Use the current view as final shot (or F7 in Cine World).
 [*]Pick a preset, hit Enter Cine World, start your recorder, press F8.
 [/list]
 
+For scenes, set Look track to As set in CSS, and Breakdown track to From the preset for the ones that stage the rig.
+
 Keys in Cine World: [b]F8[/b] rolls a take, [b]F9[/b] cancels a take or leaves Cine World, [b]F10[/b] cycles the frame guide, [b]F7[/b] saves the final shot. Keyboard only, because the D-pad uses items in this game.
-
-For the palette part, set Look track to Cycle palettes (it starts on Off). After the take your own look comes back and gets saved like normal.
-
-[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/cine-v1.0.0/cine-menu-world.jpg[/img][/center]
 
 [size=4][b]Install[/b][/size]
 [list=1]
 [*]You need CSSX 1.3.1 or newer.
-[*]Optional: CSS 1.0.0-beta.9 or newer for the palette part.
-[*]Close the game and extract the [b]eins0fx.cine[/b] folder into [b]ue4ss/Mods/CSSX/extensions/[/b].
-[*]New in 1.1.0: put the [b]CSSX_CINE_eins0fx_P[/b] folder into [b]MortalShell2/Content/Paks/~mods/[/b]. It holds the materials the breakdown draws with. If you skip it CINE still works, the breakdown just can't show more than physics bodies and the capsule.
+[*]For the look track and the scenes: CSS 1.0.5 or newer.
+[*]Close the game. Extract the [b]eins0fx.cine[/b] folder into [b]ue4ss/Mods/CSSX/extensions/[/b], and the [b]CSSX_CINE_eins0fx_P[/b] folder into [b]MortalShell2/Content/Paks/~mods/[/b].
 [/list]
 
 [code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/
@@ -72,15 +68,9 @@ For the palette part, set Look track to Cycle palettes (it starts on Off). After
     |-- cine.dll
     |-- extension.json
     |-- menu.json
+    |-- signature.txt
+    |-- fonts/
     `-- presets/
-        |-- fashion-walk-360.cine.json
-        |-- photo-orbit.cine.json
-        |-- pose-glide-3.cine.json
-        |-- pose-glide-5.cine.json
-        |-- pose-glide-7.cine.json
-        |-- pose-glide-10.cine.json
-        |-- turntable.cine.json
-        `-- (and the fight and breakdown presets)
 
 Sparta/MortalShell2/Content/Paks/~mods/
 `-- CSSX_CINE_eins0fx_P/
@@ -88,15 +78,12 @@ Sparta/MortalShell2/Content/Paks/~mods/
     |-- CSSX_CINE_eins0fx_P.ucas
     `-- CSSX_CINE_eins0fx_P.utoc[/code]
 
-Don't add an extra folder level around it.
-
-[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/cine-v1.0.0/cine-menu-shot.jpg[/img]
-[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/cine-v1.0.0/cine-menu-route.jpg[/img][/center]
+Don't add an extra folder level around them. Updating from 1.0.0: replace the eins0fx.cine folder and copy your own presets back in. Scene packs go on top of CINE; when you update CINE later, extract them again.
 
 [size=4][b]Good to know[/b][/size]
 [list]
-[*]Opening a menu, pressing F9, a loading screen, travel or death all cancel a take. The camera and walk settings go back, and so does your look (after a loading screen CINE keeps trying until CSS is ready again).
-[*]On walk takes she just follows the path you recorded, so record over open ground. Enemies in the way? Use Clean scene.
+[*]Opening a menu, pressing F9, a loading screen, travel or death all cancel a take. The camera, the walk and your look go back.
+[*]On walk takes she just follows the path you recorded. Turn on Clean scene or clear the enemies first, and record over open ground.
 [/list]
 
 [size=4][b]When something breaks[/b][/size]
@@ -109,4 +96,4 @@ MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/logs/eins0fx.cine/current.jsonl[/cod
 CINE is open source in the [url=https://github.com/ngodn/CustomShellSystem/tree/main/extensions/cine]CustomShellSystem repo[/url].
 
 [size=4][b]Credits[/b][/size]
-CINE by _eins0fx. Thanks to the UE4SS contributors.
+CINE by _eins0fx. Labels use Rajdhani (SIL Open Font License). Thanks to the UE4SS contributors.
