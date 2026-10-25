@@ -1,5 +1,17 @@
 # Current work queue
 
+## October 25: Profane Proxima 0.2.2, in progress (Astra building)
+
+Body skin (Human and Proxima) stays flat at night while the face follows the
+world lighting: the face is the game's Uber skin (reads
+MPC_SpartaLightingCharacter rim and reflection boost), the body is our own
+M_WaterHuman/M_WaterProxima. Plus Nexus requests from woahimamess (25 Oct):
+higher max for hips/thighs/calves, a Calf strips toggle, an optional
+foot/ankle glow between bare feet and heels. Brief:
+`aaa-prompts/ASTRA_PROFANE_SKIN_LIGHTING.md`. Needs Shared Assets pins
+(shipping together with Eve 1.5.2 in Shared Assets 1.0.6). Commander White
+0.1.3 hair fix is packaged (dist/commanderwhite-v0.1.3) but on hold.
+
 ## October 24: Profane Proxima glow across lighting, released 0.2.1 with CSS 1.0.5 and Shared Assets 1.0.5 (tags pushed; Nexus upload by the user)
 
 The user reports Profane Proxima's glow needs re-tuning per condition (fine in
