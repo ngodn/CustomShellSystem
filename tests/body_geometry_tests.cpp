@@ -107,8 +107,15 @@ void synthetic_suite() {
         rejects([&]{BodyGeometryModel::parse(bad);});
         bad=source;bad["morphs"][axes-1]=bad["morphs"][0];rejects([&]{BodyGeometryModel::parse(bad);});
         bad=source;bad["schema"]=1;rejects([&]{BodyGeometryModel::parse(bad);});
-        for(float invalid:{-1.f,1.01f,std::numeric_limits<float>::quiet_NaN()}) {
+        for(float invalid:{-1.f,max_body_morph_weight+.01f,std::numeric_limits<float>::quiet_NaN()}) {
             std::vector<float> values(axes,0.f);values[axes-1]=invalid;rejects([&]{model.evaluate(values);});
+        }
+        // A slider extended past its authored morph extrapolates the helper offsets linearly.
+        {
+            std::vector<float> zero(axes,0.f),one(axes,0.f),two(axes,0.f);one[0]=1;two[0]=2;
+            const auto a=model.evaluate(zero),b=model.evaluate(one),c=model.evaluate(two);
+            for(size_t i=0;i<7;++i) for(size_t axis=0;axis<3;++axis)
+                expect(std::abs(c.offsets[i][axis]-(2*b.offsets[i][axis]-a.offsets[i][axis]))<1e-6,"Extended morph does not extrapolate offsets");
         }
     }
     // Outside 6..8 axes, in either schema.

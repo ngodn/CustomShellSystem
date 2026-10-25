@@ -106,7 +106,10 @@ BodyGeometryModel BodyGeometryModel::parse(const Json& data) {
 BodyGeometry BodyGeometryModel::evaluate(const std::vector<float>& morphs) const {
     const size_t count=axes(),total=corners();
     require(morphs.size()==count,"Body morph count differs from the model");
-    for(float value:morphs) require(std::isfinite(value) && value>=0 && value<=1,"Body morph outside [0,1]");
+    // Outfits may push a body slider past its authored morph (weight above 1) to reach a larger
+    // shape. The model is linear/quadratic in the weights, so it extends past 1; the inertia and
+    // bounds checks below still reject a result that stops being physical.
+    for(float value:morphs) require(std::isfinite(value) && value>=0 && value<=max_body_morph_weight,"Body morph outside [0,3]");
     std::vector<double> weights(total);
     for(size_t mask=0;mask<total;++mask) {
         weights[mask]=1;

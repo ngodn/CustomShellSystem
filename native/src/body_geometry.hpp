@@ -21,6 +21,9 @@ struct BodyGeometry {
     std::array<std::array<BodyVector,3>,7> contact_axes{};
     bool operator==(const BodyGeometry&) const = default;
 };
+// Highest body morph weight the geometry model evaluates; outfits may extend a slider past its authored morph.
+inline constexpr float max_body_morph_weight=3.0f;
+
 struct BodyGeometryModel {
     struct Helper {
         std::string contact_bone;
