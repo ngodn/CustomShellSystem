@@ -1,0 +1,215 @@
+{
+ "schema": 1,
+ "id": "profane-proxima-stills",
+ "name": "Profane Proxima Stills",
+ "description": "Six held poses of Profane Proxima for screenshots, three seconds each, in Eve's default idle. Body only from behind.",
+ "kind": "sequence",
+ "reference": "capsule",
+ "tempo": {
+  "bpm": 170.14,
+  "offset": 0.0,
+  "beats_per_bar": 4
+ },
+ "end": 13.7605,
+ "idle": "css.eve.idle.default",
+ "shots": [
+  {
+   "at": 1.0,
+   "from": {
+    "azimuth": 172,
+    "distance": 140,
+    "height": 70,
+    "aim": 0,
+    "fov": 40,
+    "roll": -6
+   },
+   "to": {
+    "azimuth": 172,
+    "distance": 140,
+    "height": 70,
+    "aim": 0,
+    "fov": 40,
+    "roll": -6
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 36,
+   "fstop": 2.2,
+   "fixed": true
+  },
+  {
+   "at": 3.1267,
+   "from": {
+    "azimuth": 180,
+    "distance": 280,
+    "height": -26,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 280,
+    "height": -26,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "pelvis",
+   "fit": 80,
+   "fstop": 2.2,
+   "fixed": true
+  },
+  {
+   "at": 5.2535,
+   "from": {
+    "azimuth": -4,
+    "distance": 130,
+    "height": 3,
+    "aim": 0,
+    "fov": 40,
+    "roll": -2
+   },
+   "to": {
+    "azimuth": -4,
+    "distance": 130,
+    "height": 3,
+    "aim": 0,
+    "fov": 40,
+    "roll": -2
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 30,
+   "fstop": 2.2
+  },
+  {
+   "at": 7.3802,
+   "from": {
+    "azimuth": -32,
+    "distance": 135,
+    "height": 5,
+    "aim": 0,
+    "fov": 40,
+    "roll": -3
+   },
+   "to": {
+    "azimuth": -32,
+    "distance": 135,
+    "height": 5,
+    "aim": 0,
+    "fov": 40,
+    "roll": -3
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 28,
+   "fstop": 2.2
+  },
+  {
+   "at": 9.507,
+   "from": {
+    "azimuth": 180,
+    "distance": 480,
+    "height": -78,
+    "aim": 22,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 480,
+    "height": -78,
+    "aim": 22,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 205,
+   "fstop": 2.2,
+   "fixed": true
+  },
+  {
+   "at": 11.6337,
+   "from": {
+    "azimuth": 186,
+    "distance": 230,
+    "height": 10,
+    "aim": -6,
+    "fov": 40,
+    "roll": 2
+   },
+   "to": {
+    "azimuth": 186,
+    "distance": 230,
+    "height": 10,
+    "aim": -6,
+    "fov": 40,
+    "roll": 2
+   },
+   "ease": "smooth",
+   "track": "pelvis",
+   "fit": 95,
+   "fstop": 2.2,
+   "fixed": true
+  }
+ ],
+ "looks": [
+  {
+   "at": 1.0,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "human",
+   "palette": "proxima_silver",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  },
+  {
+   "at": 3.1267,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "human",
+   "palette": "cold_starlight",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  },
+  {
+   "at": 5.2535,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
+   "palette": "devout_embers",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  },
+  {
+   "at": 7.3802,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
+   "palette": "tiel_bronze",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  },
+  {
+   "at": 9.507,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
+   "palette": "devout_embers",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  },
+  {
+   "at": 11.6337,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "human",
+   "palette": "ember",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  }
+ ]
+}

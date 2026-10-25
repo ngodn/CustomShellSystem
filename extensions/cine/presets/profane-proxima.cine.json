@@ -1,0 +1,255 @@
+{
+ "schema": 1,
+ "id": "profane-proxima",
+ "name": "Profane Proxima",
+ "description": "A close 17 second cut for Profane Proxima on the song's turning points, in Eve's default idle. Only the glow colour and the skin change; body shots only from behind. Track: audio/profane-proxima.wav in the CINE folder.",
+ "kind": "sequence",
+ "reference": "capsule",
+ "tempo": {
+  "bpm": 170.14,
+  "offset": 0.0,
+  "beats_per_bar": 4
+ },
+ "end": 14.8948,
+ "audio": "audio/profane-proxima.wav",
+ "idle": "css.eve.idle.default",
+ "shots": [
+  {
+   "at": 1.0,
+   "from": {
+    "azimuth": 176,
+    "distance": 150,
+    "height": 95,
+    "aim": 0,
+    "fov": 40,
+    "roll": -8
+   },
+   "to": {
+    "azimuth": 150,
+    "distance": 125,
+    "height": 60,
+    "aim": 0,
+    "fov": 40,
+    "roll": -2
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 36,
+   "fstop": 1.8,
+   "fixed": true
+  },
+  {
+   "at": 3.1551,
+   "from": {
+    "azimuth": 192,
+    "distance": 200,
+    "height": 40,
+    "aim": -6,
+    "fov": 40,
+    "roll": 3
+   },
+   "to": {
+    "azimuth": 178,
+    "distance": 230,
+    "height": -8,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "pelvis",
+   "fit": 95,
+   "fstop": 2.8,
+   "fixed": true
+  },
+  {
+   "at": 5.4874,
+   "from": {
+    "azimuth": -6,
+    "distance": 150,
+    "height": 4,
+    "aim": 0,
+    "fov": 40,
+    "roll": -3
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 128,
+    "height": 3,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 30,
+   "fstop": 1.8
+  },
+  {
+   "at": 7.04,
+   "from": {
+    "azimuth": 172,
+    "distance": 280,
+    "height": -24,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 190,
+    "distance": 270,
+    "height": -30,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "pelvis",
+   "fit": 80,
+   "fstop": 4.0,
+   "fixed": true
+  },
+  {
+   "at": 8.4011,
+   "from": {
+    "azimuth": 180,
+    "distance": 470,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 410,
+    "height": -6,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 195,
+   "fixed": true
+  },
+  {
+   "at": 9.7977,
+   "from": {
+    "azimuth": -40,
+    "distance": 150,
+    "height": 6,
+    "aim": 0,
+    "fov": 40,
+    "roll": -4
+   },
+   "to": {
+    "azimuth": -26,
+    "distance": 132,
+    "height": 4,
+    "aim": 0,
+    "fov": 40,
+    "roll": -1
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 28,
+   "fstop": 1.8
+  },
+  {
+   "at": 11.5487,
+   "from": {
+    "azimuth": 180,
+    "distance": 520,
+    "height": -70,
+    "aim": 20,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 480,
+    "height": -80,
+    "aim": 22,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 205,
+   "fixed": true
+  },
+  {
+   "at": 12.3285,
+   "from": {
+    "azimuth": 0,
+    "distance": 150,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": -4
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 112,
+    "height": 2,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 34,
+   "fstop": 2.0
+  }
+ ],
+ "looks": [
+  {
+   "at": 1.0,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "human",
+   "palette": "proxima_silver",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  },
+  {
+   "at": 3.1551,
+   "palette": "cold_starlight"
+  },
+  {
+   "at": 5.4874,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
+   "palette": "cold_starlight",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  },
+  {
+   "at": 7.04,
+   "palette": "ruined_mist"
+  },
+  {
+   "at": 8.4011,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "human",
+   "palette": "ruined_mist",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  },
+  {
+   "at": 9.7977,
+   "palette": "tiel_bronze"
+  },
+  {
+   "at": 11.5487,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
+   "palette": "devout_embers",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12
+  }
+ ]
+}
