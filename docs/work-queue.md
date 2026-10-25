@@ -7,7 +7,11 @@ world lighting: the face is the game's Uber skin (reads
 MPC_SpartaLightingCharacter rim and reflection boost), the body is our own
 M_WaterHuman/M_WaterProxima. Plus Nexus requests from woahimamess (25 Oct):
 higher max for hips/thighs/calves, a Calf strips toggle, an optional
-foot/ankle glow between bare feet and heels. Brief:
+foot/ankle glow between bare feet and heels. And a front-chest redesign
+(the user: the current overlay rings the nipples and areolas and reads too
+sexual; it should read skimpy and sensual, with a Chest cover toggle; the
+back stays). Astra renders three front options for the user to pick before
+the final cook. Brief:
 `aaa-prompts/ASTRA_PROFANE_SKIN_LIGHTING.md`. Needs Shared Assets pins
 (shipping together with Eve 1.5.2 in Shared Assets 1.0.6). Commander White
 0.1.3 hair fix is packaged (dist/commanderwhite-v0.1.3) but on hold.
