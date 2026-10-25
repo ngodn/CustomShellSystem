@@ -1,6 +1,55 @@
 # Current work queue
 
+## October 26: Unholy Genessa and Eve "no textures / grey skin" reports, findings
+
+Reports (Nexus, 25 and 26 Oct): Genessa grey skin with white glowing veins
+(jklmnb666, Chinese client, Harbinger); Eve no textures (SlGlaze,
+Kajus2006879592); Eve on an AMD laptop where only the flying suit works and the
+other suits fall back to the Proxima suit (lukeca106).
+
+Findings (game build 26147827, updated 23 Oct; evidence in
+`CustomShellSystem-work/sm5-audit-20261026/`):
+- The released Eve 1.5.1, Unholy Genessa 0.3.1 and Shared Assets 1.0.5 pass the
+  shared shader audit on 26147827: no missing hashes, SM5 and SM6 on every
+  material. So do all 24 installed mod folders except Profane Proxima.
+- The previous releases fail on the same build: Genessa 0.3.0 has 18 grey
+  materials (MI_Genessa_body skin, MI_Genessa_top, hair), Eve 1.5.0 has 66
+  (skin and hair). Genessa's glow pieces use our own materials and still
+  render, which is exactly the reported grey skin with white veins. The
+  reports match players still on the pre-26073152 releases (or an old folder
+  left beside the new one). Reply: install Genessa 0.3.1 / Eve 1.5.1 with
+  CSS 1.0.2+ and Shared Assets 1.0.2+, and delete the old outfit folder first.
+- Not explained: lukeca106's AMD laptop (suits revert to Proxima). Needs that
+  player's `ue4ss/Mods/CustomShellSystem/CSS.log` and UE4SS.log.
+- CSS cache (`cache/packages/<16 hex>/`): thumbnails and dye masks, one folder
+  per package manifest hash, sha256-checked on every scan and rewritten when
+  wrong. A stale or deleted cache cannot serve old data or cause grey
+  materials. It is never pruned (14 Eve/Genessa versions kept here, 2.3 GB):
+  add pruning of folders no installed package uses.
+- Windows paths: CSS uses wide APIs and UTF-8 conversion (Chinese path tested
+  in `unicode-test`). UE's ImportFileAsTexture2D adds the long-path prefix. Our
+  own cache writes do not; at the default Steam depth the worst case is 242 of
+  259 characters, and a failure rejects the whole package (outfit missing, not
+  grey). Low risk for these reports.
+- Profane Proxima (released 0.2.1 and the 0.2.2 test build): its copy of the
+  game's MI_LadyKnight_1001 (parent of the Human head) still has the pre-26073152
+  top-material hashes, so the Human head is grey on the current game; and all
+  seven of its own materials are cooked SM6 only, so DX11 players get grey
+  body, glow and heels. Both fixed in 0.2.2: head shader repaired from the
+  game's own material (`profane-022-cook/head-shader-fix`), Windows cook adds
+  SM5 and recooks the five carried-over materials, and the packager now fails
+  on any missing hash or missing SM5/SM6.
+
 ## October 25: Profane Proxima 0.2.2, in progress (Astra building)
+
+Status 26 Oct: test build 6 installed (toc dbe84a47, Shared Assets 1.0.6-test.6
+pins). Contains S3/G4/L3, glute motion, Glute bulge 0.35, sculpted 0..3 range on
+all eight body sliders with the four presets (Astra report:
+`work/proportions-103/REPORT.md`; 18 of 256 extreme slider corners keep small
+ornament overlaps, CSS Beauty keeps its old 0..1 spike overlap), the Human head
+shader repair and SM5 for every own material. Build chain:
+`CustomShellSystem-work/profane-022-cook/build-103.sh`. Next: in-game check,
+then release prep (CSS 1.0.6, Shared Assets 1.0.6, Eve 1.5.2, changelogs).
 
 Body skin (Human and Proxima) stays flat at night while the face follows the
 world lighting: the face is the game's Uber skin (reads
