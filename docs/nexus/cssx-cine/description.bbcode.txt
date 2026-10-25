@@ -20,7 +20,6 @@ Each pack unzips into the CINE folder and lists the outfits it needs.
 [*][b]Fashion Walk 360[/b]: she walks a route you recorded while the camera circles her once, then it settles on the last shot you framed yourself.
 [*][b]Pose Glide 3 / 5 / 7 / 10 s[/b]: one smooth arc for idle poses, measured from her head so it works standing, sitting and kneeling.
 [*][b]Turntable[/b]: a slow circle at full-body distance. [b]Photo Orbit[/b]: holds the camera on 7 angles so you can grab stills.
-[*][b]Fight: Duel[/b], [b]Fight: Hero Orbit[/b], [b]Fight: Over the Shoulder[/b]: film a fight you play yourself. A kill plays in slow motion, a parry or a hit pushes the camera in.
 [*][b]Breakdown Turntable[/b]: two slow circles while the picture is taken apart layer by layer.
 [/list]
 
@@ -51,7 +50,7 @@ Hide enemies, or enemies and NPCs, while you're in Cine World, without pausing t
 [*]Pick a preset, hit Enter Cine World, start your recorder, press F8.
 [/list]
 
-For scenes, set Look track to As set in CSS, and Breakdown track to From the preset for the ones that stage the rig.
+For scenes, leave Expression on As set in CSS (the default), and set Breakdown track to From the preset for the ones that stage the rig.
 
 Keys in Cine World: [b]F8[/b] rolls a take, [b]F9[/b] cancels a take or leaves Cine World, [b]F10[/b] cycles the frame guide, [b]F7[/b] saves the final shot. Keyboard only, because the D-pad uses items in this game.
 

@@ -2,6 +2,34 @@
 
 Read this first after any break. Design: `DESIGN.md` (same folder).
 
+## CINE 2.0.0 (built 25 Oct 2026, not yet on Nexus)
+
+`cine-v2.0.0` is a local tag (not pushed). Release files: `extensions/core/dist/cine-v2.0.0/`
+(zip with the extension, camera presets and the breakdown pak; changelog, description, short
+description, images from the `docs/cine-2.0.0-media` branch). Music scenes ship as one pack per
+song, built by `tools/scene_packs.py` into `extensions/core/dist/cine-scene-<slug>-v1.0.0/`:
+Iris Out, Something Ain't Right, They Know Not What They Do. The tracks live in the git-ignored
+`audio/` folder. Needs CSSX 1.3.1 and CSS 1.0.5 (palette changes keep the idle, takes keep saved
+looks). Scenes need Expression on "As set in CSS"; their look changes run whatever the Look track says.
+
+The three fight presets are held back from 2.0.0 (the code stays). In the live demo on 25 Oct
+the user found player-driven fight takes awkward, and two bugs showed: a death mid-take ends
+with "the target is down" (the target's handle expires on the world change), and the duel
+camera opened behind tree branches.
+
+### Next: Fight Replay (queued)
+The user's design: the player fights normally with the game camera while CINE records; then
+CINE replays the fight and the cinematic camera films it, any preset, any number of times.
+- Unreal's replay system is a dead end here. `demorec` works in shipping (UWorld::Exec, not
+  guarded) and recorded a 678 KB replay, but `demoplay` rebuilt an empty world with no pawn:
+  MS2 is single player (characters and animation are not replicated) and its World Partition
+  world is not rebuilt. `demostop` then loads the main menu. Do not retry it.
+- The way forward is CINE's own recorder: sample the player and the target each frame
+  (transform and bone pose, natively, not through per-bone bridge calls), then hide them and
+  drive posable copies (same mesh and materials) in the live world. Hit effects, blood and
+  sound need recording and re-firing separately. Research the game's character and animation
+  setup first (CXXHeaderDump, Sparta.hpp).
+
 ## CINE 1.1.0 (in progress, 5 Oct 2026)
 
 Branch `feature/cine-scene` (from main `1832bf8`). Clean scene, fight takes and breakdown

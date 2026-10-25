@@ -92,7 +92,7 @@ def readme(slug, pack):
         '   land inside the eins0fx.cine folder (presets/, audio/ and scenes/).',
         '3. In CINE, Shot > Reload presets (or start the game) and pick a scene.',
         '',
-        'For each take: set Look track to "As set in CSS" and Breakdown track to "From the preset",',
+        'For each take: leave Expression on "As set in CSS" (the default), set Breakdown track to "From the preset",',
         'enter Cine World, start your recorder and press F8. The music plays from the roll and your',
         'own look comes back when the scene ends.',
         '',

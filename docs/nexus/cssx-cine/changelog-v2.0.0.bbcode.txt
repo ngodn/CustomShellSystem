@@ -21,10 +21,9 @@ Hey everyone. CINE grew a lot since 1.0.0, so this one is 2.0.0.
 
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/0a18bfc30623b53feb42548c8269362626b47a9d/docs/media/cine-v2.0.0/cine-v2.0.0-split.jpg[/img][/center]
 
-[b]Clean scene and fight takes[/b]
+[b]Clean scene[/b]
 [list]
-[*][b]Clean scene[/b]: hide enemies, or enemies and NPCs, while you're in Cine World, without pausing the world. They're frozen and can't be hit, new ones don't spawn, and everyone comes back as they were when you leave. Bosses are left alone.[/*]
-[*][b]Fight takes[/b]: three presets (Fight: Duel, Fight: Hero Orbit, Fight: Over the Shoulder) film a fight you play yourself. A kill plays in slow motion, a parry or a hit pushes the camera in.[/*]
+[*]Hide enemies, or enemies and NPCs, while you're in Cine World, without pausing the world. They're frozen and can't be hit, new ones don't spawn, and everyone comes back as they were when you leave. Bosses are left alone.[/*]
 [*][b]Keep my lock-on target[/b]: with clean scene on, everyone goes except the enemy you're locked on to.[/*]
 [/list]
 

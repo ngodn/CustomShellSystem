@@ -33,13 +33,7 @@ Clean scene > Hide takes enemies, or enemies and NPCs, out of the picture while 
 Cine World. The world is not paused. Hidden characters are frozen and cannot be hit, new
 ones do not spawn, and everyone comes back as they were when you leave. Bosses are left
 alone, and it stays off during a boss fight. "Keep my lock-on target" leaves the enemy you
-are locked on to in the scene; that fight is real, it can hurt you.
-
-Fight takes
-The "Fight" presets film a fight you play yourself. Lock on to an enemy, roll the take and
-fight. The camera frames both of you, a kill plays in slow motion and a parry or a hit
-pushes the camera in. The take ends when the target is down, at F9, or at the preset's
-time limit. "Fight: Hero Orbit" also works with nobody locked.
+are locked on to in the scene; a fight with it is real, it can hurt you.
 
 Breakdown
 Breakdown > Breakdown track shows the take in layers like a VFX breakdown reel: clay,
@@ -53,19 +47,14 @@ Music scenes
 Scene packs are separate downloads, one per song. Each one unzips into this folder: its
 presets go into presets/ and its music into audio/. A scene plays its music from the roll
 and cuts the camera on the beat while CSS changes outfits, skins and palettes with the song.
-Set Look track to "As set in CSS", and Breakdown track to "From the preset" for the scenes
-that stage the rig. Each scene puts your own look back when it ends. Scenes need the outfits
+Leave Expression on "As set in CSS" (the default), and set Breakdown track to "From the
+preset" for the scenes that stage the rig. Each scene puts your own look back when it ends. Scenes need the outfits
 they show and CSS Shared Assets for the dances; if an outfit is missing, the look changes
 turn off (the status line says why) and the camera and music still run.
 
 Presets
 Presets live in the presets folder as .cine.json files. Copy one, change it, then
 Shot > Reload presets. A broken file is skipped and named in the CSSX log.
-
-A fight preset has "kind": "action" and an "action" block: framing (duel, follow or
-shoulder), azimuth, orbit_speed, distance, distance_max, margin, height, aim, fov, smooth,
-shake, fstop, slowmo, slowmo_hold, tail, game_cameras (respect or override) and beats
-(on: hit, hurt, parry or kill; do: slowmo or punch; cooldown).
 
 Any preset can carry a breakdown track:
   "breakdown": {"steps": [{"at": 0.1, "layers": ["clay"], "wipe": 1.2}, ...]}
