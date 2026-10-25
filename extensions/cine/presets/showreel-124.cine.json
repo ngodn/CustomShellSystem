@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "showreel-124",
   "name": "Showreel 124",
-  "description": "An 80 second showcase cut to a 124 BPM track for Unholy Genessa, Commander White and Eve. After the intro the frame is split down the middle: the wireframe on the left, the finished look on the right, while outfits, palettes and pieces change on the beat and a title names each change. Needs those three outfits and CSS. Set Breakdown track to From the preset. Put your own track at audio/showreel.wav in the CINE folder to hear it while you record.",
+  "description": "An 80 second showcase cut to a 124 BPM track for Unholy Genessa, Commander White and Eve. After the intro the frame is split down the middle: the wireframe on the left, the finished look on the right, while outfits, palettes and pieces change on the beat and a title names each change. Needs those three outfits and CSS. Set Breakdown track to From the preset. Track: audio/showreel.wav in the CINE folder.",
   "kind": "sequence",
   "reference": "capsule",
   "tempo": {"bpm": 124, "offset": 0.87, "beats_per_bar": 4},

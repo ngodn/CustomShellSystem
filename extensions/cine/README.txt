@@ -1,18 +1,22 @@
-CINE 1.1.0 for CSSX
+CINE 2.0.0 for CSSX
 ===================
 
 Cinematic camera for showcases. CINE moves the camera and the character; you record with
 your own tool (OBS, ShadowPlay, Steam recording, gpu-screen-recorder).
 
-Requirements: CSSX 1.3.1 or newer. The look track also needs Custom Shell System
-1.0.0-beta.9 or newer; without it the camera works and the look track is off.
+Requirements: CSSX 1.3.1 or newer. The look track and the music scenes also need Custom
+Shell System 1.0.5 or newer; without CSS the camera works and the look track is off.
 
 Install
 1. Close the game.
-2. Put the eins0fx.cine folder into ue4ss/Mods/CSSX/extensions/.
+2. Put the eins0fx.cine folder into ue4ss/Mods/CSSX/extensions/. Its audio folder holds the
+   music of the scenes.
 3. Put the CSSX_CINE_eins0fx_P folder into MortalShell2/Content/Paks/~mods/.
    It holds the materials the breakdown draws with. Without it CINE still works, and a
    breakdown can only show physics bodies and the movement capsule.
+
+Updating from 1.0.0: replace the eins0fx.cine folder and add the CSSX_CINE_eins0fx_P folder.
+Presets you made yourself: copy them back into the new presets folder.
 
 Quick start
 1. Open CSSX (F6) and go to CINE.
@@ -45,6 +49,30 @@ after another. "Built-in reel" works on any preset. "From the preset" uses the s
 the preset file (see Breakdown Turntable). Labels and arrows name what is on screen.
 The look track is off while a breakdown runs.
 
+Music scenes
+Scene presets are timed to a piece of music in the audio folder: the camera cuts on the beat
+while CSS changes outfits, skins and palettes with the song, and the music plays from the
+roll. Set Breakdown track to "From the preset" for the ones that stage the rig, and Look
+track to "As set in CSS". Each scene puts your own look back when it ends.
+
+  Iris Out, Iris Out 2, Iris Out Static, Iris Out Static 1, Iris Out 9:16
+      The Iris Out dance four times: the bones alone, Eve, Unholy Genessa and Commander
+      White, each staged from wireframe to clay to the finished look before she dances.
+  Iris Out Eve + Rig, Iris Out Unholy Genessa + Rig, Iris Out Commander White + Rig
+      The dance twice: the outfit, then the bones alone.
+  Showreel 124, Showreel Finale
+      Unholy Genessa, Commander White and Eve split down the middle: wireframe on one side,
+      the finished look on the other.
+  Commander White Release (and 9:16), Commander White Walk
+      Commander White's palettes, pieces and rig.
+  Profane Proxima
+      A close 17 second cut: the glow colour and the Human / Proxima skin change on the
+      song's turning points, in Eve's default idle.
+
+The scenes need the outfits they show (Eve, Unholy Genessa, Commander White, Profane
+Proxima) and CSS Shared Assets for the dances. If one is missing, the scene's look changes
+turn off (the status line says why) and the camera and music still run.
+
 Presets
 Presets live in the presets folder as .cine.json files. Copy one, change it, then
 Shot > Reload presets. A broken file is skipped and named in the CSSX log.
@@ -59,3 +87,11 @@ Any preset can carry a breakdown track:
 "at" is a fraction of the whole take. Layers: clay, wireframe, skeleton, virtual_bones,
 ik_bones, springs, sockets, collision, capsule, base_color, normals, roughness, metallic,
 depth, occlusion. An empty list is the final image.
+
+A music scene has "kind": "sequence", a "tempo" (bpm, offset, beats_per_bar), an "end", an
+"audio" file in the audio folder, and lists of "shots" and "looks" timed in bars from 1.
+A shot has "from" and "to" poses (azimuth, distance, height, aim, fov, roll), an "ease", and
+may "track" a part of her (head, neck, chest, pelvis, knees, body) with "fit" centimetres of
+her in frame; "fixed" keeps a blocked shot on its side, "view" holds the camera you framed.
+A look step changes "outfit" and "variant", "palette" or "controls" on its beat, can switch
+the "idle", show a "title", and (with a preset "performance") start the dance again.

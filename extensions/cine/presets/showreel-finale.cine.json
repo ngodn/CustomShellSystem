@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "showreel-finale",
   "name": "Showreel Finale",
-  "description": "A 50 second showcase cut to the last part of a 124 BPM track. After a clean intro on Eve the frame is split down the middle, wireframe on the left and the finished look on the right, through Commander White, a break where the mesh takes the whole frame, Unholy Genessa on the drop and a chorus of new looks, with a title for each change. It ends clean on her face. Needs those three outfits and CSS. Set Breakdown track to From the preset. Put your own track at audio/showreel-finale.wav in the CINE folder.",
+  "description": "A 50 second showcase cut to the last part of a 124 BPM track. After a clean intro on Eve the frame is split down the middle, wireframe on the left and the finished look on the right, through Commander White, a break where the mesh takes the whole frame, Unholy Genessa on the drop and a chorus of new looks, with a title for each change. It ends clean on her face. Needs those three outfits and CSS. Set Breakdown track to From the preset. Track: audio/showreel-finale.wav in the CINE folder.",
   "kind": "sequence",
   "reference": "capsule",
   "tempo": {"bpm": 124, "offset": 1.16, "beats_per_bar": 4},

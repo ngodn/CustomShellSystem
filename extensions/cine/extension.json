@@ -4,8 +4,8 @@
   "id": "eins0fx.cine",
   "title": "CINE",
   "author": "_eins0fx",
-  "version": "1.1.0",
-  "description": "Cinematic camera for showcases: walk, pose and fight takes from presets, a clean scene without enemies or NPCs, and a VFX-style breakdown of the picture in layers. You record with your own recorder. With CSS installed it can cycle your palettes during the shot.",
+  "version": "2.0.0",
+  "description": "Cinematic camera for showcases: walk, pose and fight takes, and music scenes cut to the beat that change outfits, palettes and skins with the song. A clean scene without enemies or NPCs, and a VFX-style breakdown of the picture in layers. You record with your own recorder.",
   "kind": "native",
   "entry": "cine.dll",
   "menu": "menu.json",
@@ -37,6 +37,13 @@
     "presets/iris-out-static-1.cine.json",
     "presets/iris-out-white-rig.cine.json",
     "presets/iris-out-eve-rig.cine.json",
-    "presets/iris-out-unholy-rig.cine.json"
+    "presets/iris-out-unholy-rig.cine.json",
+    "presets/profane-proxima.cine.json",
+    "audio/iris-out-2-x4.wav",
+    "audio/iris-out-look-rig.wav",
+    "audio/iris-out-x4.wav",
+    "audio/profane-proxima.wav",
+    "audio/showreel-finale.wav",
+    "audio/showreel.wav"
   ]
 }
