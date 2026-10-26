@@ -13,7 +13,7 @@ inline constexpr std::string_view legacy_astral_root = "/Game/CSS/SharedAssets/A
 inline constexpr std::string_view authored_astral_root = "/Game/CSS/eins0fx/Shared/Astral/";
 
 // Path aliases do not bypass the source graph GUID or material-state checks.
-inline constexpr std::array<std::pair<std::string_view,std::string_view>,8> astral_root_aliases{{
+inline constexpr std::array<std::pair<std::string_view,std::string_view>,21> astral_root_aliases{{
     {"/Game/CSS/UnholyGenessa/Mat1/M_Trim.M_Trim", "/Game/CSS/eins0fx/UnholyGenessa/Mat1/M_Trim.M_Trim"},
     {"/Game/CSS/UnholyGenessa/Mat10/M_Trim.M_Trim", "/Game/CSS/eins0fx/UnholyGenessa/Mat10/M_Trim.M_Trim"},
     {"/Game/CSS/UnholyGenessa/Mat12/M_Metal.M_Metal", "/Game/CSS/eins0fx/UnholyGenessa/Mat12/M_Metal.M_Metal"},
@@ -21,7 +21,21 @@ inline constexpr std::array<std::pair<std::string_view,std::string_view>,8> astr
     {"/Game/CSS/UnholyGenessa/Fabric02/M_Silk.M_Silk", "/Game/CSS/eins0fx/UnholyGenessa/Fabric02/M_Silk.M_Silk"},
     {"/Game/CSS/EveHair/M_Hair1.M_Hair1", "/Game/CSS/eins0fx/EveSB/Hair/M_Hair1.M_Hair1"},
     {"/Game/CSS/CommanderWhite/MaterialY/M_Hair.M_Hair", "/Game/CSS/eins0fx/CommanderWhite/MaterialY/M_Hair.M_Hair"},
-    {"/Game/CSS/Locomotion/Faces/Optical1/M_Optical.M_Optical", "/Game/CSS/eins0fx/CommanderWhite/Faces/Optical/M_Optical.M_Optical"}
+    {"/Game/CSS/Locomotion/Faces/Optical1/M_Optical.M_Optical", "/Game/CSS/eins0fx/CommanderWhite/Faces/Optical/M_Optical.M_Optical"},
+    // Eve standalone outfits: each carries its own hair root, Peony also its six cloth roots.
+    {"/Game/CSS/EveHair/M_Hair1.M_Hair1", "/Game/CSS/CSS_EveBlackPearl_eins0fx_P/Hair/M_Hair1.M_Hair1"},
+    {"/Game/CSS/EveHair/M_Hair1.M_Hair1", "/Game/CSS/CSS_EvePrototype_eins0fx_P/Hair/M_Hair1.M_Hair1"},
+    {"/Game/CSS/EveHair/M_Hair1.M_Hair1", "/Game/CSS/CSS_EveSkinSuit_eins0fx_P/Hair/M_Hair1.M_Hair1"},
+    {"/Game/CSS/EveHair/M_Hair1.M_Hair1", "/Game/CSS/CSS_EveBikini_eins0fx_P/Hair/M_Hair1.M_Hair1"},
+    {"/Game/CSS/EveHair/M_Hair1.M_Hair1", "/Game/CSS/CSS_EveCasualSweater_eins0fx_P/Hair/M_Hair1.M_Hair1"},
+    {"/Game/CSS/EveHair/M_Hair1.M_Hair1", "/Game/CSS/CSS_EveMidsummerAlice_eins0fx_P/Hair/M_Hair1.M_Hair1"},
+    {"/Game/CSS/EveHair/M_Hair1.M_Hair1", "/Game/CSS/CSS_EvePeony_eins0fx_P/Hair/M_Hair1.M_Hair1"},
+    {"/Game/CSS/eins0fx/EveSB/PeonyV2/Materials/M_PeonyV2_Fabric.M_PeonyV2_Fabric", "/Game/CSS/CSS_EvePeony_eins0fx_P/PeonyV2/Materials/M_PeonyV2_Fabric.M_PeonyV2_Fabric"},
+    {"/Game/CSS/eins0fx/EveSB/PeonyV2/Materials/M_PeonyV2_FlowFabric.M_PeonyV2_FlowFabric", "/Game/CSS/CSS_EvePeony_eins0fx_P/PeonyV2/Materials/M_PeonyV2_FlowFabric.M_PeonyV2_FlowFabric"},
+    {"/Game/CSS/eins0fx/EveSB/PeonyV2/Materials/M_PeonyV2_FlowPanel.M_PeonyV2_FlowPanel", "/Game/CSS/CSS_EvePeony_eins0fx_P/PeonyV2/Materials/M_PeonyV2_FlowPanel.M_PeonyV2_FlowPanel"},
+    {"/Game/CSS/eins0fx/EveSB/PeonyV2/Materials/M_PeonyV2_FlowStrap.M_PeonyV2_FlowStrap", "/Game/CSS/CSS_EvePeony_eins0fx_P/PeonyV2/Materials/M_PeonyV2_FlowStrap.M_PeonyV2_FlowStrap"},
+    {"/Game/CSS/eins0fx/EveSB/PeonyV2/Materials/M_PeonyV2_SourceGlow.M_PeonyV2_SourceGlow", "/Game/CSS/CSS_EvePeony_eins0fx_P/PeonyV2/Materials/M_PeonyV2_SourceGlow.M_PeonyV2_SourceGlow"},
+    {"/Game/CSS/eins0fx/EveSB/PeonyV2/Stockings/Materials/M_PeonyV2_Stocking.M_PeonyV2_Stocking", "/Game/CSS/CSS_EvePeony_eins0fx_P/PeonyV2/Stockings/Materials/M_PeonyV2_Stocking.M_PeonyV2_Stocking"}
 }};
 
 inline bool astral_material_root_matches(std::string_view catalog_root,std::string_view actual) {

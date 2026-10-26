@@ -19,7 +19,12 @@ int main(int argc,char** argv) {
     check(argc==2,"Supply the shipped calibration catalog");
     const auto catalog=Catalog::load(argv[1]);
     std::ifstream stream(argv[1]);const auto document=Json::parse(stream);
-    check(catalog.bindings().size()==7,"Shipped binding count changed");
+    check(catalog.bindings().size()==9,"Shipped binding count changed");
+    // Eve standalones (1.0.0) carry their own copies of the Black Pearl and Peony bindings.
+    check(catalog.match("/Game/CSS/CSS_EveBlackPearl_eins0fx_P/SK_BlackPearl2.SK_BlackPearl2",
+                        "/Game/CSS/CSS_EveBlackPearl_eins0fx_P/ABP_Secondary.ABP_Secondary_C")!=nullptr,"Standalone Black Pearl binding missing");
+    check(catalog.match("/Game/CSS/CSS_EvePeony_eins0fx_P/PeonyV2/Meshes/SK_PeonyV2.SK_PeonyV2",
+                        "/Game/CSS/CSS_EvePeony_eins0fx_P/ABP_Secondary.ABP_Secondary_C")!=nullptr,"Standalone Peony binding missing");
     std::set<std::string> variants;
     for(const auto& binding:catalog.bindings()) {
         check(catalog.match(binding.mesh,binding.animation)==&binding,"Paired binding rejected");

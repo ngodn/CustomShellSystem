@@ -50,8 +50,11 @@ inline bool playback_adapter_asset(std::string_view asset) {
     if(shared_locomotion_asset(asset,"Adapters/")) return true;
     asset=authored_css_project_path(asset);
     if(asset.empty()) return false;
-    asset.remove_prefix(asset.find('/')+1);
     constexpr std::string_view folder="Animations/Adapters/";
+    // A package isolated under its own container stem keeps its adapters directly at
+    // /Game/CSS/<stem>/Animations/Adapters/ (Eve 1.5.3 standalones).
+    if(asset.starts_with(folder)) return asset.size()>folder.size();
+    asset.remove_prefix(asset.find('/')+1);
     return asset.starts_with(folder) && asset.size()>folder.size();
 }
 }

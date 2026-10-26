@@ -1,5 +1,15 @@
 # Current work queue
 
+## October 26: Eve 1.5.3 (AIO + seven standalones), CSS 1.0.8, Shared Assets 1.0.8
+
+User asked for each Eve outfit as its own standalone download, fully self-contained, plus the
+unused-asset cleanup (AIO 1.6 GB -> 664 MB). Astra built all eight from the 1.5.2 release
+(phase 1 plan + phase 2 report: `CSS_SeduXtress_eins0fx/work/standalone-100/`); every standalone
+passed mesh/morph/cloth/rig/shader parity. Release folder `dist/eve-v1.5.3/` (all eight zips).
+Core and Shared changes in docs/releases/v1.0.8. Live test: all eight load, every standalone applies
+textured. Still to check in play: expressions/dyes on a standalone, Genessa doubles with a
+standalone, weapon hand poses on Black Pearl/Peony standalones.
+
 ## October 26: Profane Proxima 0.2.3, natural body sliders (released with CSS 1.0.7)
 
 0.2.2 is released. The user reviewed its body shapes: boxy, not natural (breast
