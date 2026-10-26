@@ -19,7 +19,7 @@
    "at": 1.0,
    "from": {
     "azimuth": 180,
-    "distance": 520,
+    "distance": 560,
     "height": -40,
     "aim": 8,
     "fov": 40,
@@ -27,7 +27,7 @@
    },
    "to": {
     "azimuth": 180,
-    "distance": 440,
+    "distance": 480,
     "height": -50,
     "aim": 10,
     "fov": 40,
@@ -35,7 +35,7 @@
    },
    "ease": "smooth",
    "track": "body",
-   "fit": 200,
+   "fit": 230,
    "fixed": true
   },
   {

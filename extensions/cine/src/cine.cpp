@@ -1060,10 +1060,11 @@ void Extension::sequence_frame(const CssxFrame& f) {
         const double dt = std::clamp(f.seconds, 0.0, 0.25);
         t.wall_scale += (t.wall_target - t.wall_scale) * (1.0 - std::exp(-dt / 0.4));
         // The tracked parts of her body: eased between the tick's samples, then smoothed.
-        if (t.track_live && performance_.owned()) {
-            // A performance can carry her metres in a few frames (After Brute Battle leaps):
-            // the tick's ten samples a second trail her out of the frame, so while one plays
-            // the tracked parts are read every frame and the anchor is exact.
+        if (t.track_live && (performance_.owned() || rig_.montage_playing())) {
+            // A performance can carry her metres in a few frames (After Brute Battle leaps),
+            // and the game's own moves lunge and turn her (a parry, a riposte, a stab): the
+            // tick's ten samples a second trail her out of the frame, so while one plays the
+            // tracked parts are read every frame and the anchor is exact.
             sample_tracks(true);
         } else if (t.track_live) {
             t.track_age += dt;

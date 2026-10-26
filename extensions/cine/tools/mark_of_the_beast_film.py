@@ -220,21 +220,22 @@ def p2():
     # The double-time: the hunt, a move on every beat of it, the starlight skin from the first hit.
     # The skin lands a beat before the first move: CSS holds an appearance change back while a montage plays.
     t.skin(150.4, 'proxima', 'cold_starlight', expression=PX + 'angry', **glow())
+    # The moves lunge and turn her: wide frames, the face only on the parry's first beat.
     t.look(150.8, montage=BLOCK)
-    t.shot(150.8, pose(-150, 260, -10, -4), pose(-130, 240, -14, -4), 'body', 170, fixed=True)
-    t.shot(151.7, pose(160, 230, 10, -6), pose(175, 220, 4, -4), 'neck', 60, 2.4, fixed=True)
+    t.shot(150.8, pose(-150, 300, -10, -4), pose(-130, 280, -14, -4), 'body', 190, fixed=True)
+    t.shot(151.7, pose(160, 300, 20, -6), pose(175, 280, 10, -4), 'body', 150, 2.8, fixed=True)        # over her shoulder, wide enough for the block
     t.look(153.1, montage=PARRY)
-    t.shot(153.1, pose(-20, 170, 6, 0, -6), pose(-8, 150, 4, 0, -2), 'head', 38, 2.0)
+    t.shot(153.1, pose(-20, 200, 8, 0, -6), pose(-8, 180, 6, 0, -2), 'head', 60, 2.0)
     t.look(154.7, montage=RIPOSTE)
-    t.shot(154.7, pose(200, 300, -30, -4), pose(170, 280, -40, -2), 'body', 180, fixed=True)
+    t.shot(154.7, pose(200, 380, -30, -4), pose(170, 360, -40, -2), 'body', 220, fixed=True)           # the riposte carries her forward
     t.look(156.9, montage=SEAL)
-    t.shot(156.9, pose(-170, 260, 20, -8), pose(-150, 240, 10, -6), 'body', 175, fixed=True)
+    t.shot(156.9, pose(-170, 300, 20, -8), pose(-150, 280, 10, -6), 'body', 195, fixed=True)
     t.look(158.7, montage=BIO_START)
-    t.shot(158.7, pose(120, 220, 0, -4), pose(150, 210, -6, -2), 'chest', 80, 2.8, fixed=True)
+    t.shot(158.7, pose(140, 300, 0, -4), pose(165, 290, -6, -2), 'body', 160, 2.8, fixed=True)
     t.look(159.3, montage=BIO_STAB)
-    t.shot(160.5, pose(-30, 150, 2, 0, -5), pose(-15, 135, 2, 0, -2), 'head', 34, 1.8)
+    t.shot(160.5, pose(-30, 220, 4, 0, -5), pose(-15, 200, 3, 0, -2), 'head', 70, 1.8)                  # the stab bends her forward
     t.look(162.5, montage=BLOCK)
-    t.shot(162.5, pose(180, 420, -60, 14), pose(180, 380, -70, 16), 'body', 200, fixed=True)
+    t.shot(162.5, pose(180, 460, -60, 14), pose(180, 420, -70, 16), 'body', 220, fixed=True)
     # The breath: she reclines on the ground, in grass where the user sets her, so every camera
     # sits well above her and looks down; nothing at ground level.
     t.skin(164.7, 'human', 'ruined_mist', montage='', idle='css.eve.idle.reclining', expression=PX + 'daydream', **glow())
@@ -254,7 +255,7 @@ def p3():
     t = Take('beast-p3', 'Beast P3', 209.7, 246.6, 'Profane Proxima', 'the Slayer Seal on the hit, Bass Down Low and the Lily Catwalk cut on the bar, the Spin, Natarajasana, the Confident pose on the last accent.')
     t.skin(209.3, 'proxima', 'ember', expression=PX + 'serious', **glow())   # a beat before the move, for the same reason
     t.look(209.7, montage=SEAL)
-    t.shot(209.7, pose(180, 520, -40, 8), pose(180, 440, -50, 10), 'body', 200, fixed=True)
+    t.shot(209.7, pose(180, 560, -40, 8), pose(180, 480, -50, 10), 'body', 230, fixed=True)      # the charge carries her forward
     t.shot(211.4, pose(-160, 260, 10, -6, -4), pose(-200, 250, 0, -4, 0), 'neck', 62, 2.4, fixed=True, ease='whip')
     t.look(214.0, performance=BASS_DOWN_LOW, montage='')
     t.shot(214.0, pose(-150, 320, -20, 0), pose(-125, 290, -26, 0), 'body', 185, fixed=True)

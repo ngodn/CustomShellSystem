@@ -183,7 +183,7 @@
    "at": 7.9225,
    "from": {
     "azimuth": -150,
-    "distance": 260,
+    "distance": 300,
     "height": -10,
     "aim": -4,
     "fov": 40,
@@ -191,7 +191,7 @@
    },
    "to": {
     "azimuth": -130,
-    "distance": 240,
+    "distance": 280,
     "height": -14,
     "aim": -4,
     "fov": 40,
@@ -199,61 +199,61 @@
    },
    "ease": "smooth",
    "track": "body",
-   "fit": 170,
+   "fit": 190,
    "fixed": true
   },
   {
    "at": 8.2686,
    "from": {
     "azimuth": 160,
-    "distance": 230,
-    "height": 10,
+    "distance": 300,
+    "height": 20,
     "aim": -6,
     "fov": 40,
     "roll": 0
    },
    "to": {
     "azimuth": 175,
-    "distance": 220,
-    "height": 4,
+    "distance": 280,
+    "height": 10,
     "aim": -4,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
-   "track": "neck",
-   "fit": 60,
-   "fstop": 2.4,
+   "track": "body",
+   "fit": 150,
+   "fstop": 2.8,
    "fixed": true
   },
   {
    "at": 8.807,
    "from": {
     "azimuth": -20,
-    "distance": 170,
-    "height": 6,
+    "distance": 200,
+    "height": 8,
     "aim": 0,
     "fov": 40,
     "roll": -6
    },
    "to": {
     "azimuth": -8,
-    "distance": 150,
-    "height": 4,
+    "distance": 180,
+    "height": 6,
     "aim": 0,
     "fov": 40,
     "roll": -2
    },
    "ease": "smooth",
    "track": "head",
-   "fit": 38,
+   "fit": 60,
    "fstop": 2.0
   },
   {
    "at": 9.4224,
    "from": {
     "azimuth": 200,
-    "distance": 300,
+    "distance": 380,
     "height": -30,
     "aim": -4,
     "fov": 40,
@@ -261,7 +261,7 @@
    },
    "to": {
     "azimuth": 170,
-    "distance": 280,
+    "distance": 360,
     "height": -40,
     "aim": -2,
     "fov": 40,
@@ -269,14 +269,14 @@
    },
    "ease": "smooth",
    "track": "body",
-   "fit": 180,
+   "fit": 220,
    "fixed": true
   },
   {
    "at": 10.2685,
    "from": {
     "azimuth": -170,
-    "distance": 260,
+    "distance": 300,
     "height": 20,
     "aim": -8,
     "fov": 40,
@@ -284,7 +284,7 @@
    },
    "to": {
     "azimuth": -150,
-    "distance": 240,
+    "distance": 280,
     "height": 10,
     "aim": -6,
     "fov": 40,
@@ -292,30 +292,30 @@
    },
    "ease": "smooth",
    "track": "body",
-   "fit": 175,
+   "fit": 195,
    "fixed": true
   },
   {
    "at": 10.9607,
    "from": {
-    "azimuth": 120,
-    "distance": 220,
+    "azimuth": 140,
+    "distance": 300,
     "height": 0,
     "aim": -4,
     "fov": 40,
     "roll": 0
    },
    "to": {
-    "azimuth": 150,
-    "distance": 210,
+    "azimuth": 165,
+    "distance": 290,
     "height": -6,
     "aim": -2,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
-   "track": "chest",
-   "fit": 80,
+   "track": "body",
+   "fit": 160,
    "fstop": 2.8,
    "fixed": true
   },
@@ -323,30 +323,30 @@
    "at": 11.653,
    "from": {
     "azimuth": -30,
-    "distance": 150,
-    "height": 2,
+    "distance": 220,
+    "height": 4,
     "aim": 0,
     "fov": 40,
     "roll": -5
    },
    "to": {
     "azimuth": -15,
-    "distance": 135,
-    "height": 2,
+    "distance": 200,
+    "height": 3,
     "aim": 0,
     "fov": 40,
     "roll": -2
    },
    "ease": "smooth",
    "track": "head",
-   "fit": 34,
+   "fit": 70,
    "fstop": 1.8
   },
   {
    "at": 12.4221,
    "from": {
     "azimuth": 180,
-    "distance": 420,
+    "distance": 460,
     "height": -60,
     "aim": 14,
     "fov": 40,
@@ -354,7 +354,7 @@
    },
    "to": {
     "azimuth": 180,
-    "distance": 380,
+    "distance": 420,
     "height": -70,
     "aim": 16,
     "fov": 40,
@@ -362,7 +362,7 @@
    },
    "ease": "smooth",
    "track": "body",
-   "fit": 200,
+   "fit": 220,
    "fixed": true
   },
   {

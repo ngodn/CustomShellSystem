@@ -54,6 +54,7 @@ public:
     // ACharacter::PlayAnimMontage; stopped by stop_montage and at the end of the take.
     void play_montage(const std::string& path, double rate);
     void stop_montage();
+    bool montage_playing() const { return montage_playing_; }
 
     // Action takes: who she fights, how the fight is going, and the take's own time and lens.
     Json locked_target();                                // the lock-on target actor, or null
