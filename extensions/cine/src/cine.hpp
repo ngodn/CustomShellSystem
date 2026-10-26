@@ -90,6 +90,11 @@ private:
         bool seq_looks = false, wore = false, dof_on = false;
         Json own_look;                 // describe() before the take: outfit, variant, customize
         Json look_now;                 // describe() of what she wears now, for control ids
+        // Per outfit, the customization it opened with in this take: hers for the outfit she
+        // wears, and the first-seen (CSS remembered) one for any other. Every wear in the take
+        // carries it, so a variant she never customized (a skin) still gets her settings and a
+        // step's palette or control change never leaks into the next wear.
+        std::map<std::string, Json> look_custom;
         size_t look_next = 0;
         // An outfit change: the picture wipes into a frame pass, she changes under it, and it
         // wipes back on the beat.
@@ -182,6 +187,7 @@ private:
     Vec3 anchor_at(double time) const;   // the point a sequence's shot is measured from at this moment
     void sample_tracks(bool snap);
     Json wear_request(const std::string& outfit, const std::string& variant, bool own, bool persist) const;
+    void remember_custom(const Json& described);
     bool worn(const Json& described, const std::string& outfit, const std::string& variant) const;
     void apply_look(const SeqLook& look);
     void action_tick(double dt);

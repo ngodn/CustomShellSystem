@@ -2,7 +2,7 @@
  "schema": 1,
  "id": "beast-g1",
  "name": "Beast G1",
- "description": "Mark of the Beast, Unholy Genessa: After Brute Battle in the arena, the quiet on her knees, the rise, Performance 801, ember on the accent, ATOOL 3. Song 95.9 to 150.8 s. Track: audio/beast-g1.wav in the CINE folder.",
+ "description": "Mark of the Beast, Unholy Genessa: After Brute Battle cut on the bar, Come Closer through the quiet, Performance 801 through the intercut, ember on the accent, ATOOL 3. Song 95.9 to 150.8 s. Track: audio/beast-g1.wav in the CINE folder.",
  "kind": "sequence",
  "reference": "capsule",
  "tempo": {
@@ -39,6 +39,29 @@
    "fixed": true
   },
   {
+   "at": 2.4999,
+   "from": {
+    "azimuth": -165,
+    "distance": 420,
+    "height": -10,
+    "aim": 2,
+    "fov": 40,
+    "roll": 3
+   },
+   "to": {
+    "azimuth": -195,
+    "distance": 380,
+    "height": 0,
+    "aim": 4,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "body",
+   "fit": 230,
+   "fixed": true
+  },
+  {
    "at": 3.1537,
    "from": {
     "azimuth": -200,
@@ -63,26 +86,49 @@
    "fixed": true
   },
   {
-   "at": 4.692,
+   "at": 4.1536,
    "from": {
-    "azimuth": -150,
+    "azimuth": -200,
+    "distance": 360,
+    "height": -30,
+    "aim": 0,
+    "fov": 40,
+    "roll": 3
+   },
+   "to": {
+    "azimuth": -170,
+    "distance": 330,
+    "height": -20,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "body",
+   "fit": 210,
+   "fixed": true
+  },
+  {
+   "at": 5.1535,
+   "from": {
+    "azimuth": 180,
     "distance": 420,
-    "height": -10,
-    "aim": -4,
+    "height": 10,
+    "aim": 0,
     "fov": 40,
     "roll": 0
    },
    "to": {
-    "azimuth": -178,
-    "distance": 400,
-    "height": -30,
+    "azimuth": 180,
+    "distance": 300,
+    "height": 20,
     "aim": 0,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
    "track": "body",
-   "fit": 220,
+   "fit": 200,
    "fixed": true
   },
   {
@@ -156,6 +202,30 @@
    "fixed": true
   },
   {
+   "at": 9.73,
+   "from": {
+    "azimuth": -175,
+    "distance": 300,
+    "height": -50,
+    "aim": 8,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -185,
+    "distance": 260,
+    "height": -40,
+    "aim": 6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "pelvis",
+   "fit": 95,
+   "fstop": 4.0,
+   "fixed": true
+  },
+  {
    "at": 10.2685,
    "from": {
     "azimuth": -150,
@@ -180,7 +250,30 @@
    "fixed": true
   },
   {
-   "at": 11.4222,
+   "at": 11.3453,
+   "from": {
+    "azimuth": 150,
+    "distance": 330,
+    "height": -10,
+    "aim": 0,
+    "fov": 40,
+    "roll": -5
+   },
+   "to": {
+    "azimuth": 210,
+    "distance": 300,
+    "height": 0,
+    "aim": 0,
+    "fov": 40,
+    "roll": 5
+   },
+   "ease": "in_out",
+   "track": "body",
+   "fit": 190,
+   "fixed": true
+  },
+  {
+   "at": 12.3452,
    "from": {
     "azimuth": -160,
     "distance": 330,
@@ -226,7 +319,7 @@
    "fstop": 1.8
   },
   {
-   "at": 14.1143,
+   "at": 13.8066,
    "from": {
     "azimuth": 170,
     "distance": 280,
@@ -273,6 +366,29 @@
    "fstop": 2.4
   },
   {
+   "at": 16.191,
+   "from": {
+    "azimuth": 180,
+    "distance": 440,
+    "height": -60,
+    "aim": 14,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 380,
+    "height": -50,
+    "aim": 12,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 205,
+   "fixed": true
+  },
+  {
    "at": 17.2679,
    "from": {
     "azimuth": 0,
@@ -296,7 +412,31 @@
    "fstop": 1.8
   },
   {
-   "at": 18.7293,
+   "at": 18.2678,
+   "from": {
+    "azimuth": -175,
+    "distance": 260,
+    "height": 20,
+    "aim": -8,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -185,
+    "distance": 240,
+    "height": 30,
+    "aim": -10,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "neck",
+   "fit": 60,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
+   "at": 19.2677,
    "from": {
     "azimuth": 180,
     "distance": 480,
@@ -377,7 +517,7 @@
   },
   {
    "at": 6.2688,
-   "idle": "css.eve.idle.deep_kneeling_bow",
+   "performance": "css.eve.dance.comecloser",
    "expression": "css.unholygenessa.face.look-down"
   },
   {
@@ -393,9 +533,8 @@
    "expression": "css.unholygenessa.face.contempt"
   },
   {
-   "at": 11.4222,
-   "performance": "css.eve.performance.example801",
-   "idle": "css.eve.idle.default"
+   "at": 12.3452,
+   "performance": "css.eve.performance.example801"
   },
   {
    "at": 12.8067,
@@ -407,7 +546,7 @@
    "expression": "css.unholygenessa.face.angry"
   },
   {
-   "at": 18.7293,
+   "at": 19.2677,
    "performance": "css.eve.performance.atool3"
   },
   {

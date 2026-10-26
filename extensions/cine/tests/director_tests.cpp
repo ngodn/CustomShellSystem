@@ -1099,6 +1099,11 @@ int main(int argc, char** argv) {
             // 120 BPM, bar 1 at 0.5 s: bars 1.5, 2, 2.5, 3, 3.25 are at 1.5, 2.5, 3.5, 4.5, 5.0 s; the end at 6.5 s.
             r.steps(21);   // about 2.0 s in: past the first wear
             expect(h.css_wears.size() == 4 && h.css_wears[3].at("outfit") == "a.outfit" && h.css_outfit == "a.outfit", "the first look is worn on its beat");
+            // The wear carries the customization that outfit opened with in this take (what CSS
+            // described after its first wear), so her settings reach every variant and nothing a
+            // step changed leaks into the next wear.
+            expect(!h.css_wears[0].contains("customize") && h.css_wears[3].contains("customize") && h.css_wears[3].at("customize").contains("values"),
+                   "a look's wear on its beat carries the customization it was first seen with");
             expect(h.mpc.contains("WipeT0") && h.param_count("M_Cine_Clay", "Ambient", 0.5) == 1 && h.param_count("M_Cine_XRay", "Show", 0.0) >= 1,
                    "the outfit change was covered by the rig: a clay instance and the bone shapes were made for it");
             expect(parent_of_mid(h, h.prop(Host::PlayerMesh, "OverlayMaterial")).empty(), "and the cover is off her again once she has changed");
@@ -1110,6 +1115,7 @@ int main(int argc, char** argv) {
             expect(h.camera_places - placed >= 37, "and keeps being placed through a cut");
             r.steps(14);   // about 5.3 s: the second wear (4.5 s) and the second cut (5.0 s)
             expect(h.css_wears.size() == 5 && h.css_outfit == "b.outfit" && h.camera_places - placed >= 50, "the second look and the second cut land");
+            expect(h.css_wears[4].contains("customize"), "the second look's wear carries its opening customization too");
             expect(h.move_component == 0, "a sequence never hands its camera to an engine move: it would fight the per-frame placement");
             r.steps(20);
             expect(h.cameras.empty() && h.view == 1 && has(r.status(), "Take finished"), "the sequence ends on its last bar: " + r.status());

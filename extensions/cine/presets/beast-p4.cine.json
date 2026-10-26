@@ -142,7 +142,10 @@
    "wipe": 0.01,
    "hold": 0.12,
    "idle": "css.eve.idle.default",
-   "expression": "css.profaneproxima.face.contempt"
+   "expression": "css.profaneproxima.face.contempt",
+   "controls": {
+    "outfit_glow": 7.0
+   }
   },
   {
    "at": 2.3076,
@@ -156,7 +159,10 @@
    "cover": false,
    "wipe": 0.01,
    "hold": 0.12,
-   "expression": "css.profaneproxima.face.serious"
+   "expression": "css.profaneproxima.face.serious",
+   "controls": {
+    "outfit_glow": 7.0
+   }
   },
   {
    "at": 4.3301,

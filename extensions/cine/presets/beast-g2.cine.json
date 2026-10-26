@@ -2,7 +2,7 @@
  "schema": 1,
  "id": "beast-g2",
  "name": "Beast G2",
- "description": "Mark of the Beast, Unholy Genessa: the build and the loudest part: wings on the accent, Black Hole, gold, glow 8 on the accent, the Hush pose. Song 177.7 to 209.7 s. Track: audio/beast-g2.wav in the CINE folder.",
+ "description": "Mark of the Beast, Unholy Genessa: the Adam Catwalk through the build, Black Hole, wings on the accent, gold with half-bar cuts on the loudest section, glow 8, the Hush pose. Song 177.7 to 209.7 s. Track: audio/beast-g2.wav in the CINE folder.",
  "kind": "sequence",
  "reference": "capsule",
  "tempo": {
@@ -39,28 +39,74 @@
    "fixed": true
   },
   {
-   "at": 2.6537,
+   "at": 1.9999,
    "from": {
-    "azimuth": -150,
-    "distance": 230,
-    "height": 12,
-    "aim": -6,
+    "azimuth": -160,
+    "distance": 260,
+    "height": 20,
+    "aim": -8,
     "fov": 40,
     "roll": 0
    },
    "to": {
-    "azimuth": -170,
-    "distance": 220,
-    "height": 4,
-    "aim": -4,
+    "azimuth": -200,
+    "distance": 250,
+    "height": 10,
+    "aim": -6,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
    "track": "neck",
-   "fit": 58,
+   "fit": 66,
    "fstop": 2.4,
    "fixed": true
+  },
+  {
+   "at": 2.9998,
+   "from": {
+    "azimuth": 180,
+    "distance": 380,
+    "height": -60,
+    "aim": 14,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 320,
+    "height": -50,
+    "aim": 12,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 200,
+   "fixed": true
+  },
+  {
+   "at": 3.9613,
+   "from": {
+    "azimuth": -20,
+    "distance": 160,
+    "height": 6,
+    "aim": 0,
+    "fov": 40,
+    "roll": -4
+   },
+   "to": {
+    "azimuth": -8,
+    "distance": 142,
+    "height": 4,
+    "aim": 0,
+    "fov": 40,
+    "roll": -1
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 34,
+   "fstop": 1.8
   },
   {
    "at": 4.4612,
@@ -83,6 +129,30 @@
    "ease": "smooth",
    "track": "body",
    "fit": 190,
+   "fixed": true
+  },
+  {
+   "at": 5.4612,
+   "from": {
+    "azimuth": 200,
+    "distance": 300,
+    "height": 30,
+    "aim": -10,
+    "fov": 40,
+    "roll": 4
+   },
+   "to": {
+    "azimuth": 160,
+    "distance": 280,
+    "height": 20,
+    "aim": -8,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "neck",
+   "fit": 70,
+   "fstop": 2.4,
    "fixed": true
   },
   {
@@ -156,14 +226,14 @@
    "fixed": true
   },
   {
-   "at": 8.7301,
+   "at": 8.807,
    "from": {
     "azimuth": 180,
     "distance": 480,
     "height": -70,
     "aim": 20,
     "fov": 40,
-    "roll": 0
+    "roll": -3
    },
    "to": {
     "azimuth": 180,
@@ -173,9 +243,56 @@
     "fov": 40,
     "roll": 0
    },
-   "ease": "smooth",
+   "ease": "whip",
    "track": "body",
    "fit": 220,
+   "fixed": true
+  },
+  {
+   "at": 9.307,
+   "from": {
+    "azimuth": -165,
+    "distance": 240,
+    "height": 30,
+    "aim": -12,
+    "fov": 40,
+    "roll": -5
+   },
+   "to": {
+    "azimuth": -195,
+    "distance": 230,
+    "height": 20,
+    "aim": -10,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "neck",
+   "fit": 60,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
+   "at": 9.807,
+   "from": {
+    "azimuth": 180,
+    "distance": 340,
+    "height": -20,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 260,
+    "height": -10,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 190,
    "fixed": true
   },
   {
@@ -200,6 +317,53 @@
    "track": "head",
    "fit": 30,
    "fstop": 1.8
+  },
+  {
+   "at": 11.0761,
+   "from": {
+    "azimuth": 200,
+    "distance": 420,
+    "height": -60,
+    "aim": 14,
+    "fov": 40,
+    "roll": 3
+   },
+   "to": {
+    "azimuth": 160,
+    "distance": 380,
+    "height": -50,
+    "aim": 12,
+    "fov": 40,
+    "roll": -3
+   },
+   "ease": "whip",
+   "track": "body",
+   "fit": 205,
+   "fixed": true
+  },
+  {
+   "at": 11.576,
+   "from": {
+    "azimuth": 180,
+    "distance": 260,
+    "height": 30,
+    "aim": -12,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 220,
+    "height": 40,
+    "aim": -14,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "neck",
+   "fit": 56,
+   "fstop": 2.4,
+   "fixed": true
   },
   {
    "at": 12.1529,
@@ -254,7 +418,7 @@
    "at": 1.0,
    "outfit": "eins0fx.unholygenessa",
    "variant": "genessa",
-   "idle": "css.eve.idle.default",
+   "performance": "css.eve.catwalk.adamcatwalk",
    "palette": "moon",
    "expression": "css.unholygenessa.face.serious"
   },

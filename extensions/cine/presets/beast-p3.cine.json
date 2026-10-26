@@ -2,7 +2,7 @@
  "schema": 1,
  "id": "beast-p3",
  "name": "Beast P3",
- "description": "Mark of the Beast, Profane Proxima: the fast section and the outro: Bass Down Low, the Spin, the Lily Catwalk, the Confident pose on the last accent. Song 209.7 to 246.6 s. Track: audio/beast-p3.wav in the CINE folder.",
+ "description": "Mark of the Beast, Profane Proxima: the Slayer Seal on the hit, Bass Down Low and the Lily Catwalk cut on the bar, the Spin, Natarajasana, the Confident pose on the last accent. Song 209.7 to 246.6 s. Track: audio/beast-p3.wav in the CINE folder.",
  "kind": "sequence",
  "reference": "capsule",
  "tempo": {
@@ -39,6 +39,30 @@
    "fixed": true
   },
   {
+   "at": 1.6538,
+   "from": {
+    "azimuth": -160,
+    "distance": 260,
+    "height": 10,
+    "aim": -6,
+    "fov": 40,
+    "roll": -4
+   },
+   "to": {
+    "azimuth": -200,
+    "distance": 250,
+    "height": 0,
+    "aim": -4,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "neck",
+   "fit": 62,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
    "at": 2.6537,
    "from": {
     "azimuth": -150,
@@ -62,9 +86,9 @@
    "fixed": true
   },
   {
-   "at": 3.9998,
+   "at": 3.6536,
    "from": {
-    "azimuth": 170,
+    "azimuth": 175,
     "distance": 250,
     "height": -30,
     "aim": -6,
@@ -72,21 +96,44 @@
     "roll": 0
    },
    "to": {
-    "azimuth": 190,
+    "azimuth": 195,
     "distance": 240,
     "height": -36,
     "aim": -6,
     "fov": 40,
     "roll": 0
    },
-   "ease": "smooth",
+   "ease": "whip",
    "track": "pelvis",
    "fit": 88,
    "fstop": 4.0,
    "fixed": true
   },
   {
-   "at": 5.3458,
+   "at": 4.6535,
+   "from": {
+    "azimuth": 180,
+    "distance": 440,
+    "height": -60,
+    "aim": 14,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 380,
+    "height": -70,
+    "aim": 16,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 205,
+   "fixed": true
+  },
+  {
+   "at": 5.6535,
    "from": {
     "azimuth": -25,
     "distance": 160,
@@ -178,31 +225,54 @@
    "fixed": true
   },
   {
-   "at": 11.1145,
+   "at": 10.4223,
    "from": {
-    "azimuth": -160,
-    "distance": 260,
-    "height": -40,
+    "azimuth": -165,
+    "distance": 250,
+    "height": 20,
+    "aim": -8,
+    "fov": 40,
+    "roll": 3
+   },
+   "to": {
+    "azimuth": -195,
+    "distance": 240,
+    "height": 10,
     "aim": -6,
     "fov": 40,
     "roll": 0
    },
+   "ease": "whip",
+   "track": "neck",
+   "fit": 64,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
+   "at": 11.4222,
+   "from": {
+    "azimuth": 180,
+    "distance": 380,
+    "height": -60,
+    "aim": 14,
+    "fov": 40,
+    "roll": 0
+   },
    "to": {
-    "azimuth": -175,
-    "distance": 250,
-    "height": -46,
-    "aim": -4,
+    "azimuth": 180,
+    "distance": 330,
+    "height": -50,
+    "aim": 12,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
-   "track": "pelvis",
-   "fit": 90,
-   "fstop": 4.0,
+   "track": "body",
+   "fit": 200,
    "fixed": true
   },
   {
-   "at": 12.6529,
+   "at": 12.4221,
    "from": {
     "azimuth": -30,
     "distance": 150,
@@ -223,6 +293,54 @@
    "track": "head",
    "fit": 34,
    "fstop": 1.8
+  },
+  {
+   "at": 13.422,
+   "from": {
+    "azimuth": 175,
+    "distance": 280,
+    "height": -36,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 185,
+    "distance": 270,
+    "height": -42,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "pelvis",
+   "fit": 90,
+   "fstop": 4.0,
+   "fixed": true
+  },
+  {
+   "at": 14.0374,
+   "from": {
+    "azimuth": 180,
+    "distance": 300,
+    "height": 10,
+    "aim": -4,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 260,
+    "height": 20,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 170,
+   "fstop": 2.8,
+   "fixed": true
   },
   {
    "at": 14.8835,
@@ -257,12 +375,16 @@
    "cover": false,
    "wipe": 0.01,
    "hold": 0.12,
-   "idle": "css.eve.idle.default",
-   "expression": "css.profaneproxima.face.serious"
+   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/SlayerSeal/A_Shared_Attacks_SlayerSeal_Charge_Montage.A_Shared_Attacks_SlayerSeal_Charge_Montage",
+   "expression": "css.profaneproxima.face.serious",
+   "controls": {
+    "outfit_glow": 7.0
+   }
   },
   {
    "at": 2.6537,
-   "performance": "css.eve.dance.bassdownlow"
+   "performance": "css.eve.dance.bassdownlow",
+   "montage": ""
   },
   {
    "at": 6.6534,
@@ -279,7 +401,8 @@
   },
   {
    "at": 14.0374,
-   "idle": "css.eve.idle.default"
+   "performance": "css.eve.photo.natarajasana",
+   "expression": "css.profaneproxima.face.smile"
   },
   {
    "at": 14.8835,

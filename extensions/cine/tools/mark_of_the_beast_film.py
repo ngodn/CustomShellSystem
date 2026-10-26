@@ -149,35 +149,76 @@ def g0():
     return t
 
 
+# ---------------------------------------------------------------- the clips (seconds)
+
+EVE_CATWALK = 'css.eve.catwalk.evecatwalk'       # 12 s
+ADAM_CATWALK = 'css.eve.catwalk.adamcatwalk'     # 15 s
+COME_CLOSER = 'css.eve.dance.comecloser'         # 19.4 s
+DUMB_DUMB = 'css.eve.dance.dumbdumb'             # cut by the next step
+CINDERELLA = 'css.eve.dance.cinderella'          # cut by the next step
+ATOOL = PERF + 'atool'                           # 1: 4 s, 2/3/6/7: 6.7 s, 4/8: 2 s, 5: 4.4 s
+PHOTO = 'css.eve.photo.'
+FOLD = 'css.eve.idle.forward_fold'
+# Profane Proxima's glow strength on every skin in the body of the film (tuned live; None = the palette's own).
+GLOW = 7.0
+
+
+def glow(**more):
+    if GLOW is not None:
+        more.setdefault('controls', {})['outfit_glow'] = GLOW
+    return more
+
+
 # ---------------------------------------------------------------- Proxima
 
 def p1():
-    t = Take('beast-p1', 'Beast P1', 54.0, 96.0, 'Profane Proxima', 'After Brute Battle on the groove, the glow cooling from embers to silver, Low Lean, Side Kneel, ATOOL 7, the Reach pose on the accent.')
-    t.skin(54.0, 'proxima', 'devout_embers', performance=AFTER_BRUTE, expression=PX + 'serious')
-    # After Brute Battle leaps metres in a beat: wide frames, the camera high behind her.
-    t.shot(54.0, pose(200, 520, 40, 4), pose(165, 480, 20, 6), 'body', 250, fixed=True)
-    t.shot(60.0, pose(200, 300, 40, 0, -4), pose(165, 280, 30, 0, -1), 'neck', 110, 2.4, fixed=True)   # over her shoulder: her skin shows a lot from the front
-    t.shot(64.0, pose(150, 420, -10, -4), pose(178, 400, -30, 0), 'body', 220, fixed=True)
-    t.look(67.7, idle='css.eve.idle.low_lean', palette='ember', expression=PX + 'contempt')
-    t.shot(67.9, pose(180, 260, 0, -6), pose(165, 250, 14, -4), 'neck', 60, 2.4, fixed=True)
+    """54 to 95.9: the groove's entry. After Brute Battle on the first bars, cut on the bar; the Eve
+    Catwalk through the second half with the glow cooling; ATOOL 7; the Forward Fold on the silver
+    skin; a whip orbit on the loud bridge; the Reach pose on the accent."""
+    t = Take('beast-p1', 'Beast P1', 54.0, 96.0, 'Profane Proxima', 'After Brute Battle cut on the bar, the Eve Catwalk, ATOOL 7, the Forward Fold, a whip orbit on the loud bridge, the Reach pose on the accent.')
+    t.skin(54.0, 'proxima', 'devout_embers', performance=AFTER_BRUTE, expression=PX + 'serious', **glow())
+    t.shot(54.0, pose(200, 520, 40, 4), pose(165, 480, 20, 6), 'body', 250, fixed=True)                 # wide, high behind: the leaps
+    t.shot(57.9, pose(165, 420, -10, 2, -3), pose(195, 380, 0, 4, 0), 'body', 230, fixed=True, ease='whip')
+    t.shot(60.0, pose(200, 300, 40, 0, -4), pose(165, 280, 30, 0, -1), 'neck', 110, 2.4, fixed=True)    # over her shoulder
+    t.shot(62.6, pose(200, 360, -30, 0, -3), pose(170, 330, -20, 0, 0), 'body', 210, fixed=True, ease='whip')
+    t.shot(65.2, pose(180, 420, 10, 0), pose(180, 300, 20, 0), 'body', 200, fixed=True)                 # the push in
+    t.look(67.7, performance=EVE_CATWALK, palette='ember', expression=PX + 'contempt')
+    t.shot(67.9, pose(185, 340, -30, -2), pose(175, 300, -20, 0), 'body', 190, fixed=True)              # the walk, from behind
+    t.shot(70.5, pose(160, 240, 20, -6), pose(200, 230, 10, -4), 'neck', 70, 2.4, fixed=True)           # round her shoulders
+    t.shot(73.1, pose(180, 420, -60, 16), pose(180, 360, -70, 18), 'body', 205, fixed=True)             # from the ground
     t.look(74.1, palette='tiel_bronze', expression=PX + 'sulk')
-    t.shot(74.1, pose(-60, 150, 6, 0, 5), pose(-45, 138, 4, 0, 2), 'head', 30, 1.8)
-    t.look(76.0, idle='css.eve.idle.side_kneel')
-    t.shot(76.0, pose(190, 300, 30, -14), pose(168, 280, 24, -12), 'pelvis', 95, 4.0, fixed=True)   # the side kneel from above the grass
-    t.look(80.0, performance=PERF + 'atool7', idle=IDLE)
+    t.shot(74.1, pose(-60, 150, 6, 0, 5), pose(-45, 138, 4, 0, 2), 'head', 30, 1.8)                     # the accent: her face
+    t.shot(76.7, pose(195, 260, -20, -4), pose(170, 250, -26, -4), 'pelvis', 95, 4.0, fixed=True)
+    t.look(80.0, performance=ATOOL + '7')
     t.shot(80.0, pose(-170, 330, -10, 0), pose(-150, 300, -14, 0), 'body', 185, fixed=True)
+    t.shot(82.6, pose(170, 220, 30, -10, 3), pose(190, 210, 20, -8, 0), 'neck', 60, 2.4, fixed=True, ease='whip')
     t.look(84.0, expression=PX + 'smile')
     t.shot(84.0, pose(20, 150, 2, 0, -3), pose(8, 132, 2, 0, 0), 'head', 32, 1.8)
-    t.look(86.7, palette='proxima_silver', expression=PX + 'serious')
-    t.shot(88.9, pose(180, 500, 10, 12), pose(180, 440, 0, 14), 'body', 205, fixed=True)   # low but above the grass
-    t.look(92.6, performance='css.eve.photo.reach', expression=PX + 'surprised')
+    t.look(86.7, idle=FOLD, palette='proxima_silver', expression=PX + 'serious')                       # the fold, silver
+    t.shot(86.7, pose(175, 280, 40, -16), pose(185, 250, 30, -14), 'body', 150, 2.8, fixed=True)
+    t.shot(88.9, pose(140, 300, -20, 0, -6), pose(220, 280, -10, 0, 6), 'body', 200, fixed=True, ease='in_out')   # the loud bridge: the orbit
+    t.shot(91.5, pose(180, 460, -50, 12), pose(180, 320, -40, 10), 'body', 200, fixed=True)
+    t.look(92.6, performance=PHOTO + 'reach', expression=PX + 'surprised')
     t.shot(92.6, pose(-25, 170, 10, 0, -6), pose(-12, 150, 8, 0, -2), 'head', 40, 2.0)
+    t.shot(94.5, pose(180, 300, 20, -8), pose(180, 240, 30, -10), 'neck', 60, 2.4, fixed=True)
     return t
 
 
 def p2():
-    t = Take('beast-p2', 'Beast P2', 150.8, 177.7, 'Profane Proxima', 'the hunt: block, parry, riposte, the Slayer Seal and the Biosampler on the double-time; then the breath, reclining.')
-    t.skin(150.8, 'proxima', 'cold_starlight', montage=BLOCK, expression=PX + 'angry')
+    """132.8 to 177.7: DumbDumb against Genessa in the intercut, the starlight skin on the double-time,
+    the hunt on its beats, then the breath, reclining."""
+    t = Take('beast-p2', 'Beast P2', 132.8, 177.7, 'Profane Proxima', 'DumbDumb in the intercut, the starlight skin on the double-time, the hunt: block, parry, riposte, the Slayer Seal and the Biosampler; then the breath, reclining.')
+    t.skin(132.8, 'proxima', 'tiel_bronze', performance=DUMB_DUMB, expression=PX + 'tease-ya', **glow())
+    t.shot(132.8, pose(190, 340, -30, 0), pose(170, 300, -20, 0), 'body', 190, fixed=True)
+    t.shot(135.4, pose(160, 230, 20, -8, -4), pose(200, 220, 10, -6, 0), 'neck', 64, 2.4, fixed=True, ease='whip')
+    t.look(138.2, expression=PX + 'contempt')
+    t.shot(138.2, pose(180, 420, -60, 14), pose(180, 360, -70, 16), 'body', 205, fixed=True)           # the accent, from the ground
+    t.shot(140.8, pose(-30, 150, 4, 0, -4), pose(-12, 136, 3, 0, -1), 'head', 32, 1.8)
+    t.shot(143.4, pose(-175, 280, -36, -6), pose(-185, 270, -42, -6), 'pelvis', 92, 4.0, fixed=True)
+    t.shot(146.0, pose(180, 300, 30, -12), pose(180, 240, 24, -10), 'neck', 60, 2.4, fixed=True)
+    t.shot(148.4, pose(180, 460, -50, 10), pose(180, 330, -40, 8), 'body', 200, fixed=True)             # the push into the double-time
+    # The double-time: the hunt, a move on every beat of it, the starlight skin from the first hit.
+    t.skin(150.8, 'proxima', 'cold_starlight', montage=BLOCK, expression=PX + 'angry', **glow())
     t.shot(150.8, pose(-150, 260, -10, -4), pose(-130, 240, -14, -4), 'body', 170, fixed=True)
     t.shot(151.7, pose(160, 230, 10, -6), pose(175, 220, 4, -4), 'neck', 60, 2.4, fixed=True)
     t.look(153.1, montage=PARRY)
@@ -194,7 +235,7 @@ def p2():
     t.shot(162.5, pose(180, 420, -60, 14), pose(180, 380, -70, 16), 'body', 200, fixed=True)
     # The breath: she reclines on the ground, in grass where the user sets her, so every camera
     # sits well above her and looks down; nothing at ground level.
-    t.skin(164.7, 'human', 'ruined_mist', montage='', idle='css.eve.idle.reclining', expression=PX + 'daydream')
+    t.skin(164.7, 'human', 'ruined_mist', montage='', idle='css.eve.idle.reclining', expression=PX + 'daydream', **glow())
     t.shot(164.7, pose(95, 330, 120, -40, 3), pose(70, 300, 110, -40, 0), 'body', 170, 2.8, fixed=True)   # her profile from above
     t.shot(168.5, pose(25, 180, 95, -30, -4), pose(10, 160, 85, -30, -1), 'head', 40, 1.8)                 # her face from above
     t.look(171.2, expression=PX + 'kiss')
@@ -205,33 +246,41 @@ def p2():
 
 
 def p3():
-    t = Take('beast-p3', 'Beast P3', 209.7, 246.6, 'Profane Proxima', 'the fast section and the outro: Bass Down Low, the Spin, the Lily Catwalk, the Confident pose on the last accent.')
-    t.skin(209.7, 'proxima', 'ember', idle=IDLE, expression=PX + 'serious')
+    """209.7 to 246.6, intercut with g3: the Slayer Seal on the section's first hit, Bass Down Low cut
+    on the bar, the Spin, the Lily Catwalk cut on the bar through the loud outro, Natarajasana, the
+    Confident pose on the last accent."""
+    t = Take('beast-p3', 'Beast P3', 209.7, 246.6, 'Profane Proxima', 'the Slayer Seal on the hit, Bass Down Low and the Lily Catwalk cut on the bar, the Spin, Natarajasana, the Confident pose on the last accent.')
+    t.skin(209.7, 'proxima', 'ember', montage=SEAL, expression=PX + 'serious', **glow())
     t.shot(209.7, pose(180, 520, -40, 8), pose(180, 440, -50, 10), 'body', 200, fixed=True)
-    t.look(214.0, performance=BASS_DOWN_LOW)
+    t.shot(211.4, pose(-160, 260, 10, -6, -4), pose(-200, 250, 0, -4, 0), 'neck', 62, 2.4, fixed=True, ease='whip')
+    t.look(214.0, performance=BASS_DOWN_LOW, montage='')
     t.shot(214.0, pose(-150, 320, -20, 0), pose(-125, 290, -26, 0), 'body', 185, fixed=True)
-    t.shot(217.5, pose(170, 250, -30, -6), pose(190, 240, -36, -6), 'pelvis', 88, 4.0, fixed=True)
-    t.shot(221.0, pose(-25, 160, 6, 0, -5), pose(-10, 142, 4, 0, -2), 'head', 34, 1.8)
+    t.shot(216.6, pose(175, 250, -30, -6), pose(195, 240, -36, -6), 'pelvis', 88, 4.0, fixed=True, ease='whip')
+    t.shot(219.2, pose(180, 440, -60, 14), pose(180, 380, -70, 16), 'body', 205, fixed=True)
+    t.shot(221.8, pose(-25, 160, 6, 0, -5), pose(-10, 142, 4, 0, -2), 'head', 34, 1.8)
     t.look(224.4, palette='devout_embers', expression=PX + 'contempt')
     t.shot(224.4, pose(180, 450, -60, 14), pose(180, 400, -70, 16), 'body', 205, fixed=True)
     t.look(226.7, performance=SPIN)
     t.shot(226.7, pose(200, 330, -10, 0), pose(165, 300, -14, 0), 'body', 180, fixed=True)
     t.look(231.6, performance=LILY_CATWALK)
     t.shot(231.6, pose(180, 420, -30, 4), pose(180, 300, -24, 2), 'body', 190, fixed=True)
-    t.shot(236.0, pose(-160, 260, -40, -6), pose(-175, 250, -46, -4), 'pelvis', 90, 4.0, fixed=True)
-    t.shot(240.0, pose(-30, 150, 4, 0, -4), pose(-12, 135, 3, 0, -1), 'head', 34, 1.8)
-    t.look(243.6, idle=IDLE)
-    t.look(245.8, performance='css.eve.photo.confident', expression=PX + 'contempt')
+    t.shot(234.2, pose(-165, 250, 20, -8, 3), pose(-195, 240, 10, -6, 0), 'neck', 64, 2.4, fixed=True, ease='whip')
+    t.shot(236.8, pose(180, 380, -60, 14), pose(180, 330, -50, 12), 'body', 200, fixed=True)
+    t.shot(239.4, pose(-30, 150, 4, 0, -4), pose(-12, 135, 3, 0, -1), 'head', 34, 1.8)
+    t.shot(242.0, pose(175, 280, -36, -6), pose(185, 270, -42, -6), 'pelvis', 90, 4.0, fixed=True)
+    t.look(243.6, performance=PHOTO + 'natarajasana', expression=PX + 'smile')
+    t.shot(243.6, pose(180, 300, 10, -4), pose(180, 260, 20, -6), 'body', 170, 2.8, fixed=True)
+    t.look(245.8, performance=PHOTO + 'confident', expression=PX + 'contempt')
     t.shot(245.8, pose(10, 140, 2, 0, 2), pose(0, 126, 2, 0, 0), 'head', 30, 1.8)
     return t
 
 
 def p4():
     t = Take('beast-p4', 'Beast P4', 246.6, SONG_END, 'Profane Proxima', 'the drop-out on her face, the ending from the ground, then the Seated Recline.')
-    t.skin(246.6, 'human', 'devout_embers', idle=IDLE, expression=PX + 'contempt')
+    t.skin(246.6, 'human', 'devout_embers', idle=IDLE, expression=PX + 'contempt', **glow())
     t.shot(246.6, pose(0, 140, 2, 0, -2), pose(0, 118, 2, 0, 0), 'head', 30, 1.8)
     t.look(250.0, expression=PX + 'smile')
-    t.skin(253.6, 'proxima', 'devout_embers', expression=PX + 'serious')
+    t.skin(253.6, 'proxima', 'devout_embers', expression=PX + 'serious', **glow())
     t.shot(253.6, pose(180, 560, 10, 12), pose(180, 500, 0, 14), 'body', 210, fixed=True)   # low but above the grass
     # 4:15.26: the Seated Recline for the sensual ending (the user's choice).
     t.look(SEATED_AT, idle='css.eve.idle.seated_recline', expression=PX + 'daydream')
@@ -245,29 +294,37 @@ def p4():
 # ---------------------------------------------------------------- Genessa
 
 def g1():
-    t = Take('beast-g1', 'Beast G1', 95.9, 150.8, 'Unholy Genessa', 'After Brute Battle in the arena, the quiet on her knees, the rise, Performance 801, ember on the accent, ATOOL 3.')
+    """95.9 to 150.8: After Brute Battle cut on the bar; Come Closer through the quiet, the hood coming
+    off; a whip orbit on the section change; Performance 801 from 125.4 through the intercut with
+    the game's own Proxima; ember on the accent; ATOOL 3."""
+    t = Take('beast-g1', 'Beast G1', 95.9, 150.8, 'Unholy Genessa', 'After Brute Battle cut on the bar, Come Closer through the quiet, Performance 801 through the intercut, ember on the accent, ATOOL 3.')
     t.look(95.9, outfit=UG, variant='genessa', performance=AFTER_BRUTE, palette='moon', expression=GX + 'serious')
     t.shot(95.9, pose(160, 520, 40, 4), pose(195, 480, 20, 6), 'body', 250, fixed=True)
+    t.shot(99.8, pose(-165, 420, -10, 2, 3), pose(-195, 380, 0, 4, 0), 'body', 230, fixed=True, ease='whip')
     t.shot(101.5, pose(-200, 300, 40, 0, 4), pose(-165, 280, 30, 0, 1), 'neck', 110, 2.4, fixed=True)
-    t.shot(105.5, pose(-150, 420, -10, -4), pose(-178, 400, -30, 0), 'body', 220, fixed=True)
-    # The quiet: she kneels.
-    t.look(109.6, idle='css.eve.idle.deep_kneeling_bow', expression=GX + 'look-down')
+    t.shot(104.1, pose(-200, 360, -30, 0, 3), pose(-170, 330, -20, 0, 0), 'body', 210, fixed=True, ease='whip')
+    t.shot(106.7, pose(180, 420, 10, 0), pose(180, 300, 20, 0), 'body', 200, fixed=True)
+    t.look(109.6, performance=COME_CLOSER, expression=GX + 'look-down')
     t.shot(109.6, pose(180, 380, -30, -10), pose(165, 340, -40, -8), 'body', 170, fixed=True)
     t.shot(113.0, pose(-30, 150, -10, -4, -4), pose(-12, 135, -12, -4, -1), 'head', 34, 1.8)
     t.look(116.0, expression=GX + 'gloomy', palette='mist')
     t.shot(116.0, pose(140, 240, 30, -14), pose(160, 230, 40, -12), 'neck', 60, 2.4, fixed=True)
+    t.shot(118.6, pose(-175, 300, -50, 8), pose(-185, 260, -40, 6), 'pelvis', 95, 4.0, fixed=True)
     t.look(120.0, controls={'toggle_hood': 0}, expression=GX + 'contempt')
     t.shot(120.0, pose(-150, 230, 12, -6), pose(-170, 220, 4, -4), 'neck', 56, 2.4, fixed=True)
-    t.look(123.0, performance=P801, idle=IDLE)
-    t.shot(123.0, pose(-160, 330, -12, 0), pose(-140, 300, -16, 0), 'body', 185, fixed=True)
+    t.shot(122.8, pose(150, 330, -10, 0, -5), pose(210, 300, 0, 0, 5), 'body', 190, fixed=True, ease='in_out')   # the section: the orbit
+    t.look(125.4, performance=P801)
+    t.shot(125.4, pose(-160, 330, -12, 0), pose(-140, 300, -16, 0), 'body', 185, fixed=True)
     t.look(126.6, expression=GX + 'surprised')
     t.shot(126.6, pose(30, 150, 4, 0, -4), pose(15, 135, 3, 0, -1), 'head', 32, 1.8)
-    t.shot(130.0, pose(170, 280, -36, -6), pose(190, 270, -42, -6), 'pelvis', 95, 4.0, fixed=True)
-    t.shot(132.8, pose(-120, 240, 18, 4, 4), pose(-100, 220, 14, 4, 2), 'neck', 44, 2.4)
+    t.shot(129.2, pose(170, 280, -36, -6), pose(190, 270, -42, -6), 'pelvis', 95, 4.0, fixed=True)
+    t.shot(132.8, pose(-120, 240, 18, 4, 4), pose(-100, 220, 14, 4, 2), 'neck', 44, 2.4)                 # the intercut starts
+    t.shot(135.4, pose(180, 440, -60, 14), pose(180, 380, -50, 12), 'body', 205, fixed=True)
     t.look(138.2, palette='ember', expression=GX + 'angry')
     t.shot(138.2, pose(0, 130, 2, 0, 0), pose(0, 118, 2, 0, 0), 'head', 28, 1.8)
-    t.look(142.0, performance=PERF + 'atool3')
-    t.shot(142.0, pose(180, 480, -60, 16), pose(180, 430, -70, 18), 'body', 205, fixed=True)
+    t.shot(140.8, pose(-175, 260, 20, -8), pose(-185, 240, 30, -10), 'neck', 60, 2.4, fixed=True)
+    t.look(143.4, performance=ATOOL + '3')
+    t.shot(143.4, pose(180, 480, -60, 16), pose(180, 430, -70, 18), 'body', 205, fixed=True)
     t.shot(146.0, pose(-40, 160, 8, 0, 5), pose(-25, 145, 6, 0, 2), 'head', 34, 1.8)
     t.look(148.4, expression=GX + 'contempt')
     t.shot(148.4, pose(180, 300, 0, -4), pose(176, 240, 6, -4), 'neck', 54, 2.4, fixed=True)
@@ -276,43 +333,59 @@ def g1():
 
 
 def g2():
-    t = Take('beast-g2', 'Beast G2', 177.7, 209.7, 'Unholy Genessa', 'the build and the loudest part: wings on the accent, Black Hole, gold, glow 8 on the accent, the Hush pose.')
-    t.look(177.7, outfit=UG, variant='genessa', idle=IDLE, palette='moon', expression=GX + 'serious')
+    """177.7 to 209.7: the Adam Catwalk through the build, Black Hole from 186.7, wings on the accent,
+    gold on the loudest section with the camera cut on the half-bar, glow 8 on the accent, the Hush pose."""
+    t = Take('beast-g2', 'Beast G2', 177.7, 209.7, 'Unholy Genessa', 'the Adam Catwalk through the build, Black Hole, wings on the accent, gold with half-bar cuts on the loudest section, glow 8, the Hush pose.')
+    t.look(177.7, outfit=UG, variant='genessa', performance=ADAM_CATWALK, palette='moon', expression=GX + 'serious')
     t.shot(177.7, pose(185, 520, -40, 8), pose(180, 440, -50, 10), 'body', 200, fixed=True)
-    t.shot(182.0, pose(-150, 230, 12, -6), pose(-170, 220, 4, -4), 'neck', 58, 2.4, fixed=True)
+    t.shot(180.3, pose(-160, 260, 20, -8), pose(-200, 250, 10, -6), 'neck', 66, 2.4, fixed=True)
+    t.shot(182.9, pose(180, 380, -60, 14), pose(180, 320, -50, 12), 'body', 200, fixed=True)
+    t.shot(185.4, pose(-20, 160, 6, 0, -4), pose(-8, 142, 4, 0, -1), 'head', 34, 1.8)
     t.look(186.7, performance=BLACK_HOLE)
     t.shot(186.7, pose(-160, 360, -20, 0), pose(-135, 330, -26, 0), 'body', 190, fixed=True)
+    t.shot(189.3, pose(200, 300, 30, -10, 4), pose(160, 280, 20, -8, 0), 'neck', 70, 2.4, fixed=True, ease='whip')
     t.look(190.3, controls={'toggle_wings': 1}, palette='ember', expression=GX + 'laugh')
-    t.shot(190.3, pose(180, 600, -30, 10), pose(180, 520, -40, 12), 'body', 240, fixed=True)
+    t.shot(190.3, pose(180, 600, -30, 10), pose(180, 520, -40, 12), 'body', 240, fixed=True)            # the wings, wide
     t.shot(193.6, pose(-30, 170, 6, 0, -5), pose(-12, 150, 4, 0, -2), 'head', 36, 1.8)
     t.look(196.7, palette='gold', expression=GX + 'angry')
-    t.shot(196.7, pose(150, 300, -40, -6), pose(178, 290, -50, -4), 'pelvis', 95, 4.0, fixed=True)
-    t.shot(197.8, pose(180, 480, -70, 20), pose(180, 420, -80, 22), 'body', 220, fixed=True)
+    t.shot(196.7, pose(150, 300, -40, -6), pose(178, 290, -50, -4), 'pelvis', 95, 4.0, fixed=True)      # the loudest section: half-bar cuts
+    t.shot(198.0, pose(180, 480, -70, 20, -3), pose(180, 420, -80, 22, 0), 'body', 220, fixed=True, ease='whip')
+    t.shot(199.3, pose(-165, 240, 30, -12, -5), pose(-195, 230, 20, -10, 0), 'neck', 60, 2.4, fixed=True, ease='whip')
+    t.shot(200.6, pose(180, 340, -20, 0), pose(180, 260, -10, 0), 'body', 190, fixed=True)
     t.look(202.7, controls={'outfit_glow': 8}, expression=GX + 'laugh')
     t.shot(202.7, pose(0, 140, 4, 0, 0), pose(0, 124, 3, 0, 0), 'head', 30, 1.8)
-    t.look(206.7, performance='css.eve.photo.hush', expression=GX + 'tease-ya')
+    t.shot(203.9, pose(200, 420, -60, 14, 3), pose(160, 380, -50, 12, -3), 'body', 205, fixed=True, ease='whip')
+    t.shot(205.2, pose(180, 260, 30, -12), pose(180, 220, 40, -14), 'neck', 56, 2.4, fixed=True)
+    t.look(206.7, performance=PHOTO + 'hush', expression=GX + 'tease-ya')
     t.shot(206.7, pose(-20, 150, 2, 0, -3), pose(-8, 136, 2, 0, 0), 'head', 32, 1.8)
     t.shot(209.2, pose(185, 300, 0, -4), pose(180, 250, 6, -4), 'neck', 54, 2.4, fixed=True)
     return t
 
 
 def g3():
-    t = Take('beast-g3', 'Beast G3', 209.7, 246.6, 'Unholy Genessa', f'Iris Out danced at the song\'s tempo (rate {IRIS_RATE}), then the Charm and Hush poses and a laugh on the last accent.')
-    t.look(209.7, outfit=UG, variant='genessa', idle=IDLE, palette='moon', expression=GX + 'neutral')
+    """209.7 to 246.6, intercut with p3: ATOOL 6 on the section's first hit, Iris Out at the song's
+    tempo cut on the bar, Cinderella through the loud outro in gold, the Charm pose, a laugh on the last accent."""
+    t = Take('beast-g3', 'Beast G3', 209.7, 246.6, 'Unholy Genessa', f'ATOOL 6 on the hit, Iris Out at the song\'s tempo (rate {IRIS_RATE}) cut on the bar, Cinderella in gold through the loud outro, the Charm pose, a laugh on the last accent.')
+    t.look(209.7, outfit=UG, variant='genessa', performance=ATOOL + '6', palette='moon', expression=GX + 'neutral')
     t.shot(209.7, pose(180, 520, -40, 8), pose(180, 440, -50, 10), 'body', 200, fixed=True)
+    t.shot(211.4, pose(165, 250, 20, -8, 4), pose(195, 240, 10, -6, 0), 'neck', 62, 2.4, fixed=True, ease='whip')
     t.look(214.0, performance=IRIS_OUT, performance_rate=IRIS_RATE)
     t.shot(214.0, pose(-160, 330, -16, 0), pose(-135, 300, -22, 0), 'body', 185, fixed=True)
-    t.shot(217.5, pose(-20, 160, 4, 0, -4), pose(-8, 142, 3, 0, -1), 'head', 34, 1.8)
-    t.shot(221.0, pose(165, 260, -34, -6), pose(190, 250, -40, -6), 'pelvis', 90, 4.0, fixed=True)
+    t.shot(216.6, pose(-20, 160, 4, 0, -4), pose(-8, 142, 3, 0, -1), 'head', 34, 1.8)
+    t.shot(219.2, pose(165, 260, -34, -6), pose(190, 250, -40, -6), 'pelvis', 90, 4.0, fixed=True)
+    t.shot(221.8, pose(-170, 300, -10, 0), pose(-190, 280, -16, 0), 'body', 185, fixed=True)
     t.look(224.4, palette='ember', expression=GX + 'smile')
     t.shot(224.4, pose(180, 470, -64, 16), pose(180, 420, -74, 18), 'body', 205, fixed=True)
-    t.shot(228.0, pose(-150, 240, 14, -6), pose(-170, 230, 6, -4), 'neck', 56, 2.4, fixed=True)
+    t.shot(226.7, pose(-150, 240, 14, -6), pose(-170, 230, 6, -4), 'neck', 56, 2.4, fixed=True)
+    t.shot(229.2, pose(180, 420, -60, 14), pose(180, 360, -70, 16), 'body', 205, fixed=True)
     t.shot(231.6, pose(-30, 150, 6, 0, -5), pose(-12, 136, 4, 0, -2), 'head', 32, 1.8)
-    t.shot(235.0, pose(185, 300, -20, -4), pose(176, 260, -14, -4), 'chest', 85, 2.8, fixed=True)
-    t.look(238.6, performance='css.eve.photo.charm', palette='gold', expression=GX + 'smile')
-    t.shot(238.6, pose(0, 150, 2, 0, 0), pose(0, 130, 2, 0, 0), 'head', 30, 1.8)
-    t.look(242.0, performance='css.eve.photo.hush', expression=GX + 'wink')
-    t.shot(242.0, pose(-40, 150, 4, 0, 5), pose(-25, 136, 3, 0, 2), 'head', 32, 1.8)
+    t.shot(234.2, pose(185, 300, -20, -4), pose(176, 260, -14, -4), 'chest', 85, 2.8, fixed=True)
+    t.shot(236.8, pose(180, 380, -60, 14), pose(180, 330, -50, 12), 'body', 200, fixed=True)
+    t.look(238.6, performance=CINDERELLA, palette='gold', expression=GX + 'smile')
+    t.shot(238.6, pose(-160, 330, -16, 0), pose(-135, 300, -22, 0), 'body', 185, fixed=True)
+    t.shot(241.2, pose(-170, 250, 20, -8, 3), pose(-190, 240, 12, -6, 0), 'neck', 60, 2.4, fixed=True, ease='whip')
+    t.look(243.6, performance=PHOTO + 'charm', expression=GX + 'wink')
+    t.shot(243.6, pose(0, 150, 2, 0, 0), pose(0, 130, 2, 0, 0), 'head', 30, 1.8)
     t.look(245.8, expression=GX + 'laugh')
     t.shot(245.8, pose(180, 450, -60, 14), pose(180, 400, -70, 16), 'body', 205, fixed=True)
     return t

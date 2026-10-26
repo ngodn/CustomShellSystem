@@ -2,7 +2,7 @@
  "schema": 1,
  "id": "beast-p2",
  "name": "Beast P2",
- "description": "Mark of the Beast, Profane Proxima: the hunt: block, parry, riposte, the Slayer Seal and the Biosampler on the double-time; then the breath, reclining. Song 150.8 to 177.7 s. Track: audio/beast-p2.wav in the CINE folder.",
+ "description": "Mark of the Beast, Profane Proxima: DumbDumb in the intercut, the starlight skin on the double-time, the hunt: block, parry, riposte, the Slayer Seal and the Biosampler; then the breath, reclining. Song 132.8 to 177.7 s. Track: audio/beast-p2.wav in the CINE folder.",
  "kind": "sequence",
  "reference": "capsule",
  "tempo": {
@@ -10,13 +10,177 @@
   "offset": 0.0,
   "beats_per_bar": 4
  },
- "end": 11.3453,
+ "end": 18.2678,
  "audio": "audio/beast-p2.wav",
  "idle": "css.eve.idle.default",
  "performance": "off",
  "shots": [
   {
    "at": 1.0,
+   "from": {
+    "azimuth": 190,
+    "distance": 340,
+    "height": -30,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 170,
+    "distance": 300,
+    "height": -20,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 190,
+   "fixed": true
+  },
+  {
+   "at": 1.9999,
+   "from": {
+    "azimuth": 160,
+    "distance": 230,
+    "height": 20,
+    "aim": -8,
+    "fov": 40,
+    "roll": -4
+   },
+   "to": {
+    "azimuth": 200,
+    "distance": 220,
+    "height": 10,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "neck",
+   "fit": 64,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
+   "at": 3.0767,
+   "from": {
+    "azimuth": 180,
+    "distance": 420,
+    "height": -60,
+    "aim": 14,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 360,
+    "height": -70,
+    "aim": 16,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 205,
+   "fixed": true
+  },
+  {
+   "at": 4.0767,
+   "from": {
+    "azimuth": -30,
+    "distance": 150,
+    "height": 4,
+    "aim": 0,
+    "fov": 40,
+    "roll": -4
+   },
+   "to": {
+    "azimuth": -12,
+    "distance": 136,
+    "height": 3,
+    "aim": 0,
+    "fov": 40,
+    "roll": -1
+   },
+   "ease": "smooth",
+   "track": "head",
+   "fit": 32,
+   "fstop": 1.8
+  },
+  {
+   "at": 5.0766,
+   "from": {
+    "azimuth": -175,
+    "distance": 280,
+    "height": -36,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -185,
+    "distance": 270,
+    "height": -42,
+    "aim": -6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "pelvis",
+   "fit": 92,
+   "fstop": 4.0,
+   "fixed": true
+  },
+  {
+   "at": 6.0765,
+   "from": {
+    "azimuth": 180,
+    "distance": 300,
+    "height": 30,
+    "aim": -12,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 240,
+    "height": 24,
+    "aim": -10,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "neck",
+   "fit": 60,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
+   "at": 6.9995,
+   "from": {
+    "azimuth": 180,
+    "distance": 460,
+    "height": -50,
+    "aim": 10,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 330,
+    "height": -40,
+    "aim": 8,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 200,
+   "fixed": true
+  },
+  {
+   "at": 7.9225,
    "from": {
     "azimuth": -150,
     "distance": 260,
@@ -39,7 +203,7 @@
    "fixed": true
   },
   {
-   "at": 1.3461,
+   "at": 8.2686,
    "from": {
     "azimuth": 160,
     "distance": 230,
@@ -63,7 +227,7 @@
    "fixed": true
   },
   {
-   "at": 1.8845,
+   "at": 8.807,
    "from": {
     "azimuth": -20,
     "distance": 170,
@@ -86,7 +250,7 @@
    "fstop": 2.0
   },
   {
-   "at": 2.4999,
+   "at": 9.4224,
    "from": {
     "azimuth": 200,
     "distance": 300,
@@ -109,7 +273,7 @@
    "fixed": true
   },
   {
-   "at": 3.346,
+   "at": 10.2685,
    "from": {
     "azimuth": -170,
     "distance": 260,
@@ -132,7 +296,7 @@
    "fixed": true
   },
   {
-   "at": 4.0382,
+   "at": 10.9607,
    "from": {
     "azimuth": 120,
     "distance": 220,
@@ -156,7 +320,7 @@
    "fixed": true
   },
   {
-   "at": 4.7305,
+   "at": 11.653,
    "from": {
     "azimuth": -30,
     "distance": 150,
@@ -179,7 +343,7 @@
    "fstop": 1.8
   },
   {
-   "at": 5.4996,
+   "at": 12.4221,
    "from": {
     "azimuth": 180,
     "distance": 420,
@@ -202,7 +366,7 @@
    "fixed": true
   },
   {
-   "at": 6.3457,
+   "at": 13.2682,
    "from": {
     "azimuth": 95,
     "distance": 330,
@@ -226,7 +390,7 @@
    "fixed": true
   },
   {
-   "at": 7.8071,
+   "at": 14.7296,
    "from": {
     "azimuth": 25,
     "distance": 180,
@@ -249,7 +413,7 @@
    "fstop": 1.8
   },
   {
-   "at": 9.1532,
+   "at": 16.0757,
    "from": {
     "azimuth": -95,
     "distance": 330,
@@ -273,7 +437,7 @@
    "fixed": true
   },
   {
-   "at": 10.4607,
+   "at": 17.3832,
    "from": {
     "azimuth": 5,
     "distance": 160,
@@ -301,39 +465,60 @@
    "at": 1.0,
    "outfit": "eins0fx.thornyproxima",
    "variant": "proxima",
+   "palette": "tiel_bronze",
+   "cover": false,
+   "wipe": 0.01,
+   "hold": 0.12,
+   "performance": "css.eve.dance.dumbdumb",
+   "expression": "css.profaneproxima.face.tease-ya",
+   "controls": {
+    "outfit_glow": 7.0
+   }
+  },
+  {
+   "at": 3.0767,
+   "expression": "css.profaneproxima.face.contempt"
+  },
+  {
+   "at": 7.9225,
+   "outfit": "eins0fx.thornyproxima",
+   "variant": "proxima",
    "palette": "cold_starlight",
    "cover": false,
    "wipe": 0.01,
    "hold": 0.12,
    "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/Block/Axeatana/A_Shared_Actions_BlockParry_Axeatana_Perfect_Block_01_Montage.A_Shared_Actions_BlockParry_Axeatana_Perfect_Block_01_Montage",
-   "expression": "css.profaneproxima.face.angry"
+   "expression": "css.profaneproxima.face.angry",
+   "controls": {
+    "outfit_glow": 7.0
+   }
   },
   {
-   "at": 1.8845,
+   "at": 8.807,
    "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Parry/AM_Player_Seal_Parry_Successful_01_A.AM_Player_Seal_Parry_Successful_01_A"
   },
   {
-   "at": 2.4999,
+   "at": 9.4224,
    "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Parry/AM_Shells_InfSeal_Riposte_Brig_01_Shell.AM_Shells_InfSeal_Riposte_Brig_01_Shell"
   },
   {
-   "at": 3.346,
+   "at": 10.2685,
    "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/SlayerSeal/A_Shared_Attacks_SlayerSeal_Charge_Montage.A_Shared_Attacks_SlayerSeal_Charge_Montage"
   },
   {
-   "at": 4.0382,
+   "at": 10.9607,
    "montage": "/Game/Sparta/Characters/Shells/KnightLady/Animation/Ability/A_KnightLady_Attacks_Ability_Start_Montage.A_KnightLady_Attacks_Ability_Start_Montage"
   },
   {
-   "at": 4.269,
+   "at": 11.1915,
    "montage": "/Game/Sparta/Characters/Shells/KnightLady/Animation/Ability/A_KnightLady_Attacks_Ability_Stab_Montage.A_KnightLady_Attacks_Ability_Stab_Montage"
   },
   {
-   "at": 5.4996,
+   "at": 12.4221,
    "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/Block/Axeatana/A_Shared_Actions_BlockParry_Axeatana_Perfect_Block_01_Montage.A_Shared_Actions_BlockParry_Axeatana_Perfect_Block_01_Montage"
   },
   {
-   "at": 6.3457,
+   "at": 13.2682,
    "outfit": "eins0fx.thornyproxima",
    "variant": "human",
    "palette": "ruined_mist",
@@ -342,14 +527,17 @@
    "hold": 0.12,
    "montage": "",
    "idle": "css.eve.idle.reclining",
-   "expression": "css.profaneproxima.face.daydream"
+   "expression": "css.profaneproxima.face.daydream",
+   "controls": {
+    "outfit_glow": 7.0
+   }
   },
   {
-   "at": 8.8455,
+   "at": 15.768,
    "expression": "css.profaneproxima.face.kiss"
   },
   {
-   "at": 10.4607,
+   "at": 17.3832,
    "expression": "css.profaneproxima.face.tease-ya"
   }
  ]

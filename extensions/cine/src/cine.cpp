@@ -549,6 +549,7 @@ void Extension::prepare() {
                 }
                 t.prep_wait = 0;
                 t.look_now = described;
+                remember_custom(t.own_look);
                 t.seq_looks = !p.sequence.looks.empty();
             } catch (const std::exception& e) {
                 // No CSS look to read (CSS off, or the game's own shell worn): steps that need it
@@ -736,8 +737,19 @@ Json Extension::wear_request(const std::string& outfit, const std::string& varia
     const auto& t = *take_;
     Json request{{"action", "wear"}, {"persist", persist}};
     if (own) { request["outfit"] = t.own_look.at("outfit"); request["variant"] = t.own_look.at("variant"); request["customize"] = t.own_look.at("customize"); }
-    else { request["outfit"] = outfit; request["variant"] = variant; }
+    else {
+        request["outfit"] = outfit; request["variant"] = variant;
+        // The customization this outfit opened with: CSS keeps what the variant can take.
+        if (const auto found = t.look_custom.find(outfit); found != t.look_custom.end()) request["customize"] = found->second;
+    }
     return request;
+}
+
+// The first customization seen on an outfit in this take is the one its wears carry.
+void Extension::remember_custom(const Json& described) {
+    if (!take_ || !described.is_object() || !described.contains("customize") || !described.at("customize").is_object()) return;
+    const auto outfit = described.value("outfit", std::string());
+    if (!outfit.empty() && !take_->look_custom.contains(outfit)) take_->look_custom[outfit] = described.at("customize");
 }
 
 bool Extension::worn(const Json& d, const std::string& outfit, const std::string& variant) const {
@@ -842,7 +854,7 @@ void Extension::prepare_looks() {
                 else if (!t.learning) { breakdown_.learn(key(outfit, variant), spring_bones()); t.learning = true; return; }
             }
             t.learning = false;
-            t.look_now = described; t.prep.pop_front(); t.prep_sent = false;
+            t.look_now = described; remember_custom(described); t.prep.pop_front(); t.prep_sent = false;
             return;
         }
         if (!t.prep_sent) {
@@ -1119,7 +1131,7 @@ void Extension::sequence_frame(const CssxFrame& f) {
                     const auto described = rig_.css({{"action", "describe"}});
                     landed = worn(described, look.outfit, look.variant);
                     if (landed) {
-                        t.look_now = described;
+                        t.look_now = described; remember_custom(described);
                         breakdown_.adopt(look.outfit + "/" + look.variant);
                         apply_look(look);
                         t.adopted = true;

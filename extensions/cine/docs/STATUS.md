@@ -30,6 +30,8 @@ The film needed three new look-step fields: `expression` (a facial expression id
 animation montages, `""` stops it) with `montage_rate`. A montage-only sequence runs without
 CSS. Tracked shots now anchor on her live position and sample every frame while a performance
 plays, with a faster follow when she moves fast, so After Brute Battle stays in frame.
+Every wear in a take carries the customization that outfit opened with (hers, or the first-seen
+one), so a variant she never customized still gets her settings; see BEAST-GOAL.md.
 
 ### Next: Fight Replay (queued)
 The user's design: the player fights normally with the game camera while CINE records; then

@@ -2,7 +2,7 @@
  "schema": 1,
  "id": "beast-p1",
  "name": "Beast P1",
- "description": "Mark of the Beast, Profane Proxima: After Brute Battle on the groove, the glow cooling from embers to silver, Low Lean, Side Kneel, ATOOL 7, the Reach pose on the accent. Song 54.0 to 96.0 s. Track: audio/beast-p1.wav in the CINE folder.",
+ "description": "Mark of the Beast, Profane Proxima: After Brute Battle cut on the bar, the Eve Catwalk, ATOOL 7, the Forward Fold, a whip orbit on the loud bridge, the Reach pose on the accent. Song 54.0 to 96.0 s. Track: audio/beast-p1.wav in the CINE folder.",
  "kind": "sequence",
  "reference": "capsule",
  "tempo": {
@@ -39,6 +39,29 @@
    "fixed": true
   },
   {
+   "at": 2.4999,
+   "from": {
+    "azimuth": 165,
+    "distance": 420,
+    "height": -10,
+    "aim": 2,
+    "fov": 40,
+    "roll": -3
+   },
+   "to": {
+    "azimuth": 195,
+    "distance": 380,
+    "height": 0,
+    "aim": 4,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "body",
+   "fit": 230,
+   "fixed": true
+  },
+  {
    "at": 3.3075,
    "from": {
     "azimuth": 200,
@@ -63,50 +86,119 @@
    "fixed": true
   },
   {
-   "at": 4.8458,
+   "at": 4.3074,
    "from": {
-    "azimuth": 150,
+    "azimuth": 200,
+    "distance": 360,
+    "height": -30,
+    "aim": 0,
+    "fov": 40,
+    "roll": -3
+   },
+   "to": {
+    "azimuth": 170,
+    "distance": 330,
+    "height": -20,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "body",
+   "fit": 210,
+   "fixed": true
+  },
+  {
+   "at": 5.3073,
+   "from": {
+    "azimuth": 180,
     "distance": 420,
-    "height": -10,
-    "aim": -4,
+    "height": 10,
+    "aim": 0,
     "fov": 40,
     "roll": 0
    },
    "to": {
-    "azimuth": 178,
-    "distance": 400,
-    "height": -30,
+    "azimuth": 180,
+    "distance": 300,
+    "height": 20,
     "aim": 0,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
    "track": "body",
-   "fit": 220,
+   "fit": 200,
    "fixed": true
   },
   {
    "at": 6.3457,
    "from": {
-    "azimuth": 180,
-    "distance": 260,
-    "height": 0,
+    "azimuth": 185,
+    "distance": 340,
+    "height": -30,
+    "aim": -2,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 175,
+    "distance": 300,
+    "height": -20,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 190,
+   "fixed": true
+  },
+  {
+   "at": 7.3456,
+   "from": {
+    "azimuth": 160,
+    "distance": 240,
+    "height": 20,
     "aim": -6,
     "fov": 40,
     "roll": 0
    },
    "to": {
-    "azimuth": 165,
-    "distance": 250,
-    "height": 14,
+    "azimuth": 200,
+    "distance": 230,
+    "height": 10,
     "aim": -4,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
    "track": "neck",
-   "fit": 60,
+   "fit": 70,
    "fstop": 2.4,
+   "fixed": true
+  },
+  {
+   "at": 8.3455,
+   "from": {
+    "azimuth": 180,
+    "distance": 420,
+    "height": -60,
+    "aim": 16,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 360,
+    "height": -70,
+    "aim": 18,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 205,
    "fixed": true
   },
   {
@@ -133,20 +225,20 @@
    "fstop": 1.8
   },
   {
-   "at": 9.4608,
+   "at": 9.73,
    "from": {
-    "azimuth": 190,
-    "distance": 300,
-    "height": 30,
-    "aim": -14,
+    "azimuth": 195,
+    "distance": 260,
+    "height": -20,
+    "aim": -4,
     "fov": 40,
     "roll": 0
    },
    "to": {
-    "azimuth": 168,
-    "distance": 280,
-    "height": 24,
-    "aim": -12,
+    "azimuth": 170,
+    "distance": 250,
+    "height": -26,
+    "aim": -4,
     "fov": 40,
     "roll": 0
    },
@@ -180,6 +272,30 @@
    "fixed": true
   },
   {
+   "at": 11.9991,
+   "from": {
+    "azimuth": 170,
+    "distance": 220,
+    "height": 30,
+    "aim": -10,
+    "fov": 40,
+    "roll": 3
+   },
+   "to": {
+    "azimuth": 190,
+    "distance": 210,
+    "height": 20,
+    "aim": -8,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip",
+   "track": "neck",
+   "fit": 60,
+   "fstop": 2.4,
+   "fixed": true
+  },
+  {
    "at": 12.5375,
    "from": {
     "azimuth": 20,
@@ -203,26 +319,73 @@
    "fstop": 1.8
   },
   {
+   "at": 13.5759,
+   "from": {
+    "azimuth": 175,
+    "distance": 280,
+    "height": 40,
+    "aim": -16,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 185,
+    "distance": 250,
+    "height": 30,
+    "aim": -14,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "body",
+   "fit": 150,
+   "fstop": 2.8,
+   "fixed": true
+  },
+  {
    "at": 14.422,
    "from": {
+    "azimuth": 140,
+    "distance": 300,
+    "height": -20,
+    "aim": 0,
+    "fov": 40,
+    "roll": -6
+   },
+   "to": {
+    "azimuth": 220,
+    "distance": 280,
+    "height": -10,
+    "aim": 0,
+    "fov": 40,
+    "roll": 6
+   },
+   "ease": "in_out",
+   "track": "body",
+   "fit": 200,
+   "fixed": true
+  },
+  {
+   "at": 15.4219,
+   "from": {
     "azimuth": 180,
-    "distance": 500,
-    "height": 10,
+    "distance": 460,
+    "height": -50,
     "aim": 12,
     "fov": 40,
     "roll": 0
    },
    "to": {
     "azimuth": 180,
-    "distance": 440,
-    "height": 0,
-    "aim": 14,
+    "distance": 320,
+    "height": -40,
+    "aim": 10,
     "fov": 40,
     "roll": 0
    },
    "ease": "smooth",
    "track": "body",
-   "fit": 205,
+   "fit": 200,
    "fixed": true
   },
   {
@@ -247,6 +410,30 @@
    "track": "head",
    "fit": 40,
    "fstop": 2.0
+  },
+  {
+   "at": 16.5756,
+   "from": {
+    "azimuth": 180,
+    "distance": 300,
+    "height": 20,
+    "aim": -8,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 180,
+    "distance": 240,
+    "height": 30,
+    "aim": -10,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "smooth",
+   "track": "neck",
+   "fit": 60,
+   "fstop": 2.4,
+   "fixed": true
   }
  ],
  "looks": [
@@ -259,11 +446,14 @@
    "wipe": 0.01,
    "hold": 0.12,
    "performance": "css.eve.performance.afterbrutebattle",
-   "expression": "css.profaneproxima.face.serious"
+   "expression": "css.profaneproxima.face.serious",
+   "controls": {
+    "outfit_glow": 7.0
+   }
   },
   {
    "at": 6.2688,
-   "idle": "css.eve.idle.low_lean",
+   "performance": "css.eve.catwalk.evecatwalk",
    "palette": "ember",
    "expression": "css.profaneproxima.face.contempt"
   },
@@ -273,13 +463,8 @@
    "expression": "css.profaneproxima.face.sulk"
   },
   {
-   "at": 9.4608,
-   "idle": "css.eve.idle.side_kneel"
-  },
-  {
    "at": 10.9992,
-   "performance": "css.eve.performance.atool7",
-   "idle": "css.eve.idle.default"
+   "performance": "css.eve.performance.atool7"
   },
   {
    "at": 12.5375,
@@ -287,6 +472,7 @@
   },
   {
    "at": 13.5759,
+   "idle": "css.eve.idle.forward_fold",
    "palette": "proxima_silver",
    "expression": "css.profaneproxima.face.serious"
   },

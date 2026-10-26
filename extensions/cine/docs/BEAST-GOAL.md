@@ -111,14 +111,25 @@ narration, the title cards, and the intercut of the climax.
 | --- | --- | --- | --- |
 | beast-p0 | 0 to 54 | original Proxima, Profane Proxima from 41.2 | narration; kneels on the bell at 29.5 (CSS Kneeling Bow) under the title; wears Profane Proxima on her name slam |
 | beast-g0 | 0 to 54 | original Genessa, Unholy Genessa from 49.5 | the same, intercut; wears Unholy Genessa on her name slam |
-| beast-p1 | 54 to 96 | Profane Proxima | After Brute Battle on the groove's entry, then Low Lean and Side Kneel with the glow cooling; ATOOL 7 at 80; the Reach pose on the accent at 92.6 |
-| beast-g1 | 96 to 150.8 | Unholy Genessa | After Brute Battle in the arena, like Proxima; the quiet on her knees from 109.6 (Deep Kneeling Bow, look-down); rises into Performance 801 at 123; ember on the accent at 138; ATOOL 3 at 142 |
-| beast-p2 | 150.8 to 177.7 | Profane Proxima | the hunt: block, parry, riposte, Slayer Seal, Biosampler on the double-time beats; then the breath: Reclining in the Human skin, cameras above the grass, daydream, kiss |
-| beast-g2 | 177.7 to 209.7 | Unholy Genessa | the build and the loudest part: wings on the accent at 190.3, Black Hole from 186.7, glow 8 on the accent at 202.7, the Hush pose at the end |
-| beast-p3 | 209.7 to 246.6 | Profane Proxima | the fast section and outro, intercut with g3: Bass Down Low at 214, Spin, Lily Catwalk at 231.6, the Confident pose on the accent at 245.8 |
-| beast-g3 | 209.7 to 246.6 | Unholy Genessa | Iris Out at 0.679 rate (136 BPM danced at 92.3) from 214, then the Charm and Hush poses |
+| beast-p1 | 54 to 96 | Profane Proxima | After Brute Battle cut on the bar with whips; the Eve Catwalk from 67.7 with the glow cooling; ATOOL 7 at 80; the Forward Fold on the silver skin at 86.7; an 80 degree orbit on the loud bridge at 88.9; the Reach pose on the accent at 92.6 |
+| beast-g1 | 95.9 to 150.8 | Unholy Genessa | After Brute Battle cut on the bar; Come Closer through the quiet from 109.6, mist, the hood off; an orbit on the section change at 122.8; Performance 801 from 125.4 through the intercut; ember on the accent at 138.2; ATOOL 3 at 143.4 |
+| beast-p2 | 132.8 to 177.7 | Profane Proxima | DumbDumb against Genessa in the intercut (a bar each) on the bronze skin; the starlight skin on the double-time at 150.8: block, parry, riposte, Slayer Seal, Biosampler on its beats; then the breath: Reclining in the Human skin, cameras above the grass, daydream, kiss |
+| beast-g2 | 177.7 to 209.7 | Unholy Genessa | the Adam Catwalk through the build; Black Hole from 186.7; wings on the accent at 190.3; gold on the loudest section at 196.7 with the camera cut on the half-bar; glow 8 on the accent at 202.7; the Hush pose |
+| beast-p3 | 209.7 to 246.6 | Profane Proxima | intercut with g3 a bar each: the Slayer Seal on the hit; Bass Down Low at 214 cut on the bar; the Spin at 226.7; the Lily Catwalk at 231.6 cut on the bar through the loud outro; Natarajasana at 243.6; the Confident pose on the last accent |
+| beast-g3 | 209.7 to 246.6 | Unholy Genessa | ATOOL 6 on the hit; Iris Out at 0.679 rate from 214 cut on the bar; Cinderella in gold through the loud outro from 238.6; the Charm pose at 243.6; a laugh on the last accent |
 | beast-p4 | 246.6 to end | Profane Proxima | the drop-out on her face (contempt, smile), the ending from the ground; from 4:15.26 the Seated Recline (the user's choice) |
 | beast-g4 | 246.6 to end | Unholy Genessa | the same, intercut, the Seated Recline from 4:15.26; end card |
+
+Screen time, solo sections: Proxima 54 to 95.9 and 150.8 to 177.7 (68.8 s), Genessa 95.9 to 132.8 and
+177.7 to 209.7 (68.9 s); 132.8 to 150.8 and 209.7 to 246.6 are intercut a bar each, the ending too.
+
+Second pass (26 Oct, after the user's review of the first film): Eve Default Idle is only ever the
+pose she returns to; every section has a clip running (catwalks, Come Closer, DumbDumb, Cinderella,
+ATOOL 3, 6 and 7 joined the dances and the hunt). The camera follows the song's energy map
+(work/beast/energy.txt, librosa loudness, low band and onset density per section): the loud parts
+cut on the bar, the loudest (196.7 to 209.7, -3.8 dB, the heaviest low band) on the half-bar with
+whips and roll; the quiet parts (164.7 to 177.7, the drop-out) keep long moves. Profane Proxima's glow strength (`outfit_glow`, 0 to 8, default 1) is set
+on every body skin through `GLOW` in the film tool, tuned live.
 
 Live findings (26 Oct, Genessa batch at Marrow Keep): the game's Kneel montage is a kneel-and-rise
 action (4.3 s) and Kneel Loop does not hold the pose, so the intros kneel with the CSS Kneeling
@@ -131,3 +142,13 @@ their full length through CINE (checked with GetCurrentMontage).
 Framing rules as before: the body from behind, front and side shots on the face and neck.
 Every take restores her look and idle. Live checklist: expressions present on both outfits;
 montage plays (Kneel) and stops; a dance at rate 0.679; the two intros on Default.
+
+Customization in takes (26 Oct, second pass): the user saw their CSS settings missing from the
+recordings (glow strength, glow fill, flow speed, motion travel, shape sliders). A take's wear
+carried only the outfit and variant, and CSS resolves such a wear from its remembered
+customization per outfit and variant: her own skin came up right, a skin she never customized
+(Profane Proxima's Human skin) came up on package defaults. CINE now keeps, per outfit, the
+customization a look opened with in the take (hers for her own outfit, the first-seen one for
+any other) and sends it with every wear; CSS keeps what the variant can take. Verified live on
+beast-p4: the Human skin carries glow 5.25, fill 0.65, flow 0.46 and the shape sliders, and her
+own look is restored after the take.

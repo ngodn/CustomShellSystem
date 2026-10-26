@@ -38,10 +38,15 @@ FAINT = (170, 150, 146)
 CUTS = [
     (0.0, 'beast-p0'), (3.88, 'beast-g0'), (5.82, 'beast-p0'), (8.32, 'beast-g0'), (10.80, 'beast-p0'),
     (13.92, 'beast-g0'), (24.32, 'beast-p0'), (29.5, 'beast-g0'), (36.0, 'beast-p0'), (41.2, 'beast-p0'), (49.5, 'beast-g0'),
-    (54.0, 'beast-p1'), (95.9, 'beast-g1'), (150.8, 'beast-p2'), (177.7, 'beast-g2'),
-    (209.7, 'beast-g3'), (214.0, 'beast-p3'), (217.5, 'beast-g3'), (221.0, 'beast-p3'), (224.4, 'beast-g3'), (228.0, 'beast-p3'),
-    (231.6, 'beast-p3'), (236.0, 'beast-g3'), (238.6, 'beast-g3'), (240.0, 'beast-p3'), (242.0, 'beast-g3'), (243.6, 'beast-p3'),
-    (245.8, 'beast-p3'), (246.6, 'beast-p4'), (250.0, 'beast-g4'), (253.6, 'beast-p4'), (SEATED_AT, 'beast-g4'), (259.0, 'beast-p4'),
+    (54.0, 'beast-p1'), (95.9, 'beast-g1'),
+    # The intercut: Genessa's 801 against the game's own Proxima dancing, a bar each, into the double-time.
+    (132.8, 'beast-g1'), (135.4, 'beast-p2'), (138.2, 'beast-g1'), (140.8, 'beast-p2'), (143.4, 'beast-g1'), (146.0, 'beast-p2'), (148.4, 'beast-g1'),
+    (150.8, 'beast-p2'), (177.7, 'beast-g2'),
+    # The fast section and the loud outro, a bar each.
+    (209.7, 'beast-p3'), (211.4, 'beast-g3'), (214.0, 'beast-p3'), (216.6, 'beast-g3'), (219.2, 'beast-p3'), (221.8, 'beast-g3'),
+    (224.4, 'beast-p3'), (226.7, 'beast-p3'), (229.2, 'beast-g3'), (231.6, 'beast-p3'), (234.2, 'beast-g3'), (236.8, 'beast-p3'),
+    (238.6, 'beast-g3'), (241.2, 'beast-g3'), (242.0, 'beast-p3'), (243.6, 'beast-g3'), (245.8, 'beast-p3'),
+    (246.6, 'beast-p4'), (250.0, 'beast-g4'), (253.6, 'beast-p4'), (SEATED_AT, 'beast-g4'), (259.0, 'beast-p4'),
     (263.0, 'beast-g4'), (266.0, 'beast-p4'),
 ]
 
