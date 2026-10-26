@@ -1,5 +1,30 @@
 # Current work queue
 
+## October 26: Profane Proxima 0.2.3, natural body sliders (released with CSS 1.0.7)
+
+0.2.2 is released. The user reviewed its body shapes: boxy, not natural (breast
+"sausage", glute ball, hip wings, drumstick thighs, calf ball, slim upper frame)
+and the muscle definition slider does nothing visible. Nexus, Lionsfan8120 (26 Oct):
+"with a really thic lower body her arms really skinny, would love an arm slider ...
+the muscle definition slider doesnt do anything." Plan: sculpt God Damn and every
+preset as whole bodies first, then solve slider segments and combination
+correctives so presets land exactly; add an Arm size slider; redo muscle and thigh
+definition as real relief. Goal, findings, references and owners:
+`CSS_tHornyProxima_eins0fx_P/work/proportions-104/GOAL.md`.
+
+Status 26 Oct: the user approved six presets (Proxima first, Slim, Curvy,
+Phat, God Damn, BBW) built from transferred artist morphs (Skynet CC BY,
+MakeHuman CC0) plus vanilla Proxima's measured frame proportions, then slider
+shapes (13 sliders incl. new Arm size, Body fat, Belly, Muscle mass) rebuilt from
+slider values. Astra integrates (`aaa-prompts/ASTRA_PROFANE_BODY_SLIDERS_023.md`),
+handoff `work/proportions-104/handoff/body104-<skin>.npz`. Then Fable cooks 0.2.3.
+
+Released 26 Oct after the user's in-game check ("ok it works"): Profane 0.2.3
+(toc 981feb9b), CSS 1.0.7 (new Body preset row in Customize > Body; presets left the
+Template row) and Shared Assets 1.0.7 (pins 981feb9b). "CSS Beauty Standard" is now
+"Curvy" (id stays `css_beauty`). Follow-ups: BBW shading corners, waist and Glute
+bulge clearance residuals, upper-back crease from muscle definition.
+
 ## October 26: Unholy Genessa and Eve "no textures / grey skin" reports, findings
 
 Reports (Nexus, 25 and 26 Oct): Genessa grey skin with white glowing veins

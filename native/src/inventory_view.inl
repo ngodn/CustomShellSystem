@@ -726,7 +726,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 const auto& p=options.palettes[i];
                 tmpl_items.push_back({p.id,p.name,"Colour palette","Palette","The author's colour palette: "+p.name,palette_action(i+1),true});
             }
+            // 1.0.7: body presets (archetypes) get their own row in the Body section, not the Template row.
+            std::vector<const Template*> body_presets;
             for(const auto& t:worn->templates) {
+                if(t.kind==TemplateKind::Archetype) { body_presets.push_back(&t); continue; }
                 std::string kind_str="Combination";
                 if(t.kind==TemplateKind::Palette) kind_str="Palette";
                 else if(t.kind==TemplateKind::Archetype) kind_str="Archetype";
@@ -749,7 +752,27 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const bool has_dyed_palette=custom.palette!="original";
             // 0.4: the tab is a template/palette, then one section per group, each opening with the
             // tint that moves everything under it. See docs/control-convention.md.
-            struct Entry { bool tint; ControlGroup group; int control; };
+            struct Entry { bool tint; ControlGroup group; int control; bool preset=false; };
+            // The body preset a look is on: every value the preset sets matches. Otherwise Custom.
+            int active_preset=-1;
+            for(size_t p=0;p<body_presets.size() && active_preset<0;++p) {
+                const auto& data=body_presets[p]->data;
+                if(!data.contains("values") || !data.at("values").is_object()) continue;
+                bool all=true;
+                for(const auto& [k,v]:data.at("values").items()) {
+                    const auto* c=options.find(k); if(!c) continue;
+                    const auto now=values.contains(k)?values.at(k):c->value;
+                    const float want=v.is_number()?v.get<float>():(v.is_array() && !v.empty())?v[0].get<float>():now[0];
+                    if(std::abs(now[0]-want)>1e-3f) { all=false; break; }
+                }
+                if(all) active_preset=int(p);
+            }
+            auto preset_action=[&](size_t p) { return Json{{"action","template"},{"template",body_presets[p]->id}}; };
+            auto preset_step=[&](int dir) {
+                const int n=int(body_presets.size());
+                const int at=active_preset<0?(dir>0?0:n-1):(active_preset+dir+n)%n;
+                return preset_action(size_t(at));
+            };
             std::vector<Entry> entries;
             entries.push_back({false,ControlGroup::Outfit,-1});
             for(auto group:{ControlGroup::Outfit,ControlGroup::Body}) {
@@ -758,6 +781,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 if(members.empty()) continue;
                 const bool tintable=has_dyed_palette && std::any_of(members.begin(),members.end(),[&](int i){return !options.controls[i].scalar;});
                 if(tintable) entries.push_back({true,group,-1});
+                if(group==ControlGroup::Body && !body_presets.empty()) entries.push_back({false,group,-1,true});
                 for(int i:members) entries.push_back({false,group,i});
             }
             // The last row is CSS's own Ground height, after the package's parts.
@@ -804,6 +828,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     continue;
                 }
                 if(i==1 || entries[i-1].group!=entry.group) if(!(i>1 && entries[i-1].tint)) section(entry.group==ControlGroup::Body?"Body":"Outfit");
+                if(entry.preset) {
+                    row_look.value=active_preset<0?"Custom":body_presets[size_t(active_preset)]->name;
+                    row(int(i),"Body preset",Json{},preset_step(-1),preset_step(1));
+                    continue;
+                }
                 const auto& c=options.controls[entry.control];
                 const auto held_value=values.contains(c.id)?values.at(c.id):c.value;
                 chips[i]=swatch_of(c);
@@ -900,7 +929,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             } else if(row_==ground_row) {
                 // placement() drew the details window
             } else if(row_==0) {
-                detail("Templates & Presets",worn->name,"Choose an author combination, material palette, body archetype or physics preset. Left / Right cycles them.");
+                detail("Templates & Presets",worn->name,"Choose an author combination, material palette or physics preset. Left / Right cycles them.");
                 divider("Templates");
                 std::vector<Choice> choices;
                 for(size_t i=0;i<tmpl_items.size();++i) choices.push_back({std::to_string(i),tmpl_items[i].name,tmpl_items[i].action});
@@ -908,6 +937,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 direction_hint(true,"Cycle template");
                 action_button("accept","Restore original",palette_action(0),3);
                 action_button("secondary","Browse templates...",browse_templates,4);
+            } else if(entry.preset) {
+                detail("Body preset",worn->name,"The author's body shapes. A preset sets every body slider at once; move any slider afterwards to make the body your own.");
+                divider("Presets");
+                std::vector<Choice> choices;
+                for(size_t p=0;p<body_presets.size();++p) choices.push_back({body_presets[p]->id,body_presets[p]->name,preset_action(p)});
+                choice_rows(choices,active_preset<0?std::string{}:body_presets[size_t(active_preset)]->id);
+                direction_hint(true,"Cycle body preset");
             } else if(entry.tint) {
                 const auto tint=tint_of(entry.group);
                 detail(entry.group==ControlGroup::Body?"Body tint":"Outfit tint",worn->name,
@@ -1664,6 +1700,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
             opts.push_back({{"id","palette:"+p.id},{"label","[Palette] "+p.name}});
         }
         for(const auto& t:worn_outfit->templates) {
+            if(t.kind==TemplateKind::Archetype) continue;   // 1.0.7: body presets have their own row in Body
             std::string tag=t.kind==TemplateKind::Combination?"Combination":
                             t.kind==TemplateKind::Archetype?"Archetype":
                             t.kind==TemplateKind::Physics?"Physics":

@@ -1,13 +1,13 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.7",
   "container": "CSS_SharedAssets_P",
   "required_for": "shared_animations_facial_playback_customized_genessa_doubles_and_npc_appearances_shoulder_support",
   "files": {
-    "CSS_SharedAssets_P.pak": "814be7e7e3db10df1e620dd28813c8a8008d2c40bfcd160e2252163c30209794",
+    "CSS_SharedAssets_P.pak": "27032afbabdb320788d47ad261badbae1e8bd6d3bddf0e6c838e7290c03d9613",
     "CSS_SharedAssets_P.utoc": "6866994dfc5a91fad3dea70ebf7f0ff04af2fb144d2ed96066d51b12eb785e0b",
     "CSS_SharedAssets_P.ucas": "87ad051bfc0513aca908703e8ae7125f25ee3040e2d60fa0a674ac77b25757c9"
   },
-  "source_candidate": "shared-assets-1.0.6 (released 1.0.4 containers unchanged; metadata pak adds Eve 1.5.2 pins 9e17a21d6e55 and Profane Proxima 0.2.2 pins dbe84a47ca42 to the animation and css.profaneproxima.face adapters)",
+  "source_candidate": "shared-assets-1.0.7 (released 1.0.4 containers unchanged; metadata pak adds Profane Proxima 0.2.3 pins 981feb9b91f7 to the animation and css.profaneproxima.face adapters)",
   "asset_containers_identical_to_accepted": true,
   "existing_assets_preserved": true,
   "asset_count": 310
