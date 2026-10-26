@@ -33,6 +33,8 @@ def payload_names(version: str, interface: str = "inventory") -> set[str]:
     if tuple(map(int, version.split('-')[0].split('.'))) >= (1, 0, 1):
         files.add('catalog/hand-support.json')
         files.add('catalog/native-foot-ik.json')
+    if tuple(map(int, version.split('-')[0].split('.'))) >= (1, 0, 7):
+        files.add('catalog/shader-donors.json')
     if interface == 'standalone':
         files.add('assets/wardrobe-v1.png')
     elif interface == 'inventory':
@@ -126,6 +128,9 @@ def build(args: argparse.Namespace) -> Path:
              'catalog/replacement-targets.json': (ROOT / 'packaging/catalog/replacement-targets.json').read_bytes()}
     files['catalog/hand-support.json'] = (ROOT / 'packaging/catalog/hand-support.json').read_bytes()
     files['catalog/native-foot-ik.json'] = (ROOT / 'packaging/catalog/native-foot-ik.json').read_bytes()
+    # Outfit materials that borrow game shaders and their game donors
+    # (tools/authoring/shader-donors/build_shader_donors.py).
+    files['catalog/shader-donors.json'] = (ROOT / 'packaging/catalog/shader-donors.json').read_bytes()
     manifest = {'version': version, 'source_commit': revision, 'abi': 1, 'interface': 'inventory',
                 'ue4ss_revision': UE4SS_RUNTIME['revision'],
                 'ue4ss_dll_sha256': UE4SS_RUNTIME['dll_sha256'],

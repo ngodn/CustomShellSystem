@@ -36,6 +36,7 @@
 #include "animation_trace.hpp"
 #include "hand_support_catalog.hpp"
 #include "native_foot_ik.hpp"
+#include "shader_fallback.hpp"
 
 namespace css {
 fs::path engine_content_directory();
@@ -965,6 +966,9 @@ class Appearance {
     void reset_controls();
     void sync_body_geometry(RC::Unreal::UObject* component);
     void prepare_deformation_materials();
+    // Shader fallback MIDs live in control_mids_ like every other owned MID. Rollback and dyes
+    // read the outfit material a MID stands for through control_source, never its raw parent.
+    void apply_shader_fallback();
 public:
     std::string shell, pawn_name, current_mesh;
     uint64_t player_revision = 0;
@@ -1003,6 +1007,13 @@ public:
     void sync_attachments();
     void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz
     std::string configure_hand_support(const fs::path& path) {return hand_support_.configure(path);}
+    // Shader fallback (shader_fallback.hpp). Configure once at startup; returns the log lines
+    // describing the game build and the decision. set_shader_fallback_mode reports whether the
+    // outfit must be applied again because the decision changed.
+    std::vector<std::string> configure_shader_fallback(const fs::path& catalog,const fs::path& paks,const std::string& mode);
+    bool set_shader_fallback_mode(const std::string& mode);
+    std::vector<std::string> take_shader_fallback_log();
+    Json shader_fallback_status() const;
     void sync_hand_support();
     Json hand_support_status() const { return hand_support_.status(); }
     void sync_native_foot_ik(bool eligible);

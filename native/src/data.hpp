@@ -221,6 +221,7 @@ struct State {
     bool keep_default_attachments = false;   // MISC safety switch: skip the stowed-weapon collision servos entirely and leave every prop on its native game position.
     bool darkform_mirror_cleaned = false;    // one-time: dropped Harbinger slots the old mirror polluted with a living shell's look.
     std::string sunlight_shadows = "default";
+    std::string shader_fallback = "auto";    // "auto", "always" or "off": outfit materials on the game's own shaders (shader_fallback.hpp).
     std::map<std::string, Selection> selections;
     std::map<std::string, Customization> remembered_custom;
     std::set<std::string> favorites;

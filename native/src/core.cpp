@@ -379,6 +379,7 @@ struct Core {
                 std::to_string(result.diagnostics.value("rejected",0))+" rejected").c_str());
             for(const auto& file:result.diagnostics["files"])
                 host.log(("CSS package "+file.at("status").get<std::string>()+": "+file.at("path").get<std::string>()+
+                    (file.contains("version")?" v"+file.at("version").get<std::string>():"")+
                     (file.contains("reason")?" ("+file.at("reason").get<std::string>()+")":"")).c_str());
             for(const auto& error:result.diagnostics["errors"])
                 host.log(("CSS package folder error: "+error.at("path").get<std::string>()+" ("+error.at("reason").get<std::string>()+")").c_str());
@@ -416,6 +417,8 @@ struct Core {
         }
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
+        for(const auto& line:appearance.configure_shader_fallback(root/"catalog/shader-donors.json",package_root,state.shader_fallback))
+            host.log(line.c_str());
         std::error_code trace_error;
         if(fs::is_regular_file(root/"runtime/trace-idle-startup.enabled",trace_error)) {
             animation_trace.enable(host.log);
@@ -906,6 +909,16 @@ struct Core {
             if(choice!=(mode=="css")) { choice=mode=="css";dirty=true; }
             ui_refresh=true;
         }
+        else if(action=="shader_fallback") {
+            const auto mode=command.at("mode").get<std::string>();
+            if(!shader_fallback::parse_mode(mode)) throw std::runtime_error("Unknown outfit material mode");
+            if(state.shader_fallback!=mode) { state.shader_fallback=mode; dirty=true; }
+            if(appearance.set_shader_fallback_mode(mode) && !appearance.shell.empty()) { last_shell.clear(); apply_pending=true; }
+            ui_refresh=true;
+            report(mode=="always"?"Outfit materials always use the game's own shaders.":
+                   mode=="off"?"Outfit materials use their packaged shaders.":
+                   "Outfit materials switch to the game's own shaders when your game version is not verified.");
+        }
         else if(action=="sunlight_shadows") {
             const auto mode=command.at("mode").get<std::string>();
             if(mode!="default" && mode!="reduced") throw std::runtime_error("Unknown sunlight shadow mode");
@@ -1075,6 +1088,8 @@ struct Core {
         auto measured=[](FrameProfile::Phase,auto&& call) { call(); };
 #endif
         measured(FrameProfile::recovery,[&] { player_recovery.tick(delta); });
+        // Shader fallback reports what it did once per material; empty on almost every frame.
+        for(const auto& line:appearance.take_shader_fallback_log()) host.log(line.c_str());
 
         if(!content_path_checked) {
             content_path_checked=true;
@@ -1090,6 +1105,8 @@ struct Core {
                     appearance.performance.interrupt("Animation catalog changed");
                     appearance.clear_shared_animations();appearance.clear_facial_failures();++animation_catalog_generation;
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
+                    for(const auto& line:appearance.configure_shader_fallback(root/"catalog/shader-donors.json",package_root,state.shader_fallback))
+                        host.log(line.c_str());
                     original_shells_attempts=0; original_shells_retry_after=0;
                     message=wardrobe_startup_message(catalog.outfits.size());
                 }
@@ -1583,6 +1600,7 @@ struct Core {
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
         status["worn_items"]=appearance.worn_item_count();
         status["misc"]=appearance.misc_diagnostics();
+        status["shader_fallback"]=appearance.shader_fallback_status();
         status["sunlight_shadows"]=sunlight.diagnostics();
         status["sunlight_shadows"]["mode"]=state.sunlight_shadows;
         status["sunlight_shadows"]["error"]=sunlight_error;

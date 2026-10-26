@@ -66,6 +66,14 @@ materials on game build 26073152. Shared Assets provides shared animations and
 compatibility support; outfit material repairs are included in those outfits.
 Remove superseded standalone CSS shader-fix overlays after updating the outfits.
 
+Gray outfits on another game version
+Some outfit materials use shaders that ship with the game. On a game version
+CSS has not verified, Misc > Compatibility > Outfit materials (Auto) draws
+them with your game's own shaders, so they keep their textures. Always does
+this on every version; Off keeps the packaged materials. If parts still look
+gray, send CSS.log: it lists your game version, every installed outfit with
+its version, and what CSS did with each material.
+
 Settings and updates
 CSS creates state/state.json on first initialization with clean defaults.
 It creates runtime/ acknowledgements and caches package artwork/color resources

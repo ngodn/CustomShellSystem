@@ -25,6 +25,13 @@ Template row) and Shared Assets 1.0.7 (pins 981feb9b). "CSS Beauty Standard" is 
 "Curvy" (id stays `css_beauty`). Follow-ups: BBW shading corners, waist and Glute
 bulge clearance residuals, upper-back crease from muscle definition.
 
+CSS 1.0.7 also carries the shader fallback (Nexus Kiner0216, 26 Oct: Eve except Peony and
+Commander White clothes gray). Their ue4ss folder showed CSS 1.0.6 correct, Eve 1.5.1, and a
+different game exe (196453888 bytes vs 196752384 on 26147827, non-Steam K:/ install), so
+their game lacks the shaders our materials borrow. Fallback rebuilds them on game donors; see
+docs/releases/v1.0.7/README.md. Evidence: CustomShellSystem-work/reports/kiner0216-ue4ss,
+live test CustomShellSystem-work/shaderfb-test.
+
 ## October 26: Unholy Genessa and Eve "no textures / grey skin" reports, findings
 
 Reports (Nexus, 25 and 26 Oct): Genessa grey skin with white glowing veins

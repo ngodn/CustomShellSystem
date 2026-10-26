@@ -478,7 +478,14 @@ static bool material_has_overrides(UObject* value) {
     if(arrays<3) throw std::runtime_error("Material parameter metadata is unavailable");
     return false;
 }
+namespace { UObject* shader_fallback_source(UObject* value); }
+// The outfit material a CSS-owned MID stands for: a shader fallback's source, otherwise its parent.
+static UObject* control_source(UObject* mid) {
+    if(auto* source=shader_fallback_source(mid)) return source;
+    return read<UObject*>(mid,L"Parent");
+}
 static UObject* material_asset(UObject* value) {
+    if(auto* source=shader_fallback_source(value)) return source;
     std::set<UObject*> seen;
     while(dynamic_material(value)) {
         if(seen.size()>=16 || !seen.insert(value).second) throw std::runtime_error("Invalid dynamic material parent chain");
@@ -488,6 +495,7 @@ static UObject* material_asset(UObject* value) {
     return value;
 }
 static UObject* material_base_asset(UObject* value) {
+    if(auto* source=shader_fallback_source(value)) return source;
     std::set<UObject*> seen;
     while(dynamic_material(value)) {
         if(seen.size()>=16 || !seen.insert(value).second) return nullptr;
@@ -519,6 +527,7 @@ static std::vector<std::string> material_paths(UObject* component) {
 static void material(UObject* component,int index,UObject* value) {
     Call set(component,L"SetMaterial",2); set.set(L"ElementIndex",index); set.set(L"Material",value); set.run();
 }
+#include "shader_fallback.inl"
 static void restore_materials(UObject* component,const std::vector<std::string>& paths,const std::vector<WeakObject>& previous={}) {
     WeakObject live(component);
     std::vector<WeakObject> loaded;
@@ -1932,6 +1941,7 @@ std::set<int> WornItems::update(UObject* body,const std::string& identity,const 
                         throw std::runtime_error("Item material override is not a material: "+entry->id);
                     material(component,slot,value);
                 }
+                shader_fallback_component(component);
                 retained_.take(roots);
             }
         } catch(...) { release(); throw; }
@@ -2260,7 +2270,7 @@ void Appearance::reset_controls() {
     if(auto* component=component_.Get()) for(const auto& [slot,weak]:control_mids_) {
         if(auto* mid=weak.Get()) {
             Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",slot); current.run();
-            if(current.get<UObject*>()==mid) material(component,slot,applied_materials_.contains(slot)?read<UObject*>(mid,L"Parent"):nullptr);
+            if(current.get<UObject*>()==mid) material(component,slot,applied_materials_.contains(slot)?control_source(mid):nullptr);
         }
     }
     control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); last_travel_.clear(); control_outfit_.clear(); control_palette_.clear();
@@ -2269,6 +2279,7 @@ void Appearance::reset_controls() {
 void Appearance::prepare_deformation_materials() {
     auto* component=component_.Get();
     if(!component || mesh_asset(component)!=applied_.Get()) return;
+    apply_shader_fallback();
     // M_Uber interprets native dash data as DarkBro vertex stretching. Imported
     // outfits do not share the stock mesh's displacement layout. Disable that
     // branch on our instances, retaining the separate dash overlay and shell
@@ -2303,6 +2314,108 @@ void Appearance::prepare_deformation_materials() {
         Call readback(mid,L"K2_GetScalarParameterValue",2);readback.set(L"ParameterName",parameter);readback.run();
         if(readback.get<float>()!=0.f) throw std::runtime_error("Deformation parameter read-back failed");
     }
+}
+void Appearance::apply_shader_fallback() {
+    auto& state=shader_fallback_state();
+    if(!state.active) return;
+    auto* component=component_.Get();
+    if(!component || mesh_asset(component)!=applied_.Get()) return;
+    Call count(component,L"GetNumMaterials",1); count.run();
+    const auto slots=count.get<int>();
+    if(slots<0 || slots>256) throw std::runtime_error("Appearance material count exceeds the fallback limit");
+    const auto mesh=narrow(applied_.Get()->GetPathName());
+    const bool describe=!state.reported.contains("mesh:"+mesh);
+    std::vector<std::string> report;
+    bool created=false;
+    for(int slot=0;slot<slots;++slot) {
+        Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",slot); current.run();
+        auto* value=current.get<UObject*>();
+        // Empty, already ours, or a game effect that owns the slot until it ends.
+        if(!value || dynamic_material(value)) {
+            if(describe) {
+                auto* source=value?shader_fallback_source(value):nullptr;
+                report.push_back("  slot "+std::to_string(slot)+": "+(!value?std::string("empty"):
+                    source?narrow(source->GetPathName())+" -> drawn with the game's "+narrow(read<UObject*>(value,L"Parent")->GetPathName()):
+                    "dynamic material "+narrow(value->GetPathName())+", left alone"));
+            }
+            continue;
+        }
+        auto* mid=shader_fallback_mid(component,slot,value);
+        if(mid) { control_mids_[slot]=mid; created=true; }
+        if(describe) {
+            auto* instance=static_cast<UClass*>(find(L"/Script/Engine.MaterialInstance"));
+            auto* parent=value->IsA(instance)?read<UObject*>(value,L"Parent"):nullptr;
+            report.push_back("  slot "+std::to_string(slot)+": "+narrow(value->GetPathName())+
+                " (parent "+(parent?narrow(parent->GetPathName()):std::string("none"))+") -> "+
+                (mid?"drawn with the game's "+narrow(read<UObject*>(mid,L"Parent")->GetPathName()):std::string("own shaders")));
+        }
+    }
+    if(describe) {
+        shader_fallback_note("mesh:"+mesh,"Shader fallback, materials of "+mesh+":");
+        for(size_t i=0;i<report.size();++i) shader_fallback_note("mesh:"+mesh+":"+std::to_string(i),std::move(report[i]));
+    }
+    if(created) remember_materials();
+}
+std::vector<std::string> Appearance::configure_shader_fallback(const fs::path& catalog,const fs::path& paks,const std::string& mode) {
+    auto& state=shader_fallback_state();
+    std::vector<std::string> lines;
+    state.mode=shader_fallback::parse_mode(mode).value_or(shader_fallback::Mode::automatic);
+    try {
+        std::ifstream input(catalog,std::ios::binary);
+        if(!input) throw std::runtime_error("file missing");
+        state.catalog=shader_fallback::Catalog::parse(Json::parse(input));
+        state.loaded=true; state.catalog_error.clear();
+    } catch(const std::exception& error) {
+        state.catalog={}; state.loaded=false; state.catalog_error=error.what();
+    }
+    state.tables=shader_fallback::read_pak_tables(paks);
+    const auto verified=state.catalog.verified_build(state.tables);
+    state.verified_build=verified.value_or(std::string{});
+    state.active=shader_fallback::active(state.mode,verified.has_value(),state.loaded && state.catalog.size()>0);
+    wchar_t executable[32768]{};
+    const auto length=GetModuleFileNameW(nullptr,executable,32768);
+    std::error_code error;
+    const fs::path exe=length && length<32768?fs::path(executable):fs::path{};
+    const auto exe_size=exe.empty()?std::uintmax_t{0}:fs::file_size(exe,error);
+    const auto steam=shader_fallback_steam_build(paks);
+    auto exe_name=exe.filename().generic_u8string();
+    lines.push_back("Game: "+std::string(exe_name.begin(),exe_name.end())+" "+(error||exe.empty()?std::string("size unknown"):std::to_string(exe_size)+" bytes")+
+                    "; Steam build "+(steam.empty()?std::string("unknown (no Steam manifest)"):steam));
+    std::string tables;
+    for(const auto& [name,size]:state.tables) tables+=(tables.empty()?"":", ")+name+" "+std::to_string(size);
+    lines.push_back("Game pak tables: "+(tables.empty()?std::string("unreadable"):tables));
+    if(!state.loaded) lines.push_back("Shader fallback unavailable: catalog/shader-donors.json "+state.catalog_error);
+    else lines.push_back(std::string("Shader fallback ")+(state.active?"on":"off")+" (setting "+shader_fallback::mode_name(state.mode)+"; game "+
+        (verified?"is verified build "+*verified:std::string("is not a verified build"))+"; "+std::to_string(state.catalog.size())+" outfit materials listed)");
+    return lines;
+}
+bool Appearance::set_shader_fallback_mode(const std::string& mode) {
+    auto& state=shader_fallback_state();
+    const auto parsed=shader_fallback::parse_mode(mode);
+    if(!parsed) throw std::runtime_error("Unknown outfit material mode");
+    state.mode=*parsed;
+    const bool next=shader_fallback::active(state.mode,!state.verified_build.empty(),state.loaded && state.catalog.size()>0);
+    if(next==state.active) return false;
+    state.active=next;
+    // Put every outfit material back (fallbacks resolve to their source), then let the next
+    // apply rebuild controls and items under the new decision.
+    reset_controls();
+    // The restored slots are now the expected ones, so the next apply rebuilds controls on
+    // them instead of putting back the MIDs reset_controls just removed.
+    remember_materials();
+    items_.release(); menu_items_.release();
+    shader_fallback_note("mode:"+std::to_string(appearance_revision)+shader_fallback::mode_name(state.mode),
+        std::string("Shader fallback turned ")+(next?"on":"off")+" (setting "+shader_fallback::mode_name(state.mode)+")");
+    return true;
+}
+std::vector<std::string> Appearance::take_shader_fallback_log() {
+    return std::exchange(shader_fallback_state().pending,{});
+}
+Json Appearance::shader_fallback_status() const {
+    const auto& state=shader_fallback_state();
+    return {{"mode",shader_fallback::mode_name(state.mode)},{"active",state.active},{"verified_build",state.verified_build},
+            {"catalog_materials",state.catalog.size()},{"catalog_error",state.catalog_error},
+            {"rebuilt",state.rebuilt},{"skipped",state.skipped},{"pak_tables",state.tables}};
 }
 void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
     ++appearance_revision;
@@ -2478,7 +2591,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             if(!changed) continue;
             auto parameter=FName(wide(surface.parameter).c_str(),FNAME_Add);
             auto* first=mid_for(surface.slots.front());
-            Call base(read<UObject*>(first,L"Parent"),L"K2_GetTextureParameterValue",2); base.set(L"ParameterName",parameter); base.run();
+            Call base(control_source(first),L"K2_GetTextureParameterValue",2); base.set(L"ParameterName",parameter); base.run();
             auto* original=base.get<UObject*>();
             if(!original) throw std::runtime_error("The selected material has no dyeable base texture");
             UObject* target=original;

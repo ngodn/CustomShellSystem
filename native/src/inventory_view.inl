@@ -1310,11 +1310,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const int position_row=4+int(shell_items.size());
         const bool has_doubles=astral_shell(appearance.shell);
         const int sunlight_row=position_row+(has_doubles?4:1);
+        const int material_row=sunlight_row+1;
         const Json confirm_revival{{"action","ui_confirm"},
             {"title","Override Genessa revival?"},
             {"message","Switch to Faithful once, even when Alteration blocks revival? Purchased upgrades and progression are kept. Native revival can restore health, and the game can save the resulting form and health normally. Later transitions follow the game. Cancel changes nothing."},
             {"target",{{"action","genessa_form"},{"mode","faithful"},{"override",true}}}};
-        row_=std::clamp(row_,0,sunlight_row);
+        row_=std::clamp(row_,0,material_row);
         auto mode_word=[&](const MiscRule& rule) {
             if(rule.mode=="hidden") row_look.value="Hidden";
             else if(rule.mode=="in_use") row_look.value="When in use";
@@ -1360,6 +1361,14 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const Json sunlight_toggle{{"action","sunlight_shadows"},{"mode",reduced_sun?"default":"reduced"}};
         row_look.value=reduced_sun?"Reduced noise":"Default (game)";
         row(sunlight_row,"Sunlight shadows",sunlight_toggle,sunlight_toggle,sunlight_toggle);
+        section("Compatibility");
+        const std::string& material_mode=state.shader_fallback;
+        auto material_label=[](const std::string& mode){ return mode=="always"?"Always game shaders":mode=="off"?"Off":"Auto"; };
+        auto material_action=[](const char* mode){ return Json{{"action","shader_fallback"},{"mode",mode}}; };
+        const Json material_next=material_action(material_mode=="auto"?"always":material_mode=="always"?"off":"auto");
+        const Json material_previous=material_action(material_mode=="auto"?"off":material_mode=="always"?"auto":"always");
+        row_look.value=material_label(material_mode);
+        row(material_row,"Outfit materials",material_next,material_previous,material_next);
         if(row_<position_row) {
             const bool category_row=row_<4;
             const std::string key=category_row?defs[row_].key:"item:"+shell_items[size_t(row_-4)].key;
@@ -1395,6 +1404,21 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 {"reduced","Reduced noise",{{"action","sunlight_shadows"},{"mode","reduced"}}},
             },state.sunlight_shadows);
             direction_hint(true,"Choose sunlight shadows");
+        } else if(row_==material_row) {
+            const auto status=appearance.shader_fallback_status();
+            const auto verified=status.at("verified_build").get<std::string>();
+            const std::string game=verified.empty()?"Your game version is not one CSS has verified.":"Your game is verified build "+verified+".";
+            const std::string now=status.at("active").get<bool>()?" Game shaders are in use now.":" Packaged materials are in use now.";
+            detail("Outfit materials",material_label(material_mode),
+                "Some outfit materials use shaders that ship with the game, and a different game version "
+                "can show those parts grey. Auto switches them to your game's own shaders when CSS does not "
+                "recognise your game version. Always does it on every version. Off keeps the packaged materials. "+game+now);
+            choice_rows({
+                {"auto","Auto",material_action("auto")},
+                {"always","Always game shaders",material_action("always")},
+                {"off","Off",material_action("off")},
+            },material_mode);
+            direction_hint(true,"Choose outfit materials");
         } else if(row_==position_row+3) {
             const bool stray=appearance.shell=="CharacterId.Player.Darkform.CorruptedGenessa";
             detail("Genessa Form",stray?"Current: Stray":"Current: Faithful",
