@@ -218,7 +218,9 @@ def p2():
     t.shot(146.0, pose(180, 300, 30, -12), pose(180, 240, 24, -10), 'neck', 60, 2.4, fixed=True)
     t.shot(148.4, pose(180, 460, -50, 10), pose(180, 330, -40, 8), 'body', 200, fixed=True)             # the push into the double-time
     # The double-time: the hunt, a move on every beat of it, the starlight skin from the first hit.
-    t.skin(150.8, 'proxima', 'cold_starlight', montage=BLOCK, expression=PX + 'angry', **glow())
+    # The skin lands a beat before the first move: CSS holds an appearance change back while a montage plays.
+    t.skin(150.4, 'proxima', 'cold_starlight', expression=PX + 'angry', **glow())
+    t.look(150.8, montage=BLOCK)
     t.shot(150.8, pose(-150, 260, -10, -4), pose(-130, 240, -14, -4), 'body', 170, fixed=True)
     t.shot(151.7, pose(160, 230, 10, -6), pose(175, 220, 4, -4), 'neck', 60, 2.4, fixed=True)
     t.look(153.1, montage=PARRY)
@@ -250,7 +252,8 @@ def p3():
     on the bar, the Spin, the Lily Catwalk cut on the bar through the loud outro, Natarajasana, the
     Confident pose on the last accent."""
     t = Take('beast-p3', 'Beast P3', 209.7, 246.6, 'Profane Proxima', 'the Slayer Seal on the hit, Bass Down Low and the Lily Catwalk cut on the bar, the Spin, Natarajasana, the Confident pose on the last accent.')
-    t.skin(209.7, 'proxima', 'ember', montage=SEAL, expression=PX + 'serious', **glow())
+    t.skin(209.3, 'proxima', 'ember', expression=PX + 'serious', **glow())   # a beat before the move, for the same reason
+    t.look(209.7, montage=SEAL)
     t.shot(209.7, pose(180, 520, -40, 8), pose(180, 440, -50, 10), 'body', 200, fixed=True)
     t.shot(211.4, pose(-160, 260, 10, -6, -4), pose(-200, 250, 0, -4, 0), 'neck', 62, 2.4, fixed=True, ease='whip')
     t.look(214.0, performance=BASS_DOWN_LOW, montage='')

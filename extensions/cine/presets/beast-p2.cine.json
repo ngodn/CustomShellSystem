@@ -480,18 +480,21 @@
    "expression": "css.profaneproxima.face.contempt"
   },
   {
-   "at": 7.9225,
+   "at": 7.7687,
    "outfit": "eins0fx.thornyproxima",
    "variant": "proxima",
    "palette": "cold_starlight",
    "cover": false,
    "wipe": 0.01,
    "hold": 0.12,
-   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/Block/Axeatana/A_Shared_Actions_BlockParry_Axeatana_Perfect_Block_01_Montage.A_Shared_Actions_BlockParry_Axeatana_Perfect_Block_01_Montage",
    "expression": "css.profaneproxima.face.angry",
    "controls": {
     "outfit_glow": 7.0
    }
+  },
+  {
+   "at": 7.9225,
+   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/Block/Axeatana/A_Shared_Actions_BlockParry_Axeatana_Perfect_Block_01_Montage.A_Shared_Actions_BlockParry_Axeatana_Perfect_Block_01_Montage"
   },
   {
    "at": 8.807,

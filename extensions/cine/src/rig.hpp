@@ -111,7 +111,6 @@ private:
     bool time_scaled_ = false, shake_set_ = false;
     double shake_before_ = 1.0;
     std::vector<Json> cameras_;
-    std::map<std::string, Json> montages_;                 // loaded montage assets by path
     bool montage_playing_ = false;
     std::vector<std::pair<Json, int>> hud_;
     bool hud_hidden_ = false, view_changed_ = false, speed_set_ = false, moving_ = false;

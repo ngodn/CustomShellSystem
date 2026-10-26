@@ -368,18 +368,21 @@
  ],
  "looks": [
   {
-   "at": 1.0,
+   "at": 0.8462,
    "outfit": "eins0fx.thornyproxima",
    "variant": "proxima",
    "palette": "ember",
    "cover": false,
    "wipe": 0.01,
    "hold": 0.12,
-   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/SlayerSeal/A_Shared_Attacks_SlayerSeal_Charge_Montage.A_Shared_Attacks_SlayerSeal_Charge_Montage",
    "expression": "css.profaneproxima.face.serious",
    "controls": {
     "outfit_glow": 7.0
    }
+  },
+  {
+   "at": 1.0,
+   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/SlayerSeal/A_Shared_Attacks_SlayerSeal_Charge_Montage.A_Shared_Attacks_SlayerSeal_Charge_Montage"
   },
   {
    "at": 2.6537,

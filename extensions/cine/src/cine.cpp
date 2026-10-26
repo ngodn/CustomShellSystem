@@ -987,6 +987,15 @@ void Extension::apply_look(const SeqLook& look) {
         rig_.css({{"action", "apply"}, {"persist", false}, {"commands", Json::array({{{"action", "expression"}, {"expression", look.expression}}})}});
         t.wore = true;   // her own face goes back with her look at the end
     }
+    // A game montage, or an idle she is to hold, has her body from this beat: the take's
+    // performance ends here for good. Left running, CSS would interrupt it on the montage and
+    // CINE would start it again between moves, and the dance and the move would fight for her
+    // (seen on the Mark of the Beast hunt, and on the reclining idle after it).
+    const bool takes_her_body = (look.montage_set && !look.montage.empty()) || (!look.idle.empty() && look.performance_id.empty());
+    if (takes_her_body && t.performance.id != "off") {
+        if (performance_.owned()) { try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {} }
+        t.performance.id = "off"; t.performance_resume = false;
+    }
     if (!look.performance_id.empty() && mode_ == Mode::Running) {
         // Another performance from this beat: it is the take's performance now, so an
         // interruption resumes this one, at the point the music has reached.
@@ -996,10 +1005,7 @@ void Extension::apply_look(const SeqLook& look) {
         try { performance_.start([&](const Json& r) { return rig_.css(r); }, choice); t.performance_resume = false; }
         catch (...) { t.performance_resume = true; t.performance_retry = t.seq_clock + 0.2; t.performance_give_up = t.seq_clock + 6.0; }
     }
-    if (look.montage_set) {
-        try { if (look.montage.empty()) rig_.stop_montage(); else rig_.play_montage(look.montage, look.montage_rate); }
-        catch (const std::exception& e) { const std::string note = std::string("Montage: ") + e.what() + "."; t.note = t.note.empty() ? note : t.note + "  " + note; }
-    }
+    if (look.montage_set && look.montage.empty()) rig_.stop_montage();
     if (!look.idle.empty()) { rig_.css({{"action", "idle"}, {"value", look.idle}}); t.idle_set = true; }
     if (look.reset && t.opening.is_object()) { rig_.css({{"action", "apply"}, {"persist", false}, {"commands", Json::array({{{"action", "restore"}, {"customize", t.opening}}})}}); t.wore = true; }
     if (!look.physics.empty()) {
@@ -1011,10 +1017,16 @@ void Extension::apply_look(const SeqLook& look) {
         }
         if (!commands.empty()) { rig_.css({{"action", "apply"}, {"persist", false}, {"commands", std::move(commands)}}); t.wore = true; }
     }
-    if (look.palette.empty() && look.controls.empty()) return;
-    LookStep step; step.palette = look.palette; step.controls = look.controls;
-    const auto payload = look_payload(step, t.look_now);   // parts this outfit does not have are skipped
-    if (!payload.is_null()) { rig_.css(payload); t.wore = true; }   // her own look goes back at the end
+    if (!look.palette.empty() || !look.controls.empty()) {
+        LookStep step; step.palette = look.palette; step.controls = look.controls;
+        const auto payload = look_payload(step, t.look_now);   // parts this outfit does not have are skipped
+        if (!payload.is_null()) { rig_.css(payload); t.wore = true; }   // her own look goes back at the end
+    }
+    // The montage last: CSS holds an appearance change back while one is active.
+    if (look.montage_set && !look.montage.empty()) {
+        try { rig_.play_montage(look.montage, look.montage_rate); }
+        catch (const std::exception& e) { const std::string note = std::string("Montage: ") + e.what() + "."; t.note = t.note.empty() ? note : t.note + "  " + note; }
+    }
 }
 
 // Every frame of a sequence take: the clock, cuts on their beat, look steps and the
@@ -1118,6 +1130,7 @@ void Extension::sequence_frame(const CssxFrame& f) {
                     // The outfit change would end the performance anyway; ending it here, before
                     // the wear goes out, keeps CSS from reporting it as an interruption.
                     if (performance_.owned()) { try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {} }
+                    rig_.stop_montage();   // CSS holds a wear back while a montage is active
                     rig_.css(wear_request(look.outfit, look.variant, false, false));
                     t.wore = true; t.wearing = Take::Wear::Waiting; t.wear_sent_at = now; t.wear_poll = 0; t.adopted = false;
                 }

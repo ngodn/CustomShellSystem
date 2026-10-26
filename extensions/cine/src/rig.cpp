@@ -71,7 +71,7 @@ void Rig::forget() {
     time_scaled_ = shake_set_ = false;
     pawn_ = controller_ = movement_ = mesh_ = camera_manager_ = Json();
     statics_ = kismet_ = ai_ = widgets_ = player_lib_ = camera_class_ = Json();
-    cameras_.clear(); hud_.clear(); montages_.clear(); montage_playing_ = false;
+    cameras_.clear(); hud_.clear(); montage_playing_ = false;
     hud_hidden_ = view_changed_ = speed_set_ = moving_ = false;
     force_walk_sets_ = 0;
 }
@@ -293,13 +293,11 @@ bool Rig::asset_present(const std::string& path) const {
     try { return is_handle(host_.request({{"op", "load"}, {"path", path}})); } catch (...) { return false; }
 }
 void Rig::play_montage(const std::string& path, double rate) {
-    auto it = montages_.find(path);
-    if (it == montages_.end()) {
-        const auto asset = host_.request({{"op", "load"}, {"path", path}});
-        if (!is_handle(asset)) throw std::runtime_error("montage not found: " + path);
-        it = montages_.emplace(path, asset).first;
-    }
-    call(pawn_, "PlayAnimMontage", {{"AnimMontage", it->second}, {"InPlayRate", rate}, {"StartSectionName", "None"}});
+    // Loaded for every play: a handle kept from an earlier take expired with the host's object
+    // table ("Object handle expired" on the Slayer Seal), and a load of a loaded asset is cheap.
+    const auto asset = host_.request({{"op", "load"}, {"path", path}});
+    if (!is_handle(asset)) throw std::runtime_error("montage not found: " + path);
+    call(pawn_, "PlayAnimMontage", {{"AnimMontage", asset}, {"InPlayRate", rate}, {"StartSectionName", "None"}});
     montage_playing_ = true;
 }
 void Rig::stop_montage() {

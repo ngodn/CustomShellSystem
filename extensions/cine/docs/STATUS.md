@@ -32,6 +32,9 @@ CSS. Tracked shots now anchor on her live position and sample every frame while 
 plays, with a faster follow when she moves fast, so After Brute Battle stays in frame.
 Every wear in a take carries the customization that outfit opened with (hers, or the first-seen
 one), so a variant she never customized still gets her settings; see BEAST-GOAL.md.
+A montage step or an idle step ends the take's performance for good (no restart between moves),
+a step's montage plays after its palette and controls, a montage is stopped before a wear, and
+montages are loaded for every play (a cached handle expired between takes).
 
 ### Next: Fight Replay (queued)
 The user's design: the player fights normally with the game camera while CINE records; then

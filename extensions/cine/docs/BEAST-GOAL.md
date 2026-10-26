@@ -152,3 +152,16 @@ customization a look opened with in the take (hers for her own outfit, the first
 any other) and sends it with every wear; CSS keeps what the variant can take. Verified live on
 beast-p4: the Human skin carries glow 5.25, fill 0.65, flow 0.46 and the shape sliders, and her
 own look is restored after the take.
+
+Montages against performances (26 Oct, second pass, seen on the hunt): with DumbDumb still the
+take's performance when the block montage started, CSS interrupted the dance on every move and
+CINE started it again where it was between moves ("Performance interrupted (Gameplay montage is
+active); starting it again"), so the dance and the moves fought for her body; the same restart
+hit the reclining idle after the hunt, so she stood through the breath. CSS also holds an
+appearance change back while a montage is active ("Apply pending blocked by: anim montage
+active"), so the starlight skin never landed under the block; and p3's Slayer Seal failed with
+"Object handle expired", a montage handle cached from an earlier take. CINE now ends the take's
+performance for good on a montage step or an idle step, plays a step's montage after its palette
+and controls, stops a montage before any wear goes out, and loads a montage for every play. The
+film puts each skin swap a beat before the move that follows it (150.4 then 150.8, 209.3 then 209.7).
+

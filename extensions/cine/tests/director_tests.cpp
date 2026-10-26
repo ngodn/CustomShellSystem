@@ -1143,7 +1143,8 @@ int main(int argc, char** argv) {
                     {{"at", 1.5}, {"montage", "/Game/Sparta/Kneel.Kneel"}, {"montage_rate", 0.8}},
                     {{"at", 2}, {"expression", "css.face.happy"}},
                     {{"at", 2.5}, {"performance", "css.test.pose"}, {"performance_rate", 0.5}},
-                    {{"at", 3}, {"montage", ""}}})}}.dump(2);
+                    {{"at", 3}, {"montage", ""}},
+                    {{"at", 3.25}, {"montage", "/Game/Sparta/Block.Block"}}})}}.dump(2);
             r.ext->event({{"id", "reload"}});
             r.step();
             const auto before = h.snapshot();
@@ -1166,11 +1167,16 @@ int main(int argc, char** argv) {
             r.steps(10);   // about 3.9 s
             expect(h.performance_starts == starts + 1 && h.performance_start.value("id", std::string()) == "css.test.pose" && h.performance_start.value("rate", 0.0) == 0.5,
                    "the step's performance starts on its beat at its rate: " + h.performance_start.dump());
+            const int stops = h.performance_stops;
             r.steps(10);   // about 4.9 s
             expect(h.montage_stops == 1, "an empty montage step stops the one playing: " + std::to_string(h.montage_stops));
-            r.steps(30);
+            r.steps(6);    // about 5.5 s: the second montage (5.0 s), with the performance still playing
+            expect(h.montages == 2 && h.performance_stops == stops + 1 && !h.performance_active,
+                   "a montage takes her body: the take's performance is stopped for good, not restarted between moves: montages " + std::to_string(h.montages)
+                   + " stops " + std::to_string(h.performance_stops - stops) + " active " + std::to_string(h.performance_active) + " starts " + std::to_string(h.performance_starts - starts));
+            r.steps(24);
             expect(has(r.status(), "Take finished"), "the take ends: " + r.status());
-            expect(h.montage_stops == 1 && !h.performance_active, "nothing is stopped twice, and the performance is over");
+            expect(h.montage_stops == 2 && h.performance_stops == stops + 1 && !h.performance_active, "the take's end stops the montage once, and the performance was not started again");
             expect(!h.css_wears.empty() && h.css_wears.back().contains("customize"), "her own look, face included, goes back");
             const auto left = unrestored(before, h.snapshot());
             expect(left.empty(), "and the world is as it was: " + left);
@@ -1179,7 +1185,7 @@ int main(int argc, char** argv) {
             r.press("F8");
             for (int i = 0; i < 120 && !has(r.status(), "Rolling"); ++i) r.step();
             r.steps(24);
-            expect(h.montages == 2, "the montage plays again on the second roll");
+            expect(h.montages == 3, "the montage plays again on the second roll: " + std::to_string(h.montages));
             r.press("F9");
             expect(h.montage_stops == 1, "a cancelled take stops her montage: " + std::to_string(h.montage_stops));
         }
