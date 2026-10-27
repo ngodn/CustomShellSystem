@@ -1,0 +1,242 @@
+[
+  {
+    "path": "work/photo-mode/astra-e/baseline/menu.json",
+    "bytes": 15620,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/core-CMakeLists.txt",
+    "bytes": 11935,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/main.cpp",
+    "bytes": 1860,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/audio.cpp",
+    "bytes": 2027,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/audio.hpp",
+    "bytes": 778,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/breakdown.cpp",
+    "bytes": 62959,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/breakdown.hpp",
+    "bytes": 12776,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/callouts.cpp",
+    "bytes": 21433,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/callouts.hpp",
+    "bytes": 5926,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/cine.hpp",
+    "bytes": 16831,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/expression.cpp",
+    "bytes": 5624,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/expression.hpp",
+    "bytes": 920,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/guides.cpp",
+    "bytes": 5196,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/guides.hpp",
+    "bytes": 1695,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/layers.hpp",
+    "bytes": 2686,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/performance.cpp",
+    "bytes": 6849,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/performance.hpp",
+    "bytes": 1439,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/preset.cpp",
+    "bytes": 20032,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/preset.hpp",
+    "bytes": 7705,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/scene.cpp",
+    "bytes": 24369,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/scene.hpp",
+    "bytes": 5561,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/shot.cpp",
+    "bytes": 14148,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/shot.hpp",
+    "bytes": 6614,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/rig.hpp",
+    "bytes": 7323,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/sequence.hpp",
+    "bytes": 8322,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/sequence.cpp",
+    "bytes": 16698,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/packs.hpp",
+    "bytes": 2172,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/packs.cpp",
+    "bytes": 7976,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/rig.cpp",
+    "bytes": 26776,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/render.hpp",
+    "bytes": 5129,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/render.cpp",
+    "bytes": 36167,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/src/cine.cpp",
+    "bytes": 138948,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/baseline/assets/author_materials.py",
+    "bytes": 16111,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/build.log",
+    "bytes": 4720,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "work/photo-mode/astra-e/build-overrides.log",
+    "bytes": 3366,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "/tmp/cine-e-data.py",
+    "bytes": 6990,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "/tmp/cine-e-schema.py",
+    "bytes": 4681,
+    "reason": "Lane E scratch, replaced by committed source and final verification"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/audio.cpp.o",
+    "bytes": 6904,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/expression.cpp.o",
+    "bytes": 206200,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/packs.cpp.o",
+    "bytes": 393312,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/performance.cpp.o",
+    "bytes": 228480,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/shot.cpp.o",
+    "bytes": 29288,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/render.cpp.o",
+    "bytes": 569624,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/sequence.cpp.o",
+    "bytes": 200776,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/scene.cpp.o",
+    "bytes": 536976,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/rig.cpp.o",
+    "bytes": 694744,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "../../build/astra-e-host/CMakeFiles/cine.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/main.cpp.o",
+    "bytes": 297344,
+    "reason": "Discarded incomplete objects from interrupted own build; regenerated successfully"
+  },
+  {
+    "path": "work/photo-mode/astra-e/removed-objects.json",
+    "bytes": 1850,
+    "reason": "Consolidated into cleanup.json"
+  }
+]

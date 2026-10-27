@@ -1,4 +1,5 @@
 #include "preset.hpp"
+#include "guides.hpp"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -23,11 +24,11 @@ std::string text(const Json& j, const char* key, size_t limit, bool required) {
 }
 // Camera geometry limits: a camera inside her or across the map is a typo, not a shot.
 void camera_fields(const Json& j, double& az, double& dist, double& height, double& aim, double& fov) {
-    az = number(j, "azimuth", 0, -720, 720);
-    dist = number(j, "distance", 300, 30, 3000);
-    height = number(j, "height", 0, -500, 500);
-    aim = number(j, "aim", 0, -300, 300);
-    fov = number(j, "fov", 40, 5, 120);
+    az = number(j, "azimuth", content().defaults.azimuth, -720, 720);
+    dist = number(j, "distance", content().defaults.distance, 30, 3000);
+    height = number(j, "height", content().defaults.height, -500, 500);
+    aim = number(j, "aim", content().defaults.aim, -300, 300);
+    fov = number(j, "fov", content().defaults.fov, 5, 120);
 }
 }
 
@@ -60,7 +61,7 @@ Preset Preset::parse(const Json& j) {
     p.zoom = number(j, "zoom", p.zoom, 0.3, 3);
     p.fov_scale = number(j, "fov_scale", p.fov_scale, 0.3, 3);
     p.hold = number(j, "hold", p.hold, 0.5, 30);
-    p.reference = p.kind == ShotKind::Walk ? Preset::Reference::Capsule : Preset::Reference::Head;
+    p.reference = (p.kind == ShotKind::Walk ? content().defaults.walk_reference : content().defaults.pose_reference) == "head" ? Preset::Reference::Head : Preset::Reference::Capsule;
     if (j.contains("reference")) {
         const auto r = text(j, "reference", 16, true);
         if (r == "capsule") p.reference = Preset::Reference::Capsule;
@@ -83,7 +84,7 @@ Preset Preset::parse(const Json& j) {
         const Json a = j.value("action", Json::object());
         if (!a.is_object()) throw std::invalid_argument("'action' must be an object");
         auto& shot = p.action;
-        const auto framing = a.contains("framing") ? text(a, "framing", 16, true) : std::string("duel");
+        const auto framing = a.contains("framing") ? text(a, "framing", 16, true) : content().action.framing;
         if (framing == "follow") shot.framing = Framing::Follow;
         else if (framing == "duel") shot.framing = Framing::Duel;
         else if (framing == "shoulder") shot.framing = Framing::Shoulder;
@@ -200,7 +201,7 @@ Preset Preset::parse(const Json& j) {
     }
     if (j.contains("frame")) {
         p.frame = text(j, "frame", 16, true);
-        if (p.frame != "16:9" && p.frame != "9:16" && p.frame != "1:1" && p.frame != "2.39:1") throw std::invalid_argument("'frame' must be 16:9, 9:16, 1:1 or 2.39:1");
+        if (guide_from(p.frame) == Guide::Off) throw std::invalid_argument("'frame' must name a guide in the core catalog");
     }
     if (j.contains("audio")) {
         // A pack's audio id, or a file inside the extension folder (never a path out of it).
@@ -238,7 +239,7 @@ Preset Preset::parse(const Json& j) {
             if (s.contains("split") && s.at("split").is_string()) {
                 if (s.at("split") != "body") throw std::invalid_argument("'split' is a place across the frame (0.05 to 1) or \"body\"");
                 step.follow = true; step.split = 0.5;
-                step.share = number(s, "share", 0.5, 0.1, 0.9);
+                step.share = number(s, "share", content().defaults.share, 0.1, 0.9);
             } else step.split = number(s, "split", 1.0, 0.05, 1.0);
             if (s.contains("title")) { step.title = text(s, "title", 80, false); step.titled = true; }
             if (s.contains("labels")) { if (!s.at("labels").is_boolean()) throw std::invalid_argument("A breakdown step's 'labels' must be true or false"); step.labels = s.at("labels").get<bool>(); }
@@ -246,7 +247,7 @@ Preset Preset::parse(const Json& j) {
         }
     }
     if (p.kind == ShotKind::Sequence) {
-        p.cover = {bit(Layer::Clay) | bit(Layer::Skeleton) | bit(Layer::Springs)};
+        p.cover = {layers_from(content().transitions.cover)};
         if (j.contains("cover")) {
             if (!j.at("cover").is_array() || j.at("cover").empty() || j.at("cover").size() > 8) throw std::invalid_argument("'cover' must list 1 to 8 covers");
             p.cover.clear();
@@ -288,21 +289,21 @@ Timeline make_timeline(const Preset& p, double route_length_cm, double walk_spee
         if (route_length_cm < 300) throw std::invalid_argument("Record a route of at least 3 m for a walk shot");
         if (walk_speed_cm_s <= 0) throw std::invalid_argument("Invalid walking speed");
         tl.walk_start = p.intro;
-        tl.walk_time = route_length_cm / walk_speed_cm_s + 0.8;   // +0.8 s easing in and out
-        tl.arrive = tl.walk_start + tl.walk_time + 0.6;
+        tl.walk_time = route_length_cm / walk_speed_cm_s + content().motion.walk_ease;   // easing in and out
+        tl.arrive = tl.walk_start + tl.walk_time + content().motion.arrival_pad;
         const double tail = std::min(p.tail, p.max_seconds - tl.arrive);
         if (tail < 3) throw std::invalid_argument("This route is too long for the preset's " + std::to_string(int(p.max_seconds)) +
                                                   " s cap; record a shorter walk or raise max_seconds");
         tl.total = tl.arrive + tail;
         double previous = -1;
         for (const auto& k : p.keys) {
-            double t = k.anchor == "start" ? 0 : k.anchor == "walk" ? tl.walk_start : tl.walk_start + 0.2 + k.fraction * tl.walk_time;
+            double t = k.anchor == "start" ? 0 : k.anchor == "walk" ? tl.walk_start : tl.walk_start + content().motion.key_pad + k.fraction * tl.walk_time;
             t = std::max(t, previous + 0.05);   // keep strict time order after rounding
             tl.keys.push_back(key(k, t));
             previous = t;
         }
         for (const auto& s : p.look) tl.look.push_back({tl.walk_start + s.fraction * tl.walk_time, &s, false});
-        if (p.look_ends_on_own && !p.look.empty()) tl.look.push_back({tl.arrive - 2.0, nullptr, true});
+        if (p.look_ends_on_own && !p.look.empty()) tl.look.push_back({tl.arrive + content().palettes.walk_restore_offset, nullptr, true});
     } else {
         tl.total = p.duration;
         double previous = -1;
@@ -312,7 +313,7 @@ Timeline make_timeline(const Preset& p, double route_length_cm, double walk_spee
             previous = t;
         }
         for (const auto& s : p.look) tl.look.push_back({s.fraction * p.duration, &s, false});
-        if (p.look_ends_on_own && !p.look.empty()) tl.look.push_back({p.duration * 0.92, nullptr, true});
+        if (p.look_ends_on_own && !p.look.empty()) tl.look.push_back({p.duration * content().palettes.restore_fraction, nullptr, true});
     }
     std::sort(tl.look.begin(), tl.look.end(), [](const auto& a, const auto& b) { return a.at < b.at; });
     reveals();

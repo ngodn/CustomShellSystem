@@ -13,6 +13,7 @@
 // and its whips are written. A look step changes what she wears or how it is set up. One
 // that changes the outfit is covered by a transition (the director wipes the picture into a
 // frame pass and back), because wearing an outfit is not instant.
+#include "content.hpp"
 #include <cstdint>
 #include <map>
 #include <nlohmann/json.hpp>
@@ -23,8 +24,8 @@ namespace cine {
 using Json = nlohmann::json;
 
 struct Tempo {
-    double bpm = 120, offset = 0;
-    int beats_per_bar = 4;
+    double bpm = content().defaults.bpm, offset = content().defaults.offset;
+    int beats_per_bar = content().defaults.beats_per_bar;
     double bar_seconds() const { return beats_per_bar * 60.0 / bpm; }
     double seconds(double bar) const { return offset + (bar - 1.0) * bar_seconds(); }   // bar 1 = offset
     double bar(double seconds) const { return (seconds - offset) / bar_seconds() + 1.0; }
@@ -32,7 +33,7 @@ struct Tempo {
 
 // Where the camera is, around her: degrees and centimetres as in every other preset, plus
 // roll (a dutch tilt) in degrees.
-struct SeqPose { double azimuth = 0, distance = 300, height = 0, aim = 0, fov = 40, roll = 0; };
+struct SeqPose { double azimuth = content().defaults.azimuth, distance = content().defaults.distance, height = content().defaults.height, aim = content().defaults.aim, fov = content().defaults.fov, roll = content().defaults.roll; };
 
 enum class Ease { Linear, In, Out, InOut, Whip, Smooth };
 // What a shot is framed on. None measures its heights from her capsule centre, a fixed point.
@@ -120,7 +121,7 @@ struct Sequence {
 // share one turn, or the unbroken move would break.
 struct ShotPlan { double turn = 0, scale = 1; };
 // The angles a blocked shot may be turned by, nearest first.
-inline constexpr double plan_turns[] = {0, 35, -35, 70, -70, 120, -120, 180};
+inline const auto& plan_turns = content().motion.plan_turns;
 // From the clear fraction of each candidate turn (1 = the whole camera line is free, 0.3 =
 // something stands at 30 percent of the way): the turn to use and the scale that clears it.
 // A turn is only worth it when it clears clearly more than staying put.

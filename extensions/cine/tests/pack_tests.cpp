@@ -23,6 +23,7 @@ Json manifest(const std::string& pack = "IrisOut") {
 struct Host {
     std::map<std::string, Json> rows;   // row name -> DevComment JSON (dumped into the string)
     bool loads = true, wrong_type = false, bad_json = false;
+    std::string bad_row;
     int requests = 0;
     CssxHost api{CSSX_ABI, sizeof(CssxHost), this, request};
     static int request(void* context, const char* value, CssxSink sink, void* output) {
@@ -38,7 +39,7 @@ struct Host {
             const auto it = rows.find(j.at("row").get<std::string>());
             if (it == rows.end()) return nullptr;
             if (wrong_type) return {{"RowName", "x"}};
-            return {{"Tag", "None"}, {"DevComment", bad_json ? std::string("{oops") : it->second.dump()}};
+            return {{"Tag", "None"}, {"DevComment", (bad_json || j.at("row") == bad_row) ? std::string("{oops") : it->second.dump()}};
         }
         throw std::runtime_error("unexpected op " + op);
     }
@@ -98,6 +99,12 @@ int main() {
         const auto pack = read_pack(client, "IrisOut");
         expect(pack.rows.size() == 3 && pack.rows.contains("recipe.reel") && !pack.rows.contains("junk"), "presets and recipes read, other rows ignored");
         expect(pack.rows.at("preset.iris-out").at("id") == "iris-out", "preset JSON round trip");
+
+        Host bad_style = h; bad_style.api.context = &bad_style; bad_style.bad_row = "recipe.reel";
+        cssx::Client style_client(&bad_style.api);
+        const auto recovered = read_pack(style_client, "IrisOut");
+        expect(recovered.rows.contains("preset.iris-out") && !recovered.rows.contains("recipe.reel"), "malformed optional style keeps the pack's scenes");
+        expect(recovered.problems.size() == 1 && recovered.problems.front().find("recipe.reel") != std::string::npos, "malformed style warning names its row");
 
         Host missing = h; missing.api.context = &missing; missing.rows.erase("preset.iris-out-9x16");
         cssx::Client c2(&missing.api);

@@ -1,4 +1,5 @@
 #include "breakdown.hpp"
+#include "content.hpp"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -10,8 +11,6 @@ bool is_handle(const Json& j) { return j.is_object() && j.contains("$object"); }
 uint64_t id_of(const Json& j) { return is_handle(j) ? j["$object"].get<uint64_t>() : 0; }
 std::string lower(std::string s) { std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return char(std::tolower(c)); }); return s; }
 
-constexpr const char* asset_root = "/Game/CSSX/CINE/";
-constexpr const char* path_collection = "/Game/CSSX/CINE/MPC_Cine.MPC_Cine";
 constexpr const char* path_cone = "/Engine/BasicShapes/Cone.Cone";
 constexpr const char* path_sphere = "/Engine/BasicShapes/Sphere.Sphere";
 constexpr size_t max_bones = 1200;      // the game's widest skeleton is 1199 bones
@@ -19,39 +18,15 @@ constexpr size_t max_sockets = 128;
 constexpr size_t max_bodies = 160;
 constexpr size_t max_skins = 40;
 constexpr size_t max_worn_actors = 12;
-// A stick longer than any limb is an offset to a helper bone (camera, prop, interaction
-// points), not anatomy: drawn it is a spike across the picture.
-constexpr double max_stick_cm = 70;
-constexpr double clay_ambient = 0.5;    // clay stays readable in a dark scene
-// Depth is white at the lens and black at its range; the curve keeps a gradient through
-// the scene behind her instead of a flat cutout on black.
-constexpr double depth_gamma = 2.2;
-constexpr double clay_overlay_push = 0.12;   // cm along the normal
-constexpr double bone_glow = 1.8;       // bone shapes read against a dark body
-constexpr double wire_glow = 3.0;       // thin lines need more than their colour to read at night
 constexpr size_t max_looks = 30;
 constexpr int keep_relative = 0, snap_to_target = 2, no_collision = 0;
 
-struct LayerInfo { const char* id; const char* label; Vec3 colour; };
-constexpr LayerInfo info[static_cast<size_t>(Layer::Count)] = {
-    {"clay", "Clay", {0.5, 0.5, 0.5}},
-    {"wireframe", "Wireframe", {0.05, 0.85, 1.0}},
-    {"skeleton", "Skeleton", {1.0, 0.86, 0.25}},
-    {"virtual_bones", "Virtual bones", {1.0, 0.25, 0.9}},
-    {"ik_bones", "IK bones", {0.25, 1.0, 0.4}},
-    {"springs", "Spring bones", {1.0, 0.45, 0.1}},
-    {"sockets", "Sockets", {0.3, 0.75, 1.0}},
-    {"collision", "Physics bodies", {0.0, 1.0, 1.0}},
-    {"capsule", "Movement capsule", {1.0, 0.55, 0.65}},
-    {"no_body", "Body hidden", {0.2, 0.2, 0.2}},
-    {"base_color", "Base colour", {}},
-    {"normals", "Normals", {}},
-    {"roughness", "Roughness", {}},
-    {"metallic", "Metallic", {}},
-    {"depth", "Depth", {}},
-    {"occlusion", "Ambient occlusion", {}},
-    {"lighting", "Lighting", {}},
-};
+constexpr const char* layer_ids[] = {"clay", "wireframe", "skeleton", "virtual_bones", "ik_bones", "springs", "sockets", "collision", "capsule", "no_body", "base_color", "normals", "roughness", "metallic", "depth", "occlusion", "lighting"};
+const CoreBreakdownLayersItem& layer_style(Layer layer) {
+    const auto& layers = content().breakdown.layers;
+    return *std::find_if(layers.begin(), layers.end(), [&](const auto& s) { return s.id == layer_ids[static_cast<size_t>(layer)]; });
+}
+Vec3 layer_colour(Layer layer) { const auto& c = layer_style(layer).color; return {c[0], c[1], c[2]}; }
 // The frame-pass material's weight parameter for each frame layer.
 const char* pass_weight(Layer l) {
     switch (l) {
@@ -78,10 +53,10 @@ Json colour8(Vec3 c) { return {{"R", int(c.x * 255)}, {"G", int(c.y * 255)}, {"B
 
 // ---------------------------------------------------------------- pure helpers
 
-const char* layer_id(Layer l) { return info[static_cast<size_t>(l)].id; }
-const char* layer_label(Layer l) { return info[static_cast<size_t>(l)].label; }
+const char* layer_id(Layer l) { return layer_ids[static_cast<size_t>(l)]; }
+const char* layer_label(Layer l) { return layer_style(l).label.c_str(); }
 std::optional<Layer> layer_from(const std::string& id) {
-    for (size_t i = 0; i < static_cast<size_t>(Layer::Count); ++i) if (id == info[i].id) return static_cast<Layer>(i);
+    for (size_t i = 0; i < static_cast<size_t>(Layer::Count); ++i) if (id == layer_ids[i]) return static_cast<Layer>(i);
     return std::nullopt;
 }
 LayerSet layers_from(const Json& array) {
@@ -98,24 +73,22 @@ LayerSet layers_from(const Json& array) {
 bool spring_by_name(const std::string& bone) { return !spring_group(bone).empty(); }
 std::string spring_group(const std::string& bone) {
     const auto n = lower(bone);
-    if (n.starts_with("brust") || n.starts_with("breast")) return "chest";
-    if (n.starts_with("butt") || n.starts_with("glute")) return "glutes";
-    if (n.starts_with("belly")) return "belly";
+    for (const auto& group : content().bones.spring_groups)
+        for (const auto& prefix : group.prefixes) if (n.starts_with(prefix)) return group.group;
     return {};
 }
 bool helper_bone(const std::string& name) {
     const auto n = lower(name);
-    for (const char* part : {"socket", "prop_", "weapon", "camera", "warp_", "center_of_mass", "interaction", "_twist", "corrective", "stowed", "inhand"})
+    for (const auto& part : content().bones.helper_contains)
         if (n.find(part) != std::string::npos) return true;
-    // Mounts this game hangs on the player skeleton, and the outfit skeleton's spare chains.
-    for (const char* start : {"css_", "genessacloth", "bag", "wp_", "unreal", "heal_", "punch", "tiel_", "wraith_", "eredrim"})
+    for (const auto& start : content().bones.helper_prefixes)
         if (n.starts_with(start)) return true;
     return false;
 }
 BoneKind classify_bone(const std::string& name, const std::vector<std::string>& spring_bones) {
     const auto n = lower(name);
-    if (n.starts_with("vb ")) return BoneKind::Virtual;
-    if (n.starts_with("ik_")) return BoneKind::Ik;
+    if (n.starts_with(content().bones.virtual_prefix)) return BoneKind::Virtual;
+    if (n.starts_with(content().bones.ik_prefix)) return BoneKind::Ik;
     // The usual spring names always count; an outfit adds its own chains to them.
     if (spring_by_name(name) || std::any_of(spring_bones.begin(), spring_bones.end(), [&](const std::string& s) { return lower(s) == n; }))
         return BoneKind::Spring;
@@ -158,21 +131,36 @@ void Breakdown::set_param(const Json& mid, const char* name, double value) {
 // game time starting now. Written once; the GPU animates it.
 void Breakdown::wipe_numbers(double from, double to, double seconds) {
     if (!pak_) return;
-    const auto collection = load(path_collection);   // reloaded each time: a bare asset handle can be collected
+    const auto collection = load(content().breakdown.collection);   // reloaded each time: a bare asset handle can be collected
     if (!is_handle(collection)) return;
     const double now = game_time();
-    for (const auto& [name, value] : {std::pair<const char*, double>{"WipeFrom", from}, {"WipeTo", to}, {"WipeDur", std::max(0.01, seconds)}, {"WipeT0", now}})
+    for (const auto& [name, value] : {std::pair<const char*, double>{"WipeFrom", from}, {"WipeTo", to}, {"WipeDur", std::max(0.01, seconds)}, {"WipeT0", now}, {"WipeSoft", content().materials.wipe_soft}, {"WipeLine", content().materials.wipe_line}})
         call(kismet_materials_, "SetScalarParameterValue",
              {{"WorldContextObject", pawn_}, {"Collection", collection}, {"ParameterName", name}, {"ParameterValue", value}});
 }
-Json Breakdown::instance(const char* key, Vec3 colour, double opacity) {
-    const auto parent = load(std::string(asset_root) + "Materials/" + key + "." + key);
+Json Breakdown::instance(const std::string& path, Vec3 colour, double opacity) {
+    const auto parent = load(path);
     if (!is_handle(parent)) return Json();
     auto mid = call(kismet_materials_, "CreateDynamicMaterialInstance",
                     {{"WorldContextObject", pawn_}, {"Parent", parent}, {"OptionalName", "None"}, {"CreationFlags", 0}});
     if (!is_handle(mid)) return Json();
     for (const char* name : {"Color", "BaseColor"}) {
         try { call(mid, "SetVectorParameterValue", {{"ParameterName", name}, {"Value", {{"R", colour.x}, {"G", colour.y}, {"B", colour.z}, {"A", 1.0}}}}); } catch (...) {}
+    }
+    const auto& m = content().materials;
+    set_param(mid, "EndpointFade", m.endpoint_fade);
+    if (path == content().breakdown.wire) set_param(mid, "Push", m.wire_push);
+    if (path == content().breakdown.clay) {
+        set_param(mid, "Roughness", m.clay_roughness); set_param(mid, "Specular", m.clay_specular); set_param(mid, "Push", m.clay_push);
+    }
+    if (path == content().breakdown.xray) {
+        set_param(mid, "Fresnel", m.fresnel); set_param(mid, "Rim", m.rim);
+    }
+    if (path == content().breakdown.buffer_post) {
+        set_param(mid, "DepthRange", m.depth_range); set_param(mid, "LightingScale", m.lighting_scale);
+        set_param(mid, "LightingFloor", m.lighting_floor); set_param(mid, "Gain", m.gain);
+        set_param(mid, "Gamma", m.gamma); set_param(mid, "LineGlow", m.line_glow);
+        call(mid, "SetVectorParameterValue", {{"ParameterName", "LineColor"}, {"Value", {{"R", m.line_color[0]}, {"G", m.line_color[1]}, {"B", m.line_color[2]}, {"A", m.line_color[3]}}}});
     }
     if (opacity >= 0) set_param(mid, "Opacity", opacity);
     return mid;
@@ -181,18 +169,18 @@ Json Breakdown::instance(const char* key, Vec3 colour, double opacity) {
 // steps of a long take), and a garbage collection would take it: the locker holds them too.
 const Json& Breakdown::wire_mid() {
     if (is_handle(wire_) && valid(wire_)) return wire_;
-    wire_ = instance("M_Cine_Wire", info[static_cast<size_t>(Layer::Wireframe)].colour, -1);
-    set_param(wire_, "Glow", wire_glow);
+    wire_ = instance(content().breakdown.wire, layer_colour(Layer::Wireframe), -1);
+    set_param(wire_, "Glow", content().breakdown.wire_glow);
     keep(wire_);
     return wire_;
 }
 const Json& Breakdown::clay_mid() {
     if (is_handle(clay_) && valid(clay_)) return clay_;
-    clay_ = instance("M_Cine_Clay", info[static_cast<size_t>(Layer::Clay)].colour, -1);
-    set_param(clay_, "Ambient", clay_ambient);
+    clay_ = instance(content().breakdown.clay, layer_colour(Layer::Clay), -1);
+    set_param(clay_, "Ambient", content().breakdown.clay_ambient);
     // As an overlay clay is a second skin over her own: lifted a little further, her own
     // surface cannot shadow it in speckles.
-    if (options_.overlay_only) set_param(clay_, "Push", clay_overlay_push);
+    if (options_.overlay_only) set_param(clay_, "Push", content().breakdown.clay_overlay_push);
     keep(clay_);
     return clay_;
 }
@@ -202,9 +190,9 @@ const Json& Breakdown::clay_mid() {
 // to a component in the same tick, which is what keeps it alive.
 Json Breakdown::material(Layer layer, uint32_t looks) {
     for (const auto& g : groups_) if (g.layer == layer && g.looks == looks) return g.mid;
-    auto mid = instance("M_Cine_XRay", info[static_cast<size_t>(layer)].colour, 0.9);
+    auto mid = instance(content().breakdown.xray, layer_colour(layer), content().breakdown.bone_opacity);
     if (!is_handle(mid)) return mid;
-    set_param(mid, "Glow", bone_glow);
+    set_param(mid, "Glow", content().breakdown.bone_glow);
     if (!((shown_ & bit(layer)) && worn(looks))) set_param(mid, "Show", 0.0);
     groups_.push_back({layer, looks, mid});
     return mid;
@@ -291,7 +279,7 @@ void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std
         class_sphere_ = load("/Script/Engine.SphereComponent"); class_box_ = load("/Script/Engine.BoxComponent");
         if (!is_handle(mesh_) || !is_handle(statics_) || !is_handle(kismet_materials_)) { add_note("This character has no mesh to break down."); return; }
         active_ = true;
-        pak_ = is_handle(load(path_collection));
+        pak_ = is_handle(load(content().breakdown.collection));
         if (!pak_) {
             if (needed_ & ~(bit(Layer::Collision) | bit(Layer::Capsule) | bit(Layer::NoBody))) add_note("CINE's asset pak is not installed: only collision and capsule layers can show.");
             needed_ &= bit(Layer::Collision) | bit(Layer::Capsule) | bit(Layer::NoBody);
@@ -302,7 +290,7 @@ void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std
             else {
                 try {
                     for (auto& pass : pass_) {
-                        pass = instance("PP_Cine_Buffer_Post", {}, -1);
+                        pass = instance(content().breakdown.buffer_post, {}, -1);
                         if (!is_handle(pass)) throw std::runtime_error("material missing");
                         set_param(pass, "Show", 0.0);
                         call(camera_, "AddOrUpdateBlendable", {{"InBlendableObject", pass}, {"InWeight", 1.0}});
@@ -458,7 +446,7 @@ void Breakdown::plan() {
         const double length = std::sqrt(b.local.x * b.local.x + b.local.y * b.local.y + b.local.z * b.local.z);
         // A stick from the parent to this bone. Virtual and IK bones hang off the root, far from
         // what they describe, so they get a marker instead of a stick.
-        if ((needed_ & bit(Layer::Skeleton)) && !b.parent.empty() && length > 0.5 && length <= max_stick_cm && body_bone(b.kind) && body_bone(kind_of(b.parent)))
+        if ((needed_ & bit(Layer::Skeleton)) && !b.parent.empty() && length > content().geometry.stick_min && length <= content().geometry.stick_max && body_bone(b.kind) && body_bone(kind_of(b.parent)))
             queue_.push_back({Work::Stick, i});
         if (((needed_ & bit(Layer::VirtualBones)) && b.kind == BoneKind::Virtual) || ((needed_ & bit(Layer::IkBones)) && b.kind == BoneKind::Ik)
             || ((needed_ & bit(Layer::Springs)) && b.kind == BoneKind::Spring)) queue_.push_back({Work::Joint, i});
@@ -494,22 +482,22 @@ void Breakdown::build(const Work& work) {
         const double length = std::sqrt(b.local.x * b.local.x + b.local.y * b.local.y + b.local.z * b.local.z);
         const Vec3 direction = b.local * (1.0 / length);
         // The engine cone is 100 tall along Z with a base radius of 50, centred on its origin.
-        const double radius = std::clamp(length * 0.035, 0.25, 0.7);
+        const double radius = std::clamp(length * content().geometry.radius_per_length, content().geometry.radius_min, content().geometry.radius_max);
         mesh_piece(Layer::Skeleton, path_cone, b.parent, direction * (length / 2), z_to(direction), {radius / 50, radius / 50, length / 100}, b.looks & looks_of(b.parent));
     } else if (work.kind == Work::Joint) {
         const auto& b = bones_[work.index];
         const Layer layer = b.kind == BoneKind::Virtual ? Layer::VirtualBones : b.kind == BoneKind::Ik ? Layer::IkBones : Layer::Springs;
-        const double radius = b.kind == BoneKind::Spring ? 2.6 : 2.0;   // the engine sphere has radius 50
+        const double radius = b.kind == BoneKind::Spring ? content().geometry.spring_radius : content().geometry.joint_radius;   // the engine sphere has radius 50
         mesh_piece(layer, path_sphere, b.name, {}, {}, {radius / 50, radius / 50, radius / 50}, b.looks);
     } else if (work.kind == Work::Socket) {
-        mesh_piece(Layer::Sockets, path_sphere, sockets_[work.index], {}, {}, {0.024, 0.024, 0.024}, all_looks_);
+        mesh_piece(Layer::Sockets, path_sphere, sockets_[work.index], {}, {}, {content().geometry.socket_radius / 50, content().geometry.socket_radius / 50, content().geometry.socket_radius / 50}, all_looks_);
     } else {
         // One physics body: every primitive becomes the engine's own shape component on that bone.
         const auto& setup = bodies_[work.index];
         const auto bone = host_.get(setup, "BoneName");
         const auto geometry = host_.get(setup, "AggGeom");
         if (!bone.is_string() || !geometry.is_object()) return;
-        const auto colour = colour8(info[static_cast<size_t>(Layer::Collision)].colour);
+        const auto colour = colour8(layer_colour(Layer::Collision));
         auto shape = [&](const Json& cls, const Json& element, auto&& size) {
             if (!is_handle(cls)) return;
             const auto component = add_component(cls, transform({}, {}, {1, 1, 1}));
@@ -521,7 +509,7 @@ void Breakdown::build(const Work& work) {
                                      {"NewRotation", element.value("Rotation", Json{{"Pitch", 0}, {"Yaw", 0}, {"Roll", 0}})}, {"bSweep", false}, {"bTeleport", true}}}});
             size(component);
             host_.set(component, "ShapeColor", colour);
-            call(component, "SetLineThickness", {{"Thickness", 1.2}});
+            call(component, "SetLineThickness", {{"Thickness", content().geometry.physics_line}});
         };
         auto each = [&](const char* list, auto&& make) {
             const auto elements = geometry.value(list, Json::array());
@@ -583,7 +571,7 @@ void Breakdown::follow(double place) {
     place = std::clamp(place, 0.05, 0.95);
     if (std::abs(place - edge_) < 0.001) return;   // under three pixels on a 2560 wide frame
     try {
-        const auto collection = load(path_collection);
+        const auto collection = load(content().breakdown.collection);
         if (!is_handle(collection)) return;
         // From and To alike: the line stands there whatever the running clock says.
         for (const char* name : {"WipeFrom", "WipeTo"})
@@ -780,7 +768,7 @@ void Breakdown::show(LayerSet set, double wipe_seconds, double stop) {
                 if (want) {
                     for (auto l : {Layer::BaseColor, Layer::Normals, Layer::Roughness, Layer::Metallic, Layer::Depth, Layer::Occlusion})
                         set_param(pass_[next], pass_weight(l), l == *want ? 1.0 : 0.0);
-                    set_param(pass_[next], "Gamma", *want == Layer::Depth ? depth_gamma : 1.0);
+                    set_param(pass_[next], "Gamma", *want == Layer::Depth ? content().breakdown.depth_gamma : content().materials.gamma);
                     place(pass_[next], true, false);
                 }
                 if (have) place(pass_[pass_now_], false, true);
@@ -840,7 +828,7 @@ void Breakdown::edge_show(LayerSet set, double wipe_seconds, double stop) {
             if (want) {
                 for (auto l : {Layer::BaseColor, Layer::Normals, Layer::Roughness, Layer::Metallic, Layer::Depth, Layer::Occlusion})
                     set_param(pass_[pass_now_], pass_weight(l), l == *want ? 1.0 : 0.0);
-                set_param(pass_[pass_now_], "Gamma", *want == Layer::Depth ? depth_gamma : 1.0);
+                set_param(pass_[pass_now_], "Gamma", *want == Layer::Depth ? content().breakdown.depth_gamma : content().materials.gamma);
                 left(pass_[pass_now_]);
             } else set_param(pass_[pass_now_], "Show", 0);
         }
@@ -939,7 +927,7 @@ void Breakdown::tick() {
                     const auto hidden = host_.get(capsule_, "bHiddenInGame");
                     capsule_hidden_before_ = !hidden.is_boolean() || hidden.get<bool>();
                     try { capsule_colour_before_ = host_.get(capsule_, "ShapeColor"); } catch (...) {}
-                    host_.set(capsule_, "ShapeColor", colour8(info[static_cast<size_t>(Layer::Capsule)].colour));
+                    host_.set(capsule_, "ShapeColor", colour8(layer_colour(Layer::Capsule)));
                 }
                 call(capsule_, "SetHiddenInGame", {{"NewHidden", !(shown_ & bit(Layer::Capsule))}, {"bPropagateToChildren", false}});
             }
@@ -955,23 +943,23 @@ void Breakdown::tick() {
 
 void Breakdown::refresh_callouts() {
     callouts_.clear();
-    auto bone_like = [&](std::initializer_list<const char*> wanted) -> std::string {
-        for (const char* want : wanted) for (const auto& b : bones_) if (worn(b.looks) && lower(b.name) == want) return b.name;
+    auto bone_like = [&](const std::vector<std::string>& wanted) -> std::string {
+        for (const auto& want : wanted) for (const auto& b : bones_) if (worn(b.looks) && lower(b.name) == want) return b.name;
         return bones_.empty() ? std::string(*wanted.begin()) : std::string();
     };
     auto count = [&](BoneKind kind) { return std::count_if(bones_.begin(), bones_.end(), [&](const Bone& b) { return b.kind == kind && worn(b.looks); }); };
     auto first = [&](BoneKind kind) -> std::string { for (const auto& b : bones_) if (b.kind == kind && worn(b.looks)) return b.name; return {}; };
     auto add = [&](std::string text, const Json& component, std::string socket) { if (is_handle(component)) callouts_.push_back({std::move(text), component, std::move(socket)}); };
-    if (shown_ & bit(Layer::Wireframe)) add("Mesh wireframe", mesh_, bone_like({"head"}));
-    else if (shown_ & bit(Layer::Clay)) add("Clay shading", mesh_, bone_like({"head"}));
-    if (shown_ & bit(Layer::Skeleton)) add("Skeleton, " + std::to_string(bones_worn()) + " bones", mesh_, bone_like({"spine_03", "spine_02", "pelvis"}));
+    if (shown_ & bit(Layer::Wireframe)) add(content().annotations.wire, mesh_, bone_like(content().annotations.head));
+    else if (shown_ & bit(Layer::Clay)) add(content().annotations.clay, mesh_, bone_like(content().annotations.head));
+    if (shown_ & bit(Layer::Skeleton)) add(annotation(content().annotations.skeleton, bones_worn()), mesh_, bone_like(content().annotations.torso));
     // Every bone of a kind this look has, spread over her: the first, then the ones furthest
     // along the list (bones are listed head to toe, left before right).
     auto spread = [&](auto&& keep) {
         std::vector<std::string> all;
         for (const auto& b : bones_) if (worn(b.looks) && keep(b)) all.push_back(b.name);
         std::vector<std::string> out;
-        const size_t n = std::min(all.size(), max_arrows);
+        const size_t n = std::min(all.size(), size_t(content().annotations.spread_targets));
         for (size_t k = 0; k < n; ++k) out.push_back(all[n == 1 ? 0 : k * (all.size() - 1) / (n - 1)]);
         return out;
     };
@@ -982,53 +970,53 @@ void Breakdown::refresh_callouts() {
         callouts_.push_back(std::move(c));
     };
     if ((shown_ & bit(Layer::VirtualBones)) && count(BoneKind::Virtual))
-        add_many("Virtual bones, " + std::to_string(count(BoneKind::Virtual)), spread([](const Bone& b) { return b.kind == BoneKind::Virtual; }));
+        add_many(annotation(content().annotations.virtual_bones, size_t(count(BoneKind::Virtual))), spread([](const Bone& b) { return b.kind == BoneKind::Virtual; }));
     if ((shown_ & bit(Layer::IkBones)) && count(BoneKind::Ik))
-        add_many("IK bones, " + std::to_string(count(BoneKind::Ik)), spread([](const Bone& b) { return b.kind == BoneKind::Ik; }));
+        add_many(annotation(content().annotations.ik, size_t(count(BoneKind::Ik))), spread([](const Bone& b) { return b.kind == BoneKind::Ik; }));
     if (shown_ & bit(Layer::Springs)) {
         // One label per group (chest, glutes, belly...), an arrow to each chain of it: the
         // chain's first bone, the one whose parent is not in the group.
         std::vector<std::string> groups;
         for (const auto& b : bones_) {
             if (b.kind != BoneKind::Spring || !worn(b.looks)) continue;
-            auto group = spring_group(b.name); if (group.empty()) group = "outfit";
+            auto group = spring_group(b.name); if (group.empty()) group = content().annotations.spring_fallback;
             if (std::find(groups.begin(), groups.end(), group) == groups.end()) groups.push_back(group);
         }
         for (const auto& group : groups) {
-            auto in_group = [&](const std::string& name) { for (const auto& b : bones_) if (b.name == name) { auto g = spring_group(b.name); return b.kind == BoneKind::Spring && (g.empty() ? std::string("outfit") : g) == group; } return false; };
+            auto in_group = [&](const std::string& name) { for (const auto& b : bones_) if (b.name == name) { auto g = spring_group(b.name); return b.kind == BoneKind::Spring && (g.empty() ? content().annotations.spring_fallback : g) == group; } return false; };
             std::vector<std::string> roots, rest;
             for (const auto& b : bones_) {
                 if (b.kind != BoneKind::Spring || !worn(b.looks)) continue;
-                auto g = spring_group(b.name); if ((g.empty() ? std::string("outfit") : g) != group) continue;
+                auto g = spring_group(b.name); if ((g.empty() ? content().annotations.spring_fallback : g) != group) continue;
                 (in_group(b.parent) ? rest : roots).push_back(b.name);
             }
             std::vector<std::string> places(roots.begin(), roots.begin() + std::min(roots.size(), max_arrows));
-            for (size_t k = 0; places.size() < std::min<size_t>(2, roots.size() + rest.size()) && k < rest.size(); ++k) places.push_back(rest[k]);
-            add_many("Spring bones: " + group, places);
+            for (size_t k = 0; places.size() < std::min<size_t>(size_t(content().annotations.preferred_targets), roots.size() + rest.size()) && k < rest.size(); ++k) places.push_back(rest[k]);
+            add_many(annotation(content().annotations.springs, 0, group), places);
         }
     }
     if ((shown_ & bit(Layer::Sockets)) && !sockets_.empty()) {
         // Arrows to the sockets where things hang: her hands, her head, her back, else spread.
         std::vector<std::string> places;
-        for (const auto& want : {std::vector<const char*>{"hand_r", "weapon_r", "r_hand", "righthand"}, std::vector<const char*>{"hand_l", "weapon_l", "l_hand", "lefthand"},
-                                 std::vector<const char*>{"head", "hat", "hair"}, std::vector<const char*>{"spine", "back", "pelvis", "hip"}}) {
+        for (const auto& group : content().annotations.socket_groups) {
+            const auto& want = group.contains;
             for (const auto& socket : sockets_) {
                 const auto l = lower(socket);
-                if (std::any_of(want.begin(), want.end(), [&](const char* w) { return l.find(w) != std::string::npos; }) && std::find(places.begin(), places.end(), socket) == places.end()) { places.push_back(socket); break; }
+                if (std::any_of(want.begin(), want.end(), [&](const std::string& w) { return l.find(w) != std::string::npos; }) && std::find(places.begin(), places.end(), socket) == places.end()) { places.push_back(socket); break; }
             }
         }
         for (size_t k = 0; places.size() < std::min(max_arrows, sockets_.size()) && k < sockets_.size(); k += std::max<size_t>(1, sockets_.size() / max_arrows))
             if (std::find(places.begin(), places.end(), sockets_[k]) == places.end()) places.push_back(sockets_[k]);
-        add_many("Sockets, " + std::to_string(sockets_.size()), places);
+        add_many(annotation(content().annotations.sockets, sockets_.size()), places);
     }
-    if ((shown_ & bit(Layer::Collision)) && !bodies_.empty()) add("Physics bodies, " + std::to_string(bodies_.size()), mesh_, bone_like({"thigh_r", "thigh_l", "pelvis"}));
-    if (shown_ & bit(Layer::Capsule)) add("Movement capsule", capsule_, "");
+    if ((shown_ & bit(Layer::Collision)) && !bodies_.empty()) add(annotation(content().annotations.physics, bodies_.size()), mesh_, bone_like(content().annotations.physics_bones));
+    if (shown_ & bit(Layer::Capsule)) add(content().annotations.capsule, capsule_, "");
 }
 
 std::string Breakdown::caption() const {
     std::string text;
-    for (size_t i = 0; i < static_cast<size_t>(Layer::Count); ++i)
-        if (shown_ & (LayerSet{1} << i)) text += (text.empty() ? "" : " + ") + std::string(info[i].label);
+    for (const auto& style : content().breakdown.layers)
+        if (shown_ & bit(*layer_from(style.id))) text += (text.empty() ? "" : content().breakdown.separator) + style.label;
     return text;
 }
 

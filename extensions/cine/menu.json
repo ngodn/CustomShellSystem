@@ -16,11 +16,11 @@
           "id": "preset",
           "type": "choice",
           "label": "Scene",
-          "value": "fashion-walk-360",
+          "value": "none",
           "options": [
             {
-              "id": "fashion-walk-360",
-              "label": "Fashion Walk 360"
+              "id": "none",
+              "label": "Loading scenes"
             }
           ],
           "description": "The camera recipe for the take. Scenes come from the CINE packs installed in the game."
@@ -91,22 +91,6 @@
             {
               "id": "off",
               "label": "Off"
-            },
-            {
-              "id": "16:9",
-              "label": "16:9"
-            },
-            {
-              "id": "9:16",
-              "label": "9:16"
-            },
-            {
-              "id": "1:1",
-              "label": "1:1"
-            },
-            {
-              "id": "2.39:1",
-              "label": "2.39:1"
             }
           ],
           "description": "Darkens everything outside the chosen frame while you set up. Hidden during takes, so it never ends up in a recording. Breakdown labels, the caption and the signature stay inside the chosen frame."
@@ -345,10 +329,6 @@
               "label": "Off"
             },
             {
-              "id": "reel",
-              "label": "Built-in reel"
-            },
-            {
               "id": "preset",
               "label": "From the preset"
             }
@@ -375,7 +355,7 @@
           "id": "breakdown_info",
           "type": "label",
           "label": "This Take",
-          "description": "What the breakdown track will do."
+          "description": "The selected breakdown recipe."
         }
       ]
     },
@@ -395,10 +375,6 @@
               "label": "Off"
             },
             {
-              "id": "palettes",
-              "label": "Cycle palettes"
-            },
-            {
               "id": "preset",
               "label": "From the preset"
             }
@@ -409,7 +385,7 @@
           "id": "look_info",
           "type": "label",
           "label": "This Take",
-          "description": "What the look track will do."
+          "description": "The selected look recipe."
         }
       ]
     },

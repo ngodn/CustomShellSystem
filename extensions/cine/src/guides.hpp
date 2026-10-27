@@ -9,10 +9,12 @@
 
 namespace cine {
 
-enum class Guide { Off, Wide, Tall, Square, Scope };   // 16:9, 9:16, 1:1, 2.39:1
+enum class Guide { Off, Wide, Tall, Square, Scope };   // Legacy ordinals; other catalog entries use further values.
 Guide guide_from(const std::string& id);
 const char* guide_id(Guide);
 double guide_aspect(Guide);
+std::vector<std::string> guide_ids();
+Json guide_options();
 
 struct Overlay {
     bool visible = false;      // anything CINE draws at all
@@ -29,6 +31,7 @@ public:
     void attach(const CssxHudApi* hud, void* context, Typeface* face) { hud_ = hud; context_ = context; face_ = face; }
     void update(const CssxFrame& frame, const Overlay& overlay);
     void hide();
+    void refresh_style();
     void forget();             // the world changed: the host dropped our layers
 private:
     void build();

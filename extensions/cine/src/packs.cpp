@@ -32,7 +32,11 @@ Json row_json(const cssx::Client& host, const Json& table, const std::string& ro
     if (r.is_null()) return nullptr;
     if (!r.is_object() || !r.contains("DevComment") || !r["DevComment"].is_string())
         throw std::runtime_error("row " + row + " is not a CINE row (wrong table type)");
-    try { return Json::parse(r["DevComment"].get<std::string>()); }
+    try {
+        const auto& text = r["DevComment"].get_ref<const std::string&>();
+        if (text.size() > 256 * 1024) throw std::invalid_argument("row too large");
+        return Json::parse(text, [](int depth, Json::parse_event_t, Json&) { if (depth > 16) throw std::invalid_argument("row nested too deeply"); return true; });
+    }
     catch (const std::exception&) { throw std::runtime_error("row " + row + " is not valid JSON"); }
 }
 }
@@ -86,6 +90,10 @@ Pack parse_manifest(const Json& m, const std::string& token) {
         if (std::count(p.presets.begin(), p.presets.end(), id.get<std::string>())) throw std::invalid_argument("manifest lists a preset twice");
         p.presets.push_back(id.get<std::string>());
     }
+    p.default_preset = text(m, "default_preset", 64, true);
+    if (p.default_preset.empty() && m.contains("default_preset")) throw std::invalid_argument("manifest default_preset is empty");
+    if (p.default_preset.empty()) p.default_preset = p.presets.front();
+    if (std::find(p.presets.begin(), p.presets.end(), p.default_preset) == p.presets.end()) throw std::invalid_argument("manifest default_preset is not listed in presets");
     const std::string root = "/Game/CSSX/CINE/" + token + "/";
     if (m.contains("audio")) {
         if (!m["audio"].is_object() || m["audio"].size() > max_audio) throw std::invalid_argument("manifest audio is not an object");
@@ -123,8 +131,14 @@ Pack read_pack(const cssx::Client& host, const std::string& token) {
         if (name == "manifest") continue;
         const bool wanted = name.rfind("preset.", 0) == 0 || name.rfind("recipe.", 0) == 0 || name.rfind("style.", 0) == 0;
         if (!wanted) continue;
-        auto value = row_json(host, table, name);
-        if (!value.is_null()) pack.rows.emplace(name, std::move(value));
+        try {
+            auto value = row_json(host, table, name);
+            if (value.is_null() && !name.starts_with("preset.")) throw std::runtime_error("row is missing");
+            if (!value.is_null()) pack.rows.emplace(name, std::move(value));
+        } catch (const std::exception& e) {
+            if (name.starts_with("preset.")) throw;
+            pack.problems.push_back(name + ": " + e.what());
+        }
     }
     for (const auto& id : pack.presets)
         if (!pack.rows.contains("preset." + id)) throw std::runtime_error("the manifest lists " + id + " but the pack has no such preset");

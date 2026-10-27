@@ -1,0 +1,5 @@
+#pragma once
+namespace cine {
+inline constexpr const char core_default_json[] = R"CINECORE(@CINE_CORE_DEFAULTS@)CINECORE";
+inline constexpr const char core_schema_json[] = R"CINECORE(@CINE_CORE_SCHEMA@)CINECORE";
+}

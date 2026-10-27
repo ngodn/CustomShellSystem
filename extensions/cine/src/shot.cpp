@@ -175,7 +175,7 @@ Pose OrbitCurve::pose(double t, double distance_scale) const {
     return {{d * std::cos(k.azimuth * deg), d * std::sin(k.azimuth * deg), k.height}, {0, 0, k.aim}, k.fov};
 }
 
-WallProfile::WallProfile(double step, std::vector<double> raw, double hold) : step_(step > 0 ? step : 0.25) {
+WallProfile::WallProfile(double step, std::vector<double> raw, double hold) : step_(step > 0 ? step : content().motion.wall_step) {
     const size_t n = raw.size();
     const size_t reach = size_t(std::max(0.0, hold) / step_ + 0.5);
     std::vector<double> held(n, 1.0);
@@ -187,7 +187,7 @@ WallProfile::WallProfile(double step, std::vector<double> raw, double hold) : st
     scale_.assign(n, 1.0);
     for (size_t i = 0; i < n; ++i) {
         double sum = 0; size_t count = 0;
-        for (size_t j = i > 3 ? i - 3 : 0; j <= std::min(n - 1, i + 3); ++j) { sum += held[j]; ++count; }
+        for (size_t j = i > size_t(content().motion.wall_smooth_samples) ? i - size_t(content().motion.wall_smooth_samples) : 0; j <= std::min(n - 1, i + size_t(content().motion.wall_smooth_samples)); ++j) { sum += held[j]; ++count; }
         scale_[i] = std::min(held[i], sum / double(count));
     }
 }
@@ -243,9 +243,9 @@ bool project(Vec3 camera, const ViewBasis& b, const Lens& lens, Vec3 world, doub
 
 ActionView action_view(const ActionFrame& f, Vec3 subject, const Vec3* target) {
     const double punch = std::clamp(f.punch, 0.0, 1.0);
-    const double tighten = 1.0 - 0.28 * punch;
+    const double tighten = 1.0 - content().action.punch_distance * punch;
     ActionView view;
-    view.fov = f.fov * (1.0 - 0.12 * punch);
+    view.fov = f.fov * (1.0 - content().action.punch_fov * punch);
     Vec3 axis;
     double separation = 0;
     if (target) { axis = {target->x - subject.x, target->y - subject.y, 0}; separation = std::hypot(axis.x, axis.y); }
@@ -268,9 +268,9 @@ ActionView action_view(const ActionFrame& f, Vec3 subject, const Vec3* target) {
         const Vec3 forward{axis.x / separation, axis.y / separation, 0};
         const double side = f.azimuth >= 0 ? 1.0 : -1.0;
         const Vec3 right{-forward.y * side, forward.x * side, 0};
-        const double back = f.distance * tighten * 0.55, across = f.distance * 0.22;
+        const double back = f.distance * tighten * content().action.shoulder_back, across = f.distance * content().action.shoulder_across;
         view.camera = {subject.x - forward.x * back + right.x * across, subject.y - forward.y * back + right.y * across, subject.z + f.height};
-        view.aim = {subject.x + axis.x * 0.7, subject.y + axis.y * 0.7, subject.z + (target->z - subject.z) * 0.7 + f.aim};
+        view.aim = {subject.x + axis.x * content().action.shoulder_aim, subject.y + axis.y * content().action.shoulder_aim, subject.z + (target->z - subject.z) * content().action.shoulder_aim + f.aim};
     }
     const Vec3 to{view.aim.x - view.camera.x, view.aim.y - view.camera.y, view.aim.z - view.camera.z};
     view.focus = std::sqrt(to.x * to.x + to.y * to.y + to.z * to.z);

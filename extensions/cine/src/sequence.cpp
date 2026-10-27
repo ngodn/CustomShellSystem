@@ -31,7 +31,7 @@ SeqPose pose(const Json& j, const SeqPose& base, const char* what) {
     return p;
 }
 Ease ease_from(const std::string& name) {
-    if (name.empty() || name == "in_out") return Ease::InOut;
+    if (name == "in_out") return Ease::InOut;
     if (name == "linear") return Ease::Linear;
     if (name == "in") return Ease::In;
     if (name == "out") return Ease::Out;
@@ -57,9 +57,9 @@ Sequence Sequence::parse(const Json& j) {
     Sequence s;
     if (!j.contains("tempo") || !j.at("tempo").is_object()) throw std::invalid_argument("A sequence needs 'tempo' {bpm, offset}");
     const auto& tempo = j.at("tempo");
-    s.tempo.bpm = number(tempo, "bpm", 120, 30, 300);
-    s.tempo.offset = number(tempo, "offset", 0, 0, 60);
-    s.tempo.beats_per_bar = int(number(tempo, "beats_per_bar", 4, 1, 12));
+    s.tempo.bpm = number(tempo, "bpm", content().defaults.bpm, 30, 300);
+    s.tempo.offset = number(tempo, "offset", content().defaults.offset, 0, 60);
+    s.tempo.beats_per_bar = int(number(tempo, "beats_per_bar", content().defaults.beats_per_bar, 1, 12));
     if (!j.contains("end")) throw std::invalid_argument("A sequence needs 'end' (the bar it stops on)");
     const double end_bar = number(j, "end", 1, 1, 2000);
     s.total = s.tempo.seconds(end_bar);
@@ -92,7 +92,7 @@ Sequence Sequence::parse(const Json& j) {
             shot.from = last;
         }
         shot.to = item.contains("to") ? pose(item.at("to"), shot.from, "to") : shot.from;
-        shot.ease = ease_from(text(item, "ease", 16));
+        shot.ease = ease_from(item.contains("ease") ? text(item, "ease", 16) : content().defaults.ease);
         shot.fstop = number(item, "fstop", 0, 0, 32);
         if (item.contains("fixed")) { if (!item.at("fixed").is_boolean()) throw std::invalid_argument("'fixed' must be true or false"); shot.fixed = item.at("fixed").get<bool>(); }
         shot.fit = number(item, "fit", 0, 0, 2000);
@@ -203,10 +203,10 @@ ShotPlan choose_plan(const std::vector<double>& clear_by_turn) {
     // Staying put wins unless another side is clearly freer: a tenth of the way more per step
     // of turning, so the camera keeps the angle the preset asked for when it can.
     for (size_t i = 1; i < clear_by_turn.size() && i < std::size(plan_turns); ++i)
-        if (clear_by_turn[i] > clear_by_turn[best] + 0.10 + 0.03 * double(i)) best = i;
-    if (clear_by_turn[0] >= 0.98) best = 0;
+        if (clear_by_turn[i] > clear_by_turn[best] + content().motion.turn_gain + content().motion.turn_penalty * double(i)) best = i;
+    if (clear_by_turn[0] >= content().motion.clear_threshold) best = 0;
     plan.turn = plan_turns[best];
-    plan.scale = std::clamp(clear_by_turn[best], 0.25, 1.0);
+    plan.scale = std::clamp(clear_by_turn[best], content().motion.plan_min, 1.0);
     return plan;
 }
 

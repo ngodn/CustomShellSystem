@@ -1,0 +1,1716 @@
+{
+  "style.breakdown": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "collection": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "wire": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "clay": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "xray": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "buffer_post": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "clay_ambient": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "depth_gamma": {
+        "type": "number",
+        "min": 0.01,
+        "max": 10
+      },
+      "clay_overlay_push": {
+        "type": "number",
+        "min": 0,
+        "max": 5
+      },
+      "bone_glow": {
+        "type": "number",
+        "min": 0,
+        "max": 20
+      },
+      "wire_glow": {
+        "type": "number",
+        "min": 0,
+        "max": 20
+      },
+      "bone_opacity": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "caption_prefix": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "separator": {
+        "type": "string",
+        "min": 1,
+        "max": 16
+      },
+      "layers": {
+        "type": "array",
+        "min": 17,
+        "max": 17,
+        "items": {
+          "type": "object",
+          "fields": {
+            "id": {
+              "type": "string",
+              "min": 1,
+              "max": 256
+            },
+            "label": {
+              "type": "string",
+              "min": 1,
+              "max": 64
+            },
+            "color": {
+              "type": "array",
+              "min": 3,
+              "max": 3,
+              "items": {
+                "type": "number",
+                "min": 0,
+                "max": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "style.geometry": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "stick_min": {
+        "type": "number",
+        "min": 0.01,
+        "max": 70
+      },
+      "stick_max": {
+        "type": "number",
+        "min": 0.01,
+        "max": 200
+      },
+      "radius_per_length": {
+        "type": "number",
+        "min": 0.001,
+        "max": 1
+      },
+      "radius_min": {
+        "type": "number",
+        "min": 0.01,
+        "max": 10
+      },
+      "radius_max": {
+        "type": "number",
+        "min": 0.01,
+        "max": 10
+      },
+      "joint_radius": {
+        "type": "number",
+        "min": 0.01,
+        "max": 20
+      },
+      "spring_radius": {
+        "type": "number",
+        "min": 0.01,
+        "max": 20
+      },
+      "socket_radius": {
+        "type": "number",
+        "min": 0.01,
+        "max": 20
+      },
+      "physics_line": {
+        "type": "number",
+        "min": 0.1,
+        "max": 10
+      }
+    }
+  },
+  "style.bones": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "spring_groups": {
+        "type": "array",
+        "min": 1,
+        "max": 32,
+        "items": {
+          "type": "object",
+          "fields": {
+            "prefixes": {
+              "type": "array",
+              "min": 1,
+              "max": 64,
+              "items": {
+                "type": "string",
+                "min": 1,
+                "max": 256
+              }
+            },
+            "group": {
+              "type": "string",
+              "min": 1,
+              "max": 256
+            }
+          }
+        }
+      },
+      "virtual_prefix": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "ik_prefix": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "helper_contains": {
+        "type": "array",
+        "min": 1,
+        "max": 64,
+        "items": {
+          "type": "string",
+          "min": 1,
+          "max": 256
+        }
+      },
+      "helper_prefixes": {
+        "type": "array",
+        "min": 1,
+        "max": 64,
+        "items": {
+          "type": "string",
+          "min": 1,
+          "max": 256
+        }
+      }
+    }
+  },
+  "style.annotations": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "wire": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "clay": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "skeleton": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "virtual_bones": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "ik": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "springs": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "sockets": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "physics": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "capsule": {
+        "type": "string",
+        "min": 1,
+        "max": 80
+      },
+      "spring_fallback": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "head": {
+        "type": "array",
+        "min": 1,
+        "max": 64,
+        "items": {
+          "type": "string",
+          "min": 1,
+          "max": 256
+        }
+      },
+      "torso": {
+        "type": "array",
+        "min": 1,
+        "max": 64,
+        "items": {
+          "type": "string",
+          "min": 1,
+          "max": 256
+        }
+      },
+      "physics_bones": {
+        "type": "array",
+        "min": 1,
+        "max": 64,
+        "items": {
+          "type": "string",
+          "min": 1,
+          "max": 256
+        }
+      },
+      "socket_groups": {
+        "type": "array",
+        "min": 1,
+        "max": 4,
+        "items": {
+          "type": "object",
+          "fields": {
+            "contains": {
+              "type": "array",
+              "min": 1,
+              "max": 64,
+              "items": {
+                "type": "string",
+                "min": 1,
+                "max": 256
+              }
+            }
+          }
+        }
+      },
+      "preferred_targets": {
+        "type": "integer",
+        "min": 1,
+        "max": 4
+      },
+      "spread_targets": {
+        "type": "integer",
+        "min": 1,
+        "max": 4
+      }
+    }
+  },
+  "style.callouts": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "font_file": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "font_asset": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "face": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "label_font": {
+        "type": "number",
+        "min": 1,
+        "max": 96
+      },
+      "caption_font": {
+        "type": "number",
+        "min": 1,
+        "max": 96
+      },
+      "name_font": {
+        "type": "number",
+        "min": 1,
+        "max": 96
+      },
+      "sign_font": {
+        "type": "number",
+        "min": 1,
+        "max": 96
+      },
+      "label_spacing": {
+        "type": "integer",
+        "min": 0,
+        "max": 1000
+      },
+      "caption_spacing": {
+        "type": "integer",
+        "min": 0,
+        "max": 1000
+      },
+      "name_spacing": {
+        "type": "integer",
+        "min": 0,
+        "max": 1000
+      },
+      "sign_spacing": {
+        "type": "integer",
+        "min": 0,
+        "max": 1000
+      },
+      "line_height": {
+        "type": "number",
+        "min": 1,
+        "max": 200
+      },
+      "shelf_gap": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "uppercase": {
+        "type": "boolean"
+      },
+      "width_em": {
+        "type": "number",
+        "min": 0.01,
+        "max": 2
+      },
+      "label_padding": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "reference_width": {
+        "type": "number",
+        "min": 100,
+        "max": 10000
+      },
+      "scale_min": {
+        "type": "number",
+        "min": 0.1,
+        "max": 4
+      },
+      "scale_max": {
+        "type": "number",
+        "min": 0.1,
+        "max": 4
+      },
+      "ink": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "faint": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "trace": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "accent": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "caption_background": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "margin": {
+        "type": "number",
+        "min": 0,
+        "max": 0.25
+      },
+      "row_top": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "row_bottom": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "max_row_step": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "max_width": {
+        "type": "number",
+        "min": 0,
+        "max": 0.5
+      },
+      "split_grace": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "accent_left": {
+        "type": "number",
+        "min": -100,
+        "max": 100
+      },
+      "accent_right": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "accent_y": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "accent_width": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "accent_inset": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "shelf_width": {
+        "type": "number",
+        "min": 0.1,
+        "max": 10
+      },
+      "leader_width": {
+        "type": "number",
+        "min": 0.1,
+        "max": 10
+      },
+      "arrow_length": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "arrow_angle": {
+        "type": "number",
+        "min": 0.01,
+        "max": 1.5
+      },
+      "arrow_width": {
+        "type": "number",
+        "min": 0.1,
+        "max": 10
+      },
+      "caption_y": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "caption_height": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "caption_padding": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "caption_accent": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "caption_text_x": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "caption_text_y": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "caption_inset": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "caption_text_height": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "signature_break": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "signature_skip": {
+        "type": "integer",
+        "min": 0,
+        "max": 16
+      },
+      "signature_inset": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "name_height": {
+        "type": "number",
+        "min": 1,
+        "max": 300
+      },
+      "sign_height": {
+        "type": "number",
+        "min": 1,
+        "max": 200
+      },
+      "signature_bottom": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "signature_accent_y": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "signature_accent_width": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "signature_accent_inset": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "signature_lines": {
+        "type": "array",
+        "min": 0,
+        "max": 6,
+        "items": {
+          "type": "string",
+          "min": 1,
+          "max": 120
+        }
+      }
+    }
+  },
+  "style.guides": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "catalog": {
+        "type": "array",
+        "min": 1,
+        "max": 32,
+        "items": {
+          "type": "object",
+          "fields": {
+            "id": {
+              "type": "string",
+              "min": 1,
+              "max": 256
+            },
+            "label": {
+              "type": "string",
+              "min": 1,
+              "max": 256
+            },
+            "width": {
+              "type": "number",
+              "min": 0.01,
+              "max": 100
+            },
+            "height": {
+              "type": "number",
+              "min": 0.01,
+              "max": 100
+            }
+          }
+        }
+      },
+      "border_px": {
+        "type": "number",
+        "min": 0.1,
+        "max": 20
+      },
+      "matte": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "border": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "help_font": {
+        "type": "number",
+        "min": 1,
+        "max": 200
+      },
+      "help_spacing": {
+        "type": "integer",
+        "min": 0,
+        "max": 1000
+      },
+      "help_color": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "help_x": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "help_bottom": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "help_min_width": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "help_height": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "count_font": {
+        "type": "number",
+        "min": 1,
+        "max": 200
+      },
+      "count_spacing": {
+        "type": "integer",
+        "min": 0,
+        "max": 1000
+      },
+      "count_color": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "count_rect": {
+        "type": "array",
+        "min": 4,
+        "max": 4,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 10000
+        }
+      }
+    }
+  },
+  "recipe.reel": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "name": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "description": {
+        "type": "string",
+        "min": 1,
+        "max": 512
+      },
+      "wipe_max_fraction": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "steps": {
+        "type": "array",
+        "min": 1,
+        "max": 96,
+        "items": {
+          "type": "object",
+          "fields": {
+            "at": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            },
+            "layers": {
+              "type": "array",
+              "min": 0,
+              "max": 17,
+              "items": {
+                "type": "string",
+                "min": 1,
+                "max": 256
+              }
+            },
+            "wipe": {
+              "type": "number",
+              "min": 0,
+              "max": 10
+            }
+          }
+        }
+      }
+    }
+  },
+  "recipe.palettes": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "name": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "description": {
+        "type": "string",
+        "min": 1,
+        "max": 512
+      },
+      "exclude": {
+        "type": "array",
+        "min": 0,
+        "max": 64,
+        "items": {
+          "type": "string",
+          "min": 1,
+          "max": 256
+        }
+      },
+      "start": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "span": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "walk_restore_offset": {
+        "type": "number",
+        "min": -20,
+        "max": 20
+      },
+      "restore_fraction": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      }
+    }
+  },
+  "recipe.body": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "head_socket": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "lens_ratio": {
+        "type": "number",
+        "min": 0.01,
+        "max": 10
+      },
+      "envelope": {
+        "type": "array",
+        "min": 1,
+        "max": 64,
+        "items": {
+          "type": "object",
+          "fields": {
+            "bone": {
+              "type": "string",
+              "min": 1,
+              "max": 256
+            },
+            "radius": {
+              "type": "number",
+              "min": 0.1,
+              "max": 100
+            }
+          }
+        }
+      },
+      "targets": {
+        "type": "array",
+        "min": 7,
+        "max": 7,
+        "items": {
+          "type": "object",
+          "fields": {
+            "bones": {
+              "type": "array",
+              "min": 0,
+              "max": 3,
+              "items": {
+                "type": "string",
+                "min": 1,
+                "max": 256
+              }
+            },
+            "weights": {
+              "type": "array",
+              "min": 0,
+              "max": 3,
+              "items": {
+                "type": "number",
+                "min": 0,
+                "max": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "recipe.motion": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "walk_speed": {
+        "type": "number",
+        "min": 1,
+        "max": 1000
+      },
+      "start_speed": {
+        "type": "number",
+        "min": 1,
+        "max": 1000
+      },
+      "yaw_tau": {
+        "type": "number",
+        "min": 0.01,
+        "max": 5
+      },
+      "velocity_tau": {
+        "type": "number",
+        "min": 0.01,
+        "max": 5
+      },
+      "wall_step": {
+        "type": "number",
+        "min": 0.05,
+        "max": 2
+      },
+      "own_reach": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "chest_height": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "wall_margin": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "wall_min": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "plan_margin": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "hit_slack": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "plan_min": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "live_wall_min": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "plan_turns": {
+        "type": "array",
+        "min": 1,
+        "max": 16,
+        "items": {
+          "type": "number",
+          "min": -180,
+          "max": 180
+        }
+      },
+      "turn_gain": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "turn_penalty": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "clear_threshold": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "fast_speed": {
+        "type": "number",
+        "min": 0,
+        "max": 1000
+      },
+      "fast_follow": {
+        "type": "number",
+        "min": 0.01,
+        "max": 5
+      },
+      "slow_follow": {
+        "type": "number",
+        "min": 0.01,
+        "max": 5
+      },
+      "split_tau": {
+        "type": "number",
+        "min": 0.01,
+        "max": 5
+      },
+      "wall_hold": {
+        "type": "number",
+        "min": 0,
+        "max": 5
+      },
+      "wall_smooth_samples": {
+        "type": "integer",
+        "min": 0,
+        "max": 20
+      },
+      "acceleration": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "settle_distance": {
+        "type": "number",
+        "min": 1,
+        "max": 2000
+      },
+      "settle_speed": {
+        "type": "number",
+        "min": 0,
+        "max": 1000
+      },
+      "facing_speed": {
+        "type": "number",
+        "min": 0,
+        "max": 1000
+      },
+      "facing_gain": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "wide_back": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "wide_at": {
+        "type": "number",
+        "min": -20,
+        "max": 20
+      },
+      "wide_blend": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "close_at": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "tail_allowance": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "dolly_until": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "walk_ease": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "arrival_pad": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "key_pad": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "split_min": {
+        "type": "number",
+        "min": 0.05,
+        "max": 0.95
+      },
+      "split_max": {
+        "type": "number",
+        "min": 0.05,
+        "max": 0.95
+      }
+    }
+  },
+  "recipe.transitions": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "curve": {
+        "type": "integer",
+        "min": 0,
+        "max": 5
+      },
+      "exponent": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "lock_outgoing": {
+        "type": "boolean"
+      },
+      "depth_factor": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "depth_min": {
+        "type": "number",
+        "min": 150,
+        "max": 20000
+      },
+      "focus_offset": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "deep_fstop": {
+        "type": "number",
+        "min": 0.7,
+        "max": 32
+      },
+      "deep_focus": {
+        "type": "number",
+        "min": 10,
+        "max": 20000
+      },
+      "cover": {
+        "type": "array",
+        "min": 1,
+        "max": 64,
+        "items": {
+          "type": "string",
+          "min": 1,
+          "max": 256
+        }
+      },
+      "wipe_beats": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "hold_beats": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "min_hold": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      }
+    }
+  },
+  "recipe.picture": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "sharp": {
+        "type": "array",
+        "min": 7,
+        "max": 7,
+        "items": {
+          "type": "number",
+          "min": -1000000000.0,
+          "max": 200
+        }
+      },
+      "full": {
+        "type": "array",
+        "min": 7,
+        "max": 7,
+        "items": {
+          "type": "number",
+          "min": -1000000000.0,
+          "max": 200
+        }
+      }
+    }
+  },
+  "recipe.defaults": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "azimuth": {
+        "type": "number",
+        "min": -720,
+        "max": 720
+      },
+      "distance": {
+        "type": "number",
+        "min": 30,
+        "max": 3000
+      },
+      "height": {
+        "type": "number",
+        "min": -500,
+        "max": 500
+      },
+      "aim": {
+        "type": "number",
+        "min": -300,
+        "max": 300
+      },
+      "fov": {
+        "type": "number",
+        "min": 5,
+        "max": 120
+      },
+      "roll": {
+        "type": "number",
+        "min": -90,
+        "max": 90
+      },
+      "intro": {
+        "type": "number",
+        "min": 0.5,
+        "max": 20
+      },
+      "duration": {
+        "type": "number",
+        "min": 1,
+        "max": 120
+      },
+      "tail": {
+        "type": "number",
+        "min": 3,
+        "max": 60
+      },
+      "max_seconds": {
+        "type": "number",
+        "min": 5,
+        "max": 300
+      },
+      "lead": {
+        "type": "number",
+        "min": 0.2,
+        "max": 2
+      },
+      "zoom": {
+        "type": "number",
+        "min": 0.3,
+        "max": 3
+      },
+      "fov_scale": {
+        "type": "number",
+        "min": 0.3,
+        "max": 3
+      },
+      "hold": {
+        "type": "number",
+        "min": 0.5,
+        "max": 30
+      },
+      "wipe": {
+        "type": "number",
+        "min": 0,
+        "max": 10
+      },
+      "share": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "bpm": {
+        "type": "number",
+        "min": 30,
+        "max": 300
+      },
+      "offset": {
+        "type": "number",
+        "min": 0,
+        "max": 60
+      },
+      "beats_per_bar": {
+        "type": "integer",
+        "min": 1,
+        "max": 12
+      },
+      "walk_reference": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "pose_reference": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "ease": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      }
+    }
+  },
+  "style.materials": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "root": {
+        "type": "string",
+        "min": 1,
+        "max": 256
+      },
+      "wipe_soft": {
+        "type": "number",
+        "min": 0.0001,
+        "max": 0.1
+      },
+      "wipe_line": {
+        "type": "number",
+        "min": 0.0001,
+        "max": 0.1
+      },
+      "endpoint_fade": {
+        "type": "number",
+        "min": 0.0001,
+        "max": 0.1
+      },
+      "wire_color": {
+        "type": "array",
+        "min": 3,
+        "max": 3,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "wire_glow": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "wire_push": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "clay_color": {
+        "type": "array",
+        "min": 3,
+        "max": 3,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "clay_ambient": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "clay_roughness": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "clay_specular": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "clay_push": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "xray_color": {
+        "type": "array",
+        "min": 3,
+        "max": 3,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "fresnel": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "rim": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "bone_glow": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "opacity": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "depth_range": {
+        "type": "number",
+        "min": 150,
+        "max": 20000
+      },
+      "lighting_scale": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "lighting_floor": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "gain": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "gamma": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      },
+      "line_color": {
+        "type": "array",
+        "min": 3,
+        "max": 3,
+        "items": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "line_glow": {
+        "type": "number",
+        "min": 0,
+        "max": 10000
+      }
+    }
+  },
+  "recipe.action": {
+    "type": "object",
+    "fields": {
+      "schema": {
+        "type": "integer",
+        "min": 1,
+        "max": 1
+      },
+      "framing": {
+        "type": "string",
+        "min": 1,
+        "max": 16
+      },
+      "azimuth": {
+        "type": "number",
+        "min": -360,
+        "max": 360
+      },
+      "orbit_speed": {
+        "type": "number",
+        "min": -90,
+        "max": 90
+      },
+      "distance": {
+        "type": "number",
+        "min": 80,
+        "max": 3000
+      },
+      "distance_max": {
+        "type": "number",
+        "min": 80,
+        "max": 5000
+      },
+      "margin": {
+        "type": "number",
+        "min": 0,
+        "max": 1000
+      },
+      "height": {
+        "type": "number",
+        "min": -300,
+        "max": 800
+      },
+      "aim": {
+        "type": "number",
+        "min": -300,
+        "max": 300
+      },
+      "fov": {
+        "type": "number",
+        "min": 5,
+        "max": 120
+      },
+      "smooth": {
+        "type": "number",
+        "min": 0,
+        "max": 3
+      },
+      "shake": {
+        "type": "number",
+        "min": -1,
+        "max": 2
+      },
+      "fstop": {
+        "type": "number",
+        "min": 0,
+        "max": 32
+      },
+      "slowmo": {
+        "type": "number",
+        "min": 0.05,
+        "max": 1
+      },
+      "slowmo_hold": {
+        "type": "number",
+        "min": 0.1,
+        "max": 5
+      },
+      "tail": {
+        "type": "number",
+        "min": 0,
+        "max": 30
+      },
+      "respect_game_cameras": {
+        "type": "boolean"
+      },
+      "cooldown": {
+        "type": "number",
+        "min": 0.2,
+        "max": 60
+      },
+      "punch_seconds": {
+        "type": "number",
+        "min": 0,
+        "max": 10
+      },
+      "punch_distance": {
+        "type": "number",
+        "min": 0,
+        "max": 0.9
+      },
+      "punch_fov": {
+        "type": "number",
+        "min": 0,
+        "max": 0.9
+      },
+      "punch_follow": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "shoulder_back": {
+        "type": "number",
+        "min": 0,
+        "max": 2
+      },
+      "shoulder_across": {
+        "type": "number",
+        "min": 0,
+        "max": 2
+      },
+      "shoulder_aim": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "return_blend": {
+        "type": "number",
+        "min": 0,
+        "max": 10
+      },
+      "lead_min": {
+        "type": "number",
+        "min": 0.01,
+        "max": 3
+      },
+      "lead_pad": {
+        "type": "number",
+        "min": 0,
+        "max": 3
+      },
+      "view_focus": {
+        "type": "number",
+        "min": 10,
+        "max": 20000
+      }
+    }
+  }
+}

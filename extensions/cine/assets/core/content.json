@@ -1,0 +1,881 @@
+{
+  "style.breakdown": {
+    "schema": 1,
+    "collection": "/Game/CSSX/CINE/MPC_Cine.MPC_Cine",
+    "wire": "/Game/CSSX/CINE/Materials/M_Cine_Wire.M_Cine_Wire",
+    "clay": "/Game/CSSX/CINE/Materials/M_Cine_Clay.M_Cine_Clay",
+    "xray": "/Game/CSSX/CINE/Materials/M_Cine_XRay.M_Cine_XRay",
+    "buffer_post": "/Game/CSSX/CINE/Materials/PP_Cine_Buffer_Post.PP_Cine_Buffer_Post",
+    "clay_ambient": 0.5,
+    "depth_gamma": 2.2,
+    "clay_overlay_push": 0.12,
+    "bone_glow": 1.8,
+    "wire_glow": 3.0,
+    "bone_opacity": 0.9,
+    "caption_prefix": "Breakdown  //  ",
+    "separator": " + ",
+    "layers": [
+      {
+        "id": "clay",
+        "label": "Clay",
+        "color": [
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "id": "wireframe",
+        "label": "Wireframe",
+        "color": [
+          0.05,
+          0.85,
+          1
+        ]
+      },
+      {
+        "id": "skeleton",
+        "label": "Skeleton",
+        "color": [
+          1,
+          0.86,
+          0.25
+        ]
+      },
+      {
+        "id": "virtual_bones",
+        "label": "Virtual bones",
+        "color": [
+          1,
+          0.25,
+          0.9
+        ]
+      },
+      {
+        "id": "ik_bones",
+        "label": "IK bones",
+        "color": [
+          0.25,
+          1,
+          0.4
+        ]
+      },
+      {
+        "id": "springs",
+        "label": "Spring bones",
+        "color": [
+          1,
+          0.45,
+          0.1
+        ]
+      },
+      {
+        "id": "sockets",
+        "label": "Sockets",
+        "color": [
+          0.3,
+          0.75,
+          1
+        ]
+      },
+      {
+        "id": "collision",
+        "label": "Physics bodies",
+        "color": [
+          0,
+          1,
+          1
+        ]
+      },
+      {
+        "id": "capsule",
+        "label": "Movement capsule",
+        "color": [
+          1,
+          0.55,
+          0.65
+        ]
+      },
+      {
+        "id": "no_body",
+        "label": "Body hidden",
+        "color": [
+          0.2,
+          0.2,
+          0.2
+        ]
+      },
+      {
+        "id": "base_color",
+        "label": "Base colour",
+        "color": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "normals",
+        "label": "Normals",
+        "color": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "roughness",
+        "label": "Roughness",
+        "color": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "metallic",
+        "label": "Metallic",
+        "color": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "depth",
+        "label": "Depth",
+        "color": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "occlusion",
+        "label": "Ambient occlusion",
+        "color": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "lighting",
+        "label": "Lighting",
+        "color": [
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "style.geometry": {
+    "schema": 1,
+    "stick_min": 0.5,
+    "stick_max": 70.0,
+    "radius_per_length": 0.035,
+    "radius_min": 0.25,
+    "radius_max": 0.7,
+    "joint_radius": 2.0,
+    "spring_radius": 2.6,
+    "socket_radius": 1.2,
+    "physics_line": 1.2
+  },
+  "style.bones": {
+    "schema": 1,
+    "spring_groups": [
+      {
+        "prefixes": [
+          "brust",
+          "breast"
+        ],
+        "group": "chest"
+      },
+      {
+        "prefixes": [
+          "butt",
+          "glute"
+        ],
+        "group": "glutes"
+      },
+      {
+        "prefixes": [
+          "belly"
+        ],
+        "group": "belly"
+      }
+    ],
+    "virtual_prefix": "vb ",
+    "ik_prefix": "ik_",
+    "helper_contains": [
+      "socket",
+      "prop_",
+      "weapon",
+      "camera",
+      "warp_",
+      "center_of_mass",
+      "interaction",
+      "_twist",
+      "corrective",
+      "stowed",
+      "inhand"
+    ],
+    "helper_prefixes": [
+      "css_",
+      "genessacloth",
+      "bag",
+      "wp_",
+      "unreal",
+      "heal_",
+      "punch",
+      "tiel_",
+      "wraith_",
+      "eredrim"
+    ]
+  },
+  "style.annotations": {
+    "schema": 1,
+    "wire": "Mesh wireframe",
+    "clay": "Clay shading",
+    "skeleton": "Skeleton, {count} bones",
+    "virtual_bones": "Virtual bones, {count}",
+    "ik": "IK bones, {count}",
+    "springs": "Spring bones: {group}",
+    "sockets": "Sockets, {count}",
+    "physics": "Physics bodies, {count}",
+    "capsule": "Movement capsule",
+    "spring_fallback": "outfit",
+    "head": [
+      "head"
+    ],
+    "torso": [
+      "spine_03",
+      "spine_02",
+      "pelvis"
+    ],
+    "physics_bones": [
+      "thigh_r",
+      "thigh_l",
+      "pelvis"
+    ],
+    "socket_groups": [
+      {
+        "contains": [
+          "hand_r",
+          "weapon_r",
+          "r_hand",
+          "righthand"
+        ]
+      },
+      {
+        "contains": [
+          "hand_l",
+          "weapon_l",
+          "l_hand",
+          "lefthand"
+        ]
+      },
+      {
+        "contains": [
+          "head",
+          "hat",
+          "hair"
+        ]
+      },
+      {
+        "contains": [
+          "spine",
+          "back",
+          "pelvis",
+          "hip"
+        ]
+      }
+    ],
+    "preferred_targets": 2,
+    "spread_targets": 4
+  },
+  "style.callouts": {
+    "schema": 1,
+    "font_file": "fonts/Rajdhani-SemiBold.ttf",
+    "font_asset": "/Game/CSSX/CINE/Core/Fonts/FF_CINE.FF_CINE",
+    "face": "Regular",
+    "label_font": 18.0,
+    "caption_font": 20.0,
+    "name_font": 30.0,
+    "sign_font": 14.0,
+    "label_spacing": 110,
+    "caption_spacing": 150,
+    "name_spacing": 220,
+    "sign_spacing": 70,
+    "line_height": 26.0,
+    "shelf_gap": 3.0,
+    "uppercase": true,
+    "width_em": 0.52,
+    "label_padding": 10.0,
+    "reference_width": 1500.0,
+    "scale_min": 0.62,
+    "scale_max": 1.0,
+    "ink": [
+      0.9,
+      0.98,
+      1,
+      0.97
+    ],
+    "faint": [
+      0.78,
+      0.9,
+      0.96,
+      0.8
+    ],
+    "trace": [
+      0.8,
+      0.95,
+      1,
+      0.85
+    ],
+    "accent": [
+      0.2,
+      0.88,
+      1,
+      0.95
+    ],
+    "caption_background": [
+      0.01,
+      0.03,
+      0.05,
+      0.62
+    ],
+    "margin": 0.045,
+    "row_top": 0.24,
+    "row_bottom": 0.7,
+    "max_row_step": 3.2,
+    "max_width": 0.44,
+    "split_grace": 0.03,
+    "accent_left": -9.0,
+    "accent_right": 6.0,
+    "accent_y": 3.0,
+    "accent_width": 3.0,
+    "accent_inset": 2.0,
+    "shelf_width": 1.5,
+    "leader_width": 1.5,
+    "arrow_length": 13.0,
+    "arrow_angle": 0.42,
+    "arrow_width": 1.8,
+    "caption_y": 0.07,
+    "caption_height": 42.0,
+    "caption_padding": 34.0,
+    "caption_accent": 4.0,
+    "caption_text_x": 16.0,
+    "caption_text_y": 6.0,
+    "caption_inset": 20.0,
+    "caption_text_height": 32.0,
+    "signature_break": " + ",
+    "signature_skip": 1,
+    "signature_inset": 14.0,
+    "name_height": 48.0,
+    "sign_height": 25.0,
+    "signature_bottom": 0.945,
+    "signature_accent_y": 3.0,
+    "signature_accent_width": 4.0,
+    "signature_accent_inset": 4.0,
+    "signature_lines": []
+  },
+  "style.guides": {
+    "schema": 1,
+    "catalog": [
+      {
+        "id": "16:9",
+        "label": "16:9",
+        "width": 16.0,
+        "height": 9.0
+      },
+      {
+        "id": "9:16",
+        "label": "9:16",
+        "width": 9.0,
+        "height": 16.0
+      },
+      {
+        "id": "1:1",
+        "label": "1:1",
+        "width": 1.0,
+        "height": 1.0
+      },
+      {
+        "id": "2.39:1",
+        "label": "2.39:1",
+        "width": 2.39,
+        "height": 1.0
+      }
+    ],
+    "border_px": 2.0,
+    "matte": [
+      0,
+      0,
+      0,
+      0.62
+    ],
+    "border": [
+      1,
+      1,
+      1,
+      0.55
+    ],
+    "help_font": 16.0,
+    "help_spacing": 90,
+    "help_color": [
+      0.9,
+      0.98,
+      1,
+      0.9
+    ],
+    "help_x": 24.0,
+    "help_bottom": 44.0,
+    "help_min_width": 200.0,
+    "help_height": 30.0,
+    "count_font": 24.0,
+    "count_spacing": 120,
+    "count_color": [
+      0.9,
+      0.98,
+      1,
+      0.8
+    ],
+    "count_rect": [
+      24.0,
+      20.0,
+      240.0,
+      36.0
+    ]
+  },
+  "recipe.reel": {
+    "schema": 1,
+    "name": "Built-in reel",
+    "description": "Final image, clay, wireframe, skeleton, bones, collision, frame passes, final image",
+    "wipe_max_fraction": 0.06,
+    "steps": [
+      {
+        "at": 0.07,
+        "layers": [
+          "clay"
+        ],
+        "wipe": 1.2
+      },
+      {
+        "at": 0.17,
+        "layers": [
+          "clay",
+          "wireframe"
+        ],
+        "wipe": 1.2
+      },
+      {
+        "at": 0.29,
+        "layers": [
+          "clay",
+          "skeleton"
+        ],
+        "wipe": 1.2
+      },
+      {
+        "at": 0.4,
+        "layers": [
+          "clay",
+          "skeleton",
+          "virtual_bones",
+          "ik_bones"
+        ],
+        "wipe": 0.9
+      },
+      {
+        "at": 0.5,
+        "layers": [
+          "clay",
+          "skeleton",
+          "springs"
+        ],
+        "wipe": 0.9
+      },
+      {
+        "at": 0.6,
+        "layers": [
+          "collision",
+          "capsule"
+        ],
+        "wipe": 0.8
+      },
+      {
+        "at": 0.7,
+        "layers": [
+          "base_color"
+        ],
+        "wipe": 1.2
+      },
+      {
+        "at": 0.78,
+        "layers": [
+          "normals"
+        ],
+        "wipe": 1.0
+      },
+      {
+        "at": 0.85,
+        "layers": [
+          "depth"
+        ],
+        "wipe": 1.0
+      },
+      {
+        "at": 0.92,
+        "layers": [],
+        "wipe": 1.4
+      }
+    ]
+  },
+  "recipe.palettes": {
+    "schema": 1,
+    "name": "Cycle palettes",
+    "description": "Cycles every palette, then your own look",
+    "exclude": [
+      "original"
+    ],
+    "start": 0.08,
+    "span": 0.8,
+    "walk_restore_offset": -2.0,
+    "restore_fraction": 0.92
+  },
+  "recipe.body": {
+    "schema": 1,
+    "head_socket": "head",
+    "lens_ratio": 0.5625,
+    "envelope": [
+      {
+        "bone": "Head",
+        "radius": 11
+      },
+      {
+        "bone": "neck_01",
+        "radius": 7
+      },
+      {
+        "bone": "spine_04",
+        "radius": 16
+      },
+      {
+        "bone": "spine_02",
+        "radius": 14
+      },
+      {
+        "bone": "Pelvis",
+        "radius": 17
+      },
+      {
+        "bone": "upperarm_l",
+        "radius": 6
+      },
+      {
+        "bone": "upperarm_r",
+        "radius": 6
+      },
+      {
+        "bone": "lowerarm_l",
+        "radius": 5
+      },
+      {
+        "bone": "lowerarm_r",
+        "radius": 5
+      },
+      {
+        "bone": "Hand_L",
+        "radius": 6
+      },
+      {
+        "bone": "Hand_R",
+        "radius": 6
+      },
+      {
+        "bone": "thigh_l",
+        "radius": 9
+      },
+      {
+        "bone": "thigh_r",
+        "radius": 9
+      },
+      {
+        "bone": "calf_l",
+        "radius": 7
+      },
+      {
+        "bone": "calf_r",
+        "radius": 7
+      },
+      {
+        "bone": "Foot_L",
+        "radius": 7
+      },
+      {
+        "bone": "Foot_R",
+        "radius": 7
+      },
+      {
+        "bone": "CSS_Hair_Ponytail_04",
+        "radius": 6
+      },
+      {
+        "bone": "CSS_Hair_Ponytail_08",
+        "radius": 6
+      }
+    ],
+    "targets": [
+      {
+        "bones": [],
+        "weights": []
+      },
+      {
+        "bones": [
+          "Head"
+        ],
+        "weights": [
+          1.0
+        ]
+      },
+      {
+        "bones": [
+          "neck_01"
+        ],
+        "weights": [
+          1.0
+        ]
+      },
+      {
+        "bones": [
+          "spine_04"
+        ],
+        "weights": [
+          1.0
+        ]
+      },
+      {
+        "bones": [
+          "Pelvis"
+        ],
+        "weights": [
+          1.0
+        ]
+      },
+      {
+        "bones": [
+          "calf_l",
+          "calf_r"
+        ],
+        "weights": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "bones": [
+          "Head",
+          "Foot_L",
+          "Foot_R"
+        ],
+        "weights": [
+          0.5,
+          0.25,
+          0.25
+        ]
+      }
+    ]
+  },
+  "recipe.motion": {
+    "schema": 1,
+    "walk_speed": 184.0,
+    "start_speed": 70.0,
+    "yaw_tau": 0.9,
+    "velocity_tau": 0.8,
+    "wall_step": 0.25,
+    "own_reach": 75.0,
+    "chest_height": 40.0,
+    "wall_margin": 50.0,
+    "wall_min": 0.4,
+    "plan_margin": 25.0,
+    "hit_slack": 5.0,
+    "plan_min": 0.25,
+    "live_wall_min": 0.35,
+    "plan_turns": [
+      0.0,
+      35.0,
+      -35.0,
+      70.0,
+      -70.0,
+      120.0,
+      -120.0,
+      180.0
+    ],
+    "turn_gain": 0.1,
+    "turn_penalty": 0.03,
+    "clear_threshold": 0.98,
+    "fast_speed": 250.0,
+    "fast_follow": 0.06,
+    "slow_follow": 0.3,
+    "split_tau": 0.25,
+    "wall_hold": 1.0,
+    "wall_smooth_samples": 3,
+    "acceleration": 2.5,
+    "settle_distance": 220.0,
+    "settle_speed": 110.0,
+    "facing_speed": 60.0,
+    "facing_gain": 3.0,
+    "wide_back": 90.0,
+    "wide_at": -1.2,
+    "wide_blend": 3.5,
+    "close_at": 2.8,
+    "tail_allowance": 0.6,
+    "dolly_until": 4.0,
+    "walk_ease": 0.8,
+    "arrival_pad": 0.6,
+    "key_pad": 0.2,
+    "split_min": 0.08,
+    "split_max": 0.92
+  },
+  "recipe.transitions": {
+    "schema": 1,
+    "curve": 4,
+    "exponent": 2.0,
+    "lock_outgoing": false,
+    "depth_factor": 6.0,
+    "depth_min": 2500.0,
+    "focus_offset": 6.0,
+    "deep_fstop": 32.0,
+    "deep_focus": 1000.0,
+    "cover": [
+      "clay",
+      "skeleton",
+      "springs"
+    ],
+    "wipe_beats": 0.25,
+    "hold_beats": 1.0,
+    "min_hold": 0.45
+  },
+  "recipe.picture": {
+    "schema": 1,
+    "sharp": [
+      16.0,
+      8.0,
+      16.0,
+      8.0,
+      12.0,
+      12.0,
+      -1000000000.0
+    ],
+    "full": [
+      16.0,
+      8.0,
+      16.0,
+      8.0,
+      12.0,
+      12.0,
+      100.0
+    ]
+  },
+  "recipe.defaults": {
+    "schema": 1,
+    "azimuth": 0.0,
+    "distance": 300.0,
+    "height": 0.0,
+    "aim": 0.0,
+    "fov": 40.0,
+    "roll": 0.0,
+    "intro": 4.5,
+    "duration": 5.0,
+    "tail": 13.0,
+    "max_seconds": 49.0,
+    "lead": 0.8,
+    "zoom": 1.0,
+    "fov_scale": 1.0,
+    "hold": 1.5,
+    "wipe": 1.2,
+    "share": 0.5,
+    "bpm": 120.0,
+    "offset": 0.0,
+    "beats_per_bar": 4,
+    "walk_reference": "capsule",
+    "pose_reference": "head",
+    "ease": "in_out"
+  },
+  "style.materials": {
+    "schema": 1,
+    "root": "/Game/CSSX/CINE",
+    "wipe_soft": 0.004,
+    "wipe_line": 0.0015,
+    "endpoint_fade": 0.001,
+    "wire_color": [
+      0.05,
+      0.9,
+      1.0
+    ],
+    "wire_glow": 1.0,
+    "wire_push": 0.06,
+    "clay_color": [
+      0.42,
+      0.42,
+      0.42
+    ],
+    "clay_ambient": 0.0,
+    "clay_roughness": 0.65,
+    "clay_specular": 0.35,
+    "clay_push": 0.02,
+    "xray_color": [
+      1.0,
+      0.85,
+      0.1
+    ],
+    "fresnel": 1.5,
+    "rim": 0.28,
+    "bone_glow": 1.0,
+    "opacity": 0.85,
+    "depth_range": 3000.0,
+    "lighting_scale": 0.18,
+    "lighting_floor": 0.04,
+    "gain": 1.0,
+    "gamma": 1.0,
+    "line_color": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "line_glow": 1.0
+  },
+  "recipe.action": {
+    "schema": 1,
+    "framing": "duel",
+    "azimuth": 70.0,
+    "orbit_speed": 6.0,
+    "distance": 420.0,
+    "distance_max": 1100.0,
+    "margin": 150.0,
+    "height": 35.0,
+    "aim": 10.0,
+    "fov": 38.0,
+    "smooth": 0.45,
+    "shake": 0.5,
+    "fstop": 0.0,
+    "slowmo": 0.35,
+    "slowmo_hold": 0.7,
+    "tail": 3.0,
+    "respect_game_cameras": true,
+    "cooldown": 2.0,
+    "punch_seconds": 1.1,
+    "punch_distance": 0.28,
+    "punch_fov": 0.12,
+    "punch_follow": 0.35,
+    "shoulder_back": 0.55,
+    "shoulder_across": 0.22,
+    "shoulder_aim": 0.7,
+    "return_blend": 0.35,
+    "lead_min": 0.25,
+    "lead_pad": 0.15,
+    "view_focus": 400.0
+  }
+}

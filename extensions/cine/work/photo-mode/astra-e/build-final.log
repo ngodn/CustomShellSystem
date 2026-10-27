@@ -1,0 +1,13 @@
+[0/2] Re-checking globbed directories...
+[1/13] Building CXX object CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/content.cpp.o
+[2/13] Building CXX object CMakeFiles/cssx_cine_content_tests.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/tests/content_tests.cpp.o
+[3/13] Building CXX object CMakeFiles/cssx_cine_logic.dir/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/src/cine.cpp.o
+[4/13] Linking CXX static library libcssx_cine_logic.a
+[5/13] Linking CXX executable cssx_cine_pack_tests
+[6/13] Linking CXX executable cssx_cine_expression_tests
+[7/13] Linking CXX executable cssx_cine_tests
+[8/13] Linking CXX executable cssx_cine_performance_tests
+[9/13] Linking CXX executable cssx_cine_director_tests
+[10/13] Linking CXX shared library cine.so
+[11/13] Linking CXX executable cssx_cine_render_tests
+[12/13] Linking CXX executable cssx_cine_content_tests

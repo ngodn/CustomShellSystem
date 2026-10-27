@@ -8,34 +8,16 @@
 namespace cine {
 namespace fs = std::filesystem;
 namespace {
-constexpr double walk_cm_s = 184.0;        // the game's force-walk speed
-constexpr double start_cm_s = 70.0;        // she eases up from this instead of snapping
-constexpr double yaw_tau = 0.9, vel_tau = 0.8;
-constexpr double wall_step = 0.25;         // seconds between wall traces
 constexpr size_t traces_per_tick = 20;     // preparing never hitches
 constexpr size_t max_samples = 12000;      // 20 minutes at 10 Hz
 constexpr double max_route_points = 600;
 // Keyboard only: the D-pad uses items in Mortal Shell II, so it would drink a flask mid-take.
 const std::vector<std::string> hotkeys{"F7", "F8", "F9", "F10"};
 enum Hotkey { CaptureKey, TakeKey, CancelKey, GuideKey };
-const std::vector<std::string> guide_ids{"off", "16:9", "9:16", "1:1", "2.39:1"};
 const char* help_line = "CINE   F8 take   F9 cancel / exit   F10 frame guide   F7 use this view as final shot";
 const std::vector<std::string> scene_ids{"off", "enemies", "everyone"};
 const std::vector<std::string> picture_ids{"game", "sharp", "full"};
 constexpr double route_reach_cm = 3000;   // a saved route farther than this from her is somewhere else
-constexpr double own_reach = 75;   // cm from the point the camera aims at: nearer hits are the character's own props
-// Her body as a handful of balls: a bone and about how far her flesh reaches from it, in cm.
-// Projected, they give the part of her that is in the picture and how wide it is there.
-namespace {
-struct BodyBall { const char* bone; double radius; };
-constexpr BodyBall body_shape[] = {
-    {"Head", 11}, {"neck_01", 7}, {"spine_04", 16}, {"spine_02", 14}, {"Pelvis", 17},
-    {"upperarm_l", 6}, {"upperarm_r", 6}, {"lowerarm_l", 5}, {"lowerarm_r", 5}, {"Hand_L", 6}, {"Hand_R", 6},
-    {"thigh_l", 9}, {"thigh_r", 9}, {"calf_l", 7}, {"calf_r", 7}, {"Foot_L", 7}, {"Foot_R", 7},
-    // Her ponytail swings well clear of her body: it is part of what is seen of her.
-    {"CSS_Hair_Ponytail_04", 6}, {"CSS_Hair_Ponytail_08", 6}};
-}
-
 const std::vector<std::string> breakdown_ids{"off", "preset", "reel"};
 constexpr double build_timeout = 30.0;     // seconds a breakdown may take to build before the take rolls without the rest
 bool is_handle(const Json& j) { return j.is_object() && j.contains("$object"); }
@@ -47,6 +29,8 @@ double clampd(double v, double lo, double hi) { return std::isfinite(v) ? std::c
 }
 
 Extension::Extension(const CssxHost* host) : host_(host), rig_(host_), scene_(host_), breakdown_(host_), breakdown_opponent_(host_) {
+    reset_content();
+    core_content_ = content();
     // Passive start (ABI contract): read files and state, change nothing in the game.
     typeface_.attach(&host_, host_.hud(), host_.context());
     guides_.attach(host_.hud(), host_.context(), &typeface_);
@@ -57,8 +41,35 @@ Extension::Extension(const CssxHost* host) : host_(host), rig_(host_), scene_(ho
 
 // ---------------------------------------------------------------- presets and state
 
+void Extension::load_core() {
+    if (!frame_.ready || !frame_.controller) return;
+    if (!core_loader_.advance(host_)) return;
+    if (!core_loader_.problem().empty()) host_.log("CINE core data: using built-in defaults. " + core_loader_.problem(), "warning");
+    core_content_ = content();
+    if (settings_.guide != "off" && guide_from(settings_.guide) == Guide::Off) settings_.guide = "off";
+    load_presets();
+    typeface_.refresh(); guides_.refresh_style(); callouts_.refresh_style();
+    host_.invalidate();
+}
+
+void Extension::take_content(const CoreContent& value) {
+    signature_before_ = signature_;
+    install_content(value);
+    load_signature();
+    typeface_.refresh(); guides_.refresh_style(); callouts_.refresh_style();
+    host_.invalidate();
+}
+
+void Extension::restore_content() {
+    install_content(core_content_);
+    if (settings_.guide != "off" && guide_from(settings_.guide) == Guide::Off) settings_.guide = "off";
+    signature_ = std::move(signature_before_);
+    typeface_.refresh(); guides_.refresh_style(); callouts_.refresh_style();
+    host_.invalidate();
+}
+
 void Extension::load_presets() {
-    presets_.clear(); preset_problems_.clear(); packs_.clear(); audio_ids_.clear();
+    presets_.clear(); preset_order_.clear(); preset_problems_.clear(); packs_.clear(); audio_ids_.clear();
     // Packs are read from tick, one per tick, once the game is up (creation stays passive).
     pack_queue_.clear(); packs_loading_ = true;
     try {
@@ -116,11 +127,17 @@ void Extension::load_next_pack() {
         }
         Pack pack = read_pack(host_, token);
         for (const auto& [id, audio] : pack.audio) audio_ids_.emplace(id, audio.asset);   // first pack wins a shared id
+        auto resolved = resolve_content(core_loader_.rows(), pack.rows);
+        for (auto& problem : resolved.problems) pack.problems.push_back(std::move(problem));
+        for (const auto& problem : pack.problems) host_.log("CINE pack " + token + ": core style used for " + problem, "warning");
+        pack.style = std::move(resolved.value);
+        // Parsing is pure and synchronous: pack defaults apply even to omitted preset fields.
+        install_content(*pack.style);
         for (const auto& id : pack.presets) {
             try {
                 auto preset = Preset::parse(pack.rows.at("preset." + id));
                 if (preset.id != id) throw std::invalid_argument("row preset." + id + " holds preset " + preset.id);
-                preset.pack = pack.name;
+                preset.pack = pack.pack;
                 if (!preset.audio.empty() && !preset.audio_is_file()) {
                     const auto a = pack.audio.find(preset.audio);
                     if (a == pack.audio.end()) throw std::invalid_argument("plays " + preset.audio + ", which the pack does not carry");
@@ -129,9 +146,10 @@ void Extension::load_next_pack() {
                 add_preset(std::move(preset));
             } catch (const std::exception& e) { preset_problems_.push_back(pack.name + " / " + id + ": " + e.what()); }
         }
-        pack.rows.clear();   // presets are parsed; recipes and styles are read when used
+        install_content(core_content_);
+        pack.rows.clear();   // parsed presets and typed styles own everything needed for takes
         packs_.push_back(std::move(pack));
-    } catch (const std::exception& e) { preset_problems_.push_back("CINE_" + token + "_eins0fx_P: " + e.what()); }
+    } catch (const std::exception& e) { install_content(core_content_); preset_problems_.push_back("CINE_" + token + "_eins0fx_P: " + e.what()); }
     if (pack_queue_.empty()) { packs_loading_ = false; finish_presets(); }
 }
 
@@ -144,9 +162,11 @@ void Extension::finish_presets() {
             preset.audio_asset = a == audio_ids_.end() ? std::string() : a->second;
         }
     if (packs_loading_) return;
-    if (!presets_.empty() && !presets_.contains(settings_.preset)) {
-        const auto saved = saved_preset_;
-        settings_.preset = presets_.contains(saved) ? saved : preset_order_.empty() ? presets_.begin()->first : preset_order_.front();
+    if (!saved_preset_.empty()) settings_.preset = saved_preset_;
+    else {
+        settings_.preset.clear();
+        for (const auto& pack : packs_) if (presets_.contains(pack.default_preset)) { settings_.preset = pack.default_preset; break; }
+        if (settings_.preset.empty() && !presets_.empty()) settings_.preset = preset_order_.empty() ? presets_.begin()->first : preset_order_.front();
     }
     for (const auto& p : preset_problems_) host_.log("Preset skipped: " + p, "warning");
     host_.log("CINE presets: " + std::to_string(presets_.size()) + " from " + std::to_string(packs_.size()) + " pack(s) and the presets folder");
@@ -160,13 +180,13 @@ void Extension::load_state() {
     if (s.is_object()) {
         if (s.contains("preset") && s["preset"].is_string()) {
             saved_preset_ = s["preset"].get<std::string>();   // packs load later; finish_presets() applies it
-            if (presets_.contains(saved_preset_)) settings_.preset = saved_preset_;
+            settings_.preset = saved_preset_;
         }
         if (s.contains("zoom") && s["zoom"].is_number()) settings_.zoom = clampd(s["zoom"], 0.5, 2.0);
         if (s.contains("height") && s["height"].is_number()) settings_.height = clampd(s["height"], -150, 150);
         if (s.contains("fov_scale") && s["fov_scale"].is_number()) settings_.fov_scale = clampd(s["fov_scale"], 0.5, 2.0);
         if (s.contains("countdown") && s["countdown"].is_number()) settings_.countdown = clampd(s["countdown"], 0, 10);
-        if (s.contains("guide") && s["guide"].is_string() && std::count(guide_ids.begin(), guide_ids.end(), s["guide"].get<std::string>())) settings_.guide = s["guide"];
+        if (s.contains("guide") && s["guide"].is_string() && s["guide"].get_ref<const std::string&>().size() <= 16) settings_.guide = s["guide"];
         if (s.contains("look") && s["look"].is_string()) { const auto l = s["look"].get<std::string>(); if (l == "off" || l == "preset" || l == "palettes") settings_.look = l; }
         if (s.contains("walls") && s["walls"].is_boolean()) settings_.walls = s["walls"];
         if (s.contains("scene") && s["scene"].is_string() && std::count(scene_ids.begin(), scene_ids.end(), s["scene"].get<std::string>())) settings_.scene = s["scene"];
@@ -278,22 +298,23 @@ int Extension::render(const CssxFrame* f) {
         // width, so a raised arm, a turn or a pose on the ground moves it with her.
         double left = 1e12, right = -1e12;
         const Vec3 forward = basis.forward;
-        for (size_t i = 0; i < Take::body_parts; ++i) {
+        for (size_t i = 0; i < content().body.envelope.size(); ++i) {
+            if (!t.body_present[i]) continue;
             const Vec3 world = frame_.position + t.body_before[i] + (t.body_now[i] - t.body_before[i]) * ease;
             double x = 0, y = 0;
             if (!project(frame_.camera, basis, lens_, world, x, y)) continue;
             const Vec3 d = world - frame_.camera;
             const double depth = d.x * forward.x + d.y * forward.y + d.z * forward.z;
             if (depth < 5) continue;
-            const double reach = body_shape[i].radius * lens_.kx / depth;
+            const double reach = content().body.envelope[i].radius * lens_.kx / depth;
             if (y + reach < opening.y || y - reach > opening.y + opening.h) continue;   // above or below the picture
             left = std::min(left, x - reach); right = std::max(right, x + reach);
         }
         if (right > left && f->viewport_w > 1) {
             const double share = t.desired.follow ? t.desired.share : 0.5;
-            const double target = std::clamp((left + (right - left) * share) / f->viewport_w, 0.08, 0.92);
+            const double target = std::clamp((left + (right - left) * share) / f->viewport_w, content().motion.split_min, content().motion.split_max);
             // Eased: a hand entering the frame moves the line over a moment, not in one frame.
-            t.body_place = t.body_placed ? t.body_place + (target - t.body_place) * (1.0 - std::exp(-std::clamp(frame_.seconds, 0.0, 0.25) / 0.25)) : target;
+            t.body_place = t.body_placed ? t.body_place + (target - t.body_place) * (1.0 - std::exp(-std::clamp(frame_.seconds, 0.0, 0.25) / content().motion.split_tau)) : target;
             t.body_placed = true;
             if (t.desired.follow && t.wearing == Take::Wear::Idle && t.seq_clock >= t.transition_until) breakdown_.follow(t.body_place);
         }
@@ -329,7 +350,7 @@ int Extension::render(const CssxFrame* f) {
         // A split breakdown keeps its labels on the layers' side of the line.
         const double line = breakdown_.edge() < 1.0 ? f->viewport_w * breakdown_.edge() : 1e12;
         // The caption is the step's own title when it has one, else the layers on screen.
-        callouts_.update(*f, opening, callout_targets_, take_->title.empty() ? "Breakdown  //  " + breakdown_.caption() : take_->title, signing ? signature_ : unsigned_take, line);
+        callouts_.update(*f, opening, callout_targets_, take_->title.empty() ? content().breakdown.caption_prefix + breakdown_.caption() : take_->title, signing ? signature_ : unsigned_take, line);
     } else if (signing || (titled && !covering)) {
         callout_targets_.clear();
         callouts_.update(*f, opening, callout_targets_, titled && !covering ? take_->title : std::string(), signing ? signature_ : unsigned_take);
@@ -340,6 +361,7 @@ int Extension::render(const CssxFrame* f) {
 void Extension::tick(double seconds) {
     if (stopped_) return;
     try {
+        if (!core_loader_.done() && (mode_ == Mode::Idle || mode_ == Mode::Armed)) { load_core(); return; }
         if (!pack_queue_.empty() && mode_ == Mode::Idle) {
             // Waiting for the game (main menu, loading): ask about once a second, not every tick.
             if (pack_wait_ > 0) { pack_wait_ -= std::isfinite(seconds) ? seconds : 0.1; return; }
@@ -371,7 +393,7 @@ void Extension::tick(double seconds) {
             try { rig_.restore_picture(); } catch (...) {}   // console variables outlive the world
             rig_.forget(); guides_.forget(); callouts_.forget(); typeface_.forget(); scene_.forget(); breakdown_.forget(); breakdown_opponent_.forget();
             if (renderer_ && renderer_->active()) renderer_->cancel();
-            take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false; render_pending_ = false;
+            take_.reset(); restore_content(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false; render_pending_ = false;
             report("The world changed (loading, travel or death); CINE stopped and the game camera is back.");
             return;
         }
@@ -446,6 +468,7 @@ void Extension::poll_keys() {
     if (capture) capture_final_now();
     if (take) start_take();
     if (guide) {
+        const auto guide_ids = cine::guide_ids();
         auto it = std::find(guide_ids.begin(), guide_ids.end(), settings_.guide);
         settings_.guide = (it == guide_ids.end() || std::next(it) == guide_ids.end()) ? guide_ids.front() : *std::next(it);
         save_state(); host_.invalidate();
@@ -464,7 +487,7 @@ void Extension::enter() {
     if (!photo_) rig_.hide_hud();
     keys_previous_.clear();
     mode_ = Mode::Armed;
-    pak_missing_ = !rig_.asset_present("/Game/CSSX/CINE/MPC_Cine.MPC_Cine");
+    pak_missing_ = !rig_.asset_present(content().breakdown.collection);
     load_signature();
     apply_scene();
     if (photo_) { report("CINE Mode. Frame your shot with the Photo Mode camera, then Roll Take or press F8."); return; }
@@ -488,6 +511,7 @@ void Extension::exit_world(const std::string& why) {
 
 void Extension::start_take() {
     if (mode_ != Mode::Armed) return;
+    if (!core_loader_.done()) throw std::runtime_error("CINE is reading its core data; try again in a moment");
     if (photo_ && !photo_parked_) {
         // Photo Mode's camera owns the view while it is open: the take runs outside it, on
         // CINE's own camera, and CINE Mode comes back on the Take tab when it ends.
@@ -529,7 +553,14 @@ void Extension::start_take() {
         if (!restore_look(look_restore_)) throw std::runtime_error("Still putting your look back from the last take; try again in a moment");
         look_restore_ = nullptr;
     }
-    take_ = std::make_unique<Take>();
+    const auto& selected = *current_preset();
+    const auto pack = std::find_if(packs_.begin(), packs_.end(), [&](const Pack& p) { return p.pack == selected.pack; });
+    try {
+        take_content(pack != packs_.end() && pack->style ? *pack->style : core_content_);
+        take_ = std::make_unique<Take>();
+    }
+    catch (...) { restore_content(); throw; }
+    take_->source = selected;
     take_->performance = settings_.performance;
     if (const auto* p = current_preset(); p && !p->performance.empty() && p->performance != "menu") {
         take_->performance = PerformanceChoice{};
@@ -578,7 +609,7 @@ void Extension::prepare() {
         if (!rig_.resolved()) rig_.resolve();
         // Sharper shadows (and full resolution, when asked) for this take; restore_take puts the game's values back.
         rig_.picture(settings_.picture == "full" ? 2 : settings_.picture == "sharp" ? 1 : 0);
-        t.preset = *current_preset();
+        t.preset = t.source;
         auto& p = t.preset;
         // The pack's music loads now, so starting it on the first frame costs nothing. A missing
         // sound is reported when the take rolls; the take still runs on its own clock.
@@ -619,16 +650,16 @@ void Extension::prepare() {
             if (!route_) throw std::runtime_error("Record a route first (Route > Record route)");
             t.route = final_ ? branch_into_final(*route_, *final_) : *route_;
             t.track = std::make_unique<Track>(*t.route);
-            t.timeline = make_timeline(p, t.route->length(), walk_cm_s);
+            t.timeline = make_timeline(p, t.route->length(), content().motion.walk_speed);
             t.base = t.route->start; t.base_yaw = t.route->start_yaw;
         } else if (p.kind == ShotKind::Action) {
             auto& a = p.action;
             a.distance *= p.zoom; a.distance_max *= p.zoom; a.fov *= p.fov_scale;
             a.height += settings_.height; a.aim += settings_.height;
-            t.timeline = make_timeline(p, 0, walk_cm_s);
+            t.timeline = make_timeline(p, 0, content().motion.walk_speed);
             t.base = her_position(); t.base_yaw = frame_.yaw;
         } else {
-            t.timeline = make_timeline(p, 0, walk_cm_s);
+            t.timeline = make_timeline(p, 0, content().motion.walk_speed);
             t.from_head = p.reference == Preset::Reference::Head;
             t.base = t.from_head ? rig_.head_position() : her_position();
             t.base_yaw = frame_.yaw;
@@ -642,6 +673,7 @@ void Extension::prepare() {
             try { rig_.css({{"action", "idle"}, {"value", p.idle}}); t.idle_set = true; } catch (...) {}
         }
         if (p.kind != ShotKind::Photo && p.kind != ShotKind::Action && !sequence) t.curve = std::make_unique<OrbitCurve>(t.timeline.keys);
+        t.body_before.resize(content().body.envelope.size()); t.body_now.resize(content().body.envelope.size());
         // Breakdown track: the preset's own steps, or the built-in reel.
         if (settings_.breakdown == "preset") t.reveals = t.timeline.breakdown;
         else if (settings_.breakdown == "reel") t.reveals = reel(t.timeline.total);
@@ -695,8 +727,8 @@ void Extension::prepare() {
                 const std::vector<LookStep>* steps = settings_.look == "preset" ? &p.look : nullptr;
                 if (settings_.look == "palettes") {
                     std::vector<std::string> ids;
-                    for (const auto& pal : d.value("palettes", Json::array())) if (pal.value("id", std::string()) != "original") ids.push_back(pal.at("id"));
-                    for (size_t i = 0; i < ids.size(); ++i) { LookStep s; s.fraction = 0.08 + 0.8 * double(i) / double(std::max<size_t>(1, ids.size())); s.palette = ids[i]; auto_steps.push_back(s); }
+                    for (const auto& pal : d.value("palettes", Json::array())) if (std::find(content().palettes.exclude.begin(), content().palettes.exclude.end(), pal.value("id", std::string())) == content().palettes.exclude.end()) ids.push_back(pal.at("id"));
+                    for (size_t i = 0; i < ids.size(); ++i) { LookStep s; s.fraction = content().palettes.start + content().palettes.span * double(i) / double(std::max<size_t>(1, ids.size())); s.palette = ids[i]; auto_steps.push_back(s); }
                     steps = &auto_steps;
                 }
                 const double span = p.kind == ShotKind::Walk ? t.timeline.walk_time : t.timeline.total;
@@ -707,7 +739,7 @@ void Extension::prepare() {
                     if (s.titled) t.titles.emplace_back(start + s.fraction * span, s.title);
                 }
                 if (!t.steps.empty() && p.look_ends_on_own) {
-                    const double own_at = p.kind == ShotKind::Walk ? t.timeline.arrive - 2.0 : t.timeline.total * 0.92;
+                    const double own_at = p.kind == ShotKind::Walk ? t.timeline.arrive + content().palettes.walk_restore_offset : t.timeline.total * content().palettes.restore_fraction;
                     t.steps.emplace_back(own_at, Json{{"action", "apply"}, {"persist", false}, {"commands", Json::array({{{"action", "restore"}, {"customize", t.snapshot}}})}});
                 }
                 std::sort(t.steps.begin(), t.steps.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
@@ -722,22 +754,22 @@ void Extension::prepare() {
     }
     if (t.prepare_step == 1) {
         // Wall check, a slice per tick: where the curve would meet a wall, ease the camera in.
-        const size_t total = size_t(t.timeline.total / wall_step) + 2;
+        const size_t total = size_t(t.timeline.total / content().motion.wall_step) + 2;
         for (size_t n = 0; n < traces_per_tick && t.wall_next < total; ++n, ++t.wall_next) {
-            const double when = double(t.wall_next) * wall_step;
+            const double when = double(t.wall_next) * content().motion.wall_step;
             Vec3 base = t.base; double yaw = t.base_yaw;
             if (t.track) {
-                const double s = std::max(0.0, when - t.timeline.walk_start) * walk_cm_s;
+                const double s = std::max(0.0, when - t.timeline.walk_start) * content().motion.walk_speed;
                 base = t.track->at(s); yaw = t.track->heading_at(s);
             }
             const Pose pose = t.curve->pose(when);
             const Vec3 cam = to_world(base, yaw, pose.offset);
-            const Vec3 chest = base + Vec3{0, 0, t.from_head ? 0.0 : 40.0};
+            const Vec3 chest = base + Vec3{0, 0, t.from_head ? 0.0 : content().motion.chest_height};
             double hit_at = 0;
             const double reach = std::max(1.0, std::hypot(std::hypot(cam.x - chest.x, cam.y - chest.y), cam.z - chest.z));
-            t.wall_raw.push_back(rig_.trace(chest, cam, &hit_at) ? std::max(0.4, (hit_at - 50) / reach) : 1.0);
+            t.wall_raw.push_back(rig_.trace(chest, cam, &hit_at) ? std::max(content().motion.wall_min, (hit_at - content().motion.wall_margin) / reach) : 1.0);
         }
-        if (t.wall_next >= total) { t.walls = WallProfile(wall_step, t.wall_raw); t.prepare_step = 2; }
+        if (t.wall_next >= total) { t.walls = WallProfile(content().motion.wall_step, t.wall_raw); t.prepare_step = 2; }
         return;
     }
     if (t.prepare_step == 3) {
@@ -802,7 +834,7 @@ void Extension::prepare() {
         t.final_close = rig_.spawn_attached(final_->camera, r, final_->fov);
         // Dolly back level: a low shot backed off along its view line can sink under water.
         const double back = final_->camera_yaw * std::numbers::pi / 180;
-        t.final_wide = rig_.spawn_attached(final_->camera - Vec3{90 * std::cos(back), 90 * std::sin(back), 0}, r, final_->fov);
+        t.final_wide = rig_.spawn_attached(final_->camera - Vec3{content().motion.wide_back * std::cos(back), content().motion.wide_back * std::sin(back), 0}, r, final_->fov);
     }
     if (t.preset.kind == ShotKind::Walk) rig_.force_walk();   // before the take: no stall at the walk start
     t.yaw_f = frame_.yaw; t.vel_f = {};
@@ -873,7 +905,7 @@ bool Extension::worn(const Json& d, const std::string& outfit, const std::string
 bool Extension::plan_surroundings() {
     auto& t = *take_;
     const auto& seq = t.preset.sequence;
-    const size_t shots = seq.shots.size(), turns = std::size(plan_turns);
+    const size_t shots = seq.shots.size(), turns = std::size(content().motion.plan_turns);
     constexpr size_t traces_a_tick = 60;
     constexpr int samples = 5;
     if (t.clear.size() != shots) { t.clear.assign(shots, std::vector<double>(turns, 1.0)); t.plan_chain = t.plan_turn = t.plan_shot = t.plan_sample = 0; t.chain_clear.clear(); }
@@ -890,13 +922,13 @@ bool Extension::plan_surroundings() {
                     --budget;
                     const double when = shot.at + shot.length * 0.999 * double(t.plan_sample) / double(samples - 1);
                     SeqPose pose = pose_at(seq, when);
-                    pose.azimuth += plan_turns[t.plan_turn];
+                    pose.azimuth += content().motion.plan_turns[t.plan_turn];
                     const Vec3 anchor = anchor_at(when);
                     const auto view = sequence_view(pose, anchor, when);
                     const Vec3 aim = to_world(anchor, t.base_yaw, {0, 0, pose.aim + settings_.height});
                     double hit = 0, free = 1.0;
                     // A hit within arm's reach is her own: a hand, a sword at her hip. Not a wall.
-                    try { if (rig_.trace(aim, view.camera, &hit) && hit > own_reach && hit < view.focus - 5) free = std::clamp((hit - 25) / view.focus, 0.0, 1.0); } catch (...) {}
+                    try { if (rig_.trace(aim, view.camera, &hit) && hit > content().motion.own_reach && hit < view.focus - content().motion.hit_slack) free = std::clamp((hit - content().motion.plan_margin) / view.focus, 0.0, 1.0); } catch (...) {}
                     auto& worst = t.clear[t.plan_shot][t.plan_turn];
                     worst = std::min(worst, free);
                 }
@@ -906,15 +938,15 @@ bool Extension::plan_surroundings() {
             t.chain_clear.push_back(chain);
             t.plan_shot = t.plan_chain;
             ++t.plan_turn;
-            if (t.chain_clear.size() == 1 && chain >= 0.98) break;   // open as written: no need to look elsewhere
+            if (t.chain_clear.size() == 1 && chain >= content().motion.clear_threshold) break;   // open as written: no need to look elsewhere
             // A shot that must keep its side holds the whole chain there: only the distance may give.
             bool fixed = false;
             for (size_t i = t.plan_chain; i < chain_end; ++i) fixed = fixed || seq.shots[i].fixed;
             if (fixed) break;
         }
         const ShotPlan chosen = choose_plan(t.chain_clear);
-        const size_t turn = size_t(std::find(std::begin(plan_turns), std::end(plan_turns), chosen.turn) - std::begin(plan_turns));
-        for (size_t i = t.plan_chain; i < chain_end; ++i) t.plan[i] = {chosen.turn, std::clamp(t.clear[i][std::min(turn, turns - 1)], 0.25, 1.0)};
+        const size_t turn = size_t(std::find(std::begin(content().motion.plan_turns), std::end(content().motion.plan_turns), chosen.turn) - std::begin(content().motion.plan_turns));
+        for (size_t i = t.plan_chain; i < chain_end; ++i) t.plan[i] = {chosen.turn, std::clamp(t.clear[i][std::min(turn, turns - 1)], content().motion.plan_min, 1.0)};
         t.chain_clear.clear();
         t.plan_chain = chain_end; t.plan_turn = 0; t.plan_shot = chain_end; t.plan_sample = 0;
     }
@@ -1007,10 +1039,7 @@ Vec3 Extension::anchor_at(double time) const {
 // Where the tracked parts of her body are now. 10 Hz, and once before the shots are planned.
 void Extension::sample_tracks(bool snap) {
     auto& t = *take_;
-    // Up to three bones a part, averaged with these weights (body: her head, and her two feet).
-    struct Part { const char* bone[3]; double weight[3]; };
-    static constexpr Part parts[Take::tracks] = {{{"", "", ""}, {0, 0, 0}}, {{"Head", "", ""}, {1, 0, 0}}, {{"neck_01", "", ""}, {1, 0, 0}}, {{"spine_04", "", ""}, {1, 0, 0}},
-                                                 {{"Pelvis", "", ""}, {1, 0, 0}}, {{"calf_l", "calf_r", ""}, {0.5, 0.5, 0}}, {{"Head", "Foot_L", "Foot_R"}, {0.5, 0.25, 0.25}}};
+    const auto& parts = content().body.targets;
     try {
         if (!is_handle(t.body_mesh)) t.body_mesh = host_.get(rig_.pawn(), "Mesh");
         if (!t.track_live) {
@@ -1020,7 +1049,7 @@ void Extension::sample_tracks(bool snap) {
             if (all.is_array()) for (const auto& n : all) if (n.is_string()) { auto name = n.get<std::string>(); std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return char(std::tolower(c)); }); names.push_back(std::move(name)); }
             for (size_t k = 1; k < Take::tracks; ++k) {
                 t.track_ok[k] = true;
-                for (const char* bone : parts[k].bone) {
+                for (const auto& bone : parts[k].bones) {
                     std::string want = bone;
                     std::transform(want.begin(), want.end(), want.begin(), [](unsigned char c) { return char(std::tolower(c)); });
                     if (!want.empty() && std::find(names.begin(), names.end(), want) == names.end()) t.track_ok[k] = false;
@@ -1031,7 +1060,7 @@ void Extension::sample_tracks(bool snap) {
         for (size_t k = 1; k < Take::tracks; ++k) {
             if (!t.track_used[k] || !t.track_ok[k]) continue;
             Vec3 now{};
-            for (size_t b = 0; b < 3; ++b) if (parts[k].bone[b][0]) now = now + rig_.socket_location(t.body_mesh, parts[k].bone[b]) * parts[k].weight[b];
+            for (size_t b = 0; b < parts[k].bones.size(); ++b) now = now + rig_.socket_location(t.body_mesh, parts[k].bones[b]) * parts[k].weights[b];
             now = now - frame_.position;
             t.track_before[k] = t.track_live && !snap ? t.track_now[k] : now;
             t.track_now[k] = now;
@@ -1157,9 +1186,9 @@ void Extension::sequence_frame(const CssxFrame& f) {
                 t.wall_scale = t.wall_target = 1.0;   // the plan already cleared this shot; the live check starts afresh
                 // A cut starts on her as she is now, not gliding over from where the last shot's subject was.
                 if (const auto k = static_cast<size_t>(shot.track); k && t.track_live && t.track_ok[k]) t.track_at[k] = t.track_now[k];
-                breakdown_.depth_range(std::max(sequence_view(planned_pose(seq, t.plan, now), anchor_at(now), now).focus * 6.0, 2500.0));
+                breakdown_.depth_range(std::max(sequence_view(planned_pose(seq, t.plan, now), anchor_at(now), now).focus * content().transitions.depth_factor, content().transitions.depth_min));
             }
-            if (shot.fstop <= 0 && t.dof_on) { rig_.depth_of_field(t.dolly, 32, 1000); t.dof_on = false; t.focus_applied = -1; }   // deep focus again
+            if (shot.fstop <= 0 && t.dof_on) { rig_.depth_of_field(t.dolly, content().transitions.deep_fstop, content().transitions.deep_focus); t.dof_on = false; t.focus_applied = -1; }   // deep focus again
             else if (shot.fstop > 0) t.focus_applied = -1;   // a new shot: its aperture and focus are set below
         }
         // The camera is put exactly where the shot has it, every frame. Steering it from the
@@ -1185,7 +1214,7 @@ void Extension::sequence_frame(const CssxFrame& f) {
                 // second) is followed tightly, or she leaves the frame; a slow one is smoothed.
                 const Vec3 step = t.track_now[k] - t.track_before[k];
                 const double speed = std::sqrt(step.x * step.x + step.y * step.y + step.z * step.z) / 0.1;
-                const double follow = 1.0 - std::exp(-dt / (speed > 250 ? 0.06 : 0.3));
+                const double follow = 1.0 - std::exp(-dt / (speed > content().motion.fast_speed ? content().motion.fast_follow : content().motion.slow_follow));
                 t.track_at[k] = t.track_at[k] + (target - t.track_at[k]) * follow;
             }
         }
@@ -1196,7 +1225,7 @@ void Extension::sequence_frame(const CssxFrame& f) {
         // off: set again whenever the distance has moved by more than a hundredth. The focus
         // sits a little short of the point the shot is framed on, on the surface facing the lens.
         if (const auto& shot = seq.shots[t.shot_index]; shot.fstop > 0) {
-            const double focus = std::max(20.0, view.focus - 6.0);
+            const double focus = std::max(20.0, view.focus - content().transitions.focus_offset);
             if (t.focus_applied < 0 || std::abs(focus - t.focus_applied) > 0.01 * focus) { rig_.depth_of_field(t.dolly, shot.fstop, focus); t.focus_applied = focus; t.dof_on = true; }
         }
     } catch (...) {}
@@ -1207,7 +1236,7 @@ void Extension::sequence_frame(const CssxFrame& f) {
             // The pass is only there to hide the change, so it gets no more time than that.
             const double beat = 60.0 / seq.tempo.bpm;
             auto timing = [&](size_t i) {
-                struct { double wipe, hold; } out{beat / 4, std::max(beat, 0.45)};
+                struct { double wipe, hold; } out{beat * content().transitions.wipe_beats, std::max(beat * content().transitions.hold_beats, content().transitions.min_hold)};
                 if (i < seq.looks.size()) { if (seq.looks[i].wipe > 0) out.wipe = seq.looks[i].wipe; if (seq.looks[i].hold > 0) out.hold = seq.looks[i].hold; }
                 return out;
             };
@@ -1317,7 +1346,7 @@ void Extension::sequence_tick() {
     const Vec3 aim = to_world(anchor, t.base_yaw, {0, 0, pose.aim + settings_.height});
     double hit = 0;
     // A hit within arm's reach is her own (a hand, a sword at her hip), not something in the way.
-    t.wall_target = rig_.trace(aim, full.camera, &hit) && hit > own_reach && hit < full.focus - 5 ? std::clamp((hit - 25) / full.focus, 0.35, 1.0) : 1.0;
+    t.wall_target = rig_.trace(aim, full.camera, &hit) && hit > content().motion.own_reach && hit < full.focus - content().motion.hit_slack ? std::clamp((hit - content().motion.plan_margin) / full.focus, content().motion.live_wall_min, 1.0) : 1.0;
 }
 
 // After the wardrobe interrupted the dance in a sequence: start it again at the point it
@@ -1362,7 +1391,7 @@ void Extension::roll() {
             const auto view = sequence_view(planned_pose(t.preset.sequence, t.plan, 0), anchor_at(0), 0);
             rig_.place_camera(t.dolly, view.camera, view.rotation);
             rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov;
-            breakdown_.depth_range(std::max(view.focus * 6.0, 2500.0));
+            breakdown_.depth_range(std::max(view.focus * content().transitions.depth_factor, content().transitions.depth_min));
         } catch (...) {}
     }
     // A look step on the take's first instant is the opening look: she wears it already (the
@@ -1404,21 +1433,9 @@ void Extension::begin_countdown() {
 
 // The built-in reel: the final image, then one layer after another, then the final image again.
 std::vector<Timeline::Reveal> Extension::reel(double total) const {
-    const LayerSet clay = bit(Layer::Clay), wire = bit(Layer::Wireframe), bones = bit(Layer::Skeleton);
-    const std::pair<double, std::pair<LayerSet, double>> steps[]{
-        {0.07, {clay, 1.2}},
-        {0.17, {clay | wire, 1.2}},
-        {0.29, {clay | bones, 1.2}},
-        {0.40, {clay | bones | bit(Layer::VirtualBones) | bit(Layer::IkBones), 0.9}},
-        {0.50, {clay | bones | bit(Layer::Springs), 0.9}},
-        {0.60, {bit(Layer::Collision) | bit(Layer::Capsule), 0.8}},
-        {0.70, {bit(Layer::BaseColor), 1.2}},
-        {0.78, {bit(Layer::Normals), 1.0}},
-        {0.85, {bit(Layer::Depth), 1.0}},
-        {0.92, {0, 1.4}},
-    };
     std::vector<Timeline::Reveal> out;
-    for (const auto& [fraction, step] : steps) out.push_back({fraction * total, step.first, std::min(step.second, total * 0.06)});
+    for (const auto& step : content().reel.steps)
+        out.push_back({step.at * total, layers_from(step.layers), std::min(step.wipe, total * content().reel.wipe_max_fraction)});
     return out;
 }
 
@@ -1474,12 +1491,23 @@ void Extension::sample_labels() {
 // 10 Hz while a split follows her body: where the parts of her are, and the lens when the
 // labels are not measuring it already.
 void Extension::sample_body() {
-    static_assert(std::size(body_shape) == Take::body_parts, "one sample slot for each part of her body");
     auto& t = *take_;
+    if (t.body_before.size() != content().body.envelope.size()) {
+        t.body_before.resize(content().body.envelope.size()); t.body_now.resize(content().body.envelope.size());
+    }
     try {
         if (!is_handle(t.body_mesh)) t.body_mesh = host_.get(rig_.pawn(), "Mesh");
-        for (size_t i = 0; i < Take::body_parts; ++i) {
-            const Vec3 now = rig_.socket_location(t.body_mesh, body_shape[i].bone) - frame_.position;
+        if (t.body_present.empty()) {
+            const auto names = host_.call(t.body_mesh, "GetAllSocketNames");
+            if (!names.is_array()) return;
+            auto lower = [](std::string name) { for (auto& ch : name) ch = char(std::tolower(static_cast<unsigned char>(ch))); return name; };
+            t.body_present.resize(content().body.envelope.size(), false);
+            for (size_t i = 0; i < content().body.envelope.size(); ++i)
+                for (const auto& name : names) if (name.is_string() && lower(name.get<std::string>()) == lower(content().body.envelope[i].bone)) { t.body_present[i] = true; break; }
+        }
+        for (size_t i = 0; i < content().body.envelope.size(); ++i) {
+            if (!t.body_present[i]) continue;
+            const Vec3 now = rig_.socket_location(t.body_mesh, content().body.envelope[i].bone) - frame_.position;
             t.body_before[i] = t.body_live ? t.body_now[i] : now;
             t.body_now[i] = now;
         }
@@ -1504,10 +1532,12 @@ void Extension::sample_body() {
 // signature.txt in the extension folder: the first line is the name, the rest small print.
 // Read on entering Cine World, so an edit shows without a restart.
 void Extension::load_signature() {
-    signature_.clear();
+    signature_ = content().callouts.signature_lines;
     try {
         const auto info = host_.request({{"op", "extension.info"}});
         std::ifstream in(fs::path(info.at("directory").get<std::string>()) / "signature.txt");
+        if (!in) return;
+        signature_.clear();
         for (std::string line; signature_.size() < max_signature_lines && std::getline(in, line);) {
             while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) line.pop_back();
             if (line.size() > 120) line.resize(120);
@@ -1528,7 +1558,7 @@ void Extension::fire(Beat::On what) {
         if (a.beats[i].on != what || t.clock < t.beat_ready[i]) continue;
         t.beat_ready[i] = t.clock + a.beats[i].cooldown;
         if (a.beats[i].what == Beat::Do::Slowmo) t.slow_until = t.clock + a.slowmo_hold;
-        else t.punch_until = t.clock + 1.1;
+        else t.punch_until = t.clock + content().action.punch_seconds;
     }
 }
 
@@ -1580,7 +1610,7 @@ void Extension::action_tick(double dt) {
     if (std::abs(t.scale - want) < 0.02) t.scale = want;
     // Written in steps while it eases, and always once it has arrived (so it ends on exactly 1).
     if (t.scale != t.scale_applied && (std::abs(t.scale - t.scale_applied) > 0.015 || t.scale == want)) { rig_.time_scale(t.scale); t.scale_applied = t.scale; }
-    t.punch += ((t.clock < t.punch_until ? 1.0 : 0.0) - t.punch) * 0.35;
+    t.punch += ((t.clock < t.punch_until ? 1.0 : 0.0) - t.punch) * content().action.punch_follow;
     t.azimuth = wrap_degrees(t.azimuth + a.orbit_speed * dt);
     ActionFrame f{a.framing, t.azimuth, a.distance, a.distance_max, a.margin, a.height, a.aim, a.fov, t.punch};
     const auto view = action_view(f, t.subject_f, target);
@@ -1588,10 +1618,10 @@ void Extension::action_tick(double dt) {
     if (!rig_.viewing(t.dolly)) {
         const bool games = a.respect_game_cameras && rig_.tag_count("State.CustomCamera") > 0;
         if (games) return;
-        if (t.clock >= t.reassert_at) { rig_.view(t.dolly, 0.35); t.reassert_at = t.clock + 1.0; }
+        if (t.clock >= t.reassert_at) { rig_.view(t.dolly, content().action.return_blend); t.reassert_at = t.clock + 1.0; }
     }
     // The engine interpolates the move on game time: scale it so it still lands in real time.
-    const double lead = std::max(0.25, a.smooth + 0.15);
+    const double lead = std::max(content().action.lead_min, a.smooth + content().action.lead_pad);
     rig_.move_camera(t.dolly, view.camera, look_at(view.camera, view.aim), (lead + 0.05) * t.scale);
     if (std::abs(view.fov - t.fov_applied) > 0.15) { rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov; }
     if (a.fstop > 0 && std::abs(view.focus - t.focus_applied) > 12) { rig_.depth_of_field(t.dolly, a.fstop, view.focus); t.focus_applied = view.focus; }
@@ -1607,15 +1637,15 @@ void Extension::steer(double dt) {
         rig_.move_to(pts[t.target]);
     }
     const double left = flat_distance(here, pts.back());
-    t.speed += (walk_cm_s - t.speed) * std::min(1.0, dt * 2.5);
+    t.speed += (content().motion.walk_speed - t.speed) * std::min(1.0, dt * content().motion.acceleration);
     double speed = t.speed;
-    if (t.target + 1 == pts.size() && left < 220) speed = std::min(speed, std::max(110.0, walk_cm_s * left / 220));   // settle, do not brake
+    if (t.target + 1 == pts.size() && left < content().motion.settle_distance) speed = std::min(speed, std::max(content().motion.settle_speed, content().motion.walk_speed * left / content().motion.settle_distance));   // settle, do not brake
     if (std::abs(speed - t.speed_applied) > 2) { rig_.speed_limit(speed); t.speed_applied = speed; }
     const double v = std::hypot(frame_.velocity.x, frame_.velocity.y);
-    if (v > 60) {
+    if (v > content().motion.facing_speed) {
         // She faces the control rotation while moving: point it down her velocity, smoothed.
         const double want = std::atan2(frame_.velocity.y, frame_.velocity.x) * 180 / std::numbers::pi;
-        t.ctl_yaw += wrap_degrees(want - t.ctl_yaw) * std::min(1.0, dt * 3.0);
+        t.ctl_yaw += wrap_degrees(want - t.ctl_yaw) * std::min(1.0, dt * content().motion.facing_gain);
         rig_.control_yaw(t.ctl_yaw);
     }
     if (t.target + 1 == pts.size() && left < 40) { rig_.stop_moving(); t.walking = false; t.arrived = true; return; }
@@ -1629,7 +1659,7 @@ void Extension::steer(double dt) {
 void Extension::place_dolly(double dt, bool teleport) {
     auto& t = *take_;
     const double lead = t.preset.lead;
-    const double a_yaw = teleport ? 1.0 : smooth_factor(dt, yaw_tau), a_vel = teleport ? 1.0 : smooth_factor(dt, vel_tau);
+    const double a_yaw = teleport ? 1.0 : smooth_factor(dt, content().motion.yaw_tau), a_vel = teleport ? 1.0 : smooth_factor(dt, content().motion.velocity_tau);
     t.yaw_f += wrap_degrees(frame_.yaw - t.yaw_f) * a_yaw;
     t.vel_f = t.vel_f + (frame_.velocity - t.vel_f) * a_vel;
     Vec3 base = t.base; double yaw = t.base_yaw;
@@ -1658,8 +1688,8 @@ void Extension::run() {
     const bool walk = t.preset.kind == ShotKind::Walk;
     if (walk && !t.walking && !t.arrived && t.clock >= tl.walk_start) {
         t.target = std::min<size_t>(2, t.route->points.size() - 1);
-        t.speed = start_cm_s; t.speed_applied = -1;
-        rig_.speed_limit(start_cm_s);
+        t.speed = content().motion.start_speed; t.speed_applied = -1;
+        rig_.speed_limit(content().motion.start_speed);
         rig_.move_to(t.route->points[t.target]);
         t.walking = true;
     }
@@ -1690,8 +1720,8 @@ void Extension::run() {
         ++t.step_next;
     }
     if (walk && final_) {
-        if (!t.cut_wide && t.clock >= tl.arrive - 1.2) { rig_.view(t.final_wide, 3.5); t.cut_wide = true; }
-        if (!t.cut_close && t.clock >= tl.arrive + 2.8) { rig_.view(t.final_close, std::max(0.5, tl.total - (tl.arrive + 2.8) - 0.6)); t.cut_close = true; }
+        if (!t.cut_wide && t.clock >= tl.arrive + content().motion.wide_at) { rig_.view(t.final_wide, content().motion.wide_blend); t.cut_wide = true; }
+        if (!t.cut_close && t.clock >= tl.arrive + content().motion.close_at) { rig_.view(t.final_close, std::max(0.5, tl.total - (tl.arrive + content().motion.close_at) - content().motion.tail_allowance)); t.cut_close = true; }
     }
     if (t.preset.kind == ShotKind::Photo) {
         const int idx = std::min<int>(int(t.preset.photos.size()) - 1, int(t.clock / t.preset.hold));
@@ -1704,7 +1734,7 @@ void Extension::run() {
             t.photo = idx;
             report("Photo " + std::to_string(idx + 1) + " of " + std::to_string(t.preset.photos.size()) + ": " + s.name);
         }
-    } else if (t.preset.kind != ShotKind::Action && !sequence && (!walk || !final_ || t.clock < tl.arrive + 4.0)) {
+    } else if (t.preset.kind != ShotKind::Action && !sequence && (!walk || !final_ || t.clock < tl.arrive + content().motion.dolly_until)) {
         place_dolly(0.1, false);
     }
     if (t.rendering) t.clock = std::min(t.clock, tl.total);   // the renderer ends it, on its last frame
@@ -1774,6 +1804,7 @@ void Extension::finish_take(const std::string& why, bool failed) {
     std::string note = take_->note;
     if (!repainted.empty()) note = note.empty() ? repainted : note + "  " + repainted;
     take_.reset();
+    restore_content();
     mode_ = Mode::Armed;
     keys_previous_.clear();
     if (failed || !failures.empty()) status_ = "Take stopped";   // the reason is the error; Status must not stay on "Preparing"
@@ -1932,17 +1963,18 @@ std::string Extension::performance_conflict(const Preset& p) const {
 Json Extension::model() const {
     Json options = Json::array();
     for (const auto& [id, p] : presets_) options.push_back({{"id", id}, {"label", p.name}});
+    if (!settings_.preset.empty() && !presets_.contains(settings_.preset)) options.push_back({{"id", settings_.preset}, {"label", settings_.preset + " (unavailable)"}});
     if (options.empty()) options.push_back({{"id", "none"}, {"label", "No presets found"}});
     const auto* p = current_preset();
     std::string route = route_ ? std::to_string(int(route_->length() / 100)) + " m route saved" : "No route recorded";
     std::string final_shot = final_ ? "Final shot saved" : "No final shot (the walk ends on the last camera key)";
-    std::string look = settings_.look == "off" ? "Look track off" : settings_.look == "palettes" ? "Cycles every palette, then your own look" :
+    std::string look = settings_.look == "off" ? "Look track off" : settings_.look == "palettes" ? content().palettes.description :
                        (p && !p->look.empty() ? "Uses this preset's look steps" : "This preset has no look steps");
     std::string scene = settings_.scene == "off" ? "Enemies and NPCs stay as they are."
                       : !scene_.status().empty() && mode_ != Mode::Idle ? scene_.status()
                       : settings_.scene == "enemies" ? "Enemies are hidden while you are in Cine World." : "Enemies and NPCs are hidden while you are in Cine World.";
     std::string breakdown = settings_.breakdown == "off" ? "Breakdown off"
-                          : settings_.breakdown == "reel" ? "Final image, clay, wireframe, skeleton, bones, collision, frame passes, final image"
+                          : settings_.breakdown == "reel" ? content().reel.description
                           : (p && !p->breakdown.empty() ? "Uses this preset's breakdown steps" : "This preset has no breakdown steps");
     if (pak_missing_ && settings_.breakdown != "off")
         breakdown = "CINE's asset pak is not installed (see the README): only physics bodies and the capsule can show.";
@@ -1974,6 +2006,8 @@ Json Extension::model() const {
     if (!busy && !expression_catalog_.unavailable(settings_.expression).empty()) disabled["take"] = expression_catalog_.unavailable(settings_.expression);
     if (!busy && settings_.expression != "unchanged" && (settings_.look != "off" || (p && p->kind == ShotKind::Sequence && !p->sequence.looks.empty())))
         disabled["take"] = "Use As set in CSS for takes that change looks, or turn the look track off.";
+    if (!core_loader_.done()) disabled["take"] = "Reading CINE core data";
+    if (!p) disabled["take"] = "The selected scene is unavailable";
     if (!route_) disabled["clear_route"] = "No route";
     if (!final_) disabled["clear_final"] = "No final shot";
     const bool rendering = renderer_ && renderer_->active();
@@ -1985,8 +2019,9 @@ Json Extension::model() const {
         "performance", "performance_library", "performance_rate", "performance_start", "performance_refresh", "expression", "expression_refresh",
         "render_take", "render_cancel"}) enabled[id] = !disabled.contains(id);
     std::string summary = status_;
+    if (!core_loader_.problem().empty()) summary += "  Core data unavailable; using built-in defaults.";
     if (!preset_problems_.empty()) summary += "  (" + std::to_string(preset_problems_.size()) + " preset file(s) skipped; see CSSX log)";
-    return {{"values", {{"status", summary}, {"preset", presets_.empty() ? std::string("none") : settings_.preset},
+    return {{"values", {{"status", summary}, {"preset", settings_.preset.empty() ? std::string("none") : settings_.preset},
                         {"preset_info", p ? p->description : std::string()}, {"zoom", settings_.zoom}, {"height", settings_.height},
                         {"fov_scale", settings_.fov_scale}, {"countdown", settings_.countdown}, {"guide", settings_.guide},
                         {"walls", settings_.walls}, {"look", settings_.look}, {"look_info", look}, {"route_info", route}, {"final_info", final_shot},
@@ -1998,7 +2033,7 @@ Json Extension::model() const {
                         {"performance_info", performance_catalog_.description(settings_.performance)},
                         {"expression", settings_.expression}, {"expression_info", expression_catalog_.description(settings_.expression)},
                         {"render_status", render_line()}, {"render_fps", std::to_string(settings_.render_fps)}, {"render_quality", settings_.render_quality}}},
-            {"options", {{"expression", expression_catalog_.options(settings_.expression)}, {"preset", options}, {"performance", performance_catalog_.options(settings_.performance)},
+            {"options", {{"guide", guide_options()}, {"breakdown", Json::array({{{"id", "off"}, {"label", "Off"}}, {{"id", "preset"}, {"label", "From the preset"}}, {{"id", "reel"}, {"label", content().reel.name}}})}, {"look", Json::array({{{"id", "off"}, {"label", "Off"}}, {{"id", "preset"}, {"label", "From the preset"}}, {{"id", "palettes"}, {"label", content().palettes.name}}})}, {"expression", expression_catalog_.options(settings_.expression)}, {"preset", options}, {"performance", performance_catalog_.options(settings_.performance)},
                          {"performance_library", performance_catalog_.libraries(settings_.performance)}}},
             {"enabled", enabled}, {"disabled", disabled}, {"status", summary}, {"error", error_}};
 }
@@ -2083,13 +2118,13 @@ void Extension::event(const Json& e) {
         }
         else if (id == "clear_route") { route_.reset(); save_state(); report("Route cleared."); }
         else if (id == "clear_final") { final_.reset(); save_state(); report("Final shot cleared."); }
-        else if (id == "reload") { preset_order_.clear(); load_presets(); report(packs_loading_ ? std::string("Reading the CINE packs again.") : "Presets reloaded: " + std::to_string(presets_.size()) + "."); }
-        else if (id == "preset") { const auto v = e.at("value").get<std::string>(); if (!presets_.contains(v)) throw std::runtime_error("Unknown preset"); settings_.preset = v; save_state(); }
+        else if (id == "reload") { if (take_) throw std::runtime_error("Wait for the take to finish"); preset_order_.clear(); load_presets(); report(packs_loading_ ? std::string("Reading the CINE packs again.") : "Presets reloaded: " + std::to_string(presets_.size()) + "."); }
+        else if (id == "preset") { const auto v = e.at("value").get<std::string>(); if (!presets_.contains(v)) throw std::runtime_error("Unknown preset"); settings_.preset = v; saved_preset_ = v; save_state(); }
         else if (id == "zoom") { settings_.zoom = clampd(e.at("value").get<double>(), 0.5, 2.0); save_state(); }
         else if (id == "height") { settings_.height = clampd(e.at("value").get<double>(), -150, 150); save_state(); }
         else if (id == "fov_scale") { settings_.fov_scale = clampd(e.at("value").get<double>(), 0.5, 2.0); save_state(); }
         else if (id == "countdown") { settings_.countdown = clampd(e.at("value").get<double>(), 0, 10); save_state(); }
-        else if (id == "guide") { const auto v = e.at("value").get<std::string>(); if (!std::count(guide_ids.begin(), guide_ids.end(), v)) throw std::runtime_error("Unknown guide"); settings_.guide = v; save_state(); }
+        else if (id == "guide") { const auto guide_ids = cine::guide_ids(); const auto v = e.at("value").get<std::string>(); if (!std::count(guide_ids.begin(), guide_ids.end(), v)) throw std::runtime_error("Unknown guide"); settings_.guide = v; save_state(); }
         else if (id == "walls") { settings_.walls = e.at("value").get<bool>(); save_state(); }
         else if (id == "picture") { const auto v = e.at("value").get<std::string>(); if (!std::count(picture_ids.begin(), picture_ids.end(), v)) throw std::runtime_error("Unknown picture mode"); settings_.picture = v; save_state(); }
         else if (id == "look") { const auto v = e.at("value").get<std::string>(); if (v != "off" && v != "preset" && v != "palettes") throw std::runtime_error("Unknown look mode"); settings_.look = v; save_state(); }
@@ -2115,7 +2150,8 @@ void Extension::event(const Json& e) {
 
 Json Extension::status() const {
     const bool active = mode_ != Mode::Idle;
-    return {{"summary", active ? status_ : (route_ ? "Ready, route saved" : "Ready")}, {"active", active}};
+    const std::string suffix = core_loader_.problem().empty() ? "" : " (core data unavailable; using built-in defaults)";
+    return {{"summary", (active ? status_ : (route_ ? std::string("Ready, route saved") : std::string("Ready"))) + suffix}, {"active", active}};
 }
 
 bool Extension::stop() {

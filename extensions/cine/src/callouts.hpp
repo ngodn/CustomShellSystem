@@ -3,8 +3,8 @@
 // layers on screen, and the signature block. Drawn with the CSSX HUD's retained layers (text,
 // and thin rotated images for lines), so the only per-frame work is moving the arrows.
 //
-// Everything is laid out inside a frame: the opening of the chosen frame guide (16:9, 9:16,
-// 1:1, 2.39:1) or the whole viewport, so it survives the crop to that aspect. Sizes scale
+// Everything is laid out inside the chosen frame guide or the whole viewport,
+// so it survives the crop to that aspect. Sizes scale
 // down with a narrow frame. The layout is pure and tested: labels sit in two columns at the
 // frame's edges, ordered like their targets so leaders never cross; the caption is top left
 // and the signature bottom left.
@@ -12,6 +12,7 @@
 // The look is a technical readout: upper-case letter-spaced text in the extension's own
 // typeface, an accent bar at the label's outer end, a shelf line under it, and the arrow
 // leaving the shelf's inner end.
+#include "content.hpp"
 #include <cssx/client.hpp>
 #include <cssx/hud.h>
 #include <string>
@@ -32,8 +33,10 @@ struct CalloutPlace { size_t target = 0; bool on_left = true; double label_x = 0
                       std::vector<std::pair<double, double>> more_to; };   // the further arrows' tips, inside the frame (and left of a split line)
 
 constexpr size_t max_callouts = 8, max_signature_lines = 6;
-constexpr double callout_font = 18, callout_line = 26, callout_shelf = 3;
-// 1 for a frame as wide as a 16:9 screen, smaller for narrow frames (never below 0.62).
+inline const double& callout_font = content().callouts.label_font;
+inline const double& callout_line = content().callouts.line_height;
+inline const double& callout_shelf = content().callouts.shelf_gap;
+// Scaled from the style's reference width, inside its configured bounds.
 double frame_scale(const Rect& frame);
 // Room a label needs at a scale (the HUD does not report text sizes): upper-case, letter-spaced.
 double label_width(const std::string& text, double scale = 1.0);
@@ -42,14 +45,14 @@ double label_width(const std::string& text, double scale = 1.0);
 // label goes to the left column in a fixed row, and a target right of the line gets no label
 // (one on the line itself, her spine or head, keeps its label). Past the frame: no split.
 std::vector<CalloutPlace> layout_callouts(const Rect& frame, const std::vector<CalloutTarget>& targets, double line_x = 1e12);
-// "Spring bones: chest" -> "SPRING BONES: CHEST" (ASCII; other bytes pass through).
+// Optional ASCII uppercasing from the style; other bytes pass through.
 std::string readout(const std::string& text);
 // Signature lines fitted to a width: a line too long for it breaks before each " + ".
 // The first line is the name (drawn large). At most max_signature_lines come back.
 std::vector<std::string> fit_signature(const std::vector<std::string>& lines, double width, double scale);
 
-// CINE's label typeface: the TTF in the extension's fonts folder, made into a font object in
-// the game on first use (no cooked asset needed). Any failure leaves the HUD's own font.
+// The core FontFace, with the loose TTF as an older-pak fallback.
+// Any failure leaves the HUD's own font.
 class Typeface {
 public:
     void attach(const cssx::Client* host, const CssxHudApi* hud, void* context) { host_ = host; hud_ = hud; context_ = context; }
@@ -57,6 +60,7 @@ public:
     void apply(CssxLayer layer, double size, int spacing);
     // 0 left, 1 centre, 2 right (the HUD centres text by default).
     void justify(CssxLayer layer, int side);
+    void refresh();
     void forget() { font_ = nullptr; failed_ = false; }   // the world changed: the object is gone
 private:
     bool ensure();
@@ -64,7 +68,8 @@ private:
     const CssxHudApi* hud_ = nullptr;
     void* context_ = nullptr;
     Json font_;
-    bool failed_ = false;   // one attempt per world
+    std::string asset_, file_, face_name_;
+    bool failed_ = false;   // one attempt per style/world
 };
 
 class Callouts {
@@ -74,6 +79,7 @@ public:
     void update(const CssxFrame& frame_data, const Rect& frame, const std::vector<CalloutTarget>& targets,
                 const std::string& caption, const std::vector<std::string>& signature, double line_x = 1e12);
     void hide();
+    void refresh_style();
     void forget();   // the world changed: the host dropped our layers
 private:
     static constexpr size_t extra_arrows = 3;   // beyond the first: four arrows a label

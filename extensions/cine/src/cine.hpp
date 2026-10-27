@@ -47,7 +47,7 @@ public:
 private:
     enum class Mode { Idle, RecordWait, Recording, Armed, Preparing, Countdown, Running };
     struct Settings {
-        std::string preset = "fashion-walk-360";
+        std::string preset;
         double zoom = 1.0, height = 0.0, fov_scale = 1.0, countdown = 3.0;
         std::string guide = "off", look = "off";   // the look track only runs when asked for
         bool walls = true;
@@ -65,7 +65,7 @@ private:
     };
     // One take, built while Preparing and played while Running.
     struct Take {
-        Preset preset; Timeline timeline;
+        Preset source, preset; Timeline timeline;
         Json sound;                    // a pack's SoundWave for the take, loaded while preparing
         PerformanceChoice performance;
         std::string expression = "unchanged";
@@ -120,8 +120,8 @@ private:
         // crosses the middle of the frame, as a fraction of its width.
         bool follows = false, body_live = false;
         bool fits = false;             // a shot fits a height into the frame: the lens ratio is kept measured
-        static constexpr size_t body_parts = 19;
-        Vec3 body_before[body_parts], body_now[body_parts];   // head, torso, arms, hands, legs, feet (see sample_body)
+        std::vector<Vec3> body_before, body_now;
+        std::vector<bool> body_present;   // head, torso, arms, hands, legs, feet (see sample_body)
         double body_age = 0, body_place = 0.5;
         bool body_placed = false;
         Json body_mesh;
@@ -134,8 +134,8 @@ private:
         double track_age = 0;
         // tan(half the vertical angle of view) over tan(half the field of view the camera is
         // set to): what a "fit" shot needs to turn a height into a lens. Measured from the
-        // game's own projection, since it depends on the window's shape; 16:9 until then.
-        double lens_ratio = 0.5625;
+        // game's own projection, since it depends on the window's shape; core ratio until then.
+        double lens_ratio = content().body.lens_ratio;
         double wall_scale = 1.0;       // 1, or less while something stands between the camera and her
         double wall_target = 1.0;      // where the last trace wants it; the scale eases there frame by frame
         // The plan against the world, made before the take rolls: a turn and a scale per shot.
@@ -168,6 +168,10 @@ private:
     };
 
     // Settings, presets, persistence.
+    ContentLoader core_loader_;
+    void load_core();
+    void take_content(const CoreContent& value);
+    void restore_content();
     void load_presets();
     void load_folder_presets();
     void load_next_pack();       // one pack per tick, from tick()
@@ -193,7 +197,7 @@ private:
     bool plan_surroundings();   // true when done; a slice of traces per tick
     void sequence_frame(const CssxFrame& frame);
     void sequence_tick();
-    struct SeqView { Vec3 camera; Rotator rotation; double fov = 40, focus = 300; };
+    struct SeqView { Vec3 camera; Rotator rotation; double fov = content().defaults.fov, focus = content().defaults.distance; };
     SeqView sequence_view(const SeqPose& pose, Vec3 anchor, double time) const;
     double coverage_at(double time, double distance, double fov) const;   // the height a "fit" shot shows at her, or 0
     Vec3 anchor_at(double time) const;   // the point a sequence's shot is measured from at this moment
@@ -259,10 +263,12 @@ private:
     void sample_labels();
     void sample_body();
     double tick_dt_ = 0.1;
+    CoreContent core_content_;
+    std::vector<std::string> signature_before_;
     Settings settings_;
     std::map<std::string, Preset> presets_;
     std::vector<std::string> preset_order_;     // pack presets in pack and manifest order; folder presets follow by id
-    std::vector<Pack> packs_;                   // installed packs (rows dropped after parsing)
+    std::vector<Pack> packs_;                   // installed packs, including validated effective styles
     std::map<std::string, std::string> audio_ids_;   // audio id -> SoundWave, across packs
     std::vector<std::string> pack_queue_;       // packs still to read
     bool packs_loading_ = false;

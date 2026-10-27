@@ -50,6 +50,7 @@ struct Host {
     std::vector<Json> css_wears;
     size_t camera_places = 0;
     size_t requests = 0;
+    std::vector<std::string> logs;
 
     // ---- A small modelled world, off for the older tests. Objects carry real properties, so
     // a test can compare the whole world before CINE touched it and after.
@@ -311,9 +312,11 @@ struct Host {
         const auto op = j.at("op").get<std::string>();
         if (op == "state.load") return state;
         if (op == "state.save") { state = j.at("value"); return true; }
-        if (op == "log" || op == "invalidate" || op == "menu.close") return nullptr;
+        if (op == "log") { logs.push_back(j.value("message", std::string())); return nullptr; }
+        if (op == "invalidate" || op == "menu.close") return nullptr;
         if (op == "extension.info") return {{"directory", dir.string()}, {"id", "eins0fx.cine"}};
         if (op == "player") return model ? Json{{"pawn", object(Pawn)}, {"controller", object(Controller)}, {"world", object(World)}} : Json{{"pawn", object(1)}, {"controller", object(2)}};
+        if (op == "load" && j.at("path") == cine::core_table_path) return nullptr;
         if ((op == "find" || op == "load") && model) return by_path(j.at("path").get<std::string>());
         if (op == "find" || op == "load") return object(next++);
         // Like the real bridge: class_default resolves a class name, never an asset path.
@@ -519,6 +522,22 @@ int main(int argc, char** argv) {
             const auto before = r.host.requests;
             r.steps(50);
             expect(r.host.requests == before, "idle CINE must not call the host");
+            expect(std::count_if(r.host.logs.begin(), r.host.logs.end(), [](const auto& log) { return log.starts_with("CINE core data:"); }) == 1, "missing core logs once");
+            expect(has(r.ext->status()["summary"].get<std::string>(), "built-in defaults"), "missing core reaches CSSX status");
+        }
+        {   // Startup waits for a ready player, and saved choices survive an absent pack.
+            Rig r(dir);
+            r.host.state = {{"settings", {{"preset", "temporarily-missing"}}}};
+            r.ext = std::make_unique<cine::Extension>(&r.host.api);
+            const auto before = r.host.requests;
+            r.ext->tick(.1);
+            expect(r.host.requests == before, "core does not read while the player is not ready");
+            r.step();
+            expect(r.ext->model()["values"]["preset"] == "temporarily-missing", "missing saved choice is retained");
+            cssx::validate_model(cssx::bind_menu(definition, r.ext->model()));
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-3"}});
+            r.ext->event({{"id", "reload"}});
+            expect(r.ext->model()["values"]["preset"] == "pose-glide-3", "explicit choice survives reload");
         }
         {   // Enter, glide take, everything restored, still in Cine World; then leave.
             Rig r(dir);

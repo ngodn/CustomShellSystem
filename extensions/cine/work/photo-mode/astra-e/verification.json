@@ -1,0 +1,95 @@
+[
+  {
+    "command": [
+      "cmake",
+      "-S",
+      "extensions/core",
+      "-B",
+      "build/astra-e-host",
+      "-G",
+      "Ninja",
+      "-DCMAKE_BUILD_TYPE=Release"
+    ],
+    "exit": 0,
+    "seconds": 0.62,
+    "log": "configure.log",
+    "warnings": []
+  },
+  {
+    "command": [
+      "cmake",
+      "--build",
+      "build/astra-e-host",
+      "-j",
+      "6"
+    ],
+    "exit": 0,
+    "seconds": 43.158,
+    "log": "build-final.log",
+    "warnings": []
+  },
+  {
+    "command": [
+      "ctest",
+      "--test-dir",
+      "build/astra-e-host",
+      "--output-on-failure"
+    ],
+    "exit": 0,
+    "seconds": 2.72,
+    "log": "tests.log",
+    "warnings": []
+  },
+  {
+    "command": [
+      "build/astra-e-host/cssx_cine_content_tests"
+    ],
+    "exit": 0,
+    "seconds": 0.364,
+    "log": "content-checks.log",
+    "warnings": []
+  },
+  {
+    "command": [
+      "python3",
+      "extensions/core/tools/cssx.py",
+      "build",
+      "--dev"
+    ],
+    "exit": 0,
+    "seconds": 0.29,
+    "log": "windows-build.log",
+    "warnings": []
+  },
+  {
+    "command": [
+      "python3",
+      "extensions/cine/assets/core/generate.py",
+      "--check"
+    ],
+    "exit": 0,
+    "seconds": 0.091,
+    "log": "generated-check.log",
+    "warnings": []
+  },
+  {
+    "command": [
+      "python3",
+      "extensions/cine/assets/core/validate.py"
+    ],
+    "exit": 0,
+    "seconds": 0.046,
+    "log": "source-check.log",
+    "warnings": []
+  },
+  {
+    "command": [
+      "python3",
+      "/home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/work/photo-mode/astra-e/verify_scope.py"
+    ],
+    "exit": 0,
+    "seconds": 0.086,
+    "log": "scope-check.log",
+    "warnings": []
+  }
+]

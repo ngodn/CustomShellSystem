@@ -1,0 +1,37 @@
+Test project /home/eins0fx/development/mods/msII/CustomShellSystem/build/astra-e-host
+      Start  1: cssx_runtime
+ 1/16 Test  #1: cssx_runtime .....................   Passed    0.01 sec
+      Start  2: cssx_services
+ 2/16 Test  #2: cssx_services ....................   Passed    0.01 sec
+      Start  3: cssx_cheat_menu
+ 3/16 Test  #3: cssx_cheat_menu ..................   Passed    0.09 sec
+      Start  4: cssx_extension_lifecycle
+ 4/16 Test  #4: cssx_extension_lifecycle .........   Passed    0.08 sec
+      Start  5: cssx_traverse
+ 5/16 Test  #5: cssx_traverse ....................   Passed    0.04 sec
+      Start  6: cssx_cine
+ 6/16 Test  #6: cssx_cine ........................   Passed    0.03 sec
+      Start  7: cssx_cine_director
+ 7/16 Test  #7: cssx_cine_director ...............   Passed    0.90 sec
+      Start  8: cssx_cine_performance
+ 8/16 Test  #8: cssx_cine_performance ............   Passed    0.00 sec
+      Start  9: cssx_cine_expression
+ 9/16 Test  #9: cssx_cine_expression .............   Passed    0.00 sec
+      Start 10: cssx_cine_pack
+10/16 Test #10: cssx_cine_pack ...................   Passed    0.00 sec
+      Start 11: cssx_cine_content
+11/16 Test #11: cssx_cine_content ................   Passed    0.37 sec
+      Start 12: cssx_cine_content_generated
+12/16 Test #12: cssx_cine_content_generated ......   Passed    0.04 sec
+      Start 13: cssx_cine_content_source
+13/16 Test #13: cssx_cine_content_source .........   Passed    0.03 sec
+      Start 14: cssx_cine_render
+14/16 Test #14: cssx_cine_render .................   Passed    0.03 sec
+      Start 15: cssx_perf_tuner
+15/16 Test #15: cssx_perf_tuner ..................   Passed    0.03 sec
+      Start 16: cssx_tools
+16/16 Test #16: cssx_tools .......................   Passed    1.04 sec
+
+100% tests passed out of 16
+
+Total Test time (real) =   2.71 sec

@@ -1,5 +1,6 @@
 #include <cstdio>
 #include "rig.hpp"
+#include "content.hpp"
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -175,7 +176,7 @@ void Rig::move_camera(const Json& camera, Vec3 position, Rotator rotation, doubl
 void Rig::set_fov(const Json& camera, double fov) { host_.set(host_.get(camera, "CameraComponent"), "FieldOfView", fov); }
 
 void Rig::view(const Json& target, double blend) {
-    call(controller_, "SetViewTargetWithBlend", {{"NewViewTarget", target}, {"BlendTime", blend}, {"BlendFunc", 4}, {"BlendExp", 2.0}, {"bLockOutgoing", false}});
+    call(controller_, "SetViewTargetWithBlend", {{"NewViewTarget", target}, {"BlendTime", blend}, {"BlendFunc", content().transitions.curve}, {"BlendExp", content().transitions.exponent}, {"bLockOutgoing", content().transitions.lock_outgoing}});
     view_changed_ = true;
 }
 void Rig::view_player() {
@@ -209,7 +210,7 @@ bool Rig::trace(Vec3 from, Vec3 to, double* distance) {
     return hit;
 }
 
-Vec3 Rig::head_position() { return vec3(call(mesh_, "GetSocketLocation", {{"InSocketName", "head"}})); }
+Vec3 Rig::head_position() { return vec3(call(mesh_, "GetSocketLocation", {{"InSocketName", content().body.head_socket}})); }
 
 FinalShot Rig::capture_final(Vec3 her, double her_yaw) {
     const auto at = vec3(call(camera_manager_, "GetCameraLocation", Json::object()));
@@ -371,25 +372,14 @@ bool Rig::owns_take_changes() const {
 }
 
 namespace {
-// A console variable CINE raises for a take: the value for sharp shadows, the value for the
-// full picture (`leave` at a level leaves it alone), and whether lower is the better direction.
-struct PictureSetting { const char* name; double sharp, full; bool lower_is_better; };
+// Profiles can select these cvars only. No shadow page-pool resizing.
+struct PictureSetting { const char* name; bool lower_is_better; };
 constexpr double leave = -1e9;
-// What a held close-up showed in this game (work/live/quality_probe.py, 6 Oct): the shadow of
-// hair and lace on skin is stair-stepped and dotted because the light's shadow map is too
-// coarse for a lens that close, at any resolution setting. What clears it is more shadow
-// rays with a wider texel dither, the engine's own answer to "insufficient shadow
-// resolution". Nothing here resizes a render target or the shadow page pool: a take that
-// raised the pool (512 to 4096 pages, back at its end) ended in a GPU crash the same night,
-// and the pool made no visible difference in the probe.
 constexpr PictureSetting picture_settings[] = {
-    {"r.Shadow.Virtual.SMRT.RayCountDirectional", 16, 16, false},
-    {"r.Shadow.Virtual.SMRT.SamplesPerRayDirectional", 8, 8, false},
-    {"r.Shadow.Virtual.SMRT.RayCountLocal", 16, 16, false},
-    {"r.Shadow.Virtual.SMRT.SamplesPerRayLocal", 8, 8, false},
-    {"r.Shadow.Virtual.SMRT.TexelDitherScaleDirectional", 12, 12, false},
-    {"r.Shadow.Virtual.SMRT.TexelDitherScaleLocal", 12, 12, false},
-    {"r.ScreenPercentage", leave, 100, false},
+    {"r.Shadow.Virtual.SMRT.RayCountDirectional", false}, {"r.Shadow.Virtual.SMRT.SamplesPerRayDirectional", false},
+    {"r.Shadow.Virtual.SMRT.RayCountLocal", false}, {"r.Shadow.Virtual.SMRT.SamplesPerRayLocal", false},
+    {"r.Shadow.Virtual.SMRT.TexelDitherScaleDirectional", false}, {"r.Shadow.Virtual.SMRT.TexelDitherScaleLocal", false},
+    {"r.ScreenPercentage", false}
 };
 std::string console_number(double value) {
     char text[32];
@@ -401,16 +391,18 @@ std::string console_number(double value) {
 void Rig::picture(int level) {
     if (level <= 0 || !picture_saved_.empty()) return;
     const auto kismet = cdo("/Script/Engine.Default__KismetSystemLibrary");
-    for (const auto& setting : picture_settings) {
-        const double target = level >= 2 ? setting.full : setting.sharp;
+    for (size_t i = 0; i < std::size(picture_settings); ++i) {
+        const auto& setting = picture_settings[i];
+        const char* name = setting.name;
+        const double target = level >= 2 ? content().picture.full[i] : content().picture.sharp[i];
         if (target == leave) continue;
         try {
-            const auto now = call(kismet, "GetConsoleVariableFloatValue", {{"VariableName", setting.name}});
+            const auto now = call(kismet, "GetConsoleVariableFloatValue", {{"VariableName", name}});
             if (!now.is_number()) continue;
             const double value = now.get<double>();
             if (setting.lower_is_better ? value <= target : value >= target) continue;   // already as good or better
-            call(kismet, "ExecuteConsoleCommand", {{"WorldContextObject", pawn_}, {"Command", std::string(setting.name) + " " + console_number(target)}, {"SpecificPlayer", nullptr}});
-            picture_saved_.emplace_back(setting.name, value);
+            call(kismet, "ExecuteConsoleCommand", {{"WorldContextObject", pawn_}, {"Command", std::string(name) + " " + console_number(target)}, {"SpecificPlayer", nullptr}});
+            picture_saved_.emplace_back(name, value);
         } catch (...) {}   // a variable this build does not have: the picture stays as the game renders it
     }
 }

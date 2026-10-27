@@ -139,7 +139,7 @@ private:
     // A look that was never learned has what every look has.
     bool worn(uint32_t looks) const { return look_now_ < looks_.size() ? (looks & (uint32_t{1} << look_now_)) != 0 : looks == all_looks_; }
     size_t bones_worn() const;
-    Json instance(const char* key, Vec3 colour, double opacity);
+    Json instance(const std::string& path, Vec3 colour, double opacity);
     void set_param(const Json& mid, const char* name, double value);
     void wipe_numbers(double from, double to, double seconds);
     void apply_clay(bool on);      // slot materials <-> her own, on every skinned part

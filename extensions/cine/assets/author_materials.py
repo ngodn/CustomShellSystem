@@ -13,10 +13,17 @@ animates on the GPU with no per-frame call from the mod: CINE writes the four nu
 With the defaults (From = To = 1) everything is fully revealed.
 """
 import json
+import importlib.util
 from pathlib import Path
 import unreal
 
-ROOT = "/Game/CSSX/CINE"
+SOURCE = Path(__file__).resolve().parent
+spec = importlib.util.spec_from_file_location("cine_core_validate", SOURCE / "core/validate.py")
+core_source = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(core_source)
+CORE_ROWS = core_source.load_rows()
+STYLE = CORE_ROWS["style.materials"]
+ROOT = STYLE["root"]
 MATERIALS = ROOT + "/Materials"
 REPORT = Path(unreal.Paths.project_dir()).resolve() / "cine-materials.json"
 EDIT = unreal.MaterialEditingLibrary
@@ -128,8 +135,8 @@ class Graph:
         width = self.max(self.collection(mpc, "WipeLine"), self.const(0.00001))
         band = self.saturate(self.one_minus(self.div(self.abs(distance), width)))
         # No line while nothing or everything is revealed.
-        moving = self.mul(self.saturate(self.mul(position, self.const(1000.0))),
-                          self.saturate(self.mul(self.one_minus(position), self.const(1000.0))))
+        moving = self.mul(self.saturate(self.mul(position, self.div(self.const(1.0), self.scalar("EndpointFade", STYLE["endpoint_fade"])))),
+                          self.saturate(self.mul(self.one_minus(position), self.div(self.const(1.0), self.scalar("EndpointFade", STYLE["endpoint_fade"])))))
         # Invert = 1: outgoing, visible where the wipe has not passed. Hold = 1: not part of this
         # wipe. Show = 0: hidden.
         swept = self.lerp(revealed, self.one_minus(revealed), self.scalar("Invert", 0.0))
@@ -167,7 +174,7 @@ if not isinstance(mpc, unreal.MaterialParameterCollection):
     raise RuntimeError("Cannot create MPC_Cine")
 scalars = []
 for name, default in (("WipeT0", 0.0), ("WipeDur", 1.0), ("WipeFrom", 1.0), ("WipeTo", 1.0),
-                      ("WipeSoft", 0.004), ("WipeLine", 0.0015)):
+                      ("WipeSoft", STYLE["wipe_soft"]), ("WipeLine", STYLE["wipe_line"])):
     parameter = unreal.CollectionScalarParameter()
     parameter.set_editor_property("parameter_name", name)
     parameter.set_editor_property("default_value", default)
@@ -189,11 +196,11 @@ m.set_editor_property("wireframe", True)
 mesh_usage(m)
 g = Graph(m)
 revealed, _ = g.wipe(mpc)
-color = g.vector("Color", 0.05, 0.9, 1.0)
-out(g.mul(g.rgb(color), g.scalar("Glow", 1.0)), "", MP.MP_EMISSIVE_COLOR)
+color = g.vector("Color", *STYLE["wire_color"])
+out(g.mul(g.rgb(color), g.scalar("Glow", STYLE["wire_glow"])), "", MP.MP_EMISSIVE_COLOR)
 out(revealed, "", MP.MP_OPACITY_MASK)
 # Lift the lines off the surface they sit on, or they fight with it for depth.
-out(g.mul(g.n(unreal.MaterialExpressionVertexNormalWS), g.scalar("Push", 0.06)), "", MP.MP_WORLD_POSITION_OFFSET)
+out(g.mul(g.n(unreal.MaterialExpressionVertexNormalWS), g.scalar("Push", STYLE["wire_push"])), "", MP.MP_WORLD_POSITION_OFFSET)
 created["materials"]["wire"] = finish(m)
 
 # ---------------------------------------------------------------- clay (overlay or slot)
@@ -203,15 +210,15 @@ m.set_editor_property("two_sided", True)
 mesh_usage(m)
 g = Graph(m)
 revealed, _ = g.wipe(mpc)
-clay = g.rgb(g.vector("BaseColor", 0.42, 0.42, 0.42))
+clay = g.rgb(g.vector("BaseColor", *STYLE["clay_color"]))
 out(clay, "", MP.MP_BASE_COLOR)
 # A little self-light, or clay is black in a night scene.
-out(g.mul(clay, g.scalar("Ambient", 0.0)), "", MP.MP_EMISSIVE_COLOR)
-out(g.scalar("Roughness", 0.65), "", MP.MP_ROUGHNESS)
-out(g.scalar("Specular", 0.35), "", MP.MP_SPECULAR)
+out(g.mul(clay, g.scalar("Ambient", STYLE["clay_ambient"])), "", MP.MP_EMISSIVE_COLOR)
+out(g.scalar("Roughness", STYLE["clay_roughness"]), "", MP.MP_ROUGHNESS)
+out(g.scalar("Specular", STYLE["clay_specular"]), "", MP.MP_SPECULAR)
 out(g.const(0.0), "", MP.MP_METALLIC)
 out(revealed, "", MP.MP_OPACITY_MASK)
-out(g.mul(g.n(unreal.MaterialExpressionVertexNormalWS), g.scalar("Push", 0.02)), "", MP.MP_WORLD_POSITION_OFFSET)
+out(g.mul(g.n(unreal.MaterialExpressionVertexNormalWS), g.scalar("Push", STYLE["clay_push"])), "", MP.MP_WORLD_POSITION_OFFSET)
 created["materials"]["clay"] = finish(m)
 
 # ---------------------------------------------------------------- see-through colour (rig shapes)
@@ -223,13 +230,14 @@ m.set_editor_property("disable_depth_test", True)
 mesh_usage(m)
 g = Graph(m)
 revealed, _ = g.wipe(mpc)
-color = g.vector("Color", 1.0, 0.85, 0.1)
+color = g.vector("Color", *STYLE["xray_color"])
 # Unlit, but not flat: surfaces turning away from the camera darken toward Rim, so a bone reads
 # as a solid shape and overlapping bones stay apart.
-facing = g.n(unreal.MaterialExpressionFresnel, exponent=1.5, base_reflect_fraction=0.0)
-shade = g.lerp(g.const(1.0), g.scalar("Rim", 0.28), facing)
-out(g.mul(g.mul(g.rgb(color), g.scalar("Glow", 1.0)), shade), "", MP.MP_EMISSIVE_COLOR)
-out(g.mul(g.scalar("Opacity", 0.85), revealed), "", MP.MP_OPACITY)
+facing = g.n(unreal.MaterialExpressionFresnel, exponent=STYLE["fresnel"], base_reflect_fraction=0.0)
+link(g.scalar("Fresnel", STYLE["fresnel"]), "", facing, "ExponentIn")
+shade = g.lerp(g.const(1.0), g.scalar("Rim", STYLE["rim"]), facing)
+out(g.mul(g.mul(g.rgb(color), g.scalar("Glow", STYLE["bone_glow"])), shade), "", MP.MP_EMISSIVE_COLOR)
+out(g.mul(g.scalar("Opacity", STYLE["opacity"]), revealed), "", MP.MP_OPACITY)
 created["materials"]["xray"] = finish(m)
 
 # ---------------------------------------------------------------- solid colour, depth tested (rig shapes behind the body)
@@ -240,8 +248,8 @@ m.set_editor_property("two_sided", True)
 mesh_usage(m)
 g = Graph(m)
 revealed, _ = g.wipe(mpc)
-color = g.vector("Color", 1.0, 0.85, 0.1)
-out(g.mul(g.rgb(color), g.scalar("Glow", 1.0)), "", MP.MP_EMISSIVE_COLOR)
+color = g.vector("Color", *STYLE["xray_color"])
+out(g.mul(g.rgb(color), g.scalar("Glow", STYLE["bone_glow"])), "", MP.MP_EMISSIVE_COLOR)
 out(revealed, "", MP.MP_OPACITY_MASK)
 created["materials"]["solid"] = finish(m)
 
@@ -261,13 +269,13 @@ def buffer_material(name, location, lighting):
     scene = g.rgb(texture(ID.PPI_POST_PROCESS_INPUT0))
     base = g.rgb(texture(ID.PPI_BASE_COLOR))
     normal = g.add(g.mul(g.rgb(texture(ID.PPI_WORLD_NORMAL)), g.const(0.5)), g.const(0.5))
-    depth = g.one_minus(g.saturate(g.div(g.red(texture(ID.PPI_SCENE_DEPTH)), g.max(g.scalar("DepthRange", 3000.0), g.const(1.0)))))
+    depth = g.one_minus(g.saturate(g.div(g.red(texture(ID.PPI_SCENE_DEPTH)), g.max(g.scalar("DepthRange", STYLE["depth_range"]), g.const(1.0)))))
     layers = [("W_BaseColor", base), ("W_Normal", normal), ("W_Depth", depth),
               ("W_Roughness", g.red(texture(ID.PPI_ROUGHNESS))), ("W_Metallic", g.red(texture(ID.PPI_METALLIC))),
               ("W_Specular", g.red(texture(ID.PPI_SPECULAR))), ("W_AO", g.red(texture(ID.PPI_AMBIENT_OCCLUSION)))]
     if lighting:
         # Scene colour over base colour: roughly the light that fell on the surface.
-        lit = g.mul(g.div(scene, g.max(base, g.const(0.04))), g.scalar("LightingScale", 0.18))
+        lit = g.mul(g.div(scene, g.max(base, g.scalar("LightingFloor", STYLE["lighting_floor"]))), g.scalar("LightingScale", STYLE["lighting_scale"]))
         layers.append(("W_Lighting", lit))
     mix = None
     total = None
@@ -277,10 +285,10 @@ def buffer_material(name, location, lighting):
         mix = term if mix is None else g.add(mix, term)
         total = weight if total is None else g.add(total, weight)
     # Gain and Gamma place the pass on the output curve; set live per location.
-    graded = g.two(unreal.MaterialExpressionPower, g.max(g.mul(mix, g.scalar("Gain", 1.0)), g.const(0.0)),
-                   g.scalar("Gamma", 1.0), "Base", "Exp")
+    graded = g.two(unreal.MaterialExpressionPower, g.max(g.mul(mix, g.scalar("Gain", STYLE["gain"])), g.const(0.0)),
+                   g.scalar("Gamma", STYLE["gamma"]), "Base", "Exp")
     shown = g.lerp(scene, graded, g.mul(g.saturate(total), revealed))
-    edge = g.mul(g.rgb(g.vector("LineColor", 1.0, 1.0, 1.0)), g.mul(line, g.scalar("LineGlow", 1.0)))
+    edge = g.mul(g.rgb(g.vector("LineColor", *STYLE["line_color"])), g.mul(line, g.scalar("LineGlow", STYLE["line_glow"])))
     out(g.add(shown, edge), "", MP.MP_EMISSIVE_COLOR)
     return finish(material)
 
@@ -300,6 +308,48 @@ submix.set_editor_property("mute_when_backgrounded", False)
 if not unreal.EditorAssetLibrary.save_loaded_asset(submix, only_if_is_dirty=False):
     raise RuntimeError("SM_CINE_Render did not save")
 created["submix"] = submix.get_path_name()
+
+# ---------------------------------------------------------------- core content and font payload
+STRUCT = unreal.load_object(None, "/Script/GameplayTags.GameplayTagTableRow")
+if STRUCT is None:
+    raise RuntimeError("GameplayTagTableRow is unavailable")
+factory = unreal.DataTableFactory()
+factory.set_editor_property("struct", STRUCT)
+table = TOOLS.create_asset("DT_CINE_Core", ROOT + "/Core", unreal.DataTable, factory)
+if not isinstance(table, unreal.DataTable):
+    raise RuntimeError("Cannot create DT_CINE_Core")
+rows = [{"Name": name, "Tag": "", "DevComment": json.dumps(value, ensure_ascii=False, separators=(",", ":"))}
+        for name, value in CORE_ROWS.items()]
+if not unreal.DataTableFunctionLibrary.fill_data_table_from_json_string(table, json.dumps(rows, ensure_ascii=False), STRUCT):
+    raise RuntimeError("Cannot fill DT_CINE_Core")
+if not LIB.save_loaded_asset(table, only_if_is_dirty=False):
+    raise RuntimeError("Cannot save DT_CINE_Core")
+actual = json.loads(unreal.DataTableFunctionLibrary.export_data_table_to_json_string(table))
+expected = {row["Name"]: row["DevComment"].encode("utf-8") for row in rows}
+if {row["Name"]: row["DevComment"].encode("utf-8") for row in actual} != expected or any(row["Tag"] not in ("", "None") for row in actual):
+    raise RuntimeError("DT_CINE_Core row bytes differ")
+created["core_table"] = table.get_path_name()
+created["core_rows"] = rows
+
+font_style = CORE_ROWS["style.callouts"]
+font_path = font_style["font_asset"].split(".")[0]
+task = unreal.AssetImportTask()
+task.set_editor_property("filename", str(SOURCE.parent / font_style["font_file"]))
+task.set_editor_property("destination_path", font_path.rsplit("/", 1)[0])
+task.set_editor_property("destination_name", font_path.rsplit("/", 1)[1])
+task.set_editor_property("automated", True)
+task.set_editor_property("replace_existing", False)
+task.set_editor_property("factory", unreal.FontFileImportFactory())
+TOOLS.import_asset_tasks([task])
+face = LIB.load_asset(font_path)
+if not isinstance(face, unreal.FontFace):
+    raise RuntimeError("Cannot import the CINE FontFace")
+# Inline carries the bytes inside the cooked asset instead of a loose .ufont payload.
+face.set_editor_property("loading_policy", unreal.FontLoadingPolicy.INLINE)
+face.set_editor_property("hinting", unreal.FontHinting.DEFAULT)
+if not LIB.save_loaded_asset(face, only_if_is_dirty=False):
+    raise RuntimeError("Cannot save the CINE FontFace")
+created["font_face"] = face.get_path_name()
 
 # ---------------------------------------------------------------- no game or project dependency
 registry = unreal.AssetRegistryHelpers.get_asset_registry()

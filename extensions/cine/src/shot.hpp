@@ -1,4 +1,5 @@
 #pragma once
+#include "content.hpp"
 // Pure shot maths for CINE: no engine calls, so all of it is unit-tested off-game.
 // Units are Unreal's: centimetres, degrees, seconds. "Relative" means her actor frame:
 // X forward, Y right, Z up from the capsule centre.
@@ -78,8 +79,8 @@ private:
 
 // Camera key in orbit terms: azimuth from her front (+90 = her right), flat distance,
 // camera height and aim height above the capsule centre, horizontal FOV.
-struct OrbitKey { double t = 0, azimuth = 0, distance = 300, height = 0, aim = 0, fov = 40; };
-struct Pose { Vec3 offset; Vec3 aim; double fov = 40; };
+struct OrbitKey { double t = 0, azimuth = content().defaults.azimuth, distance = content().defaults.distance, height = content().defaults.height, aim = content().defaults.aim, fov = content().defaults.fov; };
+struct Pose { Vec3 offset; Vec3 aim; double fov = content().defaults.fov; };
 
 // One Catmull-Rom curve through the keys (non-uniform tangents): the camera never slows to
 // a stop between shots. Azimuth is unwrapped so the camera arcs the short or the intended
@@ -99,24 +100,24 @@ private:
 class WallProfile {
 public:
     WallProfile() = default;
-    WallProfile(double step, std::vector<double> raw, double hold = 1.0);
+    WallProfile(double step, std::vector<double> raw, double hold = content().motion.wall_hold);
     double at(double t) const;
     bool tight() const;   // any part pulled in
 private:
-    double step_ = 0.25;
+    double step_ = content().motion.wall_step;
     std::vector<double> scale_;
 };
 
 // ---- action takes: framing live action from where the fighters are now.
 enum class Framing { Follow, Duel, Shoulder };
 struct ActionFrame {
-    Framing framing = Framing::Duel;
-    double azimuth = 70;        // degrees, see ActionShot
-    double distance = 420, distance_max = 1100, margin = 150;
-    double height = 35, aim = 10, fov = 38;
+    Framing framing = content().action.framing == "follow" ? Framing::Follow : content().action.framing == "shoulder" ? Framing::Shoulder : Framing::Duel;
+    double azimuth = content().action.azimuth;        // degrees, see ActionShot
+    double distance = content().action.distance, distance_max = content().action.distance_max, margin = content().action.margin;
+    double height = content().action.height, aim = content().action.aim, fov = content().action.fov;
     double punch = 0;           // 0..1: a punch-in tightens distance and field of view
 };
-struct ActionView { Vec3 camera, aim; double fov = 40; double focus = 400; };
+struct ActionView { Vec3 camera, aim; double fov = content().defaults.fov; double focus = content().action.view_focus; };
 // Follow circles her at a world azimuth. Duel sits off the line between the two fighters and
 // backs off just enough to hold both inside the field of view. Shoulder sits behind her
 // shoulder looking past her at the target. Duel and Shoulder fall back to Follow without a

@@ -4,7 +4,8 @@
 // the JSON text is in each row's DevComment) and its music as SoundWaves under <Pack>/Audio/.
 // A folder is only a candidate: a pack counts once the engine loads its table and the manifest
 // validates. Paks mount at game start, so new or removed packs need a restart.
-#include <cssx/client.hpp>
+#include "content.hpp"
+#include <optional>
 #include <filesystem>
 #include <map>
 #include <string>
@@ -22,9 +23,11 @@ struct PackAudio {
 struct Pack {
     std::string pack;      // folder token, e.g. "IrisOut"
     std::string name;      // display name, e.g. "Iris Out"
-    std::string version, song;
+    std::string version, song, default_preset;
     std::vector<std::string> presets;          // display order
     std::map<std::string, PackAudio> audio;    // audio id -> asset
+    std::optional<CoreContent> style;          // validated core plus this pack's partial rows
+    std::vector<std::string> problems;        // bad optional rows do not discard the scenes
     std::map<std::string, Json> rows;          // every row's parsed JSON, by row name
 };
 

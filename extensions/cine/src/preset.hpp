@@ -3,6 +3,7 @@
 // strict and bounded: a broken preset is refused with a message naming the field, it never
 // reaches the camera.
 #include "layers.hpp"
+#include "content.hpp"
 #include "sequence.hpp"
 #include "shot.hpp"
 #include <map>
@@ -18,7 +19,7 @@ const char* kind_name(ShotKind);
 
 // A camera key as written in a preset. For Walk, `at` is "start", "walk" or a fraction of
 // the walking time; for Glide and Turntable, a fraction of the duration.
-struct PresetKey { std::string anchor; double fraction = 0; double azimuth = 0, distance = 300, height = 0, aim = 0, fov = 40; };
+struct PresetKey { std::string anchor; double fraction = 0; double azimuth = content().defaults.azimuth, distance = content().defaults.distance, height = content().defaults.height, aim = content().defaults.aim, fov = content().defaults.fov; };
 
 // One look step: a palette and per-control values (one number, or 1-3 channels; colour
 // controls take three as a swatch), at a fraction of the walk (Walk) or duration (others). Controls a worn outfit
@@ -27,7 +28,7 @@ struct PresetKey { std::string anchor; double fraction = 0; double azimuth = 0, 
 struct LookStep { double fraction = 0; std::string palette; std::map<std::string, std::vector<double>> controls; std::string title; bool titled = false;
                   std::map<std::string, std::string> physics; };   // controls: 1-3 channels as given; physics: a motion control and the wardrobe's preset for it
 
-struct PhotoShot { std::string name; double azimuth = 0, distance = 300, height = 0, aim = 0, fov = 40; };
+struct PhotoShot { std::string name; double azimuth = content().defaults.azimuth, distance = content().defaults.distance, height = content().defaults.height, aim = content().defaults.aim, fov = content().defaults.fov; };
 
 // One breakdown step: from this point of the take the frame shows exactly these layers,
 // reached by a left-to-right wipe of `wipe` seconds (0 cuts). An empty set is the final image.
@@ -35,48 +36,48 @@ struct PhotoShot { std::string name; double azimuth = 0, distance = 300, height 
 // whole frame; less holds the layers left of the line and the final picture right of it.
 // `follow` ("split": "body") keeps the line on the middle of her body instead of a fixed place.
 // `share`, with follow: how much of her width the layers get (0.5 is her centre line).
-struct BreakdownStep { double fraction = 0; LayerSet layers = 0; double wipe = 1.2; double split = 1.0; std::string title; bool titled = false; bool follow = false; double share = 0.5;
+struct BreakdownStep { double fraction = 0; LayerSet layers = 0; double wipe = content().defaults.wipe; double split = 1.0; std::string title; bool titled = false; bool follow = false; double share = content().defaults.share;
                        bool labels = true; };   // "labels": false keeps the arrows off while this step shows
 
 // Something that happens in a fight, and what the camera does about it.
 struct Beat {
     enum class On { Hit, Hurt, Parry, Kill } on = On::Hit;
     enum class Do { Slowmo, Punch } what = Do::Punch;
-    double cooldown = 2.0;   // seconds before this beat can fire again
+    double cooldown = content().action.cooldown;   // seconds before this beat can fire again
 };
 
 // An action take: the player plays, the camera films. Everything is measured in the world,
 // not from her facing, because she spins in a fight.
 struct ActionShot {
-    Framing framing = Framing::Duel;
-    double azimuth = 70;          // degrees: from the duel axis (duel, shoulder) or world north (follow)
-    double orbit_speed = 6;       // degrees per second; 0 holds the angle
-    double distance = 420;        // closest the camera sits
-    double distance_max = 1100;   // duel: how far it backs off to keep both in frame
-    double margin = 150;          // duel: room around the fighters
-    double height = 35, aim = 10; // camera and aim height from the capsule centre
-    double fov = 38;
-    double smooth = 0.45;         // seconds of smoothing on what the camera follows
-    double shake = 0.5;           // the game's camera shake scale during the take; negative leaves it
-    double fstop = 0;             // depth of field, 0 off; focus stays on the fight
-    double slowmo = 0.35;         // time scale of a slow-motion beat
-    double slowmo_hold = 0.7;     // real seconds a slow-motion beat lasts
-    double tail = 3.0;            // seconds the take runs on after the target dies
-    bool respect_game_cameras = true;   // let the game's own finisher cameras play
+    Framing framing = content().action.framing == "follow" ? Framing::Follow : content().action.framing == "shoulder" ? Framing::Shoulder : Framing::Duel;
+    double azimuth = content().action.azimuth;          // degrees: from the duel axis (duel, shoulder) or world north (follow)
+    double orbit_speed = content().action.orbit_speed;       // degrees per second; 0 holds the angle
+    double distance = content().action.distance;        // closest the camera sits
+    double distance_max = content().action.distance_max;   // duel: how far it backs off to keep both in frame
+    double margin = content().action.margin;          // duel: room around the fighters
+    double height = content().action.height, aim = content().action.aim; // camera and aim height from the capsule centre
+    double fov = content().action.fov;
+    double smooth = content().action.smooth;         // seconds of smoothing on what the camera follows
+    double shake = content().action.shake;           // the game's camera shake scale during the take; negative leaves it
+    double fstop = content().action.fstop;             // depth of field, 0 off; focus stays on the fight
+    double slowmo = content().action.slowmo;         // time scale of a slow-motion beat
+    double slowmo_hold = content().action.slowmo_hold;     // real seconds a slow-motion beat lasts
+    double tail = content().action.tail;            // seconds the take runs on after the target dies
+    bool respect_game_cameras = content().action.respect_game_cameras;   // let the game's own finisher cameras play
     std::vector<Beat> beats;
 };
 
 struct Preset {
     std::string id, name, description;
     ShotKind kind = ShotKind::Glide;
-    double intro = 4.5;          // Walk: seconds before she sets off
-    double duration = 5.0;       // Glide / Turntable: seconds
-    double tail = 13.0;          // Walk: seconds on the final shot
-    double max_seconds = 49.0;   // Walk: hard cap on the take
-    double lead = 0.8;           // seconds the camera target runs ahead of now
-    double zoom = 1.0;           // distance multiplier
-    double fov_scale = 1.0;      // FOV multiplier (portrait screens want more)
-    double hold = 1.5;           // Photo: seconds each still is held
+    double intro = content().defaults.intro;          // Walk: seconds before she sets off
+    double duration = content().defaults.duration;       // Glide / Turntable: seconds
+    double tail = content().defaults.tail;          // Walk: seconds on the final shot
+    double max_seconds = content().defaults.max_seconds;   // Walk: hard cap on the take
+    double lead = content().defaults.lead;           // seconds the camera target runs ahead of now
+    double zoom = content().defaults.zoom;           // distance multiplier
+    double fov_scale = content().defaults.fov_scale;      // FOV multiplier (portrait screens want more)
+    double hold = content().defaults.hold;           // Photo: seconds each still is held
     // Heights and aims are measured from her capsule centre (walks: the route height) or from
     // her head bone (poses: a seated or kneeling head sits a metre lower than a standing one).
     enum class Reference { Capsule, Head } reference = Reference::Head;
@@ -97,7 +98,7 @@ struct Preset {
     // again from its first frame the moment the new look is on, so each pass dances from
     // the top. "menu" plays the performance chosen on the CINE page.
     std::string performance; double performance_rate = 1.0;
-    std::string frame;           // optional: the frame the take is laid out for ("9:16"...), whatever guide is chosen
+    std::string frame;           // optional: the catalog frame the take is laid out for, whatever guide is chosen
     // Sequence: what takes the whole frame while she changes outfit, used in turn. The rig
     // (clay with the bones in it) by default: the outfit changes under one clay figure.
     std::vector<LayerSet> cover;
@@ -115,7 +116,7 @@ struct Timeline {
     std::vector<OrbitKey> keys;
     struct Step { double at = 0; const LookStep* step = nullptr; bool own = false; };
     std::vector<Step> look;
-    struct Reveal { double at = 0; LayerSet layers = 0; double wipe = 0; double stop = 1.0; std::string title; bool titled = false; bool follow = false; double share = 0.5;
+    struct Reveal { double at = 0; LayerSet layers = 0; double wipe = 0; double stop = 1.0; std::string title; bool titled = false; bool follow = false; double share = content().defaults.share;
                     bool labels = true; };
     std::vector<Reveal> breakdown;
 };
