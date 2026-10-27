@@ -47,8 +47,10 @@ void relationships(const CoreContent& c) {
     if (c.action.distance_max < c.action.distance) bad("recipe.action.distance_max", "less than distance");
     if (c.motion.split_min >= c.motion.split_max) bad("recipe.motion", "reversed split bounds");
     const auto& b = c.breakdown;
-    for (const auto* path : {&b.collection, &b.wire, &b.clay, &b.xray, &b.buffer_post, &c.callouts.font_asset})
+    for (const auto* path : {&b.collection, &b.wire, &b.clay, &b.xray, &b.buffer_post})
         if (!object_path(*path)) bad("assets", "expected a CINE object path");
+    // Empty: the label font is the loose font_file. A pack may name a cooked FontFace instead.
+    if (!c.callouts.font_asset.empty() && !object_path(c.callouts.font_asset)) bad("style.callouts.font_asset", "expected a CINE object path or empty");
     // Recovery recognizes our MID names. Keep this contract until ownership is identity-based.
     for (const auto* path : {&b.wire, &b.clay, &b.xray, &b.buffer_post})
         if (path->find("_Cine_") == std::string::npos) bad("assets", "material name must retain _Cine_ ownership marker");

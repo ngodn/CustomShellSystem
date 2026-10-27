@@ -143,7 +143,11 @@ bool Typeface::ensure() {
         if (is_handle(font_) && host_->request({{"op", "valid"}, {"target", font_}}) == true) return true;
         font_ = nullptr;
         failed_ = true;   // cleared again only when everything below worked
-        const auto face = host_->request({{"op", "load"}, {"path", content().callouts.font_asset}});
+        // A cooked FontFace when the style names one and it loads; otherwise the loose font file.
+        Json face;
+        if (!content().callouts.font_asset.empty()) {
+            try { face = host_->request({{"op", "load"}, {"path", content().callouts.font_asset}}); } catch (const std::exception&) { face = nullptr; }
+        }
         std::string path;
         if (!is_handle(face)) {
             const auto info = host_->request({{"op", "extension.info"}});

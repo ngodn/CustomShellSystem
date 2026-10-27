@@ -359,7 +359,7 @@
       },
       "font_asset": {
         "type": "string",
-        "min": 1,
+        "min": 0,
         "max": 256
       },
       "face": {

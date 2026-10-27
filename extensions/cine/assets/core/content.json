@@ -298,7 +298,7 @@
   "style.callouts": {
     "schema": 1,
     "font_file": "fonts/Rajdhani-SemiBold.ttf",
-    "font_asset": "/Game/CSSX/CINE/Core/Fonts/FF_CINE.FF_CINE",
+    "font_asset": "",
     "face": "Regular",
     "label_font": 18.0,
     "caption_font": 20.0,

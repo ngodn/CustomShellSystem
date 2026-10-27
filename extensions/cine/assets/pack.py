@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 EXPECTED = {'MPC_Cine', 'Materials/M_Cine_Wire', 'Materials/M_Cine_Clay', 'Materials/M_Cine_XRay',
             'Materials/M_Cine_Solid', 'Materials/PP_Cine_Buffer_Post', 'Materials/PP_Cine_Buffer_Pre',
-            'Core/Audio/SM_CINE_Render', 'Core/DT_CINE_Core', 'Core/Fonts/FF_CINE'}
+            'Core/Audio/SM_CINE_Render', 'Core/DT_CINE_Core'}
 
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('cook', type=Path)

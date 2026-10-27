@@ -309,7 +309,7 @@ if not unreal.EditorAssetLibrary.save_loaded_asset(submix, only_if_is_dirty=Fals
     raise RuntimeError("SM_CINE_Render did not save")
 created["submix"] = submix.get_path_name()
 
-# ---------------------------------------------------------------- core content and font payload
+# ---------------------------------------------------------------- core content
 STRUCT = unreal.load_object(None, "/Script/GameplayTags.GameplayTagTableRow")
 if STRUCT is None:
     raise RuntimeError("GameplayTagTableRow is unavailable")
@@ -331,25 +331,9 @@ if {row["Name"]: row["DevComment"].encode("utf-8") for row in actual} != expecte
 created["core_table"] = table.get_path_name()
 created["core_rows"] = rows
 
-font_style = CORE_ROWS["style.callouts"]
-font_path = font_style["font_asset"].split(".")[0]
-task = unreal.AssetImportTask()
-task.set_editor_property("filename", str(SOURCE.parent / font_style["font_file"]))
-task.set_editor_property("destination_path", font_path.rsplit("/", 1)[0])
-task.set_editor_property("destination_name", font_path.rsplit("/", 1)[1])
-task.set_editor_property("automated", True)
-task.set_editor_property("replace_existing", False)
-task.set_editor_property("factory", unreal.FontFileImportFactory())
-TOOLS.import_asset_tasks([task])
-face = LIB.load_asset(font_path)
-if not isinstance(face, unreal.FontFace):
-    raise RuntimeError("Cannot import the CINE FontFace")
-# Inline carries the bytes inside the cooked asset instead of a loose .ufont payload.
-face.set_editor_property("loading_policy", unreal.FontLoadingPolicy.INLINE)
-face.set_editor_property("hinting", unreal.FontHinting.DEFAULT)
-if not LIB.save_loaded_asset(face, only_if_is_dirty=False):
-    raise RuntimeError("Cannot save the CINE FontFace")
-created["font_face"] = face.get_path_name()
+# The label font stays the loose fonts/ file CINE ships: importing a FontFace runs
+# UFontFace::PostEditChangeProperty, which needs a Slate application that a headless commandlet
+# does not have (UE 5.6.1 FontFace.cpp, unguarded FSlateApplication::Get()).
 
 # ---------------------------------------------------------------- no game or project dependency
 registry = unreal.AssetRegistryHelpers.get_asset_registry()
