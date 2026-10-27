@@ -1,2 +1,0 @@
-Command: rg -n -F -f /home/eins0fx/development/mods/msII/CustomShellSystem/extensions/cine/work/photo-mode/astra-e/moved-literals.txt src
-Exit code: 1 (1 means no matches)
