@@ -93,9 +93,6 @@ private:
     std::string last_error_;
     struct RowLook { uint8_t type=0; bool hover=false; bool known=false; };
     RowLook option_look_, slider_look_;
-    WeakObject note_box_, note_text_;   // the description line
-    std::string note_shown_;
-    bool note_styled_=false, note_visible_=false;
 
     void refresh_declared();
     void forget() noexcept;
@@ -113,9 +110,6 @@ private:
     void wrap_strip(UObject* panel);
     void unwrap_strip() noexcept;
     void learn_row_looks(UObject* box);
-    void create_note(UObject* panel);
-    void show_note(bool on);
-    void update_note(const Tab& tab);
     UObject* icon_texture(const fs::path& file);
     void prefetch_icons();
     bool grow(const Declared& declared);

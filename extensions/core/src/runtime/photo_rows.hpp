@@ -9,34 +9,25 @@
 namespace cssx {
 struct PhotoRow {
     std::string id, name, value;
-    std::string description;   // the line under the page while the row is selected
     bool slider=false;     // a slider row (bar under the value) instead of an option row
     bool arrows=false;     // left/right change it
     bool enabled=true;
     double fill=0;         // slider position 0..1
 };
 
-// A label's text longer than this is cut in its row and shown whole on the description line;
-// the row's value column holds about this much at the game's size.
+// The value column of a game row holds about this many characters at the game's size.
 constexpr size_t photo_value_chars=22;
 
-// The text cut to at most `limit` characters (UTF-8 code points), ending in "..." when cut.
-inline std::string photo_shorten(const std::string& text,size_t limit) {
-    auto lead=[](unsigned char c){ return (c&0xC0)!=0x80; };
+// Characters (UTF-8 code points) in a text.
+inline size_t photo_chars(const std::string& text) {
     size_t count=0;
-    for(unsigned char c:text) count+=lead(c);
-    if(count<=limit || limit<4) return text;
-    size_t keep=limit-3, i=0;
-    for(size_t seen=0;i<text.size();++i) if(lead(static_cast<unsigned char>(text[i])) && seen++==keep) break;
-    auto out=text.substr(0,i);
-    // End on a whole word when one ends in the second half of what is kept.
-    if(i<text.size() && text[i]!=' ') if(auto space=out.rfind(' '); space!=std::string::npos && space>=out.size()/2) out.resize(space);
-    while(!out.empty() && (out.back()==' ' || out.back()=='.' || out.back()==',')) out.pop_back();
-    return out+"...";
+    for(unsigned char c:text) count+=(c&0xC0)!=0x80;
+    return count;
 }
 
-// The rows of one menu section, in order. Unknown or hidden kinds (text input) are left out:
-// the Photo Mode panel has no text field.
+// The rows of one menu section, in order. Left out, so every row reads like one of the game's:
+// text input (the panel has no text field), and a label whose text is too long for the value
+// column (prose belongs in the Player Menu, where it has room).
 inline std::vector<PhotoRow> photo_rows(const Json& model,const std::string& section) {
     std::vector<PhotoRow> rows;
     if(!model.is_object() || !model.contains("sections")) return rows;
@@ -48,7 +39,6 @@ inline std::vector<PhotoRow> photo_rows(const Json& model,const std::string& sec
             PhotoRow row;
             row.id=c.at("id").get<std::string>();
             row.name=c.value("label",row.id);
-            row.description=c.value("description",std::string());
             row.enabled=interactive(c) || type=="label" || type=="progress" || type=="loading";
             row.slider=type=="slider";
             row.arrows=interactive(c) && (adjustable(c) || type=="toggle");
@@ -56,7 +46,7 @@ inline std::vector<PhotoRow> photo_rows(const Json& model,const std::string& sec
                 row.value=c.value("enabled",true) ? std::string() : c.value("disabled_label",std::string());
             } else if(type=="label") {
                 row.value=c.contains("value") && c.at("value").is_string() ? c.at("value").get<std::string>() : std::string();
-                if(row.value!=photo_shorten(row.value,photo_value_chars)) { row.description=row.value; row.value=photo_shorten(row.value,photo_value_chars); }
+                if(photo_chars(row.value)>photo_value_chars) continue;
             } else {
                 row.value=display_value(c);
                 if(!c.value("enabled",true) && c.contains("disabled_label")) row.value=c.at("disabled_label").get<std::string>();
