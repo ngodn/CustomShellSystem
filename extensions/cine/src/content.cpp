@@ -157,37 +157,36 @@ std::string annotation(const std::string& pattern, size_t count, const std::stri
     return out;
 }
 
+// One table load and every row read in a single call: the table is referenced by nothing in
+// the game, so a garbage collection between ticks takes it and expires the handle mid-read
+// (it did during a world load). A handle that still expires is read again on a later tick.
 bool ContentLoader::advance(const cssx::Client& host) {
     if (done_) return true;
     try {
-        if (table_.is_null()) {
-            table_ = host.request({{"op", "load"}, {"path", core_table_path}});
-            if (!table_.is_object() || !table_.contains("$object")) throw std::runtime_error("core table is missing; install the current CINE asset pak");
-            return false;
+        const auto table = host.request({{"op", "load"}, {"path", core_table_path}});
+        if (!table.is_object() || !table.contains("$object")) throw std::runtime_error("core table is missing; install the current CINE asset pak");
+        const auto names = host.request({{"op", "table.rows"}, {"target", table}});
+        if (!names.is_array() || names.size() != content_schema().size()) throw std::runtime_error("core table row set is incomplete or unsupported");
+        std::set<std::string> unique;
+        Json rows = Json::object();
+        for (const auto& entry : names) {
+            if (!entry.is_string() || !content_schema().contains(entry.get<std::string>()) || !unique.insert(entry.get<std::string>()).second) throw std::runtime_error("invalid core row name");
+            const auto name = entry.get<std::string>();
+            const auto row = host.request({{"op", "table.row"}, {"target", table}, {"row", name}});
+            if (!row.is_object() || !row.contains("DevComment") || !row.at("DevComment").is_string() || row.at("DevComment").get_ref<const std::string&>().size() > 256 * 1024) throw std::runtime_error("invalid core row " + name);
+            auto value = Json::parse(row.at("DevComment").get_ref<const std::string&>(), [](int depth, Json::parse_event_t, Json&) { if (depth > 16) throw std::invalid_argument("core JSON is nested too deeply"); return true; });
+            validate_content_row(name, value);
+            rows[name] = std::move(value);
         }
-        if (!listed_) {
-            const auto names = host.request({{"op", "table.rows"}, {"target", table_}});
-            if (!names.is_array() || names.size() != content_schema().size()) throw std::runtime_error("core table row set is incomplete or unsupported");
-            std::set<std::string> unique;
-            for (const auto& name : names) {
-                if (!name.is_string() || !content_schema().contains(name.get<std::string>()) || !unique.insert(name.get<std::string>()).second) throw std::runtime_error("invalid core row name");
-                names_.push_back(name.get<std::string>());
-            }
-            listed_ = true;
-            return false;
-        }
-        const auto& name = names_.at(next_);
-        const auto row = host.request({{"op", "table.row"}, {"target", table_}, {"row", name}});
-        if (!row.is_object() || !row.contains("DevComment") || !row.at("DevComment").is_string() || row.at("DevComment").get_ref<const std::string&>().size() > 256 * 1024) throw std::runtime_error("invalid core row " + name);
-        auto value = Json::parse(row.at("DevComment").get_ref<const std::string&>(), [](int depth, Json::parse_event_t, Json&) { if (depth > 16) throw std::invalid_argument("core JSON is nested too deeply"); return true; });
-        validate_content_row(name, value);
-        rows_[name] = std::move(value);
-        if (++next_ < names_.size()) return false;
-        auto parsed = parse_content(rows_);
-        core_rows_ = std::move(rows_);
+        auto parsed = parse_content(rows);
+        core_rows_ = std::move(rows);
         install_content(std::move(parsed));
-    } catch (const std::exception& e) { problem_ = e.what(); }
-    table_ = nullptr; rows_.clear(); names_.clear(); done_ = true;
+    } catch (const std::exception& e) {
+        const std::string why = e.what();
+        if (why.find("expired") != std::string::npos && ++attempts_ < 4) return false;   // collected mid-read: try again
+        problem_ = why;
+    }
+    done_ = true;
     return true;
 }
 }

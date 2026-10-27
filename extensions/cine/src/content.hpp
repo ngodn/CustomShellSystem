@@ -22,7 +22,7 @@ void reset_content();
 void install_content(CoreContent value);
 std::string annotation(const std::string& pattern, size_t count = 0, const std::string& group = {});
 
-// One bridge request per advance. Publication is atomic after every row validates.
+// Reads the whole core table in one advance (see content.cpp). Publication is atomic after every row validates.
 class ContentLoader {
 public:
     bool advance(const cssx::Client& host);
@@ -30,10 +30,9 @@ public:
     const std::string& problem() const { return problem_; }
     const Json& rows() const { return core_rows_; }
 private:
-    Json table_, rows_ = Json::object(), core_rows_ = default_content_rows();
-    std::vector<std::string> names_;
-    size_t next_ = 0;
-    bool listed_ = false, done_ = false;
+    Json core_rows_ = default_content_rows();
+    bool done_ = false;
+    int attempts_ = 0;    // a load whose table handle expired mid-read is tried again
     std::string problem_;
 };
 }

@@ -337,6 +337,20 @@ Json Core::dev_request(const Json& request) {
     if(op=="menu.close") { menu_->close(); return true; }
     if(op=="menu.diagnostics") return menu_->diagnostics();
     if(op=="photo.diagnostics") return photo_?photo_->diagnostics():Json();
+    if(op=="extensions.restart") {
+        // Dev only: unload every extension and load the installed ones again, so a rebuilt
+        // extension DLL is picked up without restarting the game.
+        if(!runtime_) throw std::runtime_error("Extensions are not loaded");
+        if(menu_) menu_->detach();
+        if(photo_) photo_->detach();
+        if(!runtime_->stop()) throw std::runtime_error("An extension has not restored its changes yet; try again in a moment");
+        if(menu_) menu_->set_runtime(nullptr);
+        if(photo_) photo_->set_runtime(nullptr);
+        runtime_.reset();
+        start_runtime();
+        log("info","Extensions restarted from the dev channel");
+        return true;
+    }
     if(op=="photo.open") { if(!photo_) throw std::runtime_error("Photo Mode support is not running"); photo_->dev_open(request.at("extension").get<std::string>()); return true; }
     if(op=="photo.press") { if(!photo_) throw std::runtime_error("Photo Mode support is not running"); photo_->dev_press(request.at("key").get<std::string>()); return true; }
     if(op=="engine") { if(!request.contains("request")) throw std::runtime_error("engine needs a request"); return service(request.at("request")); }

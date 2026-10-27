@@ -68,7 +68,7 @@ struct Hud {
 };
 struct Host {
     Json rows = default_content_rows();
-    size_t requests = 0, fail_at = 0;
+    size_t requests = 0, fail_at = 0, expire_at = 0;   // expire_at: that request answers "Object handle expired" once
     bool missing = false, malformed = false, wrong_type = false;
     CssxHost api{CSSX_ABI, sizeof(CssxHost), this, request};
     static int request(void* self, const char* data, CssxSink sink, void* output) {
@@ -81,6 +81,7 @@ struct Host {
     }
     Json handle(const Json& j) {
         if (++requests == fail_at) throw std::runtime_error("injected bridge failure");
+        if (requests == expire_at) throw std::runtime_error("Object handle expired");
         const auto op = j.at("op").get<std::string>();
         if (op == "load") { expect(j.at("path") == core_table_path, "core object path"); return missing ? Json() : Json{{"$object", 12}}; }
         if (op == "table.rows") { Json out = Json::array(); for (const auto& [name, row] : rows.items()) { (void)row; out.push_back(name); } return out; }
@@ -93,11 +94,9 @@ struct Host {
 };
 void drain(ContentLoader& loader, Host& host) {
     cssx::Client client(&host.api);
-    for (size_t i = 0; !loader.done() && i < 32; ++i) {
-        const size_t before = host.requests;
-        loader.advance(client);
-        expect(host.requests - before <= 1, "at most one bridge read per tick");
-    }
+    // The whole table is read within one advance: a garbage collection between ticks would expire
+    // the handle mid-read. Only an expired handle makes another advance read again.
+    for (size_t i = 0; !loader.done() && i < 8; ++i) loader.advance(client);
     expect(loader.done(), "loader terminates");
     const size_t before = host.requests;
     for (int i = 0; i < 100; ++i) loader.advance(client);
@@ -137,6 +136,12 @@ int main() {
         expect(loader.problem().empty() && host.requests == rows.size() + 2, "one load, one list, one read per row");
         expect(guide_aspect(guide_from("cinema")) == 3 && guide_options().back().at("label") == "Cinema", "custom guide reaches renderer and menu");
         expect(callout_font == 22 && spring_group("custom_left") == "chest", "typed consumers use loaded data");
+        {
+            Host expiring; expiring.expire_at = 5;   // mid-read, as a collection during a world load does
+            ContentLoader retry; cssx::Client c(&expiring.api);
+            expect(!retry.advance(c) && !retry.done(), "an expired handle is read again later, not given up");
+            expect(retry.advance(c) && retry.problem().empty(), "the second read completes");
+        }
         reset_content();
         for (size_t failure = 1; failure <= rows.size() + 2; ++failure) {
             Host bad_host; bad_host.fail_at = failure;
