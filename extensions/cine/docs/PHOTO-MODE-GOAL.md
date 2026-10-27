@@ -169,12 +169,23 @@ Proton Experimental 11 and GE-Proton 11-7 on this machine).
 
 ## Checklist
 
+Worked through without hand-backs: drive the game through the bridge, fix, continue (user, 2026-10-28).
+
 1. [x] Research: Photo Mode classes, wiring, labels, input, patch binding audit (lane A); hardcode audit and
    pack pipeline (lane B); live signatures (Fable).
-2. [ ] Video render route chosen and written here.
-3. [ ] CSSX API: pause entry + Photo Mode tabs (host-tested mock first, then live insertion test).
-4. [ ] CINE: menu split into tabs, pack loader, content moved to pack data, SoundWave player, render.
-5. [ ] Pack pipeline: authoring (DataTable + SoundWave), cook, pack, verify; eight packs built.
-6. [ ] Tests and Windows builds (done criteria).
-7. [ ] Live test with the user (ask before installing; game closed for paks and the loader).
+2. [x] Video render route chosen and written here; renderer and ffmpeg fetch built (lane D, b3f6892).
+3. [x] CSSX API: pause entry + Photo Mode tabs. Live-checked 2026-10-28: tabs, whole-tab scrolling, rows in
+   the game's own look and spacing, keys, Reset All recovery, close returns the game's panel untouched.
+   Cost on a CINE tab about 46 us a frame; opening spread to steps of 3 to 5 ms.
+4. [ ] CINE:
+   - [x] menu split into tabs, pack loader, SoundWave music
+   - [ ] pause-menu way in, driven live (row, confirm, Photo Mode opens on the CINE tab)
+   - [ ] a take in Photo Mode: unpause, panel hidden, camera, music, return to the panel
+   - [ ] Render tab wired to the renderer (size, frame rate, quality, Render Take to Video, Last Render),
+     plus the `SM_CINE_Render` submix in the core pak
+   - [ ] hardcoded content moved to pack `recipe.*` / `style.*` rows (lane B table)
+5. [x] Pack pipeline: authoring (DataTable + SoundWave), cook, pack, verify; eight packs built.
+6. [ ] Tests and Windows builds (done criteria), frame cost in and out of Photo Mode.
+7. [ ] Live checks: a take per pack, route record, rendered video, menu reopen, world change, death, leave
+   Photo Mode with the game exactly as it was.
 8. [ ] Release files: `extensions/core/dist/cine-v2.0.0/` and one folder per pack, changelog, texts, tag moved.
