@@ -34,6 +34,7 @@ struct Host {
             auto text = Json{{"error", e.what()}}.dump(); sink(output, text.data(), text.size()); return 0;
         }
     }
+    int app_volume = 0;   // au.DisableAppVolume as the game holds it
     Json handle(const Json& j) {
         ++calls;
         auto op = j.at("op").get<std::string>();
@@ -81,7 +82,10 @@ struct Host {
             if (fn == "GetGameInstance") { expect(a == Json::array({obj(2)}), "world to GetGameInstance"); return obj(3); }
             if (fn == "GetOuterObject") { expect(a == Json::array({obj(3)}), "game instance outer"); return obj(1); }
             if (fn == "IsHDREnabled") return hdr;
-            if (fn == "ExecuteConsoleCommand") {
+            if (fn == "GetConsoleVariableIntValue") { expect(a == Json::array({"au.DisableAppVolume"}), "reads app volume switch"); return app_volume; }
+            if (fn == "ExecuteConsoleCommand" && a.at(1).get<std::string>().starts_with("au.DisableAppVolume ")) {
+                app_volume = std::stoi(a.at(1).get<std::string>().substr(20));
+            } else if (fn == "ExecuteConsoleCommand") {
                 expect(a.at(1).get<std::string>().ends_with("-nosuffix"), "screenshots disable suffix");
                 expect(a.at(2).is_null(), "default controller console route"); ++shots;
             } else if (fn == "CreateSound2D") { expect(a.size() == 8 && !a.at(7).get<bool>(), "owned audio component"); return obj(23); }
@@ -185,8 +189,10 @@ void state_tests() {
         f.finish_frames();
         expect(f.render->status().state == State::Audio && f.pass == Pass::Audio && !f.host.fixed, "real-time replay");
         expect(f.host.plays == 1 && f.host.starts == 1 && f.host.submix_volume == 0, "isolated recording with muted return");
+        expect(f.host.app_volume == 1, "music audible to the recording while the game is unfocused");
         f.time += 1; f.tick();
         expect(f.host.stops == 1 && f.host.destroyed == 1 && f.host.submix_volume == 1 && f.host.fixed && f.host.rate == 48, "audio teardown restores originals");
+        expect(f.host.app_volume == 0, "app volume switch restored after the audio pass");
         expect(f.io->job.kind == JobKind::Audio, "wait for WAV worker");
         f.io->done(); f.tick(); expect(f.render->status().state == State::Encoding, "WAV complete before mux");
     }
@@ -194,10 +200,11 @@ void state_tests() {
         Fixture f; f.host.fail_key = key; f.start_frames();
         expect(f.render->status().state == State::Failed && !f.host.fixed && f.host.rate == 48, std::string("rollback on ") + key);
     }
-    for (const auto key : {"call:CreateSound2D", "set:SoundClassOverride", "set:bIsUISound", "call:SetSubmixOutputVolume", "call:SetSubmixSend", "call:StartRecordingOutput", "call:Play"}) {
+    for (const auto key : {"call:GetConsoleVariableIntValue", "call:CreateSound2D", "set:SoundClassOverride", "set:bIsUISound", "call:SetSubmixOutputVolume", "call:SetSubmixSend", "call:StartRecordingOutput", "call:Play"}) {
         Fixture f(true); f.start_frames(); f.host.fail_key = key; f.finish_frames();
         expect(f.render->status().state == State::Failed && !f.host.fixed && f.host.rate == 48, std::string("audio rollback on ") + key);
         f.drain(); expect(f.host.submix_volume == 1, "submix restored on audio failure");
+        expect(f.host.app_volume == 0, "app volume switch restored on audio failure");
     }
     {
         Fixture f; f.fail_begin = true; f.start_frames();

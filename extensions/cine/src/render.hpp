@@ -117,6 +117,7 @@ private:
     Json saved_rate_, saved_fixed_;
     bool rate_dirty_ = false, fixed_dirty_ = false, take_dirty_ = false;
     bool recording_ = false, send_dirty_ = false, submix_dirty_ = false;
+    bool app_volume_dirty_ = false; int saved_app_volume_ = 0;   // au.DisableAppVolume during the audio pass
     bool frames_started_ = false, frames_ended_ = false, audio_ended_ = false;
     bool frames_verified_ = false, audio_flush_pending_ = false, flush_job_ = false;
     bool have_serial_ = false, have_time_ = false;

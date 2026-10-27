@@ -549,6 +549,12 @@ void Renderer::finish_audio() {
             client_.call(submix_, "SetSubmixOutputVolume", Json::array({request_.world, 1.0}));
         submix_dirty_ = false;
     }
+    if (app_volume_dirty_) {
+        // A console variable outlives the world: restore it even when the world is gone.
+        const bool world = client_.request({{"op", "valid"}, {"target", request_.world}}).get<bool>();
+        client_.call(system_, "ExecuteConsoleCommand", Json::array({world ? request_.world : Json(), "au.DisableAppVolume " + std::to_string(saved_app_volume_), nullptr}));
+        app_volume_dirty_ = false;
+    }
 }
 bool Renderer::restore() noexcept {
     bool ok = true;
@@ -575,6 +581,13 @@ void Renderer::begin_audio(double now) {
     take_dirty_ = true; take_.begin(Pass::Audio);
     auto music = client_.request({{"op", "load"}, {"path", request_.music_class}});
     require_object(music, "game music sound class");
+    // An unfocused game plays every sound at the app volume, 0 by default, so the music would
+    // record as silence (it did, live). UE's own movie capture lifts it for its audio pass too;
+    // au.DisableAppVolume does that for this pass, and finish_audio puts the old value back.
+    const auto saved = client_.call(system_, "GetConsoleVariableIntValue", Json::array({"au.DisableAppVolume"}));
+    saved_app_volume_ = saved.is_number_integer() ? saved.get<int>() : 0;
+    app_volume_dirty_ = true;
+    client_.call(system_, "ExecuteConsoleCommand", Json::array({request_.world, "au.DisableAppVolume 1", nullptr}));
     component_ = client_.call(gameplay_, "CreateSound2D", Json::array({request_.world, sound_, 1.0, 1.0, request_.audio_offset, nullptr, false, false}));
     require_object(component_, "render audio component");
     client_.set(component_, "SoundClassOverride", music);
