@@ -89,8 +89,19 @@ struct MoveDefinition {
     bool is_hold{false};
     uint16_t compatible_slots{0};
     std::string skeleton;
+    std::string source_title;      // the game's own name for the source, when it has one ("The Nameless Captive")
+    bool boss{false};              // from a boss fight: grouped under "Boss:" in the menu
     bool runtime_verified{false};
     bool payload_known{false};
+};
+
+// A boss or enemy skeleton whose bones carry the human rig's names, so the engine retargets its
+// montages onto the player by bone name (enemy-catalog.json "retarget_rigs"). Root motion is not
+// retargeted by the engine; travel_scale is the player's leg length over the rig's.
+struct RetargetRig {
+    std::string skeleton;          // object path, /Game/.../SK_Swordman_Skeleton.SK_Swordman_Skeleton
+    std::string title;             // who it belongs to, for messages
+    double travel_scale{1.0};
 };
 
 struct TarstoneDefinition {

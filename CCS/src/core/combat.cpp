@@ -1034,8 +1034,13 @@ void Combat::load_pending(const PlayerContext& player) {
             // skeleton, a CSS package's copy of it, or the exact rig of the body worn now (rig.hpp).
             auto* skeleton = object_of(montage, L"Skeleton");
             const auto rig_path = skeleton ? narrow(skeleton->GetPathName()) : std::string{};
-            if (!rig::compatible(rig_path, rig::player_skeleton(player)))
+            const auto worn = rig::player_skeleton(player);
+            if (!rig::compatible(rig_path, worn))
                 throw std::runtime_error("Montage is not on the player's rig (" + (skeleton ? rig::short_name(rig_path) : std::string("no skeleton")) + ")");
+            s.rig = rig::short_name(rig_path);
+            s.travel = rig::travel_scale(rig_path, worn);
+            if (const auto* r = rig::retargeted(rig_path))
+                log("CCS " + s.move_id + " is retargeted from " + (r->title.empty() ? s.rig : r->title) + " (" + s.rig + "), travel x" + std::to_string(s.travel).substr(0, 5));
             if (!keep_referenced(player.world, montage)) throw std::runtime_error("No world to hold the animation");
             s.rooted = true;
             s.montage.capture(montage);
@@ -1661,6 +1666,7 @@ void Combat::observe(void* frame_ptr) {
             } catch (...) {}
         }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
+        if (std::abs(s.travel - 1.0) > 1e-3) scale_travel(s, pointer);
         ++s.hits; changed = true;
         note_recent(cls, slot, how);
         if (noted_.size() < 64 && noted_.insert(key ^ 0x51ed270b9d1c3a7full).second)
@@ -1678,12 +1684,35 @@ void Combat::observe(void* frame_ptr) {
     provisional_hide();
     if (changed) ++swapped_; else ++skipped_;
 }
+void Combat::scale_travel(const Slot& s, UObject* montage) {
+    // A giant's lunge would otherwise carry the player the giant's distance. Z stays: ground
+    // attacks have none, and a jump keeps its height. The window spans the whole montage; the
+    // modifier removes itself once this montage stops driving the root (RootMotionModifier.cpp).
+    struct Vector { double x, y, z; };
+    try {
+        auto* pawn = pawn_.get();
+        auto* warping = pawn ? object_of(pawn, L"MotionWarpingComponent") : nullptr;
+        if (!warping || !montage) throw std::runtime_error("no motion warping component on the player");
+        Call add(find_cached(L"/Script/MotionWarping.Default__RootMotionModifier_Scale"), L"AddRootMotionModifierScale", 5);
+        add.set(L"InMotionWarpingComp", warping);
+        add.set(L"InAnimation", montage);
+        add.set(L"InStartTime", 0.f);
+        add.set(L"InEndTime", 3600.f);
+        add.set(L"InScale", Vector{s.travel, s.travel, 1.0});
+        add.run();
+        if (!add.get<UObject*>()) throw std::runtime_error("the scale modifier was not created");
+        ++travel_scaled_;
+    } catch (const std::exception& e) {
+        ++failures_;
+        if (travel_error_ != e.what()) { travel_error_ = e.what(); log("CCS travel scale unavailable for " + s.move_id + ": " + e.what()); }
+    }
+}
 nlohmann::json Combat::status() const {
     nlohmann::json slots = nlohmann::json::array();
     for (size_t i = 0; i < slots_.size(); ++i) {
         const auto& s = slots_[i];
         slots.push_back({{"slot", slot_to_string(SlotId(i))}, {"move", s.move_id}, {"ready", s.montage.alive()}, {"pending", s.pending}, {"error", s.error}, {"hits", s.hits},
-            {"speed", s.tuning.speed}, {"feel", s.tuning.feel}, {"hit_damage", s.tuning.hit_damage}, {"weapon", s.tuning.weapon}, {"weapon_mesh", s.show_mesh.alive()}, {"payload_copied", !s.backups.empty()}, {"clones", s.feel.size()}});
+            {"speed", s.tuning.speed}, {"rig", s.rig}, {"travel", s.travel}, {"feel", s.tuning.feel}, {"hit_damage", s.tuning.hit_damage}, {"weapon", s.tuning.weapon}, {"weapon_mesh", s.show_mesh.alive()}, {"payload_copied", !s.backups.empty()}, {"clones", s.feel.size()}});
     }
     CcsHookStats stats{}; stats.size = sizeof(stats);
     nlohmann::json host = {{"available", false}};
@@ -1699,6 +1728,7 @@ nlohmann::json Combat::status() const {
                 {"classes_alive", selector_class_.alive() && counter_class_.alive()}, {"left_alone", std::move(misses)}, {"error", skip_error_}};
         }()},
         {"enemy_difficulty", {{"mode", difficulty_}, {"hooked", effect_token_ != 0}, {"night_pairs_added", difficulty_added_}, {"night_effects_removed", difficulty_removed_}, {"error", difficulty_error_}}},
+        {"travel", {{"scaled", travel_scaled_}, {"error", travel_error_}}},
         {"cached_classes", class_slots_.size()}, {"error", error_}, {"slots", std::move(slots)}, {"host", std::move(host)}};
 }
 }

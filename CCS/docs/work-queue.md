@@ -585,3 +585,35 @@ non-combo activation (dodge, parry), so it is expected to be high.
 
 Live check still needed: load a save (world change) with L2+L3 skipped, spam light and heavy on
 a normal-first and a hold-first weapon; expect `missed` 0 and `layouts` above 1.
+
+## Boss and enemy moves on retargeted rigs (2026-10-27, branch feature/ccs-boss-moves)
+
+From `docs/enemy-moves-retargeting.md` Options 1 and 3. The engine retargets any montage onto
+the player's skeleton by bone name (no runtime compatibility gate since UE 5.2), so the only
+thing that refused boss moves was CCS's own rig rule.
+
+- `data/enemy-catalog.json` now carries `retarget_rigs`: nine audited rigs with all 23 core
+  human bone names and rest poses within about 38 degrees (Sir Isaac, the Nameless Captive, both
+  Orrems, Droeg, the Multi-headed Harpy, Baby Bomb, Blade Slave, Tarsus), each with
+  `travel_scale` = the player's leg length over the rig's (`work/enemy-retarget/rigs.json`).
+  Held back on purpose: Lady of the Woods (legs 83 degrees off at rest), Babka, Toxic Stalker.
+- `rig::compatible` accepts a listed skeleton, so discovery and the slot load gate both let
+  those moves through. `rig::travel_scale` is 1 when the body worn is that rig itself (a CSS boss
+  appearance, whose mesh scale already sizes the travel).
+- On the swing, `Combat::scale_travel` adds MotionWarping's own `RootMotionModifier_Scale` for the
+  montage that plays: XY times the scale, Z kept. The engine drops the modifier when another
+  animation drives the root. `status.json` shows `combat.travel` (scaled count, error) and each
+  slot's `rig` and `travel`; the log says "is retargeted from <boss> (<rig>), travel xN".
+- The catalog generator now also reads the boss and MS1 montage exports
+  (`work/enemy-retarget/boss-montages`, `ms1-enemy-montages`), so human-rig boss moves (Malborn
+  Offspring and others) are listed too. Boss rows carry `boss` and `source_title` (the game's own
+  name from `ST_Core_Bosses`) and sit under "Boss: <name>" at the top of the enemy list.
+- Generator fix: "sit" and "talk" must start a word, so Parasite and Toxic Stalker attacks are no
+  longer dropped by the word filter. The victim side of paired grabs (`_Player`/`_Shell`) is left
+  out of the new boss and retargeted rows only. All 134 older rows are unchanged (219 now; 74
+  retargeted, 71 from bosses).
+
+Live check still needed (the decision point in the research doc, section 6): a Nameless Captive
+overhead in L1 on a stock shell in Marrow Keep. Look at the arms and weapon arc, the distance
+travelled against the same swing unscaled, the two-handed grip, and that a vanilla swing after it
+travels normally. Then the same on a CSS body.

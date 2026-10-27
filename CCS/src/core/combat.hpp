@@ -94,6 +94,8 @@ private:
         engine::ObjectHandle play;                     // what "Move's own" plays: a cleaned clone for enemy montages, the montage itself otherwise
         unsigned play_kinds{};                         // RowKind bits that montage carries of its own (hold handler, turn window, weapon state, elemental trigger)
         bool unarmed{};                                // every hit window is a body slot (fist, leg): no weapon is swung
+        double travel{1.0};                            // root motion scale for a retargeted boss or enemy rig (rig.hpp), 1 otherwise
+        std::string rig;                               // short name of the move's skeleton, for messages
         SlotTuning tuning;
         std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
         std::vector<Transplant> carries; bool carry_warned{};   // "Move's own" copies that carry the original's hold and turn windows
@@ -231,6 +233,11 @@ private:
     // old ones die; until then the hook leaves every call alone (counted in skip_misses_).
     uint64_t skip_layout_retry_after_{}, skip_layouts_{}, skip_missed_{};
     std::array<uint64_t, 6> skip_misses_{};   // calls left alone, by reason: see skip_miss_names
+    // Root motion of a retargeted rig, scaled for the one montage that plays (MotionWarping's own
+    // scale modifier, dropped by the engine as soon as another animation drives the root).
+    uint64_t travel_scaled_{};
+    std::string travel_error_;
+    void scale_travel(const Slot& s, engine::UObject* montage);
     void resolve_skip_layout();
     void refresh_skip_layout(uint64_t now);
     void refresh_effect_classes(engine::UObject* world);

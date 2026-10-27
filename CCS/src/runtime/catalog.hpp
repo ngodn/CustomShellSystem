@@ -15,6 +15,8 @@ public:
     // Sprint attacks (data/running-catalog.json): the sprint slots' player candidates.
     bool load_running(const std::filesystem::path& path);
     size_t enemy_count() const { return enemy_count_; }
+    // Boss and enemy rigs whose montages retarget onto the player (enemy-catalog.json "retarget_rigs").
+    const std::vector<RetargetRig>& retarget_rigs() const { return retarget_rigs_; }
     const std::vector<MoveDefinition>& moves() const { return moves_; }
     const std::vector<TarstoneDefinition>& tarstones() const { return tarstones_; }
     const MoveDefinition* find_move(const std::string& id) const;
@@ -23,6 +25,7 @@ public:
 private:
     std::vector<MoveDefinition> moves_;
     std::vector<TarstoneDefinition> tarstones_;
+    std::vector<RetargetRig> retarget_rigs_;
     std::unordered_map<std::string, size_t> move_index_, tarstone_index_;
     std::string error_;
     size_t enemy_count_{};

@@ -96,15 +96,31 @@ bool Catalog::load_enemy(const std::filesystem::path& path) {
             move.montage_path = row.at("montage").get<std::string>();
             move.skeleton = row.at("skeleton").get<std::string>();
             move.description = row.value("description", std::string{});
+            move.source_title = row.value("source_title", std::string{});
+            move.boss = row.value("boss", false);
             move.category = "Enemy's Weapon";
             move.origin = MoveOrigin::EnemyHumanoid;
             move.compatible_slots = 0x3FF;
             move.payload_known = row.value("hit_windows", 0) > 0;
             if (move.id.empty() || move.id.size() > 256 || move.montage_path.size() > 4096 || !move.montage_path.starts_with("/Game/") ||
-                move.skeleton.empty() || move.source_name.empty() || move.source_name.size() > 64 || move.description.size() > 1024)
+                move.skeleton.empty() || move.source_name.empty() || move.source_name.size() > 64 || move.description.size() > 1024 || move.source_title.size() > 96)
                 throw std::runtime_error("Enemy catalog move identity invalid");
             if (move_index_.contains(move.id)) throw std::runtime_error("Enemy catalog id collides with a player move");
             added.push_back(std::move(move));
+        }
+        std::vector<RetargetRig> rigs;
+        if (const auto it = j.find("retarget_rigs"); it != j.end()) {   // optional: older catalogs list human-rig moves only
+            if (!it->is_array() || it->size() > 256) throw std::runtime_error("Enemy catalog rig list invalid");
+            for (const auto& row : *it) {
+                RetargetRig rig;
+                rig.skeleton = row.at("skeleton").get<std::string>();
+                rig.title = row.value("title", std::string{});
+                rig.travel_scale = row.value("travel_scale", 1.0);
+                if (!rig.skeleton.starts_with("/Game/") || rig.skeleton.size() > 1024 || rig.skeleton.find('.') == std::string::npos || rig.title.size() > 96 ||
+                    !std::isfinite(rig.travel_scale) || rig.travel_scale < 0.1 || rig.travel_scale > 4.0)
+                    throw std::runtime_error("Enemy catalog rig invalid");
+                rigs.push_back(std::move(rig));
+            }
         }
         for (auto& move : added) {
             const auto index = moves_.size();
@@ -112,6 +128,7 @@ bool Catalog::load_enemy(const std::filesystem::path& path) {
             moves_.push_back(std::move(move));
         }
         enemy_count_ = added.size();
+        retarget_rigs_ = std::move(rigs);
         return true;
     } catch (const std::exception& error) {
         error_ = error.what();

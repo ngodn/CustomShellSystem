@@ -2,6 +2,8 @@
 #include "core.hpp"
 #include "common.hpp"
 #include "ccs_version.hpp"
+#include "rig.hpp"
+#include <tuple>
 #include <windows.h>
 #include <cstring>
 #include <cctype>
@@ -95,6 +97,10 @@ Core::Core(const CcsLoaderContext* loader) {
     if (!catalog_.load(root_dir_ / "catalog.json")) { catalog_error_ = catalog_.error(); log("Catalog unavailable: " + catalog_error_); }
     else {
         if (!catalog_.load_enemy(root_dir_ / "enemy-catalog.json")) log("Enemy catalog unavailable: " + catalog_.error());
+        else if (!catalog_.retarget_rigs().empty()) {
+            rig::set_retarget_rigs(catalog_.retarget_rigs());
+            log("CCS boss and enemy rigs retargeted onto the player: " + std::to_string(catalog_.retarget_rigs().size()));
+        }
         if (!catalog_.load_ranged(root_dir_ / "ranged-catalog.json")) log("Ranged catalog unavailable: " + catalog_.error());
         if (!catalog_.load_running(root_dir_ / "running-catalog.json")) log("Running catalog unavailable: " + catalog_.error());
     }
@@ -225,7 +231,8 @@ std::string Core::enemy_icon(const std::string& source) const {
 }
 std::string Core::move_group(const std::string& id) const {
     const auto* move = id.empty() ? nullptr : catalog_.find_move(id);
-    return move ? weapon_name(move->source_name) : std::string{};
+    if (!move) return {};
+    return move->source_title.empty() ? weapon_name(move->source_name) : move->source_title;
 }
 std::string Core::move_description(const std::string& id) const {
     const auto* move = id.empty() ? nullptr : catalog_.find_move(id);
@@ -251,7 +258,9 @@ const nlohmann::json& Core::candidate_options() const {
         else moves.push_back(&move);
     }
     std::sort(moves.begin(), moves.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return weapon_name(a->source_name) < weapon_name(b->source_name); });
-    std::sort(enemy.begin(), enemy.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return std::tie(a->source_name, a->display_name) < std::tie(b->source_name, b->display_name); });
+    // Bosses first, then enemies, each by source then move.
+    std::sort(enemy.begin(), enemy.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return std::make_tuple(!a->boss, a->source_name, a->display_name) < std::make_tuple(!b->boss, b->source_name, b->display_name); });
+    auto source_label = [](const MoveDefinition& move) { return move.source_title.empty() ? enemy_name(move.source_name) : move.source_title; };
     auto missing = [&](const MoveDefinition& move) { return scanned && !discovery_.known(move.montage_path); };
     Json options = Json::array();
     for (const auto* move : moves) {
@@ -263,8 +272,8 @@ const nlohmann::json& Core::candidate_options() const {
         options.push_back(std::move(option));
     }
     for (const auto* move : enemy) {
-        options.push_back({{"id", move->id}, {"label", move->display_name}, {"group", "Enemy: " + enemy_name(move->source_name)}, {"title", move->display_name}, {"icon", move_icon(move->id)},
-            {"subtitle", enemy_name(move->source_name) + " attack"}, {"enabled", !missing(*move)}, {"disabled_label", "Not in this game version"}, {"description", move->description}, {"value", move->payload_known ? std::string{} : std::string("No hit window in this animation")}});
+        options.push_back({{"id", move->id}, {"label", move->display_name}, {"group", (move->boss ? "Boss: " : "Enemy: ") + source_label(*move)}, {"title", move->display_name}, {"icon", move_icon(move->id)},
+            {"subtitle", source_label(*move) + " attack"}, {"enabled", !missing(*move)}, {"disabled_label", "Not in this game version"}, {"description", move->description}, {"value", move->payload_known ? std::string{} : std::string("No hit window in this animation")}});
     }
     if (scanned) {   // montages the running game lists that neither catalog knows: new content after a patch
         std::unordered_set<std::string> known;

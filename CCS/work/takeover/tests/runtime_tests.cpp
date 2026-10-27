@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "catalog.hpp"
 #include "combo_skip.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -102,6 +103,22 @@ int main(int argc, char** argv) {
         check(critical && critical->levels == std::vector<double>{0.3, 0.35, 0.4}, "Clerik cooked stats altered");
         const auto* resolve = catalog.find_tarstone("ID_Melee_LightAttackFinisher_Resolve");
         check(resolve && resolve->levels == std::vector<double>{1.4, 1.7, 2.5}, "Zealot cooked stats altered");
+        {   // the shipped enemy catalog: boss rows and the retargeted rigs with their travel scales
+            ccs::runtime::Catalog enemies;
+            check(enemies.load(argv[2]) && enemies.load_enemy(std::filesystem::path(argv[2]).parent_path() / "enemy-catalog.json"), "shipped enemy catalog rejected");
+            const auto& rigs = enemies.retarget_rigs();
+            const auto swordman = std::find_if(rigs.begin(), rigs.end(), [](const ccs::RetargetRig& r) { return r.skeleton.ends_with("SK_Swordman_Skeleton.SK_Swordman_Skeleton"); });
+            check(swordman != rigs.end() && swordman->title == "The Nameless Captive" && swordman->travel_scale > 0.4 && swordman->travel_scale < 0.6, "Nameless Captive rig missing or mis-scaled");
+            check(std::none_of(rigs.begin(), rigs.end(), [](const ccs::RetargetRig& r) { return r.skeleton.find("ToxicStalker") != std::string::npos || r.skeleton.find("LadyOfTheWood") != std::string::npos; }), "a held-back rig is listed");
+            const auto* overhead = enemies.find_move("enemy:A_Swordman_Attacks_Overhead_01_Montage");
+            check(overhead && overhead->boss && overhead->source_title == "The Nameless Captive" && overhead->skeleton == "SK_Swordman_Skeleton", "boss move row lost its fields");
+            const auto* brigand = enemies.find_move("enemy:A_BrigBase_Attack_RunUp_Start_Montage");
+            check(brigand && !brigand->boss && brigand->skeleton == "SKEL_Human_Skeleton", "an older enemy row changed");
+            const json bad_rig = {{"schema_version", 1}, {"moves", json::array()}, {"retarget_rigs", {{{"skeleton", "/Game/X.X"}, {"travel_scale", 9.0}}}}};
+            check(ccs::runtime::write_file_atomic(root / "bad-rigs.json", bad_rig.dump()), "bad rig fixture failed");
+            ccs::runtime::Catalog other;
+            check(other.load(argv[2]) && !other.load_enemy(root / "bad-rigs.json") && other.retarget_rigs().empty(), "an out-of-range travel scale was accepted");
+        }
         check(ccs::runtime::write_file_atomic(root / "bad-catalog.json", "{}"), "bad catalog fixture failed");
         check(!catalog.load(root / "bad-catalog.json") && catalog.find_move(opener->id), "bad reload destroyed the valid catalog");
         std::filesystem::remove_all(root);

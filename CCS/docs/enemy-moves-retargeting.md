@@ -4,6 +4,12 @@ Written 27 October 2026. Research only: nothing was built, installed or run in t
 
 Scripts and data for this note are in [`CCS/work/enemy-retarget/`](../work/enemy-retarget/) (see the last section).
 
+## Status (27 Oct 2026)
+
+Options 1 and 3 are implemented on `feature/ccs-boss-moves` (see `work-queue.md`, "Boss and enemy
+moves on retargeted rigs"). Nine rigs are listed; Lady of the Woods, Babka and Toxic Stalker are
+held back. The live look at a retargeted swing (section 6, question 1) is still to do.
+
 ## Short answer
 
 The engine already retargets. Since UE 5.2, skeleton compatibility is an editor-only concern: at runtime any animation plays on any skeleton, with bones matched by name and rotations corrected for the two rest poses. Translations follow the *player's* skeleton's per-bone retarget modes. SKEL_Human_Skeleton puts pelvis, spine and limbs on AnimationScaled, so a big boss's offsets shrink to the player's lengths. Nothing in the montage play path checks skeletons. The only thing stopping a Swordman or Moth Knight swing from playing on the player today is CCS's own rule in `CCS/src/core/rig.cpp`.
