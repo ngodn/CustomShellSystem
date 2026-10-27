@@ -1,6 +1,7 @@
 // Portable checks: manifest schemas, model validation, storage layout,
 // settings recovery, frame statistics. No engine, no Windows.
 #include "manifest.hpp"
+#include "photo_rows.hpp"
 #include "controls.hpp"
 #include "storage.hpp"
 #include "writer.hpp"
@@ -46,6 +47,36 @@ int main() {
         bad=photo; bad["photo_mode"]["tabs"]=Json::array(); for(int i=0;i<9;++i) bad["photo_mode"]["tabs"].push_back({{"section","s"+std::to_string(i)},{"icon","tabs/a.png"}});
         rejects([&]{Manifest::parse(bad,root/"valid");},"more than eight photo tabs rejected");
         fs::remove(root/"valid/menu.json"); fs::remove_all(root/"valid/tabs");
+    }
+    {   // photo_rows / photo_event: menu controls as Photo Mode rows and what their keys send
+        Json model={{"sections",Json::array({{{"id","take"},{"title","Take"},{"controls",Json::array({
+            {{"id","scene"},{"type","choice"},{"label","Scene"},{"value","b"},{"options",Json::array({{{"id","a"},{"label","Alpha"}},{{"id","b"},{"label","Beta"}}})}},
+            {{"id","zoom"},{"type","slider"},{"label","Distance"},{"value",1.0},{"min",0.5},{"max",2.0},{"step",0.5},{"unit","x"}},
+            {{"id","walls"},{"type","toggle"},{"label","Ease In at Walls"},{"value",true}},
+            {{"id","roll"},{"type","button"},{"label","Roll Take"}},
+            {{"id","clear"},{"type","button"},{"label","Clear Route"},{"confirm","Delete the saved route?"}},
+            {{"id","status"},{"type","label"},{"label","Status"},{"value","Ready"}},
+            {{"id","name"},{"type","text"},{"label","Name"},{"value","x"}},
+            {{"id","off"},{"type","button"},{"label","Exit"},{"enabled",false},{"disabled_label","Not in a take"}}})}}})}};
+        const auto rows=photo_rows(model,"take");
+        check(rows.size()==7,"text controls are left out of Photo Mode rows");
+        check(rows[0].value=="Beta" && rows[0].arrows && !rows[0].slider,"a choice shows its option label with arrows");
+        check(rows[1].slider && rows[1].value=="1 x" && std::abs(rows[1].fill-1.0/3.0)<1e-9,"a slider shows value, unit and fill");
+        check(rows[2].value=="On" && rows[2].arrows,"a toggle shows On with arrows");
+        check(rows[3].value.empty() && !rows[3].arrows && rows[3].enabled,"a button has no value and no arrows");
+        check(rows[5].value=="Ready" && rows[5].enabled,"a label shows its text");
+        check(!rows[6].enabled && rows[6].value=="Not in a take","a disabled button shows its reason");
+        check(photo_rows(model,"missing").empty() && photo_rows(Json(),"take").empty(),"unknown section or model is no rows");
+        const auto& c=model["sections"][0]["controls"];
+        check(photo_event(c[0],"right",false)==Json({{"id","scene"},{"value","a"}}),"right on a choice wraps to the next option");
+        { auto top=c[1]; top["value"]=2.0; check(photo_event(top,"right",false).is_null(),"right at the slider's end sends nothing"); }
+        check(photo_event(c[1],"left",false)==Json({{"id","zoom"},{"value",0.5}}),"left on a slider steps down");
+        check(photo_event(c[2],"accept",false)==Json({{"id","walls"},{"value",false}}),"accept flips a toggle");
+        check(photo_event(c[3],"accept",false)==Json({{"id","roll"}}) && photo_event(c[3],"left",false).is_null(),"accept presses a button, arrows do not");
+        check(photo_event(c[4],"accept",false).is_null() && photo_event(c[4],"accept",true)==Json({{"id","clear"},{"confirmed",true}}),"a confirm button waits for confirmation");
+        check(photo_event(c[5],"accept",true).is_null() && photo_event(c[7],"accept",true).is_null(),"labels and disabled buttons send nothing");
+        validate_event(model,photo_event(c[0],"right",false)); validate_event(model,photo_event(c[4],"accept",true));
+        rejects([&]{validate_event(model,{{"id","cssx.photo_mode"},{"value","open"}});},"a reserved host event cannot come in as a control event");
     }
     rejects([&]{contained_file(root/"valid","../valid/main.lua");},"traversal rejected");
     rejects([&]{contained_file(root/"valid","C:/file.lua");},"absolute path rejected");
