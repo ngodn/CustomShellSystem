@@ -8,6 +8,7 @@
 #include "bridge.hpp"
 #include "hud.hpp"
 #include "menu.hpp"
+#include "photo.hpp"
 #include "devchannel.hpp"
 #include "extensions.hpp"
 #include "settings.hpp"
@@ -36,6 +37,7 @@ private:
     HudService hud_;
     std::unique_ptr<Runtime> runtime_;
     std::unique_ptr<Menu> menu_;
+    std::unique_ptr<PhotoMode> photo_;   // after runtime_: its destructor tells an extension its session closed
     std::unique_ptr<DevChannel> dev_;
     engine::PlayerContext player_{};
     void* engine_=nullptr;
@@ -50,7 +52,7 @@ private:
     bool extensions_allowed() const { return !legacy_.activation_present && legacy_.mapped.empty(); }
     void start_runtime();
     // Frame accounting
-    FrameRing<4096> phase_tick_, phase_menu_, phase_hud_, phase_ext_;
+    FrameRing<4096> phase_tick_, phase_menu_, phase_hud_, phase_ext_, phase_photo_;
     std::map<std::string,std::pair<uint64_t,uint64_t>> op_stats_;   // op -> (calls, microseconds)
     Json frame_stats(double seconds) const;
     Json perf_brief(double seconds=10) const;   // one-line cost summary for the menu

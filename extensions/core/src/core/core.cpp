@@ -68,6 +68,7 @@ void Core::start_runtime() {
     services.log=[this](const std::string& level,const std::string& message,const Json& fields){ log(level,message,fields); };
     runtime_=std::make_unique<Runtime>(root_,std::move(services));
     if(menu_) menu_->set_runtime(runtime_.get());
+    if(photo_) photo_->set_runtime(runtime_.get());
     log("info","Extensions started",{{"count",runtime_->count()}});
 }
 Json Core::service(const Json& request) {
@@ -191,6 +192,7 @@ void Core::tick(void* engine,float delta) {
         check_legacy();
         menu_=std::make_unique<Menu>(Menu::Deps{nullptr,&settings_,[this](const std::string& m){ log("warning",m); },
             [this]{ return status(); },[this]{ settings_.save(root_/"settings.json"); },CSSX_VERSION,root_,[this]{ return perf_brief(); }});
+        photo_=std::make_unique<PhotoMode>(PhotoMode::Deps{nullptr,[this](const std::string& m){ log("info",m); }});
         // CSS is optional. When it is installed and enabled it adds its own Player
         // Menu tab first; CSSX waits briefly for that so CSS's page-count checks
         // keep passing. Without CSS, CSSX attaches at once.
@@ -226,6 +228,7 @@ void Core::tick(void* engine,float delta) {
         if(pressed) hotkey();
     }
     { Phase p(phase_menu_); menu_->tick(player_,delta); watch_input_block(now); }
+    if(photo_) { Phase p(phase_photo_); photo_->tick(player_,delta); }
     if(!quiet_ && now>=status_after_) { status_after_=now+5000; publish_status(); }
 }
 Json Core::frame_stats(double seconds) const {
@@ -240,7 +243,7 @@ Json Core::frame_stats(double seconds) const {
         result["engine"]=summarize(window,ring->frequency).json();
         result["frames_total"]=uint64_t(ring->total);
         auto phase=[&](const FrameRing<4096>& r){ auto v=r.newest(size_t(window.size())); auto s=summarize(v,ring->frequency); long double sum=0; for(auto x:v) sum+=(long double)x; return Json{{"count",v.size()},{"mean_us",v.empty()?0.0:double(sum)*1e6/double(ring->frequency)/double(v.size())},{"max_us",s.max_ms*1000},{"p99_us",s.p99_ms*1000}}; };
-        result["phases"]={{"core_tick",phase(phase_tick_)},{"extensions",phase(phase_ext_)},{"hud",phase(phase_hud_)},{"menu",phase(phase_menu_)}};
+        result["phases"]={{"core_tick",phase(phase_tick_)},{"extensions",phase(phase_ext_)},{"hud",phase(phase_hud_)},{"menu",phase(phase_menu_)},{"photo",phase(phase_photo_)}};
         // Hitch attribution: for every frame above twice the median, the
         // core's own time in that frame. If the core share stays in
         // microseconds while the frame is tens of milliseconds, the hitch
@@ -332,6 +335,7 @@ Json Core::dev_request(const Json& request) {
     if(op=="menu.act") { menu_->drive(request.at("action")); return true; }
     if(op=="menu.close") { menu_->close(); return true; }
     if(op=="menu.diagnostics") return menu_->diagnostics();
+    if(op=="photo.diagnostics") return photo_?photo_->diagnostics():Json();
     if(op=="engine") { if(!request.contains("request")) throw std::runtime_error("engine needs a request"); return service(request.at("request")); }
     if(op=="input.unblock") {
         // Recovery: strip the game's UI.Input.Block.All tag from the player when a screen
@@ -348,6 +352,7 @@ Json Core::dev_request(const Json& request) {
 bool Core::stop() {
     if(stopped_) return true;
     if(menu_) menu_->detach();
+    if(photo_) photo_->detach();   // before the runtime stops: the owner hears its session closed
     if(runtime_ && !runtime_->stop()) { log("warning","Core stop deferred: an extension has not restored its changes"); return false; }
     if(!bridge_->stop_hooks()) { log("warning","Core stop deferred: hook cleanup pending"); return false; }
     hud_.release();

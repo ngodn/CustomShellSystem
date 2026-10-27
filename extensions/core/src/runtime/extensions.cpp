@@ -381,6 +381,11 @@ Json Runtime::library() {
     }
     return result;
 }
+std::vector<const Manifest*> Runtime::photo_extensions() const {
+    std::vector<const Manifest*> result;
+    for(const auto& entry:entries_) if(!entry->suspended && !entry->manifest.photo_entry.empty()) result.push_back(&entry->manifest);
+    return result;
+}
 Json Runtime::model(const std::string& id) { auto& e=find(id); if(e.suspended) throw std::runtime_error(e.error); if(e.dirty) e.refresh(); return e.model; }
 void Runtime::event(const std::string& id,const Json& event) { auto& e=find(id); if(e.suspended) throw std::runtime_error(e.error); e.event(event); }
 void Runtime::host_event(const std::string& id,const std::string& name,const Json& value) {
