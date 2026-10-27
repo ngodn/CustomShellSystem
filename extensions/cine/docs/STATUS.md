@@ -2,15 +2,25 @@
 
 Read this first after any break. Design: `DESIGN.md` (same folder).
 
-## CINE 2.0.0 (built 25 Oct 2026, not yet on Nexus)
+## CINE 2.0.0 (in progress 28 Oct 2026, not yet on Nexus)
 
-`cine-v2.0.0` is a local tag (not pushed). Release files: `extensions/core/dist/cine-v2.0.0/`
-(zip with the extension, camera presets and the breakdown pak; changelog, description, short
-description, images from the `docs/cine-2.0.0-media` branch). Music scenes ship as one pack per
-song, built by `tools/scene_packs.py` into `extensions/core/dist/cine-scene-<slug>-v1.0.0/`:
-Iris Out, Something Ain't Right, They Know Not What They Do. The tracks live in the git-ignored
-`audio/` folder. Needs CSSX 1.3.1 and CSS 1.0.5 (palette changes keep the idle, takes keep saved
-looks). Scenes need Expression on "As set in CSS"; their look changes run whatever the Look track says.
+Goal, decisions and checklist: `PHOTO-MODE-GOAL.md`. 2.0.0 now runs inside the game's Photo
+Mode (needs CSSX 1.3.2): pause > System > Activate CINE Mode opens Photo Mode with CINE's tabs
+(Take, Route, Animation, Scene, Look, Render) built from the game's own widgets. Record Route
+and takes step out of Photo Mode (CSSX `photo.step_out` / `photo.step_in`) and come back on
+their tab. The Render tab renders a take to `renders/<scene>-<date>/video.mp4` with the bundled
+FFmpeg (`tools/fetch_ffmpeg.py`, git-ignored exe), music through `SM_CINE_Render` in the main pak.
+Scenes ship as pak packs (`CINE_<Pack>_eins0fx_P`, built by `assets/packs/build_pack.py`,
+packaged by `tools/scene_packs.py` into `extensions/core/dist/cine-pack-<slug>-v1.0.0/`); the main
+CINE ships no scenes. `cine-v2.0.0` is a local tag (not pushed) to be moved at release.
+
+Verified live 28 Oct: pause row (game confirm input), tabs and rows in the game's look, Record
+Route with a scripted walk, final shot from the Photo Mode view, Fashion Walk 360 rolled and
+back on the Take tab, close returns the game's Photo Mode untouched. Open: the HUD hide during
+takes and the Render tab live (built, not run in game), a click-through of the Animation, Scene
+and Look rows, the main pak rebuild with the mixer (queued: `work/core-pak/build.sh`), content
+moved out of C++ into `DT_CINE_Core` (Astra lane E), pack text fixes (Beast "Track:" notes,
+Commander White Walk row names), then the release zip and tag.
 
 The three fight presets are held back from 2.0.0 (the code stays). In the live demo on 25 Oct
 the user found player-driven fight takes awkward, and two bugs showed: a death mid-take ends
