@@ -4,12 +4,12 @@
 
 I built Custom Combat System to let you choose the animation each attack of your weapon plays. Put an enemy's swing on your light chain, a heavy from another weapon on your finisher, a boss move on your charged attack, then save the set as a preset and share the file. For each slot you choose how far it goes: keep your weapon's timing and hit numbers with only the animation changed, or take the move's own timing, its damage multiplier and poise damage, and even its weapon in your hand for the swing. Base damage and Resolve are always your weapon's. The move turns with your stick or your lock-on, and the game's hyper armor can cover it, so a fifteen second enemy combo plays like an attack of your own instead of a cutscene you are stuck in.
 
-[size=4][i][b][color=#ff7700]This is an alpha and I am releasing it now to gather feedback, ideas and bug reports before the first full version.[/color][/b][/i][/size]
+[size=4][i][b][color=#ff7700]This is a beta. Feedback, ideas and bug reports are welcome before the first full version.[/color][/b][/i][/size]
 
 [size=4][b]What you can do[/b][/size]
 [list]
 [*]Thirteen slots: light L1 L2 L3, light finisher LF, charged light LC, the same five for heavy, and the sprint attacks S+L and S+H.[/*]
-[*]Candidates for every slot: all player weapons' moves, the enemy attacks that use the player's skeleton (so they play on your body), and any new attack animation the running game lists after a patch.[/*]
+[*]Candidates for every slot: all player weapons' moves, the enemy attacks that use the player's skeleton (so they play on your body), boss moves from Droeg, Sir Isaac, the Nameless Captive and others (sized to your body), and any new attack animation the running game lists after a patch.[/*]
 [*]Six settings per slot on the right panel. Speed, 0.5x to 4x. Feel: the game's timing or the move's own. Damage: the move's hit numbers or your weapon's. Visual: keep your weapon in hand or show the move's own weapon for the swing; on a punch or a kick it hides yours. Armor: the move's own hyper armor, or the game's hyper armor over the whole move. Steer: the stick turns you through the whole move and cancels the recovery after the last hit, or only the turn windows the move brings. L2, L3, H2 and H3 add Combo step: play the step or skip it.[/*]
 [*]Armor and Steer are on by default. Both bend the game's rules, so the Armor value is marked as a cheat. Set either to Move's own for the game's own behaviour.[/*]
 [*]Presets: save, load and delete your sets. They are plain JSON files you can share.[/*]
@@ -58,7 +58,7 @@ CCS goes in:
     dlls/
         main.dll
     core/
-        ccs_core-1.0.0-alpha.5.dll
+        ccs_core-1.0.0-beta.1.dll
     assets/
         banner.png
         enemy-icons/
@@ -107,13 +107,14 @@ Thestus's night doubles the health and damage of every enemy that spawns. [b]Wor
 
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.4/ccs-settings-world-time.gif[/img][/center]
 
-[size=4][b]Known limits in this alpha[/b][/size]
+[size=4][b]Known limits in this beta[/b][/size]
 [list]
 [*]The sidearm's fire cannot be customised yet.[/*]
 [*]Moves play on the human rig only. When you die and fight on as the Harbinger, or wear a creature shell, the swaps pause until you are back on a human body.[/*]
 [*]With Feel set to Move's own, the move keeps its own hit windows and rhythm, so a combo can feel different from your weapon's. Game's keeps your weapon's timing with the new animation fitted in.[/*]
 [*]The Clockwork Scythe's chain hits belong to the Scythe's own attack animations and do not follow a swapped move.[/*]
 [*]Attacks that are built to break hyper armor still break it, whatever the Armor setting.[/*]
+[*]Boss moves come from bodies built differently from yours, so on some moves the arms or the weapon arc can sit a little off. Magdalena, Babka and the Toxic Stalker are left out for that reason.[/*]
 [*]No presets ship with the mod yet. Save your own; I would like to see what you come up with.[/*]
 [/list]
 
