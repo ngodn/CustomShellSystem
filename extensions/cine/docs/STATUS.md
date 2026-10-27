@@ -16,8 +16,8 @@ CINE ships no scenes. `cine-v2.0.0` is a local tag (not pushed) to be moved at r
 
 Verified live 28 Oct: pause row (game confirm input), tabs and rows in the game's look, Record
 Route with a scripted walk, final shot from the Photo Mode view, Fashion Walk 360 rolled and
-back on the Take tab, close returns the game's Photo Mode untouched. Open: the HUD hide during
-takes and the Render tab live (built, not run in game), a click-through of the Animation, Scene
+back on the Take tab, close returns the game's Photo Mode untouched. Live 28 Oct (second session): HUD hidden during takes, renders at 30/24 fps, all rows. Open: render
+music records silence (blocks release), a click-through of the Animation, Scene
 and Look rows, the main pak rebuild with the mixer (queued: `work/core-pak/build.sh`), content
 moved out of C++ into `DT_CINE_Core` (Astra lane E), pack text fixes (Beast "Track:" notes,
 Commander White Walk row names), then the release zip and tag.

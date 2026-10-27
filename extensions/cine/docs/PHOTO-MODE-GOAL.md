@@ -188,7 +188,14 @@ Worked through without hand-backs: drive the game through the bridge, fix, conti
      (user, 28 Oct)
 5. [x] Pack pipeline: authoring (DataTable + SoundWave), cook, pack, verify; eight packs built.
 6. [ ] Tests and Windows builds (done criteria), frame cost in and out of Photo Mode.
-7. [ ] Live checks: a take per pack, route record, rendered video, menu reopen, world change, death, leave
+7. [ ] Live checks. Done 28 Oct (second session): DT_CINE_Core read from the cooked pak (after a
+   loader fix), 32 scenes from 8 packs, HUD hidden during a take, take returns to CINE Mode, every
+   row of Animation, Scene and Look changes and restores, Render Take to Video at 30 and 24 fps
+   (h264_vulkan, progress row), CSS state unchanged. **Open, blocks release: render music records
+   silence** (UE writes the WAV, peak 0; suspect the unfocused-window volume while the game is not
+   focused; `work/render-live/silent-music.wav`). Deferred to the next game window: music render
+   after that fix, breakdown/label/guide look after lane E, a pack style override, frame cost in
+   and out of CINE Mode, no-pak fallback. Original list: a take per pack, route record, rendered video, menu reopen, world change, death, leave
    Photo Mode with the game exactly as it was. Plus, after lane E: the cooked pak reads back
    `DT_CINE_Core` (15 rows, schema 1, bytes equal `assets/core/content.json`) and the inline font
    `FF_CINE`; in game the labels' font, both guide menus, a breakdown and a sequence look as before,
