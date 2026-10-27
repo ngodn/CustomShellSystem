@@ -71,7 +71,7 @@ The default stem is `CSS_${NAME}_${AUTHORorMODDER}_P`. Name and author are made 
 
 ```sh
 python3 tools/css_package.py verify '/path/to/CSS_My_Outfit_YourName_P' --repak '/path/to/repak'
-python3 tools/css_package.py zip '/path/to/CSS_My_Outfit_YourName_P' --repak '/path/to/repak' --output 'dist/releases/CSS_My_Outfit_YourName_P.zip'
+python3 tools/css_package.py zip '/path/to/CSS_My_Outfit_YourName_P' --repak '/path/to/repak' --output 'dist/CSS_My_Outfit_YourName_P.zip'
 ```
 
 The ZIP command takes a verified three-file package, makes a checked snapshot, reads the completed archive back and verifies its bytes. It refuses existing ZIPs and extra package-directory files. It does not make an ordinary replacement into a CSS package.

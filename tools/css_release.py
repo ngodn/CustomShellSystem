@@ -148,7 +148,8 @@ def build(args: argparse.Namespace) -> Path:
         'required_for': shared.get('required_for', 'customized_genessa_doubles'),
         'files': shared['files']}
     files['release.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
-    output = args.output.resolve()
+    # One folder per release, next to its changelog: dist/v<version>/ (docs/releases.md).
+    output = (args.output or ROOT / 'dist' / f'v{version}').resolve()
     output.mkdir(parents=True, exist_ok=True)
     archive = output / f'MSII-CSS-v{version}.zip'
     if archive.exists():
@@ -170,6 +171,9 @@ def build(args: argparse.Namespace) -> Path:
             temporary.rmdir()
     checksum = digest(archive.read_bytes())
     archive.with_suffix('.zip.sha256').write_text(f'{checksum}  {archive.name}\n')
+    changelog = ROOT / 'docs/releases' / f'v{version}' / f'css-v{version}-changelog.bbcode'
+    if changelog.is_file() and not (output / changelog.name).exists():
+        (output / changelog.name).write_bytes(changelog.read_bytes())
     print(archive)
     print(checksum)
     return archive
@@ -183,7 +187,8 @@ def main():
                          help='Stage a local archive from committed build inputs before the final release tag')
     release.add_argument('--sdk', type=Path, default=ROOT / 'reference/ue4ss-sdk-d7e7826d')
     release.add_argument('--import-library', type=Path, default=ROOT / UE4SS_RUNTIME['import_library'])
-    release.add_argument('--output', type=Path, default=ROOT / 'dist/releases')
+    release.add_argument('--output', type=Path, default=None,
+                         help='Folder for the archive (default dist/v<VERSION>/, with the version changelog)')
     check = sub.add_parser('verify')
     check.add_argument('archive', type=Path)
     args = parser.parse_args()

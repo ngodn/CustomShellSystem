@@ -21,7 +21,7 @@ Build from a clean checkout at that tag:
 
 ```sh
 python3 tools/css_release.py build --sdk /absolute/path/to/ue4ss-sdk-d7e7826d
-python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.3.2.zip
+python3 tools/css_release.py verify dist/v0.3.2/MSII-CSS-v0.3.2.zip
 ```
 
 The script builds both Release DLLs from that checkout and uses an explicit
@@ -102,7 +102,7 @@ that same clean annotated tag after building CSS:
 
 ```sh
 python3 tools/cssx_release.py build --sdk /absolute/path/to/ue4ss-sdk-d7e7826d
-python3 tools/cssx_release.py verify dist/releases/MSII-CSSX-v0.3.0.zip
+python3 extensions/core/tools/cssx_release.py verify extensions/core/dist/MSII-CSSX-v0.3.0.zip
 ```
 
 CSSX installs inside CustomShellSystem; each extension installs under extensions/.
