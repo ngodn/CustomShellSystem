@@ -25,6 +25,7 @@ public:
     engine::UObject* resolve(const Json& value);   // throws when expired
     bool stop_hooks();                             // remove every rule; false while one is busy
     Json hook_stats() const;
+    const CssxHookHost* hook_host() const { return hooks_; }   // null when the loader has none
     struct HookGroup;
 private:
     const CssxHookHost* hooks_;

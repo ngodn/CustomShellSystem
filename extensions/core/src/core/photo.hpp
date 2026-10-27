@@ -14,6 +14,7 @@
 // Cost: nothing unless an extension declares photo_mode. Then two cached flag reads a frame;
 // while an extension tab is showing, a key poll and a model refresh four times a second.
 #include "engine.hpp"
+#include "core_abi.h"
 #include "extensions.hpp"
 #include "menu_input.hpp"
 #include "photo_rows.hpp"
@@ -29,6 +30,7 @@ public:
     struct Deps {
         Runtime* runtime=nullptr;
         std::function<void(const std::string&)> log;
+        const CssxHookHost* hooks=nullptr;   // the loader's hook service: tells when a row is confirmed
     };
     explicit PhotoMode(Deps deps):deps_(std::move(deps)) {}
     ~PhotoMode() { try { detach(); } catch(...) {} }
@@ -51,7 +53,7 @@ private:
     using UObject=RC::Unreal::UObject;
     using WeakObject=engine::WeakObject;
     struct Declared { std::string id, entry; std::vector<Manifest::PhotoTab> tabs; };
-    struct PauseRow { std::string id; WeakObject row; bool down=false; };
+    struct PauseRow { std::string id; WeakObject row; bool down=false, confirmed=false; };
     struct Row { WeakObject widget; bool slider=false; PhotoRow shown; bool fresh=true; uint64_t settle_until=0; };
     struct Tab {
         std::string section; WeakObject tab, page, box; WeakObject icon;
@@ -69,6 +71,9 @@ private:
     // pause menu
     std::vector<PauseRow> pause_rows_;
     WeakObject system_page_;
+    uint64_t confirm_hook_=0, input_hook_=0;   // post-hooks while the System page shows (see watch_confirms)
+    int32_t input_offset_=-1;               // the page input event's Input parameter
+    bool watch_reported_=false;
     // session
     std::string session_;                   // extension id that owns the open Photo Mode session
     uint64_t session_started_=0;
@@ -101,6 +106,9 @@ private:
     void pause_tick(UObject* handler);
     UObject* ensure_pause_row(PauseRow& p,UObject* box,UObject* reference,UObject* after);
     void begin_session(const std::string& id,UObject* system_page);
+    void watch_confirms(UObject* row,bool on) noexcept;
+    static void on_confirmed(void* user,void* object,void* frame,void* result);
+    static void on_page_input(void* user,void* object,void* frame,void* result);
     void end_session() noexcept;
     // panel
     void panel_tick(UObject* component);

@@ -192,7 +192,7 @@ void Core::tick(void* engine,float delta) {
         check_legacy();
         menu_=std::make_unique<Menu>(Menu::Deps{nullptr,&settings_,[this](const std::string& m){ log("warning",m); },
             [this]{ return status(); },[this]{ settings_.save(root_/"settings.json"); },CSSX_VERSION,root_,[this]{ return perf_brief(); }});
-        photo_=std::make_unique<PhotoMode>(PhotoMode::Deps{nullptr,[this](const std::string& m){ log("info",m); }});
+        photo_=std::make_unique<PhotoMode>(PhotoMode::Deps{nullptr,[this](const std::string& m){ log("info",m); },bridge_->hook_host()});
         // CSS is optional. When it is installed and enabled it adds its own Player
         // Menu tab first; CSSX waits briefly for that so CSS's page-count checks
         // keep passing. Without CSS, CSSX attaches at once.

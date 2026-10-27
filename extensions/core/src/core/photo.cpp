@@ -7,6 +7,9 @@
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/FString.hpp>
+#include <Unreal/FFrame.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 
 namespace cssx {
 using namespace engine;
@@ -19,6 +22,9 @@ constexpr const char* page_class="/Game/Sparta/UI/PhotoMode/Widgets/WBP_MOT_Phot
 constexpr const char* row_class="/Game/Sparta/UI/PhotoMode/Widgets/WBP_NB_Photomode.WBP_NB_Photomode_C";
 constexpr const char* slider_class="/Game/Sparta/UI/PhotoMode/Widgets/WBP_NB_Photomode_Slider.WBP_NB_Photomode_Slider_C";
 constexpr uint8_t state_selected=2, state_confirmed=3;           // ENavigableState
+// EInterfaceInput Confirm_Primary_Press (NewEnumerator8; DisplayNameMap of
+// /Game/Sparta/UI/Core/Navigation/Enums/EInterfaceInput): Enter, Space, pad A.
+constexpr uint8_t input_confirm=13;
 constexpr uint8_t vis_collapsed=1, vis_hidden=2, vis_self_passive=4;  // ESlateVisibility
 constexpr int rows_per_tick=4;                                   // a game widget costs about a millisecond to create
 constexpr uint64_t check_every_ms=250, settle_ms=1000, confirm_window_ms=3000;
@@ -128,7 +134,7 @@ UObject* PhotoMode::ensure_pause_row(PauseRow& p,UObject* box,UObject* reference
 
 void PhotoMode::pause_tick(UObject* handler) {
     auto* page=object_of(object_of(object_of(handler,L"WBP_Menu_Game"),L"WBP_Menu_Options"),L"WBP_MOT_System");
-    if(!page || !visible_now(page)) { for(auto& p:pause_rows_) p.down=false; return; }
+    if(!page || !visible_now(page)) { for(auto& p:pause_rows_) p.down=p.confirmed=false; watch_confirms(nullptr,false); return; }
     system_page_=page;
     auto* box=object_of(page,L"BP_VBC_System"); auto* photo=object_of(page,L"WBP_NBS_ActivatePhotomode");
     if(!box || !photo) throw std::runtime_error("The System page layout changed");
@@ -145,16 +151,61 @@ void PhotoMode::pause_tick(UObject* handler) {
         if(it==pause_rows_.end()) { pause_rows_.push_back({d.id,{},false}); it=pause_rows_.end()-1; }
         auto* row=ensure_pause_row(*it,box,photo,after);
         after=row;
+        watch_confirms(row,true);
         // Available exactly when the game's own Photo Mode row is (IsPlayerInterfaceEnabled).
         if(bool_of(row,L"bEnabled",true)!=enabled) { set_bool(row,L"bEnabled",enabled); try { invoke(row,L"UpdateEnabledState",L"bEnabled",enabled); } catch(const std::exception& e) { report(e.what()); } }
         const auto state=read<uint8_t>(row,L"NavigableState");
         // The game's navigation confirms a row by state (keys and clicks); the accept key on the
         // selected row is read too, in case a state change is undone within the same frame.
-        const bool pressed=state==state_confirmed || (state==state_selected && accept && !it->down);
-        it->down=accept;
+        const bool pressed=it->confirmed || state==state_confirmed || (state==state_selected && accept && !it->down);
+        it->down=accept; it->confirmed=false;
         if(enabled && pressed) { begin_session(d.id,page); return; }
     }
     prefetch_icons();
+}
+
+// The System page acts on the confirm input only for the game's own rows (it compares the active
+// row with each of them), so an extension row is never told. Two post-hooks report it: the page's
+// input event (keys and pad: the input arrives with the active row still selected), and every
+// row's OnConfirmedState (any path that does confirm a row). They live only while the System
+// page shows, since a Blueprint hook makes every script call pay a lookup.
+void PhotoMode::watch_confirms(UObject* row,bool on) noexcept {
+    auto* hooks=deps_.hooks; if(!hooks) return;
+    try {
+        if(on && row && !confirm_hook_)
+            if(auto* fn=row->GetFunctionByNameInChain(L"OnConfirmedState")) confirm_hook_=hooks->add(hooks->context,fn,&PhotoMode::on_confirmed,this);
+        if(on && !input_hook_) if(auto* page=system_page_.Get()) {
+            // The page's input listener event; its name carries an editor node number, so match it.
+            for(auto* fn:page->GetClassPrivate()->ForEachFunction()) {
+                const std::wstring name(fn->GetName());
+                if(name.rfind(L"BndEvt__",0)!=0 || name.find(L"OnInputTriggered")==std::wstring::npos) continue;
+                for(auto* p:fn->ForEachProperty()) if(p->HasAnyPropertyFlags(CPF_Parm) && std::wstring(p->GetName())==L"Input" && p->GetElementSize()==1) input_offset_=p->GetOffset_Internal();
+                if(input_offset_>=0) input_hook_=hooks->add(hooks->context,fn,&PhotoMode::on_page_input,this);
+                break;
+            }
+        }
+        if(on && (!confirm_hook_ || !input_hook_) && !watch_reported_) {
+            watch_reported_=true;
+            report("the pause row's confirm cannot be fully watched; the accept key still works");
+        }
+    } catch(const std::exception& e) { report(e.what()); }
+    if(!on) {
+        if(confirm_hook_ && hooks->remove(hooks->context,confirm_hook_)) confirm_hook_=0;
+        if(input_hook_ && hooks->remove(hooks->context,input_hook_)) input_hook_=0;
+    }
+}
+
+void PhotoMode::on_confirmed(void* user,void* object,void*,void*) {
+    auto* self=static_cast<PhotoMode*>(user);
+    for(auto& p:self->pause_rows_) if(p.row.Get()==object) p.confirmed=true;   // acted on next tick
+}
+
+void PhotoMode::on_page_input(void* user,void*,void* frame,void*) {
+    auto* self=static_cast<PhotoMode*>(user);
+    auto* locals=frame?static_cast<RC::Unreal::FFrame*>(frame)->Locals():nullptr;
+    if(!locals || self->input_offset_<0) return;
+    if(static_cast<const uint8_t*>(locals)[self->input_offset_]!=input_confirm) return;
+    try { for(auto& p:self->pause_rows_) if(auto* row=p.row.Get()) if(read<uint8_t>(row,L"NavigableState")==state_selected) p.confirmed=true; } catch(...) {}
 }
 
 void PhotoMode::begin_session(const std::string& id,UObject* system_page) {
@@ -432,6 +483,7 @@ void PhotoMode::detach_panel() noexcept {
 }
 
 void PhotoMode::detach() noexcept {
+    watch_confirms(nullptr,false);
     end_session();
     for(auto& p:pause_rows_) remove(p.row.Get());
     try { if(auto* page=system_page_.Get()) if(auto* box=object_of(page,L"BP_VBC_System")) rescan(box); } catch(...) {}
