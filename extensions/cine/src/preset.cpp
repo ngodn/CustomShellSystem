@@ -203,11 +203,13 @@ Preset Preset::parse(const Json& j) {
         if (p.frame != "16:9" && p.frame != "9:16" && p.frame != "1:1" && p.frame != "2.39:1") throw std::invalid_argument("'frame' must be 16:9, 9:16, 1:1 or 2.39:1");
     }
     if (j.contains("audio")) {
-        // A file inside the extension folder, never a path out of it.
+        // A pack's audio id, or a file inside the extension folder (never a path out of it).
         const auto file = text(j, "audio", 160, true);
         const bool wav = file.ends_with(".wav"), mp3 = file.ends_with(".mp3");
-        if ((!wav && !mp3) || file.find("..") != std::string::npos || file.find(':') != std::string::npos || file.front() == '/' || file.front() == '\\')
-            throw std::invalid_argument("'audio' must be a .wav or .mp3 file inside the CINE folder");
+        const bool id = !file.empty() && file.size() <= 64 && std::all_of(file.begin(), file.end(),
+            [](unsigned char c) { return std::islower(c) || std::isdigit(c) || c == '-' || c == '_'; });
+        if (!id && ((!wav && !mp3) || file.find("..") != std::string::npos || file.find(':') != std::string::npos || file.front() == '/' || file.front() == '\\'))
+            throw std::invalid_argument("'audio' must be a pack audio id or a .wav or .mp3 file inside the CINE folder");
         p.audio = file;
     }
     if (j.contains("breakdown")) {

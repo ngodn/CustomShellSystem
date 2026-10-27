@@ -37,6 +37,41 @@ Json Rig::cdo(const std::string& path) const {
     return h;
 }
 
+namespace {
+constexpr const char* music_class = "/Game/Sparta/Audio/SoundClasses/Music.Music";
+}
+
+Json Rig::load_sound(const std::string& path) {
+    const auto sound = host_.request({{"op", "load"}, {"path", path}});
+    if (!is_handle(sound)) throw std::runtime_error("the pack's music did not load (" + path + ")");
+    const auto cls = sound.value("class", std::string());
+    if (cls.find("SoundWave") == std::string::npos) throw std::runtime_error("the pack's music is not a sound (" + path + ")");
+    return sound;
+}
+
+void Rig::play_music(const Json& sound) {
+    stop_music();
+    if (!is_handle(statics_) || !is_handle(controller_)) throw std::runtime_error("the player is not ready for music");
+    // CreateSound2D makes a UI sound (it keeps playing while the game is paused) and does not start
+    // it, so the sound class is set before the first sample.
+    auto component = call(statics_, "CreateSound2D", {{"WorldContextObject", controller_}, {"Sound", sound}, {"VolumeMultiplier", 1.0},
+        {"PitchMultiplier", 1.0}, {"StartTime", 0.0}, {"ConcurrencySettings", nullptr}, {"bPersistAcrossLevelTransition", false},
+        {"bAutoDestroy", false}});
+    if (!is_handle(component)) throw std::runtime_error("the game could not create the music player");
+    music_ = component;
+    try {
+        const auto music = host_.request({{"op", "load"}, {"path", music_class}});
+        if (is_handle(music)) host_.request({{"op", "set"}, {"target", component}, {"property", "SoundClassOverride"}, {"value", music}, {"echo", false}});
+        call(component, "Play", {{"StartTime", 0.0}});
+    } catch (...) { stop_music(); throw; }
+}
+
+void Rig::stop_music() noexcept {
+    if (music_.is_null()) return;
+    try { if (host_.request({{"op", "valid"}, {"target", music_}}).get<bool>()) call(music_, "Stop", Json::object()); } catch (...) {}
+    music_ = nullptr;   // unreferenced and stopped: the engine collects it
+}
+
 void Rig::resolve() {
     const auto p = host_.player();
     if (!p.is_object() || !is_handle(p.value("pawn", Json())) || !is_handle(p.value("controller", Json())))
@@ -71,7 +106,7 @@ void Rig::forget() {
     time_scaled_ = shake_set_ = false;
     pawn_ = controller_ = movement_ = mesh_ = camera_manager_ = Json();
     statics_ = kismet_ = ai_ = widgets_ = player_lib_ = camera_class_ = Json();
-    cameras_.clear(); hud_.clear(); montage_playing_ = false;
+    cameras_.clear(); hud_.clear(); montage_playing_ = false; music_ = Json();   // the world took the music player with it
     hud_hidden_ = view_changed_ = speed_set_ = moving_ = false;
     force_walk_sets_ = 0;
 }

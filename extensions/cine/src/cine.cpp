@@ -57,27 +57,92 @@ Extension::Extension(const CssxHost* host) : host_(host), rig_(host_), scene_(ho
 // ---------------------------------------------------------------- presets and state
 
 void Extension::load_presets() {
-    presets_.clear(); preset_problems_.clear();
+    presets_.clear(); preset_problems_.clear(); packs_.clear(); audio_ids_.clear();
+    // Packs are read from tick, one per tick, once the game is up (creation stays passive).
+    pack_queue_.clear(); packs_loading_ = true;
+    try {
+        std::vector<std::string> problems;
+        pack_queue_ = find_pack_folders(mods_folder(), problems);
+        for (auto& p : problems) preset_problems_.push_back(std::move(p));
+    } catch (const std::exception& e) { preset_problems_.push_back(std::string("CINE packs: ") + e.what()); }
+    if (pack_queue_.empty()) packs_loading_ = false;
+    load_folder_presets();
+    finish_presets();
+}
+
+// Your own presets: JSON files in this extension's presets folder (copy one from a pack to edit it).
+void Extension::load_folder_presets() {
     try {
         const auto info = host_.request({{"op", "extension.info"}});
         const fs::path dir = fs::path(info.at("directory").get<std::string>()) / "presets";
         std::error_code ec;
-        if (!fs::is_directory(dir, ec)) { preset_problems_.push_back("presets folder is missing"); return; }
+        if (!fs::is_directory(dir, ec)) return;
         for (const auto& entry : fs::directory_iterator(dir, ec)) {
             const auto name = entry.path().filename().string();
             if (name.size() < 10 || name.substr(name.size() - 10) != ".cine.json") continue;
             try {
                 if (entry.file_size(ec) > 256 * 1024) throw std::invalid_argument("file is larger than 256 KiB");
                 std::ifstream in(entry.path(), std::ios::binary);
-                auto preset = Preset::parse(Json::parse(in));
-                if (presets_.contains(preset.id)) throw std::invalid_argument("duplicate id " + preset.id);
-                presets_.emplace(preset.id, std::move(preset));
+                add_preset(Preset::parse(Json::parse(in)));
             } catch (const std::exception& e) { preset_problems_.push_back(name + ": " + e.what()); }
-            if (presets_.size() >= 128) break;
+            if (presets_.size() >= 256) break;
         }
     } catch (const std::exception& e) { preset_problems_.push_back(e.what()); }
-    if (!presets_.empty() && !presets_.contains(settings_.preset)) settings_.preset = presets_.begin()->first;
+}
+
+void Extension::add_preset(Preset preset) {
+    if (presets_.contains(preset.id)) {
+        const auto& other = presets_.at(preset.id);
+        throw std::invalid_argument("id " + preset.id + " is already used by " + (other.pack.empty() ? std::string("a preset file") : "the " + other.pack + " pack"));
+    }
+    if (!preset.pack.empty()) preset_order_.push_back(preset.id);
+    presets_.emplace(preset.id, std::move(preset));
+}
+
+void Extension::load_next_pack() {
+    const auto token = pack_queue_.front();
+    pack_queue_.erase(pack_queue_.begin());
+    try {
+        if (!rig_.resolved()) {
+            const auto p = host_.player();
+            if (!p.is_object() || !is_handle(p.value("controller", Json()))) { pack_queue_.insert(pack_queue_.begin(), token); pack_wait_ = 1.0; return; }   // not in the game yet
+        }
+        Pack pack = read_pack(host_, token);
+        for (const auto& [id, audio] : pack.audio) audio_ids_.emplace(id, audio.asset);   // first pack wins a shared id
+        for (const auto& id : pack.presets) {
+            try {
+                auto preset = Preset::parse(pack.rows.at("preset." + id));
+                if (preset.id != id) throw std::invalid_argument("row preset." + id + " holds preset " + preset.id);
+                preset.pack = pack.name;
+                if (!preset.audio.empty() && !preset.audio_is_file()) {
+                    const auto a = pack.audio.find(preset.audio);
+                    if (a == pack.audio.end()) throw std::invalid_argument("plays " + preset.audio + ", which the pack does not carry");
+                    preset.audio_asset = a->second.asset;
+                }
+                add_preset(std::move(preset));
+            } catch (const std::exception& e) { preset_problems_.push_back(pack.name + " / " + id + ": " + e.what()); }
+        }
+        pack.rows.clear();   // presets are parsed; recipes and styles are read when used
+        packs_.push_back(std::move(pack));
+    } catch (const std::exception& e) { preset_problems_.push_back("CINE_" + token + "_eins0fx_P: " + e.what()); }
+    if (pack_queue_.empty()) { packs_loading_ = false; finish_presets(); }
+}
+
+// After the folder or the last pack: user presets naming a pack's audio id find its SoundWave,
+// the selection stays valid, and every problem reaches the log once.
+void Extension::finish_presets() {
+    for (auto& [id, preset] : presets_)
+        if (preset.pack.empty() && !preset.audio.empty() && !preset.audio_is_file()) {
+            const auto a = audio_ids_.find(preset.audio);
+            preset.audio_asset = a == audio_ids_.end() ? std::string() : a->second;
+        }
+    if (packs_loading_) return;
+    if (!presets_.empty() && !presets_.contains(settings_.preset)) {
+        const auto saved = saved_preset_;
+        settings_.preset = presets_.contains(saved) ? saved : preset_order_.empty() ? presets_.begin()->first : preset_order_.front();
+    }
     for (const auto& p : preset_problems_) host_.log("Preset skipped: " + p, "warning");
+    host_.log("CINE presets: " + std::to_string(presets_.size()) + " from " + std::to_string(packs_.size()) + " pack(s) and the presets folder");
 }
 
 void Extension::load_state() {
@@ -86,7 +151,10 @@ void Extension::load_state() {
     if (!state.is_object()) return;
     const auto s = state.value("settings", Json::object());
     if (s.is_object()) {
-        if (s.contains("preset") && s["preset"].is_string() && presets_.contains(s["preset"].get<std::string>())) settings_.preset = s["preset"];
+        if (s.contains("preset") && s["preset"].is_string()) {
+            saved_preset_ = s["preset"].get<std::string>();   // packs load later; finish_presets() applies it
+            if (presets_.contains(saved_preset_)) settings_.preset = saved_preset_;
+        }
         if (s.contains("zoom") && s["zoom"].is_number()) settings_.zoom = clampd(s["zoom"], 0.5, 2.0);
         if (s.contains("height") && s["height"].is_number()) settings_.height = clampd(s["height"], -150, 150);
         if (s.contains("fov_scale") && s["fov_scale"].is_number()) settings_.fov_scale = clampd(s["fov_scale"], 0.5, 2.0);
@@ -261,6 +329,12 @@ int Extension::render(const CssxFrame* f) {
 void Extension::tick(double seconds) {
     if (stopped_) return;
     try {
+        if (!pack_queue_.empty() && mode_ == Mode::Idle) {
+            // Waiting for the game (main menu, loading): ask about once a second, not every tick.
+            if (pack_wait_ > 0) { pack_wait_ -= std::isfinite(seconds) ? seconds : 0.1; return; }
+            load_next_pack();
+            return;
+        }
         if (mode_ == Mode::Idle && !performance_.owned() && !expression_.owned() && !capture_pending_ && look_restore_.is_null() && own_look_owed_.is_null() && !scene_.pending() && !breakdown_.busy() && !breakdown_opponent_.busy())
             return;   // free outside Cine World
         const double dt = std::isfinite(seconds) ? std::clamp(seconds, 0.0, 1.0) : 0.0;
@@ -281,7 +355,7 @@ void Extension::tick(double seconds) {
             if (take_ && take_->idle_set) { try { rig_.css({{"action", "idle"}, {"value", ""}}); } catch (...) {} }
             if (take_ && take_->wore && take_->own_look.is_object()) { own_look_owed_ = take_->own_look; own_look_check_ = 0.5; queue_look_restore(take_->own_look); }
             labels_live_ = false; labels_.clear(); lens_ = {};
-            audio_.stop();
+            audio_.stop(); rig_.stop_music();
             try { rig_.restore_picture(); } catch (...) {}   // console variables outlive the world
             rig_.forget(); guides_.forget(); callouts_.forget(); typeface_.forget(); scene_.forget(); breakdown_.forget(); breakdown_opponent_.forget();
             take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false;
@@ -476,6 +550,11 @@ void Extension::prepare() {
         rig_.picture(settings_.picture == "full" ? 2 : settings_.picture == "sharp" ? 1 : 0);
         t.preset = *current_preset();
         auto& p = t.preset;
+        // The pack's music loads now, so starting it on the first frame costs nothing. A missing
+        // sound is reported when the take rolls; the take still runs on its own clock.
+        if (!p.audio.empty() && !p.audio_is_file() && !p.audio_asset.empty()) {
+            try { t.sound = rig_.load_sound(p.audio_asset); } catch (const std::exception& e) { host_.log(std::string("Scene music: ") + e.what(), "warning"); }
+        }
         // A "view" shot is the camera as the player framed it in Cine World: its place around
         // her (in her own frame, so it follows her if the take is rolled elsewhere), height,
         // tilt and lens, held. The camera looks at her axis; a framing off to one side keeps
@@ -1260,10 +1339,17 @@ void Extension::roll() {
     if (!t.preset.audio.empty()) {
         std::string why;
         try {
-            const auto info = host_.request({{"op", "extension.info"}});
-            if (audio_.play(fs::path(info.at("directory").get<std::string>()) / t.preset.audio, why)) { t.wall_clock = true; t.rolled_at = std::chrono::steady_clock::now(); }
+            if (!t.preset.audio_is_file()) {
+                // A pack's SoundWave, loaded while the take prepared.
+                if (t.sound.is_null()) throw std::runtime_error(t.preset.audio_asset.empty() ? "install the pack that carries it" : "it did not load");
+                rig_.play_music(t.sound);
+                t.wall_clock = true; t.rolled_at = std::chrono::steady_clock::now();
+            } else {
+                const auto info = host_.request({{"op", "extension.info"}});
+                if (audio_.play(fs::path(info.at("directory").get<std::string>()) / t.preset.audio, why)) { t.wall_clock = true; t.rolled_at = std::chrono::steady_clock::now(); }
+            }
         } catch (const std::exception& e) { why = e.what(); }
-        if (!audio_.playing()) { const std::string note = "No music (" + t.preset.audio + ": " + why + ")."; t.note = t.note.empty() ? note : t.note + "  " + note; }
+        if (!audio_.playing() && !rig_.music_playing()) { const std::string note = "No music (" + t.preset.audio + ": " + why + ")."; t.note = t.note.empty() ? note : t.note + "  " + note; }
     }
     report(with_note("Rolling."));
 }
@@ -1620,7 +1706,7 @@ void Extension::finish_take(const std::string& why, bool failed) {
         try { for (auto& f : b->end()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
     }
     callouts_.hide(); labels_live_ = false; labels_.clear(); lens_ = {};
-    audio_.stop();
+    audio_.stop(); rig_.stop_music();
     if (take_->idle_set) { try { rig_.css({{"action", "idle"}, {"value", ""}}); } catch (...) {} }
     std::string repainted;
     const bool wore = take_->wore && take_->own_look.is_object();
@@ -1810,7 +1896,7 @@ void Extension::event(const Json& e) {
         }
         else if (id == "clear_route") { route_.reset(); save_state(); report("Route cleared."); }
         else if (id == "clear_final") { final_.reset(); save_state(); report("Final shot cleared."); }
-        else if (id == "reload") { load_presets(); report("Presets reloaded: " + std::to_string(presets_.size()) + "."); }
+        else if (id == "reload") { preset_order_.clear(); load_presets(); report(packs_loading_ ? std::string("Reading the CINE packs again.") : "Presets reloaded: " + std::to_string(presets_.size()) + "."); }
         else if (id == "preset") { const auto v = e.at("value").get<std::string>(); if (!presets_.contains(v)) throw std::runtime_error("Unknown preset"); settings_.preset = v; save_state(); }
         else if (id == "zoom") { settings_.zoom = clampd(e.at("value").get<double>(), 0.5, 2.0); save_state(); }
         else if (id == "height") { settings_.height = clampd(e.at("value").get<double>(), -150, 150); save_state(); }
@@ -1851,7 +1937,7 @@ bool Extension::stop() {
     // The pieces go now: after this the extension may be unloaded and no tick drains the queue.
     for (Breakdown* b : {&breakdown_, &breakdown_opponent_}) { try { b->flush(); } catch (...) {} }
     if (!look_restore_.is_null() && restore_look(look_restore_)) look_restore_ = nullptr;   // last chance before unload
-    audio_.stop();
+    audio_.stop(); rig_.stop_music();
     try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {}
     try { if (!expression_.stop([&](const Json& r) { return rig_.css(r); })) return false; }
     catch (...) { return false; }

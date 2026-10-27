@@ -38,7 +38,8 @@ Engine (game thread, live reflection): `player` → `{pawn, controller, world,
 shell}`; `valid {target}`; `find {path}`; `load {path}`; `class_default
 {class}`; `get {target,property}`; `set {target,property,value}`; `properties
 {target,inherited}`; `describe {target,function}`; `call
-{target,function,args,outputs}`; `table.rows {target}`; `map.update
+{target,function,args,outputs}`; `table.rows {target}` (sorted row names); `table.row
+{target,row}` (one row's fields as an object, `null` when the row is missing; since CSSX 1.3.2); `map.update
 {target,property,key,expected,value}`; `input.keys {target,keys}`.
 
 Host: `menu.status` → `{menu_open, game_menu_open}`; `menu.close`;

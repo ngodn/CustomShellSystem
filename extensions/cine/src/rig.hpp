@@ -55,6 +55,12 @@ public:
     void play_montage(const std::string& path, double rate);
     void stop_montage();
     bool montage_playing() const { return montage_playing_; }
+    // Scene music from a pack: a SoundWave loaded while the take prepares, played as a 2D sound
+    // on the game's Music sound class (so the player's music volume applies), stopped on every exit.
+    Json load_sound(const std::string& path);           // the SoundWave, or throws why not
+    void play_music(const Json& sound);                 // starts it from its first sample
+    void stop_music() noexcept;
+    bool music_playing() const { return !music_.is_null(); }
 
     // Action takes: who she fights, how the fight is going, and the take's own time and lens.
     Json locked_target();                                // the lock-on target actor, or null
@@ -113,6 +119,7 @@ private:
     double shake_before_ = 1.0;
     std::vector<Json> cameras_;
     bool montage_playing_ = false;
+    Json music_;                 // the audio component playing a pack's scene music
     std::vector<std::pair<Json, int>> hud_;
     bool hud_hidden_ = false, view_changed_ = false, speed_set_ = false, moving_ = false;
     int force_walk_sets_ = 0;

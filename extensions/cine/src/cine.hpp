@@ -7,6 +7,7 @@
 #include "callouts.hpp"
 #include "guides.hpp"
 #include "preset.hpp"
+#include "packs.hpp"
 #include "performance.hpp"
 #include "expression.hpp"
 #include "rig.hpp"
@@ -62,6 +63,7 @@ private:
     // One take, built while Preparing and played while Running.
     struct Take {
         Preset preset; Timeline timeline;
+        Json sound;                    // a pack's SoundWave for the take, loaded while preparing
         PerformanceChoice performance;
         std::string expression = "unchanged";
         bool expression_started = false, expression_ready = false;
@@ -161,6 +163,10 @@ private:
 
     // Settings, presets, persistence.
     void load_presets();
+    void load_folder_presets();
+    void load_next_pack();       // one pack per tick, from tick()
+    void add_preset(Preset preset);
+    void finish_presets();
     void load_state();
     void save_state() const;
     std::string performance_conflict(const Preset&) const;
@@ -248,6 +254,13 @@ private:
     double tick_dt_ = 0.1;
     Settings settings_;
     std::map<std::string, Preset> presets_;
+    std::vector<std::string> preset_order_;     // pack presets in pack and manifest order; folder presets follow by id
+    std::vector<Pack> packs_;                   // installed packs (rows dropped after parsing)
+    std::map<std::string, std::string> audio_ids_;   // audio id -> SoundWave, across packs
+    std::vector<std::string> pack_queue_;       // packs still to read
+    bool packs_loading_ = false;
+    double pack_wait_ = 0;                      // seconds until the next try while the game is not up
+    std::string saved_preset_;                  // the selection from state, applied once packs are read
     std::vector<std::string> preset_problems_;
     std::optional<Route> route_;
     std::optional<FinalShot> final_;

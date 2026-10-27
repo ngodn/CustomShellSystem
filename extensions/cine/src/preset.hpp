@@ -86,7 +86,11 @@ struct Preset {
     std::vector<BreakdownStep> breakdown;   // optional, any kind
     ActionShot action;           // Action only
     Sequence sequence;           // Sequence only: shots and looks on a tempo grid
-    std::string audio;           // optional: a .wav or .mp3 in the extension folder, played from the take's first frame
+    std::string audio;           // optional: a pack audio id (e.g. iris-out-x4), or a .wav / .mp3 in the extension folder;
+                                 // played from the take's first frame
+    std::string audio_asset;     // set by the loader: the SoundWave an audio id resolves to
+    std::string pack;            // set by the loader: the pack token it came from, empty for the presets folder
+    bool audio_is_file() const { return audio.ends_with(".wav") || audio.ends_with(".mp3"); }
     std::string idle;            // optional: the idle every look plays during the take (a CSS idle id)
     // Optional: a performance (a CSS shared dance or pose id) the take plays from its first
     // frame. In a sequence with look steps it is stopped for every outfit change and started
