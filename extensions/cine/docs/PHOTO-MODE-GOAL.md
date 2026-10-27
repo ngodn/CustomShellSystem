@@ -84,6 +84,23 @@ The game's eight tabs stay first and unchanged. CINE adds six tabs in the same i
 
 Scene choices list every installed pack's scenes, grouped by pack.
 
+Tab strip (user, 27 Oct: "proper icon, scrollable tab, and proper spacing"):
+- Six CINE icons drawn in the game's style (white line glyphs on transparent, same weight and optical
+  size as `T_UI_Photomode_*_Icon`), not reused game icons.
+- The strip scrolls: 14 tabs do not fit the panel. Measured live: each tab is a `WBP_NB_Menu_Image_C`
+  with a 100x100 icon in a `HorizontalBoxSlot` padded 20 left and right; the eight game tabs want
+  1120 x 100. `BP_HBC_Menu_Options` sits in `HorizontalBox_251` between the LB and RB prompts. CINE Mode
+  moves the strip into a horizontal ScrollBox kept at the original 1120 width and scrolls the selected
+  tab into view on every tab change; leaving CINE Mode puts the strip back in its own slot.
+- Same spacing as the game's tabs (slot padding copied from a game tab), no gap hacks.
+
+Live proof (27 Oct, Fable + user): a `WBP_NB_Menu_Image_C` tab and a `WBP_Menu_Option_Tab_C` page added
+with `AddChildToHorizontalBox` / `AddChild` (parameter `content`) and a `GetNavigableChildren` rescan
+gave 9 navigable tabs; `NavigateToCustomIndex(8,0)` moved selection and switcher together; the user
+cycled the tabs by hand with Q/E and it wrapped cleanly; removal restored 8/8. The pause row was proven
+the same way (`AddChildToVerticalBox`, `NavigateToCustomIndex` highlight). `UPanelWidget.InsertChildAt`
+is not callable in shipping: insert by re-adding children in order (slots have no overrides).
+
 ## What CINE reuses from Photo Mode and what it takes over
 
 | Part | Outside a take | During a take |
