@@ -1693,7 +1693,7 @@ void Combat::scale_travel(const Slot& s, UObject* montage) {
         auto* pawn = pawn_.get();
         auto* warping = pawn ? object_of(pawn, L"MotionWarpingComponent") : nullptr;
         if (!warping || !montage) throw std::runtime_error("no motion warping component on the player");
-        Call add(find_cached(L"/Script/MotionWarping.Default__RootMotionModifier_Scale"), L"AddRootMotionModifierScale", 5);
+        Call add(find_cached(L"/Script/MotionWarping.Default__RootMotionModifier_Scale"), L"AddRootMotionModifierScale", 6);   // five inputs and the returned modifier
         add.set(L"InMotionWarpingComp", warping);
         add.set(L"InAnimation", montage);
         add.set(L"InStartTime", 0.f);
