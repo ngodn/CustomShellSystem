@@ -617,3 +617,10 @@ Live check still needed (the decision point in the research doc, section 6): a N
 overhead in L1 on a stock shell in Marrow Keep. Look at the arms and weapon arc, the distance
 travelled against the same swing unscaled, the two-handed grip, and that a vanilla swing after it
 travels normally. Then the same on a CSS body.
+
+Live check, 27 Oct (core bf62ce23e214): the Nameless Captive's Overhead 01 in L1 on the Katanas
+plays on the player and looks right to the user; travel scaled on 3 of 3 swings (x0.483), no
+failures, and vanilla swings after it move normally. The first build refused the scale call
+(the reflected call counts the returned modifier: six parameters, not five), fixed in 986d648.
+Combo skip in the same sessions: 13 redirects, 0 missed, the selector found again after every
+world change. Still to look at: Sir Isaac and Droeg moves, a CSS body, two-handed grip.
