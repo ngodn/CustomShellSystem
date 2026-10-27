@@ -1105,13 +1105,24 @@ void Combat::ensure_hook() {
     if (!token_) { inputs_ = {}; function_ = {}; throw std::runtime_error("Native montage pre-hook registration rejected"); }
     log("CCS combat hook installed");
 }
+namespace {
+const char* effect_paths[] = {"/Game/Sparta/Core/GameplayEffects/GE_DamageMultiplier.GE_DamageMultiplier_C",
+                              "/Game/Sparta/Core/GameplayEffects/GE_EffectMaxHealth_Multiplier.GE_EffectMaxHealth_Multiplier_C",
+                              "/Game/Sparta/Core/GameplayEffects/GE_NGP_DamageMultiplier.GE_NGP_DamageMultiplier_C"};
+}
+void Combat::refresh_effect_classes(UObject* world) {
+    // Held by the world: a new world gets them again, and one unloaded on the way is loaded again.
+    engine::ObjectHandle* handles[] = {&night_damage_, &night_health_, &ngp_damage_};
+    for (int i = 0; i < 3; ++i) {
+        auto* c = handles[i]->get();
+        if (!c) { c = load(effect_paths[i]); if (!c) throw std::runtime_error(std::string("missing ") + effect_paths[i]); *handles[i] = {}; handles[i]->capture(c); }
+        if (world) keep_referenced(world, c);
+    }
+}
 void Combat::ensure_effect_hook() {
     if (effect_token_) return;
-    static const char* paths[] = {"/Game/Sparta/Core/GameplayEffects/GE_DamageMultiplier.GE_DamageMultiplier_C",
-                                  "/Game/Sparta/Core/GameplayEffects/GE_EffectMaxHealth_Multiplier.GE_EffectMaxHealth_Multiplier_C",
-                                  "/Game/Sparta/Core/GameplayEffects/GE_NGP_DamageMultiplier.GE_NGP_DamageMultiplier_C"};
-    UObject* classes[3]{};
-    for (int i = 0; i < 3; ++i) { classes[i] = load(paths[i]); if (!classes[i]) throw std::runtime_error(std::string("missing ") + paths[i]); keep_referenced(world_.get(), classes[i]); }
+    night_damage_ = {}; night_health_ = {}; ngp_damage_ = {};
+    refresh_effect_classes(world_.get());
     auto* cdo = find(L"/Script/GameplayAbilities.Default__AbilitySystemComponent");
     Call signature(cdo, L"BP_ApplyGameplayEffectToSelf", 4);
     auto* function = signature.function();
@@ -1120,7 +1131,6 @@ void Combat::ensure_effect_hook() {
     if (!param || !param->IsA<FObjectProperty>() || param->GetElementSize() != sizeof(UObject*) || param->HasAnyPropertyFlags(CPF_OutParm | CPF_ReturnParm)
         || param->GetOffset_Internal() < 0 || param->GetOffset_Internal() + param->GetElementSize() > function->GetParmsSize())
         throw std::runtime_error("BP_ApplyGameplayEffectToSelf parameter layout changed");
-    night_damage_ = {}; night_damage_.capture(classes[0]); night_health_ = {}; night_health_.capture(classes[1]); ngp_damage_ = {}; ngp_damage_.capture(classes[2]);
     effect_class_param_ = param;
     effect_function_ = {}; effect_function_.capture(function);
     effect_token_ = deps_.hooks->add_native_pre(deps_.hooks->context, function, effect_callback, this);
@@ -1176,8 +1186,14 @@ bool Combat::skip_wanted() const {
     for (auto slot : {SlotId::L2, SlotId::L3, SlotId::H2, SlotId::H3}) if (slots_[size_t(slot)].tuning.step == "skip") return true;
     return false;
 }
-void Combat::ensure_skip_hook() {
-    if (skip_token_) return;
+namespace {
+// Why the skip hook left a call alone, in status.json order.
+enum SkipMiss { MissNotPlayer, MissFrame, MissNoSelector, MissStale, MissNoCounter, MissNotInList };
+const char* skip_miss_names[] = {"not_player", "frame", "no_selector_caller", "stale_classes", "no_counter", "not_in_list"};
+}
+void Combat::resolve_skip_layout() {
+    // Found again after a world change: the old classes and their fields may be gone.
+    combo_list_ = combo_counter_ = combo_count_ = nullptr; selector_class_ = {}; counter_class_ = {};
     auto* selector = load("/Game/Sparta/Core/Player/Ability/GA_Player_AttackSelectorBase.GA_Player_AttackSelectorBase_C");
     auto* counter = load("/Game/Sparta/Core/Player/Components/BPC_Player_ComboCounter.BPC_Player_ComboCounter_C");
     if (!selector || !counter) throw std::runtime_error("attack selector or combo counter class missing");
@@ -1186,6 +1202,25 @@ void Combat::ensure_skip_hook() {
     auto* count = field(counter, L"CurrentComboCount", sizeof(int32_t));
     if (!list->IsA<FArrayProperty>() || !static_cast<FArrayProperty*>(list)->GetInner()->IsA<FObjectProperty>() || !holder->IsA<FObjectProperty>() || !count->IsA<FIntProperty>())
         throw std::runtime_error("attack selector layout changed");
+    selector_class_.capture(selector); counter_class_.capture(counter);
+    combo_list_ = list; combo_counter_ = holder; combo_count_ = count;
+    ++skip_layouts_;
+}
+void Combat::refresh_skip_layout(uint64_t now) {
+    if (!skip_token_ || (selector_class_.alive() && counter_class_.alive() && combo_list_)) return;
+    if (now < skip_layout_retry_after_) return;
+    try {
+        resolve_skip_layout();
+        if (!skip_error_.empty()) skip_error_.clear();
+        log("CCS combo skip found the attack selector again (" + std::to_string(skip_layouts_) + ")");
+    } catch (const std::exception& e) {
+        if (skip_error_ != e.what()) log(std::string("CCS combo skip lost the attack selector: ") + e.what());
+        skip_error_ = e.what(); skip_layout_retry_after_ = now + 1000;
+    }
+}
+void Combat::ensure_skip_hook() {
+    if (skip_token_) return;
+    resolve_skip_layout();
     auto* cdo = find(L"/Script/GameplayAbilities.Default__AbilitySystemComponent");
     Call signature(cdo, L"TryActivateAbilityByClass", 3);
     auto* function = signature.function();
@@ -1194,8 +1229,7 @@ void Combat::ensure_skip_hook() {
     if (!param || !param->IsA<FObjectProperty>() || param->GetElementSize() != sizeof(UObject*) || param->HasAnyPropertyFlags(CPF_OutParm | CPF_ReturnParm)
         || param->GetOffset_Internal() < 0 || param->GetOffset_Internal() + param->GetElementSize() > function->GetParmsSize())
         throw std::runtime_error("TryActivateAbilityByClass parameter layout changed");
-    selector_class_ = {}; selector_class_.capture(selector); counter_class_ = {}; counter_class_.capture(counter);
-    combo_list_ = list; combo_counter_ = holder; combo_count_ = count; skip_class_param_ = param;
+    skip_class_param_ = param;
     skip_function_ = {}; skip_function_.capture(function);
     skip_token_ = deps_.hooks->add_native_pre(deps_.hooks->context, function, skip_callback, this);
     if (!skip_token_) { skip_class_param_ = nullptr; skip_function_ = {}; throw std::runtime_error("Combo skip pre-hook registration rejected"); }
@@ -1213,16 +1247,19 @@ void Combat::skip_callback(void* user, void* object, void* frame, void*) noexcep
     catch (...) { ++self->failures_; }
 }
 void Combat::observe_activation(UObject* asc, void* frame_ptr) {
-    if (!enabled_ || !skip_class_param_ || !asc || asc != asc_.get()) return;   // the player's own activations only
+    if (!enabled_ || !skip_class_param_ || !asc) return;
+    if (asc != asc_.get() && !player_outer(asc)) { ++skip_misses_[MissNotPlayer]; return; }   // the player's own activations only
     auto* frame = static_cast<FFrame*>(frame_ptr);
     auto* locals = frame ? frame->Locals() : nullptr;
-    if (!locals || frame->Node() != skip_function_.get()) return;
+    if (!locals || frame->Node() != skip_function_.get()) { ++skip_misses_[MissFrame]; return; }
     // A blueprint caller's frame: the hook host evaluates the parameters into a frame of its own
     // whose previous frame is the caller's, and the caller here is the selector's TryActivateComboAttack.
     auto* caller = frame->PreviousFrame();
     auto* selector = caller ? caller->Object() : nullptr;
     auto* selector_class = static_cast<UClass*>(selector_class_.get());
-    if (!selector || !selector_class || !selector->IsA(selector_class)) return;
+    auto* counter_class = static_cast<UClass*>(counter_class_.get());
+    if (!selector_class || !counter_class || !combo_list_) { ++skip_misses_[MissStale]; return; }   // found again on the next tick
+    if (!selector || !selector->IsA(selector_class)) { ++skip_misses_[MissNoSelector]; return; }   // dodges, parries, items: not a combo step
     auto* param = static_cast<std::byte*>(static_cast<void*>(locals)) + skip_class_param_->GetOffset_Internal();
     UObject* requested{}; std::memcpy(&requested, param, sizeof(requested));
     if (!requested) return;
@@ -1231,15 +1268,15 @@ void Combat::observe_activation(UObject* asc, void* frame_ptr) {
     if (length <= 0 || length > 8) return;
     auto at = [&](int i) { UObject* c{}; std::memcpy(&c, list.GetRawPtr(i), sizeof(c)); return c; };
     UObject* counter{}; std::memcpy(&counter, reinterpret_cast<std::byte*>(selector) + combo_counter_->GetOffset_Internal(), sizeof(counter));
-    auto* counter_class = static_cast<UClass*>(counter_class_.get());
-    if (!counter || !counter_class || !counter->IsA(counter_class)) return;   // the count could not follow a redirect
+    if (!counter || !counter->IsA(counter_class)) { ++skip_misses_[MissNoCounter]; return; }   // the count could not follow a redirect
     auto* count_at = reinterpret_cast<std::byte*>(counter) + combo_count_->GetOffset_Internal();
     int32_t count{}; std::memcpy(&count, count_at, sizeof(count));
     // The position asked for: the count's own (a combo step), else wherever the class sits (the
     // finisher path takes the last position). Running and plunging attacks are not in this list.
     int position = count >= 0 && count < length && at(count) == requested ? count : -1;
     for (int i = 0; position < 0 && i < length; ++i) if (at(i) == requested) position = i;
-    if (position <= 0) return;
+    if (position < 0) { ++skip_misses_[MissNotInList]; return; }
+    if (position == 0) return;
     // Light or heavy chain from the class name, cached like the montage hook's.
     auto chain_slot = [&](UObject* cls) {
         const auto key = name_key(cls->GetNamePrivate());
@@ -1395,7 +1432,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         const bool had_world = world_.ptr != nullptr;
         world_ = {}; world_.capture(player.world);
         donor_ = {}; donor_armor_ = donor_turn_ = donor_cancel_ = -1; donor_failed_ = false;   // the donor rows live in the old world's references
-        if (effect_token_) { for (auto* c : {night_damage_.get(), night_health_.get(), ngp_damage_.get()}) if (c) keep_referenced(player.world, c); }
+        if (effect_token_) { try { refresh_effect_classes(player.world); } catch (const std::exception& e) { difficulty_error_ = e.what(); } }
         if (had_world) {
             log("CCS world changed; reloading the slots");
             montage_facts_.clear();
@@ -1412,6 +1449,9 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (!effect_token_ && now >= effect_retry_after_) {
             try { ensure_effect_hook(); difficulty_error_.clear(); }
             catch (const std::exception& e) { if (difficulty_error_ != e.what()) log(std::string("CCS enemy difficulty hook failed: ") + e.what()); difficulty_error_ = e.what(); effect_retry_after_ = now + 5000; }
+        } else if (effect_token_ && now >= effect_retry_after_ && !(night_damage_.alive() && night_health_.alive() && ngp_damage_.alive())) {
+            try { refresh_effect_classes(world_.get()); difficulty_error_.clear(); log("CCS enemy difficulty found its effect classes again"); }
+            catch (const std::exception& e) { difficulty_error_ = e.what(); effect_retry_after_ = now + 5000; }
         }
     } else if (effect_token_) remove_effect_hook();
     // The combo skip hook exists only while a step is skipped and a player is in a world.
@@ -1420,6 +1460,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
             try { ensure_skip_hook(); skip_error_.clear(); }
             catch (const std::exception& e) { if (skip_error_ != e.what()) log(std::string("CCS combo skip hook failed: ") + e.what()); skip_error_ = e.what(); skip_retry_after_ = now + 5000; }
         }
+        refresh_skip_layout(now);
     } else if (skip_token_) remove_skip_hook();
     bool tuned = false; for (const auto& s : slots_) if (std::abs(s.tuning.speed - 1.0) > 1e-6) tuned = true;
     const bool wanted = enabled_ && (assigned() > 0 || tuned);
@@ -1523,6 +1564,10 @@ void Combat::observe(void* frame_ptr) {
     }
     if (slot < 0) { ++skipped_; note_skip("class name has no slot", ability); note_recent(cls, slot, "no slot"); return; }
     if (!pawn_humanoid_) { ++skipped_; note_recent(cls, slot, "rig not humanoid"); return; }   // the Harbinger form or a creature shell: its rig cannot play these montages
+    // A step set to Skip that still plays: the skip hook missed it. Counted so status.json shows it.
+    if ((slot == int(SlotId::L2) || slot == int(SlotId::L3) || slot == int(SlotId::H2) || slot == int(SlotId::H3)) && slots_[size_t(slot)].tuning.step == "skip") {
+        ++skip_missed_; note_recent(cls, slot, "set to Skip but played");
+    }
     // Hold-first weapons play the charge stage on every press; a tap cuts out of it into step
     // L<n>/H<n>. When that step is an unarmed move with "Move's weapon", the weapon hides from
     // the first frame of the stage, provisionally: a charge that goes through shows it back.
@@ -1647,7 +1692,12 @@ nlohmann::json Combat::status() const {
     return {{"enabled", enabled_}, {"active", active_}, {"hooked", token_ != 0}, {"seen", seen_}, {"swapped", swapped_},
         {"skipped", skipped_}, {"failures", failures_}, {"wrong_frame", wrong_frame_}, {"maximum_callback_us", maximum_us_}, {"recent", recent_},
         {"hold_unlocked", {{"light", hold_unlocked_[0]}, {"heavy", hold_unlocked_[1]}, {"cheat", hold_cheat_}, {"granted", hold_grant_asc_.alive()}}},
-        {"combo_skip", {{"hooked", skip_token_ != 0}, {"redirects", skip_redirects_}, {"error", skip_error_}}},
+        {"combo_skip", [&] {
+            nlohmann::json misses = nlohmann::json::object();
+            for (size_t i = 0; i < skip_misses_.size(); ++i) misses[skip_miss_names[i]] = skip_misses_[i];
+            return nlohmann::json{{"hooked", skip_token_ != 0}, {"redirects", skip_redirects_}, {"missed", skip_missed_}, {"layouts", skip_layouts_},
+                {"classes_alive", selector_class_.alive() && counter_class_.alive()}, {"left_alone", std::move(misses)}, {"error", skip_error_}};
+        }()},
         {"enemy_difficulty", {{"mode", difficulty_}, {"hooked", effect_token_ != 0}, {"night_pairs_added", difficulty_added_}, {"night_effects_removed", difficulty_removed_}, {"error", difficulty_error_}}},
         {"cached_classes", class_slots_.size()}, {"error", error_}, {"slots", std::move(slots)}, {"host", std::move(host)}};
 }

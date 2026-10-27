@@ -226,6 +226,14 @@ private:
     engine::ObjectHandle skip_function_, selector_class_, counter_class_;
     engine::FProperty* skip_class_param_{}, *combo_list_{}, *combo_counter_{}, *combo_count_{};
     std::string skip_error_;
+    // The selector and combo counter are blueprint classes. A world change can unload them and
+    // load them again as new objects, so their handles and fields are found again whenever the
+    // old ones die; until then the hook leaves every call alone (counted in skip_misses_).
+    uint64_t skip_layout_retry_after_{}, skip_layouts_{}, skip_missed_{};
+    std::array<uint64_t, 6> skip_misses_{};   // calls left alone, by reason: see skip_miss_names
+    void resolve_skip_layout();
+    void refresh_skip_layout(uint64_t now);
+    void refresh_effect_classes(engine::UObject* world);
     bool skip_wanted() const;
     static void skip_callback(void* user, void* object, void* frame, void* result) noexcept;
     void observe_activation(engine::UObject* asc, void* frame);

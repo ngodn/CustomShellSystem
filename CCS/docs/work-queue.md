@@ -555,3 +555,33 @@ position's class into the parameter and sets the count to it, so the selector's 
 reset continues from there. The pure rule is `runtime/combo_skip.hpp`, host-tested. Live-checked by
 the user: H1 to H3 with H2 skipped, H1 looping with both skipped, charge-first weapons. A skipped
 third step also skips a finisher Tarstone's attack (ModifyComboList puts it at position 2).
+
+## Combo skip after a world change (2026-10-27)
+
+Reported by the user: L2/L3 Skip works in some sessions and not in others (heavy likely too).
+Evidence from the 27 Oct session (`Mods/CCS/runtime/status.json`, core alpha.5 e9b1ef6804ba,
+Katanas): `combo_skip.hooked` true, `redirects` 0, `failures` 0, while `combat.recent` showed
+`A2_double -> L2` and `A3_double -> L3` playing. The log shows the hook installed right after
+core init, then two "world changed" lines. The Oct 23 game patch did not change
+`GA_Player_AttackSelectorBase::TryActivateComboAttack` (re-exported and decoded under
+`work/combo-skip/patch-1023/`; only the ubergraph gained an `IsAstral` plunge guard, and the combo
+counter gained empowered/in-place hold functions), and no attack ability chains steps itself.
+
+Cause: `ensure_skip_hook` captured the selector and combo counter blueprint classes (and their
+fields) once. A world change can unload those classes and load them again as new objects; the
+handles then read as dead and the callback returned before doing anything, silently, for the
+rest of the session. Toggling a Skip row off and on reinstalled the hook, which is why it looked
+random. The difficulty hook had the same weakness for its three effect classes (it only re-held
+the ones still alive at the world change).
+
+Fix (core build after alpha.5): `resolve_skip_layout` finds the classes and fields again whenever
+they die (`refresh_skip_layout`, every tick, retry 1 s), and `refresh_effect_classes` reloads and
+re-holds the effect classes per world. The owner check also accepts an ASC whose outer is the
+pawn. `status.json` `combat.combo_skip` now has `missed` (a Skip step that still played, seen by
+the montage hook, also in `recent` as "set to Skip but played"), `layouts` (how many times the
+classes were found), `classes_alive`, and `left_alone` counters by reason (not_player, frame,
+no_selector_caller, stale_classes, no_counter, not_in_list). `no_selector_caller` counts every
+non-combo activation (dodge, parry), so it is expected to be high.
+
+Live check still needed: load a save (world change) with L2+L3 skipped, spam light and heavy on
+a normal-first and a hold-first weapon; expect `missed` 0 and `layouts` above 1.
