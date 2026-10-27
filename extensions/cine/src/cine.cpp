@@ -91,9 +91,15 @@ void Extension::load_folder_presets() {
 }
 
 void Extension::add_preset(Preset preset) {
-    if (presets_.contains(preset.id)) {
-        const auto& other = presets_.at(preset.id);
-        throw std::invalid_argument("id " + preset.id + " is already used by " + (other.pack.empty() ? std::string("a preset file") : "the " + other.pack + " pack"));
+    if (const auto it = presets_.find(preset.id); it != presets_.end()) {
+        // A pack's preset replaces a loose file with the same id (an older CINE left its presets in
+        // the folder); two packs, or a file after a pack, keep the first one.
+        if (!preset.pack.empty() && it->second.pack.empty()) {
+            preset_problems_.push_back("presets folder: " + preset.id + " is replaced by the " + preset.pack + " pack's version");
+            presets_.erase(it);
+        } else {
+            throw std::invalid_argument("id " + preset.id + " is already used by " + (it->second.pack.empty() ? std::string("a preset file") : "the " + it->second.pack + " pack"));
+        }
     }
     if (!preset.pack.empty()) preset_order_.push_back(preset.id);
     presets_.emplace(preset.id, std::move(preset));

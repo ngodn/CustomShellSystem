@@ -13,15 +13,6 @@
     "README.txt",
     "signature.txt",
     "fonts/OFL.txt",
-    "fonts/Rajdhani-SemiBold.ttf",
-    "presets/breakdown-turntable.cine.json",
-    "presets/commander-white-walk.cine.json",
-    "presets/fashion-walk-360.cine.json",
-    "presets/photo-orbit.cine.json",
-    "presets/pose-glide-10.cine.json",
-    "presets/pose-glide-3.cine.json",
-    "presets/pose-glide-5.cine.json",
-    "presets/pose-glide-7.cine.json",
-    "presets/turntable.cine.json"
+    "fonts/Rajdhani-SemiBold.ttf"
   ]
 }
