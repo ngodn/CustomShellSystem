@@ -21,7 +21,7 @@ constexpr const char* slider_class="/Game/Sparta/UI/PhotoMode/Widgets/WBP_NB_Pho
 constexpr uint8_t state_selected=2, state_confirmed=3;           // ENavigableState
 constexpr uint8_t vis_collapsed=1, vis_hidden=2, vis_self_passive=4;  // ESlateVisibility
 constexpr int rows_per_tick=4;                                   // a game widget costs about a millisecond to create
-constexpr uint64_t model_every_ms=250, confirm_window_ms=3000;
+constexpr uint64_t check_every_ms=250, settle_ms=1000, confirm_window_ms=3000;
 // The description line sits in the empty band at the foot of the panel, under the key prompts:
 // the panel is 799 units tall and the prompts end 105 above its bottom. Inset like the rows.
 constexpr float note_height=84, note_font=26;
@@ -217,7 +217,10 @@ void PhotoMode::panel_tick(UObject* component) {
     session_live_=true;
     auto* panel=object_of(component,L"PhotoModeUI");
     if(!panel) return;
-    if(panel_.Get()!=panel || tabs_.empty() || !tabs_.front().tab.Get() || child_index(strip_.Get(),tabs_.front().tab.Get())<0) {
+    const auto now=now_ms();
+    const bool slow=now>=slow_at_;   // checks that only need to run four times a second
+    if(slow) slow_at_=now+check_every_ms;
+    if(panel_.Get()!=panel || tabs_.empty() || !tabs_.front().tab.Get() || (slow && child_index(strip_.Get(),tabs_.front().tab.Get())<0)) {
         const bool first=panel_.Get()==nullptr && tabs_.empty();
         detach_panel();
         const auto attached=attach(panel);
@@ -234,7 +237,7 @@ void PhotoMode::panel_tick(UObject* component) {
     auto* strip=strip_.Get(); if(!strip) return;
     const int index=active_index(strip);
     if(index!=active_tab_) {
-        active_tab_=index; model_at_=0;
+        active_tab_=index; rows_dirty_=true;
         // Scroll by whole tabs so no icon is ever cut at the strip's edge: the window of tabs
         // that fit moves only as far as needed to show the active one.
         if(auto* scroll=scroll_.Get()) if(index>=0 && tab_pitch_>0) {
@@ -251,13 +254,14 @@ void PhotoMode::panel_tick(UObject* component) {
     show_note(on_ours);
     if(!on_ours) return;
     auto& tab=tabs_[size_t(ours)];
-    const auto now=now_ms();
-    bool refreshed=false;
-    if(model_.is_null() || now-model_at_>=model_every_ms) {
-        model_at_=now; refreshed=true;
+    // The rows follow the extension's model, which changes only when an extension says so.
+    const auto revision=deps_.runtime->revision();
+    if(model_.is_null() || revision!=model_revision_) {
         try { model_=deps_.runtime->model(session_); } catch(const std::exception& e) { report(e.what()); return; }
+        model_revision_=revision; rows_dirty_=true;
     }
-    build_page(tab,refreshed);
+    if(!pending_confirm_.empty() && now>confirm_until_) { pending_confirm_.clear(); rows_dirty_=true; }   // "Confirm again" ran out
+    build_page(tab,slow);
     update_note(tab);
     if(bool_of(component,L"bIsPlayerUserInterfaceInFocus")) poll_keys(tab);
     else for(auto& [k,v]:key_down_) v=true;   // a key held while switching focus must not fire
@@ -453,61 +457,83 @@ void PhotoMode::forget() noexcept {
 
 // ---------------------------------------------------------------- rows
 
-void PhotoMode::build_page(Tab& tab,bool recheck) {
+void PhotoMode::build_page(Tab& tab,bool slow) {
     auto* box=tab.box.Get(); if(!box) return;
-    auto rows=photo_rows(model_,tab.section);
-    // Pending confirmation shows on its row until it runs out.
-    if(!pending_confirm_.empty() && now_ms()>confirm_until_) pending_confirm_.clear();
-    for(auto& r:rows) if(r.id==pending_confirm_) r.value="Confirm again";
-    // Pool: one widget per row and kind, created a few per tick so a big tab never hitches.
-    std::vector<std::pair<bool,size_t>> order; size_t options=0, sliders=0; int budget=rows_per_tick;
-    for(const auto& r:rows) {
-        auto& pool=r.slider?tab.slider_rows:tab.option_rows; auto& n=r.slider?sliders:options;
-        if(n>=pool.size()) {
-            if(budget--<=0) break;
-            Row row; row.slider=r.slider;
-            row.widget=create_widget(pc_.Get(),widget_class(r.slider?slider_class:row_class));
-            // A long name or value ends in an ellipsis inside its column instead of spilling out.
-            for(auto name:{L"Text_Option",L"Text_Option_Value"}) if(auto* text=object_of(row.widget.Get(),name)) {
-                invoke(text,L"SetClipping",L"InClipping",uint8_t{1});                   // ClipToBounds
-                invoke(text,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});   // Ellipsis
+    if(rows_dirty_ || !tab.complete) {
+        rows_dirty_=false;
+        auto rows=photo_rows(model_,tab.section);
+        for(auto& r:rows) if(r.id==pending_confirm_) r.value="Confirm again";   // until it runs out
+        // Pool: one widget per row and kind, created a few per tick so a big tab never hitches.
+        std::vector<std::pair<bool,size_t>> order; size_t options=0, sliders=0; int budget=rows_per_tick;
+        for(const auto& r:rows) {
+            auto& pool=r.slider?tab.slider_rows:tab.option_rows; auto& n=r.slider?sliders:options;
+            if(n>=pool.size()) {
+                if(budget--<=0) break;
+                pool.push_back(make_row(r.slider));
             }
-            // The settings the game gives its own rows on its pages (highlight style, hover).
-            const auto& look=r.slider?slider_look_:option_look_;
-            if(look.known) {
-                Call type(row.widget.Get(),L"SetNavigableType",1); type.set(L"NewParam",look.type); type.run();
-                set_bool(row.widget.Get(),L"bSelectOnHover",look.hover);
-            }
-            pool.push_back(std::move(row));
+            order.push_back({r.slider,n++});
         }
-        order.push_back({r.slider,n++});
+        if(order!=tab.order) {
+            invoke(box,L"ClearChildren");
+            for(const auto& [slider,i]:order) if(auto* w=(slider?tab.slider_rows:tab.option_rows)[i].widget.Get()) add_vertical(box,w);
+            tab.order=order;
+            rescan(box);
+            // The page spaces its rows itself (they overlap by the highlight's margin).
+            if(auto* page=tab.page.Get()) try { invoke(page,L"UpdateSelectionDistance"); } catch(const std::exception& e) { report(e.what()); }
+            // The game selects a page's first row when its tab opens; this page's rows arrive a few
+            // ticks later, so select it (or the row that was selected before the rows changed) here.
+            if(!order.empty() && active_index(box)<0) navigate(box,std::clamp(tab.selected,0,int(order.size())-1));
+        }
+        for(size_t i=0;i<order.size();++i) fill(row_at(tab,i),rows[i]);
+        tab.rows.assign(rows.begin(),rows.begin()+std::ptrdiff_t(order.size()));
+        tab.complete=order.size()==rows.size();
     }
-    if(order!=tab.order) {
-        invoke(box,L"ClearChildren");
-        for(const auto& [slider,i]:order) if(auto* w=(slider?tab.slider_rows:tab.option_rows)[i].widget.Get()) add_vertical(box,w);
-        tab.order=order;
-        rescan(box);
-        // The page spaces its rows itself (they overlap by the highlight's margin).
-        if(auto* page=tab.page.Get()) try { invoke(page,L"UpdateSelectionDistance"); } catch(const std::exception& e) { report(e.what()); }
-        // The game selects a page's first row when its tab opens; this page's rows arrive a few
-        // ticks later, so select it (or the row that was selected before the rows changed) here.
-        if(!order.empty() && active_index(box)<0) navigate(box,std::clamp(tab.selected,0,int(order.size())-1));
-    }
-    const int selected=active_index(box);
-    for(size_t i=0;i<order.size();++i) {
-        auto& row=(order[i].first?tab.slider_rows:tab.option_rows)[order[i].second];
-        if(recheck && !row.fresh) recheck_row(row);
-        fill(row,rows[i],int(i)==selected);
-    }
-    tab.rows.assign(rows.begin(),rows.begin()+std::ptrdiff_t(order.size()));
-    tab.selected=selected;
+    tab.selected=active_index(box);
+    if(slow) recheck(tab);
 }
 
-// The game rewrites a row when it builds it (after CSSX first filled it) and on Reset All, with
-// "- -" and an empty bar since the row has no option logic of its own. Four times a second CSSX
-// reads back what the row shows and refills it when the game has changed it.
+PhotoMode::Row& PhotoMode::row_at(Tab& tab,size_t i) {
+    const auto& [slider,index]=tab.order[i];
+    return (slider?tab.slider_rows:tab.option_rows)[index];
+}
+
+PhotoMode::Row PhotoMode::make_row(bool slider) {
+    Row row; row.slider=slider; row.settle_until=now_ms()+settle_ms;
+    row.widget=create_widget(pc_.Get(),widget_class(slider?slider_class:row_class));
+    auto* w=row.widget.Get();
+    // A long name or value ends in an ellipsis inside its column instead of spilling out.
+    for(auto name:{L"Text_Option",L"Text_Option_Value"}) if(auto* text=object_of(w,name)) {
+        invoke(text,L"SetClipping",L"InClipping",uint8_t{1});                   // ClipToBounds
+        invoke(text,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});   // Ellipsis
+    }
+    // The settings the game gives its own rows on its pages (highlight style, hover).
+    const auto& look=slider?slider_look_:option_look_;
+    if(look.known) {
+        Call type(w,L"SetNavigableType",1); type.set(L"NewParam",look.type); type.run();
+        set_bool(w,L"bSelectOnHover",look.hover);
+    }
+    return row;
+}
+
+// The game rewrites a row when it builds it (a frame after CSSX first filled it) and on Reset
+// All, with "- -" and an empty bar, since the row has no option logic of its own. New rows are
+// read back for their first second; after that one row stands for the page, since Reset All
+// rewrites them all at once, and only when it has changed is every row read back.
+void PhotoMode::recheck(Tab& tab) {
+    if(tab.order.empty()) return;
+    const auto now=now_ms();
+    bool settling=false;
+    for(size_t i=0;i<tab.order.size();++i) { auto& row=row_at(tab,i); if(now<row.settle_until) { settling=true; recheck_row(row); } }
+    if(!settling) {
+        auto& sentinel=row_at(tab,0);
+        recheck_row(sentinel);
+        if(sentinel.fresh) for(size_t i=1;i<tab.order.size();++i) recheck_row(row_at(tab,i));
+    }
+    for(size_t i=0;i<tab.order.size() && i<tab.rows.size();++i) if(auto& row=row_at(tab,i); row.fresh) fill(row,tab.rows[i]);
+}
+
 void PhotoMode::recheck_row(Row& row) {
-    auto* w=row.widget.Get(); if(!w) return;
+    auto* w=row.widget.Get(); if(!w || row.fresh) return;
     const auto& shown=row.shown;
     if(text_of(object_of(w,L"Text_Option_Value"),4096)!=shown.value) { row.fresh=true; return; }
     if(text_of(object_of(w,L"Text_Option"),4096)!=shown.name) { row.fresh=true; return; }
@@ -517,7 +543,7 @@ void PhotoMode::recheck_row(Row& row) {
         if(std::abs(read<float>(fill,L"Percent")-float(shown.fill))>0.001f) row.fresh=true;
 }
 
-void PhotoMode::fill(Row& row,const PhotoRow& value,bool) {
+void PhotoMode::fill(Row& row,const PhotoRow& value) {
     auto* w=row.widget.Get(); if(!w) return;
     if(row.fresh || row.shown.name!=value.name) {
         text_property(w,L"Text_OptionName",value.name);
@@ -563,14 +589,14 @@ void PhotoMode::press(Tab& tab,const std::string& key) {
         const auto now=now_ms();
         const bool would_send=!photo_event(*control,key,true).is_null();
         if(!would_send) return;
-        if(pending_confirm_!=row.id || now>confirm_until_) { pending_confirm_=row.id; confirm_until_=now+confirm_window_ms; model_at_=0; return; }
+        if(pending_confirm_!=row.id || now>confirm_until_) { pending_confirm_=row.id; confirm_until_=now+confirm_window_ms; rows_dirty_=true; return; }
         confirmed=true; pending_confirm_.clear();
     }
     const auto event=photo_event(*control,key,confirmed);
     if(event.is_null()) return;
     try { deps_.runtime->event(session_,event); last_error_.clear(); }
     catch(const std::exception& e) { report(e.what()); }
-    model_at_=0;   // show the result on the next tick
+    rows_dirty_=true;   // show the result on the next tick, even if the extension did not invalidate
 }
 
 Json PhotoMode::diagnostics() const {

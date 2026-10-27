@@ -51,13 +51,14 @@ private:
     using WeakObject=engine::WeakObject;
     struct Declared { std::string id, entry; std::vector<Manifest::PhotoTab> tabs; };
     struct PauseRow { std::string id; WeakObject row; bool down=false; };
-    struct Row { WeakObject widget; bool slider=false; PhotoRow shown; bool fresh=true; };
+    struct Row { WeakObject widget; bool slider=false; PhotoRow shown; bool fresh=true; uint64_t settle_until=0; };
     struct Tab {
         std::string section; WeakObject tab, page, box; WeakObject icon;
         std::vector<Row> option_rows, slider_rows;   // pooled per kind
         std::vector<std::pair<bool,size_t>> order;  // row i of the page: (slider?, index in its pool)
         std::vector<PhotoRow> rows;                  // what the page shows now
         int selected=-1;
+        bool complete=false;                         // every row of the model has its widget
     };
 
     Deps deps_;
@@ -78,7 +79,8 @@ private:
     struct SlotLook { std::array<float,4> padding{}; std::array<std::byte,8> size{}; uint8_t horizontal=0, vertical=0; };
     std::vector<std::pair<WeakObject,SlotLook>> strip_siblings_;   // the strip's row before CSSX wrapped it
     Json model_;
-    uint64_t model_at_=0;
+    uint64_t model_revision_=0, slow_at_=0;
+    bool rows_dirty_=true;
     std::string pending_confirm_; uint64_t confirm_until_=0;
     std::vector<MenuKeyBinding> keys_;
     std::map<std::string,bool> key_down_;
@@ -110,9 +112,12 @@ private:
     void show_note(bool on);
     void update_note(const Tab& tab);
     UObject* icon_texture(const fs::path& file);
-    void build_page(Tab& tab,bool recheck);
+    void build_page(Tab& tab,bool slow);
+    Row& row_at(Tab& tab,size_t i);
+    Row make_row(bool slider);
+    void recheck(Tab& tab);
     void recheck_row(Row& row);
-    void fill(Row& row,const PhotoRow& value,bool selected);
+    void fill(Row& row,const PhotoRow& value);
     void poll_keys(Tab& tab);
     void press(Tab& tab,const std::string& key);
 };
