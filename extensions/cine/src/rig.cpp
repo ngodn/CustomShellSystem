@@ -72,41 +72,6 @@ void Rig::stop_music() noexcept {
     music_ = nullptr;   // unreferenced and stopped: the engine collects it
 }
 
-namespace {
-// The single parameter name of a reflected function (names differ between builds).
-std::string only_param(const cssx::Client& host, const Json& target, const std::string& function) {
-    const auto d = host.request({{"op", "describe"}, {"target", target}, {"function", function}});
-    for (const auto& [name, info] : d.items()) if (!info.value("return", false) && !info.value("out", false)) return name;
-    throw std::runtime_error(function + " takes no argument");
-}
-}
-
-void Rig::photo_take_begin() {
-    const auto component = host_.get(controller_, "Photography Mode Component");
-    if (!is_handle(component)) return;
-    if (host_.call(statics_, "IsGamePaused", {{"WorldContextObject", controller_}}).get<bool>()) {
-        host_.call(component, "Unpause", Json::object());
-        photo_paused_ = true;
-    }
-    const auto panel = host_.get(component, "PhotoModeUI");
-    if (is_handle(panel)) {
-        host_.call(panel, "SetPhotomodeUIVisibility", {{only_param(host_, panel, "SetPhotomodeUIVisibility"), false}});
-        photo_hidden_ = true;
-    }
-}
-
-void Rig::photo_take_end() noexcept {
-    try {
-        const auto component = is_handle(controller_) ? host_.get(controller_, "Photography Mode Component") : Json();
-        if (is_handle(component) && host_.get(component, "bIsPhotoModeActive").get<bool>()) {
-            const auto panel = host_.get(component, "PhotoModeUI");
-            if (photo_hidden_ && is_handle(panel)) host_.call(panel, "SetPhotomodeUIVisibility", {{only_param(host_, panel, "SetPhotomodeUIVisibility"), true}});
-            if (photo_paused_) host_.call(component, "Pause", Json::object());
-        }
-    } catch (...) {}
-    photo_paused_ = photo_hidden_ = false;
-}
-
 void Rig::resolve() {
     const auto p = host_.player();
     if (!p.is_object() || !is_handle(p.value("pawn", Json())) || !is_handle(p.value("controller", Json())))
@@ -141,7 +106,7 @@ void Rig::forget() {
     time_scaled_ = shake_set_ = false;
     pawn_ = controller_ = movement_ = mesh_ = camera_manager_ = Json();
     statics_ = kismet_ = ai_ = widgets_ = player_lib_ = camera_class_ = Json();
-    cameras_.clear(); hud_.clear(); montage_playing_ = false; music_ = Json(); photo_paused_ = photo_hidden_ = false;   // the world took the music player with it
+    cameras_.clear(); hud_.clear(); montage_playing_ = false; music_ = Json();   // the world took the music player with it
     hud_hidden_ = view_changed_ = speed_set_ = moving_ = false;
     force_walk_sets_ = 0;
 }

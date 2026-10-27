@@ -44,6 +44,8 @@ public:
     void detach() noexcept;
     bool session() const { return !session_.empty(); }
     Json diagnostics() const;
+    // Host requests from extensions: photo.step_out, photo.step_in {section}.
+    Json request(const Json& r);
     Json attach_steps() const;
     // Dev channel only: start a session for an extension without the pause menu (tests).
     void dev_open(const std::string& id);
@@ -76,6 +78,8 @@ private:
     bool watch_reported_=false;
     // session
     std::string session_;                   // extension id that owns the open Photo Mode session
+    std::string parked_, open_section_;     // a session stepped out of; the tab to reopen on
+    struct Step { enum Kind { none, out, in } kind=none; std::string section; } step_;
     uint64_t session_started_=0;
     bool session_live_=false;               // Photo Mode was seen active in this session
     WeakObject panel_, strip_, switcher_, strip_box_, scroll_, size_box_;
@@ -109,7 +113,8 @@ private:
     void watch_confirms(UObject* row,bool on) noexcept;
     static void on_confirmed(void* user,void* object,void* frame,void* result);
     static void on_page_input(void* user,void* object,void* frame,void* result);
-    void end_session() noexcept;
+    void end_session(const char* how="closed") noexcept;
+    void run_step(UObject* component);
     // panel
     void panel_tick(UObject* component);
     enum class Attach { done, later, failed };

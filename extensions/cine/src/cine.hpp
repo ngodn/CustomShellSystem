@@ -202,6 +202,7 @@ private:
     std::vector<Timeline::Reveal> reel(double total) const;
     std::vector<std::string> spring_bones();
     void record_tick();
+    void step_back_in(const std::string& section = "route");
     void capture_final_now();
     void poll_keys();
     void report(const std::string& message, bool error = false);
@@ -277,6 +278,7 @@ private:
     std::string status_ = "Ready", error_;
     bool stopped_ = false;
     bool photo_ = false;      // in the game's Photo Mode, opened from Activate CINE Mode (CSSX 1.3.2)
+    bool photo_parked_ = false;   // stepped out of Photo Mode to record a route; steps back in when done
     // A take's look the restore could not put back yet (world change, CSS busy): retried once a
     // second for up to two minutes, in any mode.
     static constexpr double look_restore_window = 120.0;

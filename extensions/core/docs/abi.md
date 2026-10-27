@@ -47,6 +47,18 @@ Host: `menu.status` → `{menu_open, game_menu_open}`; `menu.close`;
 seconds; since 1.3.1 also `mean_ms, p95_ms, p99_ms, max_ms, hitches, seconds`, and `seconds` 1 to 60 picks the window);
 `input.focus`.
 
+Photo Mode (CSSX 1.3.2). An extension whose manifest has `"photo_mode": {"entry": "...", "tabs":
+[{"section", "icon"}]}` gets a row under the game's Activate Photo Mode on the pause menu's System page.
+The row opens the game's Photo Mode with the extension's menu sections added as tabs, built from the
+game's own tab, page and row widgets. Only the extension's rows that read like the game's are shown:
+no text inputs, and no label whose text is too long for the value column. The extension hears
+`{"id":"cssx.photo_mode","value":"open"|"parked"|"closed"}`. Host ops for the extension that owns the
+session, both run on the next tick:
+`photo.step_out` closes Photo Mode the way the game's own exit does and parks the session (the
+extension hears `parked`, not `closed`), so the player can move or the extension can use its own
+camera; `photo.step_in {section?}` reopens Photo Mode into the parked session, on that section's tab.
+Event ids starting with `cssx.` are reserved for the host.
+
 Since CSSX 1.3.1: `CSSX_LAYER_SCREEN` as a layer parent puts the layer on the screen
 itself instead of inside the game's HUD widget (it keeps drawing while the game HUD is
 hidden); an older CSSX returns 0 for it. An object handle is accepted where a function or property expects an

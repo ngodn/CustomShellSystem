@@ -77,6 +77,7 @@ Json Core::service(const Json& request) {
     if(op=="log") { log(request.value("level",std::string("info")),request.at("message").get<std::string>(),request.value("fields",Json::object())); return nullptr; }
     if(op=="menu.status") return {{"menu_open",menu_ && menu_->is_open()},{"game_menu_open",game_menu_open()}};
     if(op=="menu.close") { if(menu_) menu_->close(); return true; }
+    if(op=="photo.step_out" || op=="photo.step_in") { if(!photo_) throw std::runtime_error("Photo Mode support is not running"); return photo_->request(request); }
     // {hz, median_ms, core_mean_us, ...} over the last ten seconds, or over "seconds" (1 to 60).
     if(op=="frame.brief") return perf_brief(std::clamp(request.value("seconds",10.0),1.0,60.0));
     if(op=="service.list") return services_.list(monotonic_us()/1e6);

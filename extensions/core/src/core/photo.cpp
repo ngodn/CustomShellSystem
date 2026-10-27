@@ -97,6 +97,7 @@ void PhotoMode::tick(const PlayerContext& player,double) {
     auto* handler=handler_.Get(); auto* component=component_.Get();
     if(!handler || !component) return;
     try {
+        run_step(component);
         if(!declared_.empty() && bool_of(handler,L"bIsInGameMenu")) pause_tick(handler);
         if(!session_.empty()) panel_tick(component);
     } catch(const std::exception& e) {
@@ -238,15 +239,59 @@ void PhotoMode::dev_press(const std::string& key) {
     press(tabs_[size_t(ours)],key);
 }
 
-void PhotoMode::end_session() noexcept {
+void PhotoMode::end_session(const char* how) noexcept {
     if(session_.empty()) return;
     const bool told=announced_;
     announced_=false;
     detach_panel();
     const auto id=session_;
     session_.clear(); session_live_=false; model_=nullptr; pending_confirm_.clear();
-    if(told && deps_.runtime) { try { deps_.runtime->host_event(id,"photo_mode","closed"); } catch(...) {} }
-    if(deps_.log) try { deps_.log("Photo Mode closed for "+id); } catch(...) {}
+    if(told && deps_.runtime) { try { deps_.runtime->host_event(id,"photo_mode",how); } catch(...) {} }
+    if(deps_.log) try { deps_.log(std::string("Photo Mode ")+how+" for "+id); } catch(...) {}
+}
+
+// ---------------------------------------------------------------- stepping out and back in
+
+// An extension in a session can leave Photo Mode for a while (to let the player move) and come
+// back into the same session. Both happen on the next tick, never inside the extension's own call.
+Json PhotoMode::request(const Json& r) {
+    const auto op=r.at("op").get<std::string>();
+    if(op=="photo.step_out") {
+        if(session_.empty() || !announced_) throw std::runtime_error("No Photo Mode session to step out of");
+        step_={Step::out,{}};
+        return true;
+    }
+    if(op=="photo.step_in") {
+        if(parked_.empty() && !(step_.kind==Step::out)) throw std::runtime_error("No parked Photo Mode session to step back into");
+        step_={Step::in,r.value("section",std::string())};
+        return true;
+    }
+    throw std::runtime_error("Unknown Photo Mode request");
+}
+
+void PhotoMode::run_step(UObject* component) {
+    if(step_.kind==Step::none) return;
+    const auto step=std::exchange(step_,{});
+    if(step.kind==Step::out) {
+        if(session_.empty()) return;
+        parked_=session_;
+        end_session("parked");
+        // The game's own way out of Photo Mode: the event its Esc / B binding runs.
+        for(auto* fn:component->GetClassPrivate()->ForEachFunction()) {
+            const std::wstring name(fn->GetName());
+            if(name.rfind(L"InpActEvt_IA_PhotoMode_Deactivate_PlayerControls",0)!=0) continue;
+            Call close(component,name.c_str(),fn->GetNumParms()); close.run();   // default input value, no source action
+            return;
+        }
+        report("Photo Mode could not be closed for the extension (the game's exit event is missing)");
+        return;
+    }
+    if(parked_.empty()) return;
+    if(std::none_of(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==parked_; })) { parked_.clear(); return; }
+    if(!bool_of(component,L"bIsPhotoModeActive")) invoke(component,L"ActivatePlayerMode");
+    session_=std::exchange(parked_,{}); open_section_=step.section;
+    session_started_=now_ms(); session_live_=false; announced_=false; active_tab_=-1; model_=nullptr; rows_dirty_=true;
+    if(deps_.log) deps_.log("Photo Mode reopened for "+session_);
 }
 
 // ---------------------------------------------------------------- panel
@@ -281,7 +326,11 @@ void PhotoMode::panel_tick(UObject* component) {
     if(!announced_) {
         announced_=true;
         try { deps_.runtime->host_event(session_,"photo_mode","open"); } catch(const std::exception& e) { report(e.what()); }
-        try { navigate(strip_.Get(),game_tabs_); } catch(const std::exception& e) { report(e.what()); }   // open on the extension's first tab
+        // Open on the tab the extension asked for when it stepped back in, else on its first tab.
+        int first=0;
+        for(size_t i=0;i<tabs_.size();++i) if(!open_section_.empty() && tabs_[i].section==open_section_) first=int(i);
+        open_section_.clear();
+        try { navigate(strip_.Get(),game_tabs_+first); } catch(const std::exception& e) { report(e.what()); }
     }
     auto* strip=strip_.Get(); if(!strip) return;
     const int index=active_index(strip);
@@ -553,17 +602,23 @@ PhotoMode::Row PhotoMode::make_row(bool slider) {
 
 // The game rewrites a row when it builds it (a frame after CSSX first filled it) and on Reset
 // All, with "- -" and an empty bar, since the row has no option logic of its own. New rows are
-// read back for their first second; after that one row stands for the page, since Reset All
-// rewrites them all at once, and only when it has changed is every row read back.
+// read back for their first second. After that the first option row and the first slider row
+// stand for the page (the game rewrites each kind as a group: Reset All, the UI coming back after
+// a take), and only when one of them changed is every row read back.
 void PhotoMode::recheck(Tab& tab) {
     if(tab.order.empty()) return;
     const auto now=now_ms();
     bool settling=false;
     for(size_t i=0;i<tab.order.size();++i) { auto& row=row_at(tab,i); if(now<row.settle_until) { settling=true; recheck_row(row); } }
     if(!settling) {
-        auto& sentinel=row_at(tab,0);
-        recheck_row(sentinel);
-        if(sentinel.fresh) for(size_t i=1;i<tab.order.size();++i) recheck_row(row_at(tab,i));
+        // The game resets option rows and slider rows separately, so one of each stands for the page.
+        bool changed=false; bool seen_option=false, seen_slider=false;
+        for(size_t i=0;i<tab.order.size() && !(seen_option && seen_slider);++i) {
+            auto& row=row_at(tab,i); bool& seen=row.slider?seen_slider:seen_option;
+            if(seen) continue;
+            seen=true; recheck_row(row); changed=changed || row.fresh;
+        }
+        if(changed) for(size_t i=0;i<tab.order.size();++i) recheck_row(row_at(tab,i));
     }
     for(size_t i=0;i<tab.order.size() && i<tab.rows.size();++i) if(auto& row=row_at(tab,i); row.fresh) fill(row,tab.rows[i]);
 }
