@@ -369,6 +369,11 @@ void Extension::tick(double seconds) {
             return;
         }
         if (render_watch_ && renderer_ && !renderer_->active()) render_finished();
+        if (render_watch_) {
+            // The Render row follows the renderer (frames, encoding): menus refresh on invalidate only.
+            auto line = render_line();
+            if (line != render_shown_) { render_shown_ = std::move(line); host_.invalidate(); }
+        }
         if (mode_ == Mode::Idle && !performance_.owned() && !expression_.owned() && !capture_pending_ && look_restore_.is_null() && own_look_owed_.is_null() && !scene_.pending() && !breakdown_.busy() && !breakdown_opponent_.busy())
             return;   // free outside Cine World
         const double dt = std::isfinite(seconds) ? std::clamp(seconds, 0.0, 1.0) : 0.0;

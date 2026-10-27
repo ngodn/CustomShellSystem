@@ -290,6 +290,7 @@ private:
     uint64_t render_serial_ = 0; uint32_t render_world_gen_ = 0;
     Json render_world_, render_pawn_;
     std::string render_note_;
+    std::string render_shown_;   // the Render row last published, so progress invalidates only on change
     void start_render();
     void release_render();
     void render_frame_tick();
