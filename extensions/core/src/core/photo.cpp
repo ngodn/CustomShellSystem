@@ -3,6 +3,7 @@
 #include "photo.hpp"
 #include <windows.h>
 #include <algorithm>
+#include <cmath>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/FString.hpp>
@@ -21,6 +22,10 @@ constexpr uint8_t state_selected=2, state_confirmed=3;           // ENavigableSt
 constexpr uint8_t vis_collapsed=1, vis_hidden=2, vis_self_passive=4;  // ESlateVisibility
 constexpr int rows_per_tick=4;                                   // a game widget costs about a millisecond to create
 constexpr uint64_t model_every_ms=250, confirm_window_ms=3000;
+// The description line sits in the empty band at the foot of the panel, under the key prompts:
+// the panel is 799 units tall and the prompts end 105 above its bottom. Inset like the rows.
+constexpr float note_height=84, note_font=26;
+constexpr std::array<float,4> note_padding{120,0,120,14};
 
 uint64_t now_ms() { return GetTickCount64(); }
 UClass* widget_class(const char* path) {
@@ -34,7 +39,7 @@ void rescan(UObject* panel) { if(auto* nav=nav_of(panel)) invoke(nav,L"GetNaviga
 int active_index(UObject* panel) { auto* nav=nav_of(panel); return nav?read<int32_t>(nav,L"ActiveIndex"):-1; }
 void navigate(UObject* panel,int index) {
     auto* nav=nav_of(panel); if(!nav) return;
-    Call c(nav,L"NavigateToCustomIndex",3); c.set(L"Index",int32_t{index}); c.set(L"SubIndex",int32_t{0}); c.run();
+    Call c(nav,L"NavigateToCustomIndex",4); c.set(L"Index",int32_t{index}); c.set(L"SubIndex",int32_t{0}); c.run();   // + Success, ReturnValue
 }
 int child_index(UObject* panel,UObject* child) {
     Call c(panel,L"GetChildIndex",2); c.set(L"content",child); c.run(); return c.get<int32_t>();
@@ -44,6 +49,16 @@ void add_horizontal(UObject* box,UObject* child) { Call c(box,L"AddChildToHorizo
 void add_child(UObject* panel,UObject* child) { Call c(panel,L"AddChild",2); c.set(L"content",child); c.run(); }
 void remove(UObject* widget) { if(widget) try { invoke(widget,L"RemoveFromParent"); } catch(...) {} }
 bool visible_now(UObject* widget) { Call c(widget,L"IsVisible",1); c.run(); return c.get<bool>(); }
+// Runs a one-parameter setter with the value of a same-typed property of another object, after
+// `adjust` has changed the copy (font size).
+template<class F> void set_like(UObject* target,const wchar_t* fn,const wchar_t* param_name,UObject* source,const wchar_t* property,F adjust) {
+    auto* from=source->GetPropertyByNameInChain(property);
+    Call c(target,fn,1); auto* param=c.param(param_name);
+    if(!from || !from->SameType(param)) throw std::runtime_error("Photo Mode: the game's row text changed type");
+    param->CopyCompleteValue(c.data(param),reinterpret_cast<std::byte*>(source)+from->GetOffset_Internal());
+    adjust(c.data(param),size_t(param->GetElementSize()));
+    c.run();
+}
 }
 
 void PhotoMode::report(const std::string& message) {
@@ -141,7 +156,7 @@ void PhotoMode::pause_tick(UObject* handler) {
         auto* row=ensure_pause_row(*it,box,photo,after);
         after=row;
         // Available exactly when the game's own Photo Mode row is (IsPlayerInterfaceEnabled).
-        if(bool_of(row,L"bEnabled",true)!=enabled) { raw_value(row,L"bEnabled",enabled); try { invoke(row,L"UpdateEnabledState"); } catch(...) {} }
+        if(bool_of(row,L"bEnabled",true)!=enabled) { set_bool(row,L"bEnabled",enabled); try { invoke(row,L"UpdateEnabledState",L"bEnabled",enabled); } catch(const std::exception& e) { report(e.what()); } }
         const auto state=read<uint8_t>(row,L"NavigableState");
         // The game's navigation confirms a row by state (keys and clicks); the accept key on the
         // selected row is read too, in case a state change is undone within the same frame.
@@ -160,6 +175,25 @@ void PhotoMode::begin_session(const std::string& id,UObject* system_page) {
     invoke(component,L"ActivatePlayerMode");
     session_=id; session_started_=now_ms(); session_live_=false; active_tab_=-1; model_=nullptr;
     if(deps_.log) deps_.log("Photo Mode opened for "+id);
+}
+
+void PhotoMode::dev_open(const std::string& id) {
+    if(std::none_of(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==id; }))
+        throw std::runtime_error("no loaded extension declares photo_mode: "+id);
+    auto* component=component_.Get();
+    if(!component) throw std::runtime_error("no player yet");
+    end_session();
+    // Joins a Photo Mode that is already open; otherwise opens it the way the game's camera key does.
+    if(!bool_of(component,L"bIsPhotoModeActive")) invoke(component,L"ActivatePlayerMode");
+    session_=id; session_started_=now_ms(); session_live_=false; active_tab_=-1; model_=nullptr;
+    if(deps_.log) deps_.log("Photo Mode opened for "+id+" (dev)");
+}
+
+void PhotoMode::dev_press(const std::string& key) {
+    if(key!="left" && key!="right" && key!="accept") throw std::runtime_error("key is left, right or accept");
+    const int ours=active_tab_-game_tabs_;
+    if(session_.empty() || ours<0 || ours>=int(tabs_.size())) throw std::runtime_error("no extension tab is showing");
+    press(tabs_[size_t(ours)],key);
 }
 
 void PhotoMode::end_session() noexcept {
@@ -186,33 +220,45 @@ void PhotoMode::panel_tick(UObject* component) {
     if(panel_.Get()!=panel || tabs_.empty() || !tabs_.front().tab.Get() || child_index(strip_.Get(),tabs_.front().tab.Get())<0) {
         const bool first=panel_.Get()==nullptr && tabs_.empty();
         detach_panel();
-        if(!attach(panel)) { end_session(); return; }
+        const auto attached=attach(panel);
+        if(attached==Attach::failed) { end_session(); return; }
+        if(attached==Attach::later) {
+            if(now_ms()-session_started_>5000) { report("the Photo Mode tab strip never laid out; tabs not added"); end_session(); }
+            return;
+        }
         if(first) {
             try { deps_.runtime->host_event(session_,"photo_mode","open"); } catch(const std::exception& e) { report(e.what()); }
-            navigate(strip_.Get(),game_tabs_);   // open on the extension's first tab
+            try { navigate(strip_.Get(),game_tabs_); } catch(const std::exception& e) { report(e.what()); }   // open on the extension's first tab
         }
     }
     auto* strip=strip_.Get(); if(!strip) return;
     const int index=active_index(strip);
     if(index!=active_tab_) {
         active_tab_=index; model_at_=0;
-        if(auto* scroll=scroll_.Get()) if(index>=0) {
-            const auto list=children(strip);
-            if(index<int(list.size())) {
-                Call c(scroll,L"ScrollWidgetIntoView",4); c.set(L"WidgetToFind",list[index]); c.set(L"AnimateScroll",true);
-                c.set(L"ScrollDestination",uint8_t{0}); c.set(L"Padding",40.f); c.run();
-            }
+        // Scroll by whole tabs so no icon is ever cut at the strip's edge: the window of tabs
+        // that fit moves only as far as needed to show the active one.
+        if(auto* scroll=scroll_.Get()) if(index>=0 && tab_pitch_>0) {
+            const int fit=std::max(1,int(std::floor(strip_width_/tab_pitch_+0.01)));
+            const int total=game_tabs_+int(tabs_.size());
+            if(index<first_tab_) first_tab_=index;
+            else if(index>=first_tab_+fit) first_tab_=index-fit+1;
+            first_tab_=std::clamp(first_tab_,0,std::max(0,total-fit));
+            invoke(scroll,L"SetScrollOffset",L"NewScrollOffset",float(first_tab_*tab_pitch_));
         }
     }
     const int ours=active_tab_-game_tabs_;
-    if(ours<0 || ours>=int(tabs_.size())) return;
+    const bool on_ours=ours>=0 && ours<int(tabs_.size());
+    show_note(on_ours);
+    if(!on_ours) return;
     auto& tab=tabs_[size_t(ours)];
     const auto now=now_ms();
+    bool refreshed=false;
     if(model_.is_null() || now-model_at_>=model_every_ms) {
-        model_at_=now;
+        model_at_=now; refreshed=true;
         try { model_=deps_.runtime->model(session_); } catch(const std::exception& e) { report(e.what()); return; }
     }
-    build_page(tab);
+    build_page(tab,refreshed);
+    update_note(tab);
     if(bool_of(component,L"bIsPlayerUserInterfaceInFocus")) poll_keys(tab);
     else for(auto& [k,v]:key_down_) v=true;   // a key held while switching focus must not fire
 }
@@ -223,16 +269,20 @@ UObject* PhotoMode::icon_texture(const fs::path& file) {
     return import.get<UObject*>();
 }
 
-bool PhotoMode::attach(UObject* panel) {
+PhotoMode::Attach PhotoMode::attach(UObject* panel) {
     auto declared=std::find_if(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==session_; });
-    if(declared==declared_.end()) return false;
+    if(declared==declared_.end()) return Attach::failed;
     auto* strip=object_of(panel,L"BP_HBC_Menu_Options"); auto* switcher=object_of(panel,L"WS_Tabs");
-    if(!strip || !switcher) { report("the Photo Mode panel layout changed; tabs not added"); return false; }
+    if(!strip || !switcher) { report("the Photo Mode panel layout changed; tabs not added"); return Attach::failed; }
     const auto game=children(strip);
-    if(game.empty()) return false;
+    if(game.empty()) return Attach::later;
     auto* reference=game.front();
+    // The game's own strip width, kept when it scrolls. A panel the game has just created has no
+    // layout yet: measure it now, and if it still reads zero, try again next tick.
+    invoke(strip,L"ForceLayoutPrepass");
     Call desired(strip,L"GetDesiredSize",1); desired.run();
-    const auto width=desired.get<Vec2>().x;   // the game's own strip width, kept when it scrolls
+    const auto width=desired.get<Vec2>().x;
+    if(!(width>1)) return Attach::later;
     panel_=panel; strip_=strip; switcher_=switcher; game_tabs_=int(game.size());
     auto* tab_type=widget_class(tab_class); auto* page_type=widget_class(page_class);
     for(const auto& t:declared->tabs) {
@@ -248,16 +298,83 @@ bool PhotoMode::attach(UObject* panel) {
             invoke(slot,L"SetPadding",L"InPadding",read<std::array<float,4>>(ref_slot,L"Padding"));   // the game's own tab spacing
         auto* page=create_widget(pc_.Get(),page_type);
         auto* box=object_of(page,L"BP_VBC_PhotomodeGeneral");
-        if(!box) { remove(icon); report("the Photo Mode page layout changed; tabs not added"); detach_panel(); return false; }
+        if(!box) { remove(icon); report("the Photo Mode page layout changed; tabs not added"); detach_panel(); return Attach::failed; }
+        if(tabs_.empty()) learn_row_looks(box);
         invoke(box,L"ClearChildren");
         add_child(switcher,page);
+        // The player's text size setting, which the game applies to its own pages when they open.
+        try { Call scale(page,L"RefreshUIScale",1); scale.set(L"bPreview",false); scale.run(); } catch(const std::exception& e) { report(e.what()); }
         tab.tab=icon; tab.page=page; tab.box=box;
         tabs_.push_back(std::move(tab));
     }
     rescan(strip);
     wrap_strip(panel);
+    create_note(panel);
     if(auto* size=size_box_.Get()) invoke(size,L"SetWidthOverride",L"InWidthOverride",float(width));
-    return true;
+    strip_width_=float(width); tab_pitch_=float(width)/float(game_tabs_); first_tab_=0;   // the game's tabs are all alike
+    return Attach::done;
+}
+
+// The game's own rows on the page CSSX clones carry per-row settings that differ from the row
+// class defaults: highlight style and select-on-hover.
+// Learned from those rows before they are cleared, so CSSX rows always match the shipped game.
+void PhotoMode::learn_row_looks(UObject* box) {
+    option_look_={}; slider_look_={};
+    auto* option_type=widget_class(row_class); auto* slider_type=widget_class(slider_class);
+    for(auto* r:children(box)) {
+        auto* type=r->GetClassPrivate();
+        RowLook* look=type==slider_type?&slider_look_:type==option_type?&option_look_:nullptr;
+        if(!look || look->known) continue;
+        look->type=read<uint8_t>(r,L"NavigableType");
+        look->hover=bool_of(r,L"bSelectOnHover");
+        look->known=true;
+    }
+    if(!option_look_.known) option_look_=slider_look_;
+    if(!slider_look_.known) slider_look_=option_look_;
+    if(!option_look_.known) report("the game's Photo Mode rows changed; CSSX rows use their defaults");
+}
+
+void PhotoMode::create_note(UObject* panel) {
+    auto* tree=object_of(panel,L"WidgetTree");
+    auto* contents=object_of(object_of(switcher_.Get(),L"Slot"),L"Parent");   // Overlay_Tabs_Contents
+    if(!tree || !contents) { report("the Photo Mode panel layout changed; no description line"); return; }
+    auto* box=construct(L"/Script/UMG.SizeBox",tree); auto* text=construct(L"/Script/UMG.TextBlock",tree);
+    invoke(box,L"SetHeightOverride",L"InHeightOverride",note_height);
+    invoke(box,L"SetClipping",L"InClipping",uint8_t{1});                     // ClipToBounds
+    invoke(text,L"SetAutoWrapText",L"InAutoTextWrap",true);
+    invoke(text,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{2});    // MultilineEllipsis
+    invoke(text,L"SetJustification",L"InJustification",uint8_t{1});          // centred, like the prompt above it
+    content(box,text);
+    Call add(contents,L"AddChildToOverlay",2); add.set(L"content",box); add.run();
+    if(auto* slot=add.get<UObject*>()) {
+        invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{0});   // fill
+        invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{3});       // bottom
+        invoke(slot,L"SetPadding",L"InPadding",note_padding);
+    }
+    visible(box,vis_collapsed);
+    note_box_=box; note_text_=text; note_shown_.clear(); note_styled_=false; note_visible_=false;
+}
+
+void PhotoMode::show_note(bool on) {
+    if(on==note_visible_) return;
+    if(auto* box=note_box_.Get()) visible(box,on?vis_self_passive:vis_collapsed);
+    note_visible_=on;
+}
+
+void PhotoMode::update_note(const Tab& tab) {
+    auto* text=note_text_.Get(); if(!text) return;
+    if(!note_styled_) {
+        // The game's own row font and colour, a size smaller, taken from the first CINE row.
+        UObject* source=nullptr;
+        for(const auto* pool:{&tab.option_rows,&tab.slider_rows}) for(const auto& r:*pool) if(!source) if(auto* w=r.widget.Get()) source=object_of(w,L"Text_Option");
+        if(!source) return;
+        auto* info=find_cached(L"/Script/SlateCore.SlateFontInfo");
+        set_like(text,L"SetFont",L"InFontInfo",source,L"Font",[&](void* data,size_t bytes){ member(data,bytes,info,L"Size",note_font); });
+        set_like(text,L"SetColorAndOpacity",L"InColorAndOpacity",source,L"ColorAndOpacity",[](void*,size_t){});
+        note_styled_=true;
+    }
+    const auto& note=tab.selected>=0 && tab.selected<int(tab.rows.size()) ? tab.rows[size_t(tab.selected)].description : std::string();
+    if(note!=note_shown_) { text_value(text,note); note_shown_=note; }
 }
 
 void PhotoMode::wrap_strip(UObject* panel) {
@@ -312,9 +429,12 @@ void PhotoMode::detach_panel() noexcept {
     } catch(...) {}
     for(auto& t:tabs_) { remove(t.tab.Get()); remove(t.page.Get()); }
     tabs_.clear();
+    remove(note_box_.Get());
+    note_box_.Reset(); note_text_.Reset(); note_shown_.clear(); note_styled_=false; note_visible_=false;
     unwrap_strip();
     try { if(auto* strip=strip_.Get()) rescan(strip); } catch(...) {}
     panel_.Reset(); strip_.Reset(); switcher_.Reset(); game_tabs_=0; active_tab_=-1;
+    strip_width_=0; tab_pitch_=0; first_tab_=0;
 }
 
 void PhotoMode::detach() noexcept {
@@ -327,12 +447,13 @@ void PhotoMode::detach() noexcept {
 void PhotoMode::forget() noexcept {
     pause_rows_.clear(); system_page_.Reset(); tabs_.clear(); strip_siblings_.clear();
     panel_.Reset(); strip_.Reset(); switcher_.Reset(); strip_box_.Reset(); scroll_.Reset(); size_box_.Reset();
+    note_box_.Reset(); note_text_.Reset(); note_shown_.clear(); note_styled_=false; note_visible_=false;
     pc_.Reset(); handler_.Reset(); component_.Reset(); session_.clear(); keys_.clear();
 }
 
 // ---------------------------------------------------------------- rows
 
-void PhotoMode::build_page(Tab& tab) {
+void PhotoMode::build_page(Tab& tab,bool recheck) {
     auto* box=tab.box.Get(); if(!box) return;
     auto rows=photo_rows(model_,tab.section);
     // Pending confirmation shows on its row until it runs out.
@@ -346,6 +467,17 @@ void PhotoMode::build_page(Tab& tab) {
             if(budget--<=0) break;
             Row row; row.slider=r.slider;
             row.widget=create_widget(pc_.Get(),widget_class(r.slider?slider_class:row_class));
+            // A long name or value ends in an ellipsis inside its column instead of spilling out.
+            for(auto name:{L"Text_Option",L"Text_Option_Value"}) if(auto* text=object_of(row.widget.Get(),name)) {
+                invoke(text,L"SetClipping",L"InClipping",uint8_t{1});                   // ClipToBounds
+                invoke(text,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});   // Ellipsis
+            }
+            // The settings the game gives its own rows on its pages (highlight style, hover).
+            const auto& look=r.slider?slider_look_:option_look_;
+            if(look.known) {
+                Call type(row.widget.Get(),L"SetNavigableType",1); type.set(L"NewParam",look.type); type.run();
+                set_bool(row.widget.Get(),L"bSelectOnHover",look.hover);
+            }
             pool.push_back(std::move(row));
         }
         order.push_back({r.slider,n++});
@@ -355,14 +487,34 @@ void PhotoMode::build_page(Tab& tab) {
         for(const auto& [slider,i]:order) if(auto* w=(slider?tab.slider_rows:tab.option_rows)[i].widget.Get()) add_vertical(box,w);
         tab.order=order;
         rescan(box);
+        // The page spaces its rows itself (they overlap by the highlight's margin).
+        if(auto* page=tab.page.Get()) try { invoke(page,L"UpdateSelectionDistance"); } catch(const std::exception& e) { report(e.what()); }
+        // The game selects a page's first row when its tab opens; this page's rows arrive a few
+        // ticks later, so select it (or the row that was selected before the rows changed) here.
+        if(!order.empty() && active_index(box)<0) navigate(box,std::clamp(tab.selected,0,int(order.size())-1));
     }
     const int selected=active_index(box);
     for(size_t i=0;i<order.size();++i) {
         auto& row=(order[i].first?tab.slider_rows:tab.option_rows)[order[i].second];
+        if(recheck && !row.fresh) recheck_row(row);
         fill(row,rows[i],int(i)==selected);
     }
     tab.rows.assign(rows.begin(),rows.begin()+std::ptrdiff_t(order.size()));
     tab.selected=selected;
+}
+
+// The game rewrites a row when it builds it (after CSSX first filled it) and on Reset All, with
+// "- -" and an empty bar since the row has no option logic of its own. Four times a second CSSX
+// reads back what the row shows and refills it when the game has changed it.
+void PhotoMode::recheck_row(Row& row) {
+    auto* w=row.widget.Get(); if(!w) return;
+    const auto& shown=row.shown;
+    if(text_of(object_of(w,L"Text_Option_Value"),4096)!=shown.value) { row.fresh=true; return; }
+    if(text_of(object_of(w,L"Text_Option"),4096)!=shown.name) { row.fresh=true; return; }
+    if(auto* arrow=object_of(w,L"WBP_ArrowButton_L"))
+        if(read<uint8_t>(arrow,L"Visibility")!=(shown.arrows?vis_self_passive:vis_hidden)) { row.fresh=true; return; }
+    if(row.slider) if(auto* bar=object_of(w,L"WBP_GenericBar")) if(auto* fill=object_of(bar,L"ProgressBar_Generic"))
+        if(std::abs(read<float>(fill,L"Percent")-float(shown.fill))>0.001f) row.fresh=true;
 }
 
 void PhotoMode::fill(Row& row,const PhotoRow& value,bool) {
@@ -378,9 +530,9 @@ void PhotoMode::fill(Row& row,const PhotoRow& value,bool) {
         visible(object_of(w,L"WBP_ArrowButton_R"),value.arrows?vis_self_passive:vis_hidden);
     }
     if(row.slider && (row.fresh || row.shown.fill!=value.fill)) if(auto* bar=object_of(w,L"WBP_GenericBar")) {
-        try { invoke(bar,L"SetPercent",L"InPercent",float(value.fill)); } catch(...) {}
+        invoke(bar,L"UpdateProgressBar",L"InPercent",float(value.fill));   // WBP_Player_Bar_Generic
     }
-    if(row.fresh || row.shown.enabled!=value.enabled) { try { invoke(w,L"ToggleButtonGrayout",L"Grayout",!value.enabled); } catch(...) {} }
+    if(row.fresh || row.shown.enabled!=value.enabled) invoke(w,L"ToggleButtonGrayout",L"bShouldGrayout",!value.enabled);
     row.shown=value; row.fresh=false;
 }
 
@@ -427,6 +579,6 @@ Json PhotoMode::diagnostics() const {
     Json declared=Json::array();
     for(const auto& d:declared_) declared.push_back({{"id",d.id},{"entry",d.entry},{"tabs",d.tabs.size()}});
     return {{"declared",declared},{"pause_rows",pause_rows_.size()},{"session",session_},{"live",session_live_},
-            {"attached",panel_.Get()!=nullptr},{"game_tabs",game_tabs_},{"active_tab",active_tab_},{"tabs",tabs},{"error",last_error_}};
+            {"attached",panel_.Get()!=nullptr},{"game_tabs",game_tabs_},{"active_tab",active_tab_},{"tabs",tabs},{"note",note_shown_},{"note_visible",note_visible_},{"error",last_error_}};
 }
 }

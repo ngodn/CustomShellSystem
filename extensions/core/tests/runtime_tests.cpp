@@ -67,6 +67,15 @@ int main() {
         check(rows[5].value=="Ready" && rows[5].enabled,"a label shows its text");
         check(!rows[6].enabled && rows[6].value=="Not in a take","a disabled button shows its reason");
         check(photo_rows(model,"missing").empty() && photo_rows(Json(),"take").empty(),"unknown section or model is no rows");
+        check(photo_shorten("Fashion Walk 360",22)=="Fashion Walk 360","short text is kept");
+        check(photo_shorten("CINE Mode. Frame your shot with the camera",22)=="CINE Mode. Frame...","long text is cut at a word end with dots");
+        check(photo_shorten("\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9",5)=="\xC3\xA9\xC3\xA9...","cutting counts characters, not bytes");
+        {
+            auto m=model; m["sections"][0]["controls"][5]["value"]="She walks your recorded route while the camera circles her once.";
+            m["sections"][0]["controls"][5]["description"]="What the scene does.";
+            const auto r=photo_rows(m,"take")[5];
+            check(r.value.size()<=25 && r.value.ends_with("...") && r.description=="She walks your recorded route while the camera circles her once.","a long label is cut in the row and whole on the description line");
+        }
         const auto& c=model["sections"][0]["controls"];
         check(photo_event(c[0],"right",false)==Json({{"id","scene"},{"value","a"}}),"right on a choice wraps to the next option");
         { auto top=c[1]; top["value"]=2.0; check(photo_event(top,"right",false).is_null(),"right at the slider's end sends nothing"); }

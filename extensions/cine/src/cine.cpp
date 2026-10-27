@@ -246,7 +246,7 @@ int Extension::render(const CssxFrame* f) {
     o.visible = true;
     const bool framing = mode_ == Mode::Armed || mode_ == Mode::Recording;
     o.guide = framing ? guide_from(settings_.guide) : Guide::Off;
-    if (mode_ == Mode::Armed) o.help = help_line;
+    if (mode_ == Mode::Armed && !photo_) o.help = help_line;   // Photo Mode has its own prompt bar and the Roll Take row
     else if (mode_ == Mode::Recording) o.help = "CINE   recording your route: walk it, then stand still for 3 s (F9 stops)";
     if (mode_ == Mode::Countdown && take_) o.countdown = "CINE  " + std::to_string(int(std::ceil(std::max(0.0, take_->countdown))));
     if (mode_ == Mode::Running || mode_ == Mode::Preparing) o.visible = false;   // nothing of CINE in the recording

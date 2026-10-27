@@ -108,6 +108,11 @@ bool bool_of(UObject* object,const wchar_t* name,bool fallback) {
     if(!p || !p->IsA<FBoolProperty>()) return fallback;
     return static_cast<FBoolProperty*>(p)->GetPropertyValueInContainer(object);
 }
+void set_bool(UObject* object,const wchar_t* name,bool value) {
+    auto* p=resolve_field(object,name);
+    if(!p || !p->IsA<FBoolProperty>()) throw std::runtime_error("Bool property is missing: "+narrow(name));
+    static_cast<FBoolProperty*>(p)->SetPropertyValueInContainer(object,value);   // safe for packed bitfields
+}
 WeakObject::WeakObject(UObject* object) { *this=object; }
 WeakObject& WeakObject::operator=(UObject* object) {
     if(object) {

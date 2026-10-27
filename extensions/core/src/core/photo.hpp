@@ -42,6 +42,9 @@ public:
     void detach() noexcept;
     bool session() const { return !session_.empty(); }
     Json diagnostics() const;
+    // Dev channel only: start a session for an extension without the pause menu (tests).
+    void dev_open(const std::string& id);
+    void dev_press(const std::string& key);   // a menu key on the selected row
 
 private:
     using UObject=RC::Unreal::UObject;
@@ -71,6 +74,7 @@ private:
     WeakObject panel_, strip_, switcher_, strip_box_, scroll_, size_box_;
     std::vector<Tab> tabs_;
     int game_tabs_=0, active_tab_=-1;
+    float strip_width_=0, tab_pitch_=0; int first_tab_=0;   // tab strip scrolling, whole tabs at a time
     struct SlotLook { std::array<float,4> padding{}; std::array<std::byte,8> size{}; uint8_t horizontal=0, vertical=0; };
     std::vector<std::pair<WeakObject,SlotLook>> strip_siblings_;   // the strip's row before CSSX wrapped it
     Json model_;
@@ -80,6 +84,11 @@ private:
     std::map<std::string,bool> key_down_;
     uint64_t keys_retry_=0, repeat_at_=0;
     std::string last_error_;
+    struct RowLook { uint8_t type=0; bool hover=false; bool known=false; };
+    RowLook option_look_, slider_look_;
+    WeakObject note_box_, note_text_;   // the description line
+    std::string note_shown_;
+    bool note_styled_=false, note_visible_=false;
 
     void refresh_declared();
     void forget() noexcept;
@@ -91,12 +100,18 @@ private:
     void end_session() noexcept;
     // panel
     void panel_tick(UObject* component);
-    bool attach(UObject* panel);
+    enum class Attach { done, later, failed };
+    Attach attach(UObject* panel);
     void detach_panel() noexcept;
     void wrap_strip(UObject* panel);
     void unwrap_strip() noexcept;
+    void learn_row_looks(UObject* box);
+    void create_note(UObject* panel);
+    void show_note(bool on);
+    void update_note(const Tab& tab);
     UObject* icon_texture(const fs::path& file);
-    void build_page(Tab& tab);
+    void build_page(Tab& tab,bool recheck);
+    void recheck_row(Row& row);
     void fill(Row& row,const PhotoRow& value,bool selected);
     void poll_keys(Tab& tab);
     void press(Tab& tab,const std::string& key);

@@ -336,6 +336,8 @@ Json Core::dev_request(const Json& request) {
     if(op=="menu.close") { menu_->close(); return true; }
     if(op=="menu.diagnostics") return menu_->diagnostics();
     if(op=="photo.diagnostics") return photo_?photo_->diagnostics():Json();
+    if(op=="photo.open") { if(!photo_) throw std::runtime_error("Photo Mode support is not running"); photo_->dev_open(request.at("extension").get<std::string>()); return true; }
+    if(op=="photo.press") { if(!photo_) throw std::runtime_error("Photo Mode support is not running"); photo_->dev_press(request.at("key").get<std::string>()); return true; }
     if(op=="engine") { if(!request.contains("request")) throw std::runtime_error("engine needs a request"); return service(request.at("request")); }
     if(op=="input.unblock") {
         // Recovery: strip the game's UI.Input.Block.All tag from the player when a screen

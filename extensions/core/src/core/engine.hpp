@@ -41,6 +41,7 @@ template<typename T> T read(UObject* object,const wchar_t* name) {
 // property is absent or not an object reference.
 UObject* object_of(UObject* object,const wchar_t* name);
 bool bool_of(UObject* object,const wchar_t* name,bool fallback=false);
+void set_bool(UObject* object,const wchar_t* name,bool value);
 
 // UE4SS's serial-allocation fallback uses a legacy soft-reference layout.
 // Initialise new serials through a reflected frame before constructing a weak handle.
