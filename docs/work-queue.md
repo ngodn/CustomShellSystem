@@ -12,6 +12,10 @@ timing in status. Found on the way:
   0.1.2 graphs run `CR_BodyV11` (body-feel). Needs a V11-based shoulder support rig under
   `/Game/CSS/Runtime/Hands/` and new catalog rows; swapping V11 for the B3-based rig would drop the
   24 body controls' motion.
+- Glute motion in 0.1.3: the bones swing like Eve's (about 9.6 degrees walking) and the user confirmed
+  it reads from the side; from behind the leotard/skin texture hides it. Queued for a later CW release
+  (user idea, 27 Oct): an outfit piece that makes the glutes read, like Profane's G4 glute press, e.g. a
+  metal binding strap that presses a bulge.
 
 ## October 27: Profane Proxima 0.2.4 Chest shape (Perky / Juicy), CSS 1.0.9, Shared Assets 1.0.9
 
