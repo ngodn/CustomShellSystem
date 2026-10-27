@@ -1346,8 +1346,10 @@ void Extension::roll() {
         std::string why;
         try {
             if (!t.preset.audio_is_file()) {
-                // A pack's SoundWave, loaded while the take prepared.
-                if (t.sound.is_null()) throw std::runtime_error(t.preset.audio_asset.empty() ? "install the pack that carries it" : "it did not load");
+                // A pack's SoundWave, loaded while the take prepared. Handles are weak: resolve it again
+                // (free while it is still loaded; a reload if the garbage collector took it meanwhile).
+                if (t.preset.audio_asset.empty()) throw std::runtime_error("install the pack that carries it");
+                t.sound = rig_.load_sound(t.preset.audio_asset);
                 rig_.play_music(t.sound);
                 t.wall_clock = true; t.rolled_at = std::chrono::steady_clock::now();
             } else {
