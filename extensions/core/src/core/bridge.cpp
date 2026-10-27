@@ -405,6 +405,25 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
         Json names=Json::array();for(const auto& entry:rows) names.push_back(narrow(entry.Key.ToString()));
         std::sort(names.begin(),names.end());return names;
     }
+    if(op=="table.row") {
+        // One row's fields, decoded like a struct property. A missing row is null, not an error.
+        if(!object->IsA<UDataTable>()) throw std::runtime_error("Target is not a DataTable");
+        auto* table=static_cast<UDataTable*>(object);
+        const auto row=request.at("row").get<std::string>();
+        if(row.empty() || row.size()>256) throw std::runtime_error("Invalid row name");
+        UScriptStruct* type=table->GetRowStruct().Get();
+        if(!type) throw std::runtime_error("DataTable has no row struct");
+        auto* data=table->FindRowUnchecked(FName(wide(row).c_str(),FNAME_Find));
+        if(!data) return nullptr;
+        const auto size=type->GetPropertiesSize();Json result=Json::object();size_t count=0;
+        for(auto* field:type->ForEachPropertyInChain()) {
+            if(++count>256 || field->GetOffset_Internal()<0 || field->GetOffset_Internal()+field->GetSize()>size) throw std::runtime_error("Row field exceeds bounds");
+            try {result[narrow(field->GetName())]=decode(field,data+field->GetOffset_Internal(),0);}
+            catch(const std::exception&) {result[narrow(field->GetName())]={{"$unsupported",true}};}
+        }
+        if(result.dump().size()>1024*1024) throw std::runtime_error("Row exceeds 1 MiB");
+        return result;
+    }
     if(op=="get" || op=="set" || op=="map.update") {
         const auto name=wide(request.at("property").get<std::string>());
         auto* type=object->IsA<UStruct>()?static_cast<UStruct*>(object):object->GetClassPrivate();
