@@ -62,6 +62,8 @@ def main():
                     help='shared-adapter-handoff.json of the final outfit trio; supplies source_toc_sha256 and source_bulk_bytes')
     ap.add_argument('--drop', action='append', default=[], help='expression name suffix to drop, e.g. look-down')
     ap.add_argument('--replace', action='store_true', help='replace the rig if it already exists')
+    ap.add_argument('--keep-previous', action='store_true',
+                    help='with --replace, keep the existing rig\'s adapters for other outfit revisions')
     ap.add_argument('--version')
     ap.add_argument('--out', required=True, type=Path)
     a = ap.parse_args()
@@ -145,6 +147,12 @@ def main():
     if len(hand['source_toc_sha256']) != 64 or len({(x['source_outfit'], x['source_mesh']) for x in adapters}) != len(adapters):
         sys.exit('bad revision or duplicate source mesh in the handoff')
 
+    if a.keep_previous and existing:
+        # Players who update Shared Assets before the outfit keep their face on the released revision.
+        new_revision = hand['source_toc_sha256']
+        adapters += [x for x in existing[0]['adapters'] if x['source_toc_sha256'] != new_revision]
+        if len(adapters) > 32:
+            sys.exit('more than 32 facial adapters; drop an older revision')
     rig = dict(id=a.rig, morphs=morphs, expressions=expressions, adapters=adapters)
     if performances:
         rig['performances'] = performances

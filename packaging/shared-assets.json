@@ -1,13 +1,13 @@
 {
-  "version": "1.0.10",
+  "version": "1.0.11",
   "container": "CSS_SharedAssets_P",
   "required_for": "shared_animations_facial_playback_customized_genessa_doubles_and_npc_appearances_shoulder_support",
   "files": {
-    "CSS_SharedAssets_P.pak": "6910f5b9c643253c1b3d49ef9648e60783826a3637752abb88653397da8822ed",
+    "CSS_SharedAssets_P.pak": "5f2773424ddd542b389910472beb4551ca71932190a9f32764b5f55b072a6903",
     "CSS_SharedAssets_P.utoc": "6866994dfc5a91fad3dea70ebf7f0ff04af2fb144d2ed96066d51b12eb785e0b",
     "CSS_SharedAssets_P.ucas": "87ad051bfc0513aca908703e8ae7125f25ee3040e2d60fa0a674ac77b25757c9"
   },
-  "source_candidate": "shared-assets-1.0.10 (released 1.0.4 containers unchanged; metadata pak adds the Commander White 0.1.3 pins 7dc76d9eb993 and prunes superseded CW development revisions, keeping 0.1.2 a0a3521d015e)",
+  "source_candidate": "shared-assets-1.0.11 (1.0.10 containers unchanged; metadata pak adds the Profane Proxima 0.2.5 pins 84db90558d7f to the animation library and the face rig, keeping 0.2.4 c413a3b04165)",
   "asset_containers_identical_to_accepted": true,
   "existing_assets_preserved": true,
   "asset_count": 310
