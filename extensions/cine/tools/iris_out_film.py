@@ -177,9 +177,9 @@ def film(order, preset_id, name, audio, static=False):
         'schema': 1,
         'id': preset_id,
         'name': name,
-        'description': ('The Iris Out dance ' + {2: 'twice', 3: 'three times', 4: 'four times'}[len(order)] + ', ' + ('on one still camera, the view you framed in Cine World before F8: ' if static else 'framed for the game window as it is: ') + ', then '.join(names) + '. Each look is staged before she dances '
+        'description': ('The Iris Out dance ' + {2: 'twice', 3: 'three times', 4: 'four times'}[len(order)] + ', ' + ('on one still camera, the view you framed before rolling: ' if static else 'framed for the game window as it is: ') + ', then '.join(names) + '. Each look is staged before she dances '
                         '(wireframe, clay, then the look) and worn as saved in CSS; Eve is the outfit worn at F8. '
-                        'Needs CSS, the shared locomotion pack and the three outfits. Set Breakdown track to From the preset. Track: ' + audio + ' in the CINE folder.'),
+                        'Needs CSS, the shared locomotion pack and the three outfits. Set Breakdown to From the preset.'),
         'kind': 'sequence',
         'reference': 'capsule',
         'tempo': {'bpm': BPM, 'offset': 0.0, 'beats_per_bar': 4},

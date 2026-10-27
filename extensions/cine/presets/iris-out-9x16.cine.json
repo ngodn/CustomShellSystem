@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "iris-out-9x16",
   "name": "Iris Out 9:16",
-  "description": "The Iris Out dance four times, in a 9:16 frame (Reels): record the whole screen and crop to the middle: the bones alone (on the instrumental), then Eve, then Unholy Genessa, then Commander White. Each look is staged before she dances (wireframe, clay, then the look) and worn as saved in CSS; Eve is the outfit worn at F8. Needs CSS, the shared locomotion pack and the three outfits. Set Breakdown track to From the preset. Track: audio/iris-out-x4.wav in the CINE folder.",
+  "description": "The Iris Out dance four times, in a 9:16 frame (Reels): record the whole screen and crop to the middle: the bones alone (on the instrumental), then Eve, then Unholy Genessa, then Commander White. Each look is staged before she dances (wireframe, clay, then the look) and worn as saved in CSS; Eve is the outfit worn at F8. Needs CSS, the shared locomotion pack and the three outfits. Set Breakdown to From the preset.",
   "kind": "sequence",
   "reference": "capsule",
   "tempo": {"bpm": 136.0, "offset": 0.0, "beats_per_bar": 4},

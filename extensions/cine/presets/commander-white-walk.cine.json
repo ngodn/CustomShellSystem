@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "commander-white-walk",
   "name": "Commander White Walk",
-  "description": "She walks your recorded route while the camera circles her once, split on the middle of her body: mesh and rig on one side, the finished look on the other. She starts and ends in the look she is wearing; on the way the palette goes to crimson and obsidian and a few pieces come off and go back on, each named by a title. Needs the Commander White outfit and CSS, a recorded route and a final shot. Set Look track and Breakdown track to From the preset.",
+  "description": "She walks your recorded route while the camera circles her once, split on the middle of her body: mesh and rig on one side, the finished look on the other. She starts and ends in the look she is wearing; on the way the palette goes to crimson and obsidian and a few pieces come off and go back on, each named by a title. Needs the Commander White outfit and CSS, a recorded route and a final shot. Set Look Track and Breakdown to From the preset.",
   "kind": "walk",
   "intro": 4.5,
   "tail": 16,

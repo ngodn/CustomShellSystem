@@ -91,8 +91,7 @@ class Take:
         self.shots.sort(key=lambda s: s['at'])
         return {
             'schema': 1, 'id': self.id, 'name': self.name,
-            'description': f'Mark of the Beast, {self.who}: {self.about} Song {self.start:.1f} to {self.end:.1f} s. '
-                           f'Track: audio/{self.id}.wav in the CINE folder.',
+            'description': f'Mark of the Beast, {self.who}: {self.about} Song {self.start:.1f} to {self.end:.1f} s.',
             'kind': 'sequence', 'reference': 'capsule',
             'tempo': {'bpm': BPM, 'offset': 0.0, 'beats_per_bar': 4},
             'end': self.at(self.end), 'audio': f'audio/{self.id}.wav', 'idle': IDLE, 'performance': 'off',

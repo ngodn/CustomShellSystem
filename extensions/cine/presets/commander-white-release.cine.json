@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "commander-white-release",
   "name": "Commander White Release",
-  "description": "An 80 second release film for Commander White on a 124 BPM track, in long gliding moves: a portrait, her three palettes, each piece coming off as the camera passes it, the rig, a rise from boots to face, mixed looks and three idles, each named by a title. On whole-figure parts the frame is split on her body, mesh and rig beside the finished look; close shots are clean. Needs the Commander White outfit and CSS. Set Breakdown track to From the preset. Track: audio/showreel.wav in the CINE folder.",
+  "description": "An 80 second release film for Commander White on a 124 BPM track, in long gliding moves: a portrait, her three palettes, each piece coming off as the camera passes it, the rig, a rise from boots to face, mixed looks and three idles, each named by a title. On whole-figure parts the frame is split on her body, mesh and rig beside the finished look; close shots are clean. Needs the Commander White outfit and CSS. Set Breakdown to From the preset.",
   "kind": "sequence",
   "reference": "capsule",
   "tempo": {"bpm": 124, "offset": 0.87, "beats_per_bar": 4},

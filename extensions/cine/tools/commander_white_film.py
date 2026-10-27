@@ -207,8 +207,7 @@ def film():
         'schema': 1, 'id': 'commander-white-release', 'name': 'Commander White Release',
         'description': ('An 80 second release film for Commander White on a 124 BPM track, in long gliding moves: a portrait, her three palettes, each piece coming off as the '
                         'camera passes it, the rig, a rise from boots to face, mixed looks and three idles, each named by a title. On whole-figure parts the frame is split on her '
-                        'body, mesh and rig beside the finished look; close shots are clean. Needs the Commander White outfit and CSS. Set Breakdown track to From the preset. '
-                        'Track: audio/showreel.wav in the CINE folder.'),
+                        'body, mesh and rig beside the finished look; close shots are clean. Needs the Commander White outfit and CSS. Set Breakdown to From the preset.'),
         'kind': 'sequence', 'reference': 'capsule', 'tempo': tempo, 'end': 42, 'audio': 'audio/showreel.wav', 'idle': 'eve',
         'cover': [['wireframe']], 'shots': shots, 'looks': looks,
         # Mesh and rig on the whole-figure parts only. Close shots (the pass down her body, the
@@ -230,8 +229,8 @@ def portrait(wide):
     tall = copy.deepcopy(wide)
     tall['id'], tall['name'] = 'commander-white-release-9x16', 'Commander White Release 9:16'
     tall['description'] = ('The Commander White release film framed for 9:16 (Reels): the same cut as Commander White Release. Titles, labels and signature are laid out inside the '
-                           '9:16 frame whatever guide is chosen; record the whole screen and crop to the middle. Needs the Commander White outfit and CSS. Set Breakdown track to '
-                           'From the preset. Track: audio/showreel.wav in the CINE folder.')
+                           '9:16 frame whatever guide is chosen; record the whole screen and crop to the middle. Needs the Commander White outfit and CSS. Set Breakdown to '
+                           'From the preset.')
     keys = list(tall)
     at = keys.index('idle') + 1
     return {**{k: tall[k] for k in keys[:at]}, 'frame': '9:16', **{k: tall[k] for k in keys[at:]}}

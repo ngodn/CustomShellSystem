@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "commander-white-release-9x16",
   "name": "Commander White Release 9:16",
-  "description": "The Commander White release film framed for 9:16 (Reels): the same cut as Commander White Release. Titles, labels and signature are laid out inside the 9:16 frame whatever guide is chosen; record the whole screen and crop to the middle. Needs the Commander White outfit and CSS. Set Breakdown track to From the preset. Track: audio/showreel.wav in the CINE folder.",
+  "description": "The Commander White release film framed for 9:16 (Reels): the same cut as Commander White Release. Titles, labels and signature are laid out inside the 9:16 frame whatever guide is chosen; record the whole screen and crop to the middle. Needs the Commander White outfit and CSS. Set Breakdown to From the preset.",
   "kind": "sequence",
   "reference": "capsule",
   "tempo": {"bpm": 124, "offset": 0.87, "beats_per_bar": 4},

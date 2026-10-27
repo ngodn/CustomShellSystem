@@ -120,8 +120,7 @@ def build():
         'id': 'profane-proxima',
         'name': 'Profane Proxima',
         'description': ('A close 17 second cut for Profane Proxima on the song\'s turning points, in Eve\'s default idle. '
-                        'Only the glow colour and the skin change; body shots only from behind. '
-                        'Track: audio/profane-proxima.wav in the CINE folder.'),
+                        'Only the glow colour and the skin change; body shots only from behind.'),
         'kind': 'sequence',
         'reference': 'capsule',
         'tempo': {'bpm': BPM, 'offset': 0.0, 'beats_per_bar': 4},
