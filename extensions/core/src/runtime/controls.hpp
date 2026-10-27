@@ -72,6 +72,7 @@ inline Json adjusted_value(const Json& c,int direction) {
 inline void validate_event(const Json& model,const Json& event) {
     if(!event.is_object()) throw std::runtime_error("Control event must be an object");
     const auto id=event.at("id").get<std::string>();
+    if(id.rfind("cssx.",0)==0) throw std::runtime_error("Reserved control ID");   // host events only (Runtime::host_event)
     for(const auto& section:model.at("sections")) for(const auto& c:section.at("controls")) if(c.at("id")==id) {
         if(!interactive(c)) throw std::runtime_error("Control is disabled or read-only");
         if(c.contains("confirm") && !event.value("confirmed",false)) throw std::runtime_error("Control requires confirmation");

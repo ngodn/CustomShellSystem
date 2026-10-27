@@ -12,6 +12,11 @@ struct Manifest {
     int schema=2, api=3;
     std::string id, title, version, author, description, kind, layout;
     fs::path directory, entry, banner, menu;
+    // Optional (CSSX 1.3.2): a pause-menu entry that opens the game's Photo Mode with this
+    // extension's menu sections added to the panel as tabs, in the game's own widgets.
+    struct PhotoTab { std::string section; fs::path icon; };
+    std::string photo_entry;                 // label of the System page row, e.g. "Activate CINE Mode"
+    std::vector<PhotoTab> photo_tabs;        // one tab per menu section, in order
     static Manifest parse(const Json&,const fs::path&);
     Json json() const;
 };

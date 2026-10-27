@@ -53,10 +53,31 @@ Manifest Manifest::parse(const Json& j,const fs::path& dir) {
     if((m.kind=="native" && !native_ok) || (m.kind=="lua" && suffix!=".lua")) throw std::runtime_error("Extension entry does not match its kind");
     if(j.contains("banner")) m.banner=contained_file(dir,text(j,"banner",2048));
     if(j.contains("menu")) m.menu=contained_file(dir,text(j,"menu",2048));
+    if(j.contains("photo_mode")) {
+        const auto& photo=j.at("photo_mode");
+        if(!photo.is_object()) throw std::runtime_error("photo_mode must be an object");
+        m.photo_entry=text(photo,"entry",48);
+        if(!photo.contains("tabs") || !photo["tabs"].is_array() || photo["tabs"].empty() || photo["tabs"].size()>8)
+            throw std::runtime_error("photo_mode needs 1 to 8 tabs");
+        if(m.menu.empty()) throw std::runtime_error("photo_mode needs the extension's menu file");
+        for(const auto& t:photo["tabs"]) {
+            if(!t.is_object()) throw std::runtime_error("A photo_mode tab must be an object");
+            Manifest::PhotoTab tab{text(t,"section",64),contained_file(dir,text(t,"icon",2048))};
+            if(tab.icon.extension()!=".png") throw std::runtime_error("A photo_mode tab icon must be a .png file");
+            for(const auto& other:m.photo_tabs) if(other.section==tab.section) throw std::runtime_error("photo_mode lists section "+tab.section+" twice");
+            m.photo_tabs.push_back(std::move(tab));
+        }
+    }
     return m;
 }
 Json Manifest::json() const {
-    return {{"id",id},{"schema",schema},{"api",api},{"title",title},{"version",version},{"author",author},{"description",description},{"kind",kind},{"layout",layout},{"banner",path_utf8(banner)}};
+    Json result={{"id",id},{"schema",schema},{"api",api},{"title",title},{"version",version},{"author",author},{"description",description},{"kind",kind},{"layout",layout},{"banner",path_utf8(banner)}};
+    if(!photo_entry.empty()) {
+        Json tabs=Json::array();
+        for(const auto& t:photo_tabs) tabs.push_back({{"section",t.section},{"icon",path_utf8(t.icon)}});
+        result["photo_mode"]={{"entry",photo_entry},{"tabs",std::move(tabs)}};
+    }
+    return result;
 }
 Discovery discover(const fs::path& root) {
     Discovery result; std::error_code ec;

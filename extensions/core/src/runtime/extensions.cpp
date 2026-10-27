@@ -137,6 +137,7 @@ struct Runtime::Entry {
     void refresh();
     void refresh_status();
     void event(const Json&);
+    void deliver(const Json&);   // validated (or host) event to the extension
     void tick(double);
     void render(const CssxFrame*);
     bool needs_frame() const {
@@ -302,6 +303,9 @@ void Runtime::Entry::refresh_status() {
 void Runtime::Entry::event(const Json& e) {
     if(dirty) refresh();
     validate_event(model,e);
+    deliver(e);
+}
+void Runtime::Entry::deliver(const Json& e) {
     requests=0;
     Stopwatch watch(cost.event_calls,cost.event_us);
     if(lua) invoke_lua("event",e);
@@ -379,6 +383,12 @@ Json Runtime::library() {
 }
 Json Runtime::model(const std::string& id) { auto& e=find(id); if(e.suspended) throw std::runtime_error(e.error); if(e.dirty) e.refresh(); return e.model; }
 void Runtime::event(const std::string& id,const Json& event) { auto& e=find(id); if(e.suspended) throw std::runtime_error(e.error); e.event(event); }
+void Runtime::host_event(const std::string& id,const std::string& name,const Json& value) {
+    if(name.empty() || name.size()>32 || name.find_first_not_of("abcdefghijklmnopqrstuvwxyz_")!=std::string::npos) throw std::runtime_error("Invalid host event name");
+    auto& e=find(id); if(e.suspended) throw std::runtime_error(e.error);
+    if(e.dirty) e.refresh();
+    e.deliver({{"id","cssx."+name},{"value",value}});
+}
 Json Runtime::request(const Json& j) {
     const auto op=j.at("op").get<std::string>();
     if(op=="library") return library();

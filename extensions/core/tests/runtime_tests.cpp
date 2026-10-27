@@ -27,6 +27,26 @@ int main() {
         auto invalid=current;invalid["id"]=id;rejects([&]{Manifest::parse(invalid,root/"valid");},"invalid id rejected");
     }
     check(m.json()["schema"]==2 && m.json()["api"]==3,"manifest json echoes versions");
+    {   // photo_mode (CSSX 1.3.2): a pause entry and Photo Mode tabs from menu sections
+        std::ofstream(root/"valid/menu.json")<<"{}";
+        fs::create_directories(root/"valid/tabs");
+        std::ofstream(root/"valid/tabs/a.png")<<"png"; std::ofstream(root/"valid/tabs/b.png")<<"png"; std::ofstream(root/"valid/tabs/c.txt")<<"x";
+        auto photo=current; photo["menu"]="menu.json";
+        photo["photo_mode"]={{"entry","Activate Test Mode"},{"tabs",{{{"section","one"},{"icon","tabs/a.png"}},{{"section","two"},{"icon","tabs/b.png"}}}}};
+        auto pm=Manifest::parse(photo,root/"valid");
+        check(pm.photo_entry=="Activate Test Mode" && pm.photo_tabs.size()==2 && pm.photo_tabs[1].section=="two","photo_mode parsed");
+        check(pm.json()["photo_mode"]["tabs"].size()==2 && pm.json()["photo_mode"]["entry"]=="Activate Test Mode","photo_mode echoed in the library json");
+        check(!m.json().contains("photo_mode"),"no photo_mode unless declared");
+        auto bad=photo; bad["photo_mode"]["tabs"]=Json::array(); rejects([&]{Manifest::parse(bad,root/"valid");},"photo_mode without tabs rejected");
+        bad=photo; bad["photo_mode"]["tabs"][0]["icon"]="tabs/c.txt"; rejects([&]{Manifest::parse(bad,root/"valid");},"non-png tab icon rejected");
+        bad=photo; bad["photo_mode"]["tabs"][1]["section"]="one"; rejects([&]{Manifest::parse(bad,root/"valid");},"duplicate photo tab section rejected");
+        bad=photo; bad["photo_mode"]["tabs"][0]["icon"]="../valid/tabs/a.png"; rejects([&]{Manifest::parse(bad,root/"valid");},"photo tab icon traversal rejected");
+        bad=photo; bad.erase("menu"); rejects([&]{Manifest::parse(bad,root/"valid");},"photo_mode without a menu file rejected");
+        bad=photo; bad["photo_mode"]["entry"]=std::string(49,'x'); rejects([&]{Manifest::parse(bad,root/"valid");},"overlong photo entry rejected");
+        bad=photo; bad["photo_mode"]["tabs"]=Json::array(); for(int i=0;i<9;++i) bad["photo_mode"]["tabs"].push_back({{"section","s"+std::to_string(i)},{"icon","tabs/a.png"}});
+        rejects([&]{Manifest::parse(bad,root/"valid");},"more than eight photo tabs rejected");
+        fs::remove(root/"valid/menu.json"); fs::remove_all(root/"valid/tabs");
+    }
     rejects([&]{contained_file(root/"valid","../valid/main.lua");},"traversal rejected");
     rejects([&]{contained_file(root/"valid","C:/file.lua");},"absolute path rejected");
     fs::create_directories(root/"bad");std::ofstream(root/"bad/extension.json")<<"broken";

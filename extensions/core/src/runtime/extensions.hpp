@@ -36,6 +36,9 @@ public:
     Json library();                    // {revision, extensions:[...], errors:[...]}
     Json model(const std::string& id);
     void event(const std::string& id,const Json& event);
+    // CSSX's own notice to one extension, outside its menu controls: {"id":"cssx.<name>","value":...}.
+    // Since 1.3.2: "cssx.photo_mode" with "open" / "closed" for extensions that declare photo_mode.
+    void host_event(const std::string& id,const std::string& name,const Json& value);
     void tick(double seconds);
     void render(const CssxFrame& frame);
     bool needs_frame() const;
