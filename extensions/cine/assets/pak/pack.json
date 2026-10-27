@@ -1,6 +1,8 @@
 {
   "container": "CSSX_CINE_eins0fx_P",
   "packages": [
+    "/Game/CSSX/CINE/Core/Audio/SM_CINE_Render",
+    "/Game/CSSX/CINE/Core/DT_CINE_Core",
     "/Game/CSSX/CINE/MPC_Cine",
     "/Game/CSSX/CINE/Materials/M_Cine_Clay",
     "/Game/CSSX/CINE/Materials/M_Cine_Solid",
@@ -11,8 +13,8 @@
   ],
   "files": {
     "CSSX_CINE_eins0fx_P.pak": "75e7144577253917f6da7312ef5e585b12fb728226a22b0938323751a6b555cd",
-    "CSSX_CINE_eins0fx_P.ucas": "96eae91ce4c739817b7facc1208b41a71ad5d6520ad7594710f466e23b024d32",
-    "CSSX_CINE_eins0fx_P.utoc": "6cf77a9101c8f0e863fd0dd25be82b8b87e72862dab6683beb0d1bb99d964dee"
+    "CSSX_CINE_eins0fx_P.ucas": "d7072a37fdb7d916f92db4aa73c807a8075f80ba3ab7760ad4559723e32c797a",
+    "CSSX_CINE_eins0fx_P.utoc": "4144b03d11c2d1d42a209309c8748169a4a5f8cecbc7474e0974ff78e7b28cc9"
   },
   "installed": false
 }
