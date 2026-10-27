@@ -42,6 +42,7 @@ public:
     void detach() noexcept;
     bool session() const { return !session_.empty(); }
     Json diagnostics() const;
+    Json attach_steps() const;
     // Dev channel only: start a session for an extension without the pause menu (tests).
     void dev_open(const std::string& id);
     void dev_press(const std::string& key);   // a menu key on the selected row
@@ -81,6 +82,10 @@ private:
     Json model_;
     uint64_t model_revision_=0, slow_at_=0;
     bool rows_dirty_=true;
+    struct { std::vector<std::pair<const char*,uint64_t>> steps; } attach_cost_;   // last attach, microseconds a step
+    size_t pages_ready_=0;                  // tabs whose page is in the switcher
+    bool announced_=false;                  // the extension heard "open" this session
+    std::map<std::wstring,WeakObject> icons_;   // imported tab icons
     std::string pending_confirm_; uint64_t confirm_until_=0;
     std::vector<MenuKeyBinding> keys_;
     std::map<std::string,bool> key_down_;
@@ -112,6 +117,8 @@ private:
     void show_note(bool on);
     void update_note(const Tab& tab);
     UObject* icon_texture(const fs::path& file);
+    void prefetch_icons();
+    bool grow(const Declared& declared);
     void build_page(Tab& tab,bool slow);
     Row& row_at(Tab& tab,size_t i);
     Row make_row(bool slider);
