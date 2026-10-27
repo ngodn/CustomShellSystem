@@ -354,6 +354,15 @@ void file_tests(const fs::path& root) {
     { std::ofstream out(wav, std::ios::binary); out.write(bytes.data(), std::streamsize(bytes.size())); }
     double seconds = 0;
     expect(complete_wav(wav, &seconds) && std::abs(seconds - 1.0/48000) < 1e-10, "PCM WAV complete duration");
+    {   // UE 5.6's submix writer: stereo 16-bit with block align 2 (bytes per sample), byte rate right.
+        std::string ue = bytes; ue[32] = char(2);
+        { std::ofstream out(wav, std::ios::binary); out.write(ue.data(), std::streamsize(ue.size())); }
+        expect(complete_wav(wav, &seconds) && std::abs(seconds - 1.0/48000) < 1e-10, "UE block-align quirk accepted");
+        ue = bytes; ue[32] = char(3);
+        { std::ofstream out(wav, std::ios::binary); out.write(ue.data(), std::streamsize(ue.size())); }
+        expect(!complete_wav(wav), "other block-align values refused");
+        { std::ofstream out(wav, std::ios::binary); out.write(bytes.data(), std::streamsize(bytes.size())); }   // the worker tests read this file
+    }
     auto worker = make_io();
     auto wait_result = [&] {
         std::optional<Result> result;

@@ -221,9 +221,13 @@ bool complete_wav(const fs::path& path, double* seconds) {
         if (!std::memcmp(chunk.data(), "fmt ", 4)) {
             if (n < 16) return false;
             in.read(reinterpret_cast<char*>(chunk.data()+8), 16);
-            const auto channels = le16(chunk.data()+10), bits = le16(chunk.data()+22);
-            rate = le32(chunk.data()+12); align = le16(chunk.data()+20);
-            if (!in || le16(chunk.data()+8) != 1 || !channels || channels > 8 || bits != 16 || align != channels * 2 || !rate || le32(chunk.data()+16) != rate * align) return false;
+            const auto channels = le16(chunk.data()+10), bits = le16(chunk.data()+22), block = le16(chunk.data()+20);
+            rate = le32(chunk.data()+12);
+            // The frame is channels x 16 bits. UE 5.6's submix WAV writer puts the bytes per sample
+            // (2) in the block-align field of a stereo file; its byte rate and data are right, so
+            // the frame is computed, and either block-align value is accepted.
+            align = uint16_t(channels * 2);
+            if (!in || le16(chunk.data()+8) != 1 || !channels || channels > 8 || bits != 16 || (block != align && block != 2) || !rate || le32(chunk.data()+16) != rate * align) return false;
         } else if (!std::memcmp(chunk.data(), "data", 4)) data = n;
         pos += 8 + uint64_t(n) + (n & 1);
     }
