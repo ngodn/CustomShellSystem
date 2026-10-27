@@ -19,7 +19,12 @@
     "tabs/animation.png",
     "tabs/scene.png",
     "tabs/look.png",
-    "tabs/render.png"
+    "tabs/render.png",
+    "ffmpeg/ffmpeg.exe",
+    "ffmpeg/LICENSE.txt",
+    "ffmpeg/COPYING.LGPLv3",
+    "ffmpeg/COPYING.GPLv3",
+    "ffmpeg/SOURCE.txt"
   ],
   "photo_mode": {
     "entry": "Activate CINE Mode",
@@ -43,6 +48,10 @@
       {
         "section": "look",
         "icon": "tabs/look.png"
+      },
+      {
+        "section": "render",
+        "icon": "tabs/render.png"
       }
     ]
   }

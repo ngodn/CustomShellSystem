@@ -412,6 +412,75 @@
           "description": "What the look track will do."
         }
       ]
+    },
+    {
+      "id": "render",
+      "title": "Render",
+      "description": "Renders the take to a video file: every frame is captured at a fixed frame rate, the scene's music is recorded, and ffmpeg (bundled) encodes them. Takes longer than the take itself; leave the game window alone meanwhile.",
+      "controls": [
+        {
+          "id": "render_status",
+          "type": "label",
+          "label": "Render",
+          "description": "What the renderer is doing now."
+        },
+        {
+          "id": "render_take",
+          "type": "button",
+          "label": "Render Take to Video",
+          "disabled_label": "Not ready",
+          "description": "Rolls the chosen scene and renders it to renders/<scene>-<date>/video.mp4 in the CINE folder."
+        },
+        {
+          "id": "render_fps",
+          "type": "radio",
+          "label": "Frame Rate",
+          "value": "30",
+          "options": [
+            {
+              "id": "24",
+              "label": "24 fps"
+            },
+            {
+              "id": "30",
+              "label": "30 fps"
+            },
+            {
+              "id": "60",
+              "label": "60 fps"
+            }
+          ],
+          "description": "Frames per second of the video."
+        },
+        {
+          "id": "render_quality",
+          "type": "radio",
+          "label": "Quality",
+          "value": "high",
+          "options": [
+            {
+              "id": "high",
+              "label": "High"
+            },
+            {
+              "id": "medium",
+              "label": "Medium"
+            },
+            {
+              "id": "small",
+              "label": "Small File"
+            }
+          ],
+          "description": "Higher quality gives a larger file."
+        },
+        {
+          "id": "render_cancel",
+          "type": "button",
+          "label": "Cancel Render",
+          "disabled_label": "Not rendering",
+          "description": "Stops the render; the frames captured so far stay in its folder."
+        }
+      ]
     }
   ]
 }

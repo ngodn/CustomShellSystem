@@ -289,6 +289,18 @@ LOC = unreal.BlendableLocation
 created["materials"]["buffer_post"] = buffer_material("PP_Cine_Buffer_Post", LOC.BL_SCENE_COLOR_AFTER_TONEMAPPING, False)
 created["materials"]["buffer_pre"] = buffer_material("PP_Cine_Buffer_Pre", LOC.BL_SCENE_COLOR_BEFORE_DOF, True)
 
+# ---------------------------------------------------------------- render mixer
+# The renderer records a take's music through this submix only (render.hpp, Request.submix): a
+# plain submix on the master route, never auto-disabled and never muted when the window loses
+# focus, so an unattended render keeps its music. The renderer owns its output level.
+tools = unreal.AssetToolsHelpers.get_asset_tools()
+submix = tools.create_asset("SM_CINE_Render", ROOT + "/Core/Audio", unreal.SoundSubmix, unreal.SoundSubmixFactory())
+submix.set_editor_property("auto_disable", False)
+submix.set_editor_property("mute_when_backgrounded", False)
+if not unreal.EditorAssetLibrary.save_loaded_asset(submix, only_if_is_dirty=False):
+    raise RuntimeError("SM_CINE_Render did not save")
+created["submix"] = submix.get_path_name()
+
 # ---------------------------------------------------------------- no game or project dependency
 registry = unreal.AssetRegistryHelpers.get_asset_registry()
 registry.scan_paths_synchronous([ROOT], force_rescan=True)

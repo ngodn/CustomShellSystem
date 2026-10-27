@@ -8,6 +8,7 @@
 #include "guides.hpp"
 #include "preset.hpp"
 #include "packs.hpp"
+#include "render.hpp"
 #include "performance.hpp"
 #include "expression.hpp"
 #include "rig.hpp"
@@ -59,6 +60,8 @@ private:
         std::string picture = "sharp";    // render quality during a take: game | sharp | full
         PerformanceChoice performance;
         std::string expression = "unchanged";
+        unsigned render_fps = 30;            // Render tab: 24 | 30 | 60
+        std::string render_quality = "high"; // high | medium | small
     };
     // One take, built while Preparing and played while Running.
     struct Take {
@@ -75,6 +78,9 @@ private:
         Json dolly, final_wide, final_close;
         // Look track: CSS snapshot and one apply payload per step.
         bool look = false; Json snapshot; std::vector<std::pair<double, Json>> steps; size_t step_next = 0;
+        // Rendered to video: held on its first frame until the renderer starts capturing, silent,
+        // and ended by the renderer rather than by its own clock.
+        bool rendering = false, hold = false;
         // Clock and filters.
         double clock = 0, countdown = 0, yaw_f = 0, ctl_yaw = 0, fov_applied = -1; Vec3 vel_f;
         // Walk state.
@@ -272,6 +278,17 @@ private:
     uint32_t world_ = 0;   // world generation Cine World or the recording started in
     Mode record_return_ = Mode::Idle;   // where route recording goes back to (Idle or Armed)
     std::unique_ptr<Take> take_;
+    // Render Take to Video (render.hpp): one renderer for the session, made on first use.
+    std::unique_ptr<video::Renderer> renderer_;
+    bool render_pending_ = false, render_watch_ = false;
+    uint64_t render_serial_ = 0; uint32_t render_world_gen_ = 0;
+    Json render_world_, render_pawn_;
+    std::string render_note_;
+    void start_render();
+    void release_render();
+    void render_frame_tick();
+    void render_finished();
+    std::string render_line() const;
     bool capture_pending_ = false; double capture_after_ = 0;
     bool start_pending_ = false;
     std::vector<bool> keys_previous_;

@@ -175,6 +175,8 @@ void Extension::load_state() {
         if (s.contains("labels") && s["labels"].is_boolean()) settings_.labels = s["labels"];
         if (s.contains("breakdown_target") && s["breakdown_target"].is_boolean()) settings_.breakdown_target = s["breakdown_target"];
         if (s.contains("signature") && s["signature"].is_boolean()) settings_.signature = s["signature"];
+        if (s.contains("render_fps") && s["render_fps"].is_number_unsigned()) { const unsigned f = s["render_fps"]; if (f == 24 || f == 30 || f == 60) settings_.render_fps = f; }
+        if (s.contains("render_quality") && s["render_quality"].is_string()) { const auto q = s["render_quality"].get<std::string>(); if (q == "high" || q == "medium" || q == "small") settings_.render_quality = q; }
         if (s.contains("picture") && s["picture"].is_string() && std::count(picture_ids.begin(), picture_ids.end(), s["picture"].get<std::string>())) settings_.picture = s["picture"];
         if (s.contains("expression")) {
             try { settings_.expression = expression_choice(s.at("expression")); }
@@ -209,7 +211,8 @@ void Extension::save_state() const {
                              {"countdown", settings_.countdown}, {"guide", settings_.guide}, {"look", settings_.look}, {"walls", settings_.walls},
                              {"scene", settings_.scene}, {"keep_target", settings_.keep_target}, {"breakdown", settings_.breakdown},
                              {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}, {"signature", settings_.signature},
-                             {"picture", settings_.picture}, {"performance", settings_.performance.json()}, {"expression", settings_.expression}}}};
+                             {"picture", settings_.picture}, {"performance", settings_.performance.json()}, {"expression", settings_.expression},
+                             {"render_fps", settings_.render_fps}, {"render_quality", settings_.render_quality}}}};
     if (route_) { Json pts = Json::array(); for (const auto& p : route_->points) pts.push_back(vec_json(p)); value["route"] = std::move(pts); }
     if (final_) value["final"] = {{"position", vec_json(final_->position)}, {"yaw", final_->yaw}, {"camera", vec_json(final_->camera)},
                                   {"pitch", final_->pitch}, {"camera_yaw", final_->camera_yaw}, {"fov", final_->fov}};
@@ -242,6 +245,7 @@ int Extension::render(const CssxFrame* f) {
     frame_.yaw = f->player_yaw; frame_.seconds = f->seconds;
     frame_.has_camera = CSSX_FRAME_HAS_CAMERA(f);
     if (frame_.has_camera) { frame_.camera = {f->camera_x, f->camera_y, f->camera_z}; frame_.camera_rotation = {f->camera_pitch, f->camera_yaw, f->camera_roll}; }
+    render_frame_tick();   // every engine frame while a render runs, idle included (its audio and encode passes)
     if (mode_ == Mode::Idle || mode_ == Mode::RecordWait) { guides_.hide(); callouts_.hide(); return 1; }
     Overlay o;
     o.visible = true;
@@ -342,6 +346,7 @@ void Extension::tick(double seconds) {
             load_next_pack();
             return;
         }
+        if (render_watch_ && renderer_ && !renderer_->active()) render_finished();
         if (mode_ == Mode::Idle && !performance_.owned() && !expression_.owned() && !capture_pending_ && look_restore_.is_null() && own_look_owed_.is_null() && !scene_.pending() && !breakdown_.busy() && !breakdown_opponent_.busy())
             return;   // free outside Cine World
         const double dt = std::isfinite(seconds) ? std::clamp(seconds, 0.0, 1.0) : 0.0;
@@ -365,7 +370,8 @@ void Extension::tick(double seconds) {
             audio_.stop(); rig_.stop_music();
             try { rig_.restore_picture(); } catch (...) {}   // console variables outlive the world
             rig_.forget(); guides_.forget(); callouts_.forget(); typeface_.forget(); scene_.forget(); breakdown_.forget(); breakdown_opponent_.forget();
-            take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false;
+            if (renderer_ && renderer_->active()) renderer_->cancel();
+            take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false; render_pending_ = false;
             report("The world changed (loading, travel or death); CINE stopped and the game camera is back.");
             return;
         }
@@ -403,6 +409,7 @@ void Extension::tick(double seconds) {
                 if (take_->countdown <= 0) roll();
                 break;
             case Mode::Running:
+                if (take_->hold) break;   // a render's first frame, until capture starts
                 if (const auto why = performance_.poll([&](const Json& r) { return rig_.css(r); }); !why.empty()) {
                     // In a sequence the wardrobe interrupts the dance for its own reasons (a
                     // look step, the clay coming off her materials): the camera keeps rolling
@@ -466,6 +473,8 @@ void Extension::enter() {
 }
 
 void Extension::exit_world(const std::string& why) {
+    if (renderer_ && renderer_->active()) renderer_->cancel();
+    render_pending_ = false;
     if (take_) finish_take(why, false);
     std::vector<std::string> failures;
     try { failures = rig_.restore_all(); } catch (const std::exception& e) { failures.push_back(e.what()); }
@@ -1329,6 +1338,16 @@ void Extension::resume_performance() {
 // real time from this instant: a long frame (an outfit landing) then costs picture, never sync.
 void Extension::roll() {
     auto& t = *take_;
+    if (render_pending_) {
+        // Rendered: hold on the first frame, silent (the renderer records the music itself),
+        // and start the dance only when capture starts (release_render).
+        render_pending_ = false;
+        t.rendering = t.hold = true;
+        t.clock = 0; t.seq_clock = 0; t.performance_at = 0;
+        mode_ = Mode::Running;
+        start_render();
+        return;
+    }
     // A sequence rolls whatever CSS says: a refused start (the layer still blending out of her
     // idle) joins a moment later, in time with the music. Other takes need it at once.
     if (t.preset.kind == ShotKind::Sequence) {
@@ -1378,9 +1397,9 @@ void Extension::roll() {
 }
 
 void Extension::begin_countdown() {
-    take_->countdown = settings_.countdown;
+    take_->countdown = render_pending_ ? 0.0 : settings_.countdown;   // a render needs no recorder to start
     mode_ = Mode::Countdown;
-    report(with_note(settings_.countdown > 0 ? "Get ready: start your recorder." : "Rolling."));
+    report(with_note(take_->countdown > 0 ? "Get ready: start your recorder." : "Rolling."));
 }
 
 // The built-in reel: the final image, then one layer after another, then the final image again.
@@ -1688,7 +1707,8 @@ void Extension::run() {
     } else if (t.preset.kind != ShotKind::Action && !sequence && (!walk || !final_ || t.clock < tl.arrive + 4.0)) {
         place_dolly(0.1, false);
     }
-    if (t.clock >= tl.total) finish_take("Take finished.", false);
+    if (t.rendering) t.clock = std::min(t.clock, tl.total);   // the renderer ends it, on its last frame
+    else if (t.clock >= tl.total) finish_take("Take finished.", false);
 }
 
 // Put the player's own look back and let CSS save it (persist=true). False when CSS refused.
@@ -1760,7 +1780,7 @@ void Extension::finish_take(const std::string& why, bool failed) {
     if (!failures.empty()) report(why + " Could not restore: " + failures.front(), true);
     else report(note.empty() ? why : why + "  " + note, failed);
     if (photo_parked_) { try { rig_.restore_hud(); } catch (...) {} }
-    step_back_in("take");
+    if (!render_watch_) step_back_in("take");   // a render comes back when its audio and encode are done
 }
 
 // ---------------------------------------------------------------- route and final shot
@@ -1785,6 +1805,92 @@ void Extension::record_tick() {
     } catch (const std::exception& e) { report(e.what(), true); }
     step_back_in();
     samples_.clear();
+}
+
+// ---------------------------------------------------------------- render to video
+
+void Extension::start_render() {
+    auto& t = *take_;
+    if (!renderer_) {
+        video::Take callbacks;
+        callbacks.begin = [this](video::Pass pass) { if (pass == video::Pass::Frames) release_render(); };
+        callbacks.frame = [](unsigned, double) {};   // the engine's fixed frame rate steps the take one frame a frame
+        callbacks.end = [this] { if (take_ && take_->rendering) finish_take("Take rendered.", false); };
+        renderer_ = std::make_unique<video::Renderer>(host_, std::move(callbacks));
+    }
+    video::Request r;
+    r.settings.fps = settings_.render_fps;
+    r.settings.quality = settings_.render_quality == "small" ? video::Quality::Small : settings_.render_quality == "medium" ? video::Quality::Medium : video::Quality::High;
+    r.cine_folder = fs::path(host_.request({{"op", "extension.info"}}).at("directory").get<std::string>());
+    r.preset = t.preset.id;
+    r.seconds = t.timeline.total;
+    const auto player = host_.player();
+    r.world = player.value("world", Json()); r.pawn = player.value("pawn", Json());
+    render_world_ = r.world; render_pawn_ = r.pawn; render_world_gen_ = frame_.world; render_serial_ = 0;
+    render_note_.clear();
+    // Music: a pack's SoundWave, recorded through CINE's own mixer. A music file next to the
+    // presets, or a pak without the mixer, gives a silent video and says so.
+    if (!t.preset.audio.empty()) {
+        if (t.preset.audio_is_file()) render_note_ = "Silent video: music from a file is not recorded.";
+        else if (t.preset.audio_asset.empty()) render_note_ = "Silent video: the pack with this scene's music is not installed.";
+        else {
+            bool mixer = false;
+            try { mixer = host_.request({{"op", "load"}, {"path", r.submix}}).is_object(); } catch (...) {}
+            if (mixer) { r.sound = t.preset.audio_asset; r.music_class = "/Game/Sparta/Audio/SoundClasses/Music.Music"; }
+            else render_note_ = "Silent video: CINE's pak has no render mixer; reinstall CINE.";
+        }
+    }
+    if (!renderer_->start(std::move(r))) throw std::runtime_error(renderer_->status().error.empty() ? "The render could not start" : renderer_->status().error);
+    render_watch_ = true;
+    report("Rendering. Leave the game window alone until it is done.");
+}
+
+// Capture starts: the held take starts moving (and dancing) from its first frame.
+void Extension::release_render() {
+    if (!take_ || !take_->hold) return;
+    auto& t = *take_;
+    t.hold = false;
+    if (t.preset.kind == ShotKind::Sequence) {
+        try { performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance); }
+        catch (...) { t.performance_resume = t.performance.id != "off"; t.performance_retry = 0.2; t.performance_give_up = 6.0; }
+    } else performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance);
+}
+
+void Extension::render_frame_tick() {
+    if (!renderer_ || !render_watch_ || !renderer_->active()) return;
+    if (frame_.world != render_world_gen_) { renderer_->cancel(); return; }
+    const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    renderer_->tick(++render_serial_, now, render_world_, render_pawn_);
+}
+
+void Extension::render_finished() {
+    render_watch_ = false;
+    const auto& s = renderer_->status();
+    if (take_ && take_->rendering) finish_take("Render stopped.", true);
+    if (s.state == video::State::Done) {
+        status_ = "Video saved";
+        report("Video saved: " + (s.folder / "video.mp4").string() + (render_note_.empty() ? std::string() : "  " + render_note_));
+    } else {
+        status_ = "Render failed";
+        report("Render failed: " + (s.error.empty() ? s.line : s.error), true);
+    }
+    step_back_in("render");
+}
+
+// The Render row's value: short, so it reads in Photo Mode's value column.
+std::string Extension::render_line() const {
+    if (!renderer_) return "Ready";
+    const auto& s = renderer_->status();
+    switch (s.state) {
+        case video::State::Idle: return "Ready";
+        case video::State::Probing: return "Preparing";
+        case video::State::Frames: return "Frame " + std::to_string(s.frames) + " / " + std::to_string(s.total);
+        case video::State::Audio: return "Recording music";
+        case video::State::Encoding: return "Encoding " + std::to_string(s.total ? s.encoded * 100 / s.total : 0) + "%";
+        case video::State::Done: return "Video saved";
+        case video::State::Failed: return "Failed";
+    }
+    return "Ready";
 }
 
 // Back into CINE Mode, on that tab, after a route recording or a take that stepped out of Photo Mode.
@@ -1870,9 +1976,14 @@ Json Extension::model() const {
         disabled["take"] = "Use As set in CSS for takes that change looks, or turn the look track off.";
     if (!route_) disabled["clear_route"] = "No route";
     if (!final_) disabled["clear_final"] = "No final shot";
+    const bool rendering = renderer_ && renderer_->active();
+    disabled["render_take"] = rendering ? "Rendering now" : disabled.value("take", std::string());
+    if (!rendering) disabled["render_cancel"] = "Not rendering";
+    if (disabled["render_take"].get<std::string>().empty()) disabled.erase("render_take");
     Json enabled = Json::object();
     for (const auto& id : {"enter", "exit", "take", "record", "capture", "clear_route", "clear_final", "keep_target", "labels", "breakdown_target",
-        "performance", "performance_library", "performance_rate", "performance_start", "performance_refresh", "expression", "expression_refresh"}) enabled[id] = !disabled.contains(id);
+        "performance", "performance_library", "performance_rate", "performance_start", "performance_refresh", "expression", "expression_refresh",
+        "render_take", "render_cancel"}) enabled[id] = !disabled.contains(id);
     std::string summary = status_;
     if (!preset_problems_.empty()) summary += "  (" + std::to_string(preset_problems_.size()) + " preset file(s) skipped; see CSSX log)";
     return {{"values", {{"status", summary}, {"preset", presets_.empty() ? std::string("none") : settings_.preset},
@@ -1885,7 +1996,8 @@ Json Extension::model() const {
                         {"performance", settings_.performance.id}, {"performance_library", performance_catalog_.library(settings_.performance)},
                         {"performance_rate", settings_.performance.rate}, {"performance_start", settings_.performance.seconds},
                         {"performance_info", performance_catalog_.description(settings_.performance)},
-                        {"expression", settings_.expression}, {"expression_info", expression_catalog_.description(settings_.expression)}}},
+                        {"expression", settings_.expression}, {"expression_info", expression_catalog_.description(settings_.expression)},
+                        {"render_status", render_line()}, {"render_fps", std::to_string(settings_.render_fps)}, {"render_quality", settings_.render_quality}}},
             {"options", {{"expression", expression_catalog_.options(settings_.expression)}, {"preset", options}, {"performance", performance_catalog_.options(settings_.performance)},
                          {"performance_library", performance_catalog_.libraries(settings_.performance)}}},
             {"enabled", enabled}, {"disabled", disabled}, {"status", summary}, {"error", error_}};
@@ -1939,6 +2051,16 @@ void Extension::event(const Json& e) {
         }
         else if (id == "enter") enter();
         else if (id == "exit") exit_world("Left Cine World.");
+        else if (id == "render_take") {
+            if (mode_ != Mode::Armed) throw std::runtime_error("Enter Cine World first");
+            if (renderer_ && renderer_->active()) throw std::runtime_error("A render is running");
+            render_pending_ = true;
+            if (photo_) start_take();   // steps out of Photo Mode first
+            else { start_pending_ = true; host_.request({{"op", "menu.close"}}); report("Closing the menu; the render starts in a moment."); }
+        }
+        else if (id == "render_cancel") { if (renderer_) renderer_->cancel(); }
+        else if (id == "render_fps") { const unsigned f = std::stoul(e.at("value").get<std::string>()); if (f == 24 || f == 30 || f == 60) { settings_.render_fps = f; save_state(); } }
+        else if (id == "render_quality") { const auto q = e.at("value").get<std::string>(); if (q == "high" || q == "medium" || q == "small") { settings_.render_quality = q; save_state(); } }
         else if (id == "take") {
             if (mode_ != Mode::Armed) throw std::runtime_error("Enter Cine World first");
             if (photo_) start_take();   // steps out of Photo Mode first
@@ -1956,7 +2078,8 @@ void Extension::event(const Json& e) {
         }
         else if (id == "capture") {
             if (mode_ != Mode::Idle && mode_ != Mode::Armed) throw std::runtime_error("Wait for the take to finish");
-            capture_pending_ = true; capture_after_ = 1.5; host_.request({{"op", "menu.close"}}); report("Saving the game camera's view 1.5 s after the menu closes.");
+            if (photo_) capture_final_now();   // the Photo Mode view is already the one to keep: no menu to wait for
+            else { capture_pending_ = true; capture_after_ = 1.5; host_.request({{"op", "menu.close"}}); report("Saving the game camera's view 1.5 s after the menu closes."); }
         }
         else if (id == "clear_route") { route_.reset(); save_state(); report("Route cleared."); }
         else if (id == "clear_final") { final_.reset(); save_state(); report("Final shot cleared."); }
@@ -1998,6 +2121,7 @@ Json Extension::status() const {
 bool Extension::stop() {
     if (stopped_) return true;
     try { exit_world("CINE stopped."); } catch (...) {}
+    if (renderer_ && !renderer_->stop()) return false;   // restoring the engine or ending ffmpeg: CSSX asks again
     // The pieces go now: after this the extension may be unloaded and no tick drains the queue.
     for (Breakdown* b : {&breakdown_, &breakdown_opponent_}) { try { b->flush(); } catch (...) {} }
     if (!look_restore_.is_null() && restore_look(look_restore_)) look_restore_ = nullptr;   // last chance before unload
