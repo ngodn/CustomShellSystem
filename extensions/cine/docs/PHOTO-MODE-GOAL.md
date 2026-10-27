@@ -183,11 +183,16 @@ Worked through without hand-backs: drive the game through the bridge, fix, conti
    - [ ] a take in Photo Mode: unpause, panel hidden, camera, music, return to the panel
    - [ ] Render tab wired to the renderer (size, frame rate, quality, Render Take to Video, Last Render),
      plus the `SM_CINE_Render` submix in the core pak
-   - [ ] hardcoded content moved to data (lane B table, Astra lane E): shared style and recipes in
+   - [x] hardcoded content moved to data (lane B table, Astra lane E, dcd3472): shared style and recipes in
      `DT_CINE_Core` in CINE's main pak; a scene pack may override any of them for its own scenes
      (user, 28 Oct)
 5. [x] Pack pipeline: authoring (DataTable + SoundWave), cook, pack, verify; eight packs built.
 6. [ ] Tests and Windows builds (done criteria), frame cost in and out of Photo Mode.
 7. [ ] Live checks: a take per pack, route record, rendered video, menu reopen, world change, death, leave
-   Photo Mode with the game exactly as it was.
+   Photo Mode with the game exactly as it was. Plus, after lane E: the cooked pak reads back
+   `DT_CINE_Core` (15 rows, schema 1, bytes equal `assets/core/content.json`) and the inline font
+   `FF_CINE`; in game the labels' font, both guide menus, a breakdown and a sequence look as before,
+   a pack override applies only to its own scenes, CINE without the pak falls back with one
+   warning, and frame cost in and out of CINE Mode; the HUD is hidden during takes; every row of
+   Animation, Scene and Look pressed.
 8. [ ] Release files: `extensions/core/dist/cine-v2.0.0/` and one folder per pack, changelog, texts, tag moved.
