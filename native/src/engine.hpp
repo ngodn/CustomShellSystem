@@ -840,6 +840,8 @@ class Appearance {
     // together, because one owner clearing its own set must not put back what the other
     // still wants hidden. `applied_hidden_` is what the component was last told.
     std::set<int> toggle_hidden_, item_hidden_, applied_hidden_;
+    std::string fallback_outfit_;   // outfit id of the look being applied, for the stale-outfit shader rule
+    bool shader_fallback_stale_outfit() const;
     // Toggle-driven AnimBP switches (control_anim_switches): what the controls want, and per
     // post-process instance what was last written, so a steady look writes nothing.
     std::map<std::string,bool> anim_switches_;
@@ -1023,6 +1025,8 @@ public:
     // outfit must be applied again because the decision changed.
     std::vector<std::string> configure_shader_fallback(const fs::path& catalog,const fs::path& paks,const std::string& mode);
     bool set_shader_fallback_mode(const std::string& mode);
+    // Installed outfit id -> package version, from the catalog scan, for the stale-outfit rule.
+    void set_installed_outfit_versions(std::map<std::string,std::string> versions);
     std::vector<std::string> take_shader_fallback_log();
     Json shader_fallback_status() const;
     void sync_hand_support();

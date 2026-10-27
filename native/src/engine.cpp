@@ -1456,6 +1456,7 @@ bool Appearance::restore() {
     current_items_.clear(); current_items_identity_.clear();
     // The mesh is going back to the game's own, so nothing CSS hid on it may survive.
     toggle_hidden_.clear(); item_hidden_.clear(); reconcile_sections(); anim_switches_.clear();
+    fallback_outfit_.clear(); shader_fallback_state().outfit_stale=false;
     restore_menu();
     detach_residual_controls();
     auto* component = component_.Get();
@@ -2343,9 +2344,25 @@ void Appearance::prepare_deformation_materials() {
         if(readback.get<float>()!=0.f) throw std::runtime_error("Deformation parameter read-back failed");
     }
 }
+bool Appearance::shader_fallback_stale_outfit() const {
+    const auto& state=shader_fallback_state();
+    const auto version=state.installed_versions.find(fallback_outfit_);
+    if(version==state.installed_versions.end()) return false;
+    return !state.active && shader_fallback::active_for_outfit(state.mode,!state.verified_build.empty(),
+        state.loaded && state.catalog.size()>0,state.catalog.stale(fallback_outfit_,version->second));
+}
+void Appearance::set_installed_outfit_versions(std::map<std::string,std::string> versions) {
+    shader_fallback_state().installed_versions=std::move(versions);
+}
 void Appearance::apply_shader_fallback() {
     auto& state=shader_fallback_state();
-    if(!state.active) return;
+    state.outfit_stale=shader_fallback_stale_outfit();
+    if(state.outfit_stale) {
+        const auto& version=state.installed_versions.at(fallback_outfit_);
+        shader_fallback_note("stale:"+fallback_outfit_+":"+version,"Shader fallback on for "+fallback_outfit_+" "+version+
+            ": that version's shaders are missing on game build "+state.verified_build+"; updating the outfit restores its own materials");
+    }
+    if(!state.active && !state.outfit_stale) return;
     auto* component=component_.Get();
     if(!component || mesh_asset(component)!=applied_.Get()) return;
     Call count(component,L"GetNumMaterials",1); count.run();
@@ -2421,10 +2438,12 @@ bool Appearance::set_shader_fallback_mode(const std::string& mode) {
     auto& state=shader_fallback_state();
     const auto parsed=shader_fallback::parse_mode(mode);
     if(!parsed) throw std::runtime_error("Unknown outfit material mode");
+    const bool before=state.active || state.outfit_stale;
     state.mode=*parsed;
-    const bool next=shader_fallback::active(state.mode,!state.verified_build.empty(),state.loaded && state.catalog.size()>0);
-    if(next==state.active) return false;
-    state.active=next;
+    state.active=shader_fallback::active(state.mode,!state.verified_build.empty(),state.loaded && state.catalog.size()>0);
+    state.outfit_stale=shader_fallback_stale_outfit();
+    const bool next=state.active || state.outfit_stale;
+    if(next==before) return false;
     // Put every outfit material back (fallbacks resolve to their source), then let the next
     // apply rebuild controls and items under the new decision.
     reset_controls();
@@ -2443,10 +2462,11 @@ Json Appearance::shader_fallback_status() const {
     const auto& state=shader_fallback_state();
     return {{"mode",shader_fallback::mode_name(state.mode)},{"active",state.active},{"verified_build",state.verified_build},
             {"catalog_materials",state.catalog.size()},{"catalog_error",state.catalog_error},
-            {"rebuilt",state.rebuilt},{"skipped",state.skipped},{"pak_tables",state.tables}};
+            {"rebuilt",state.rebuilt},{"skipped",state.skipped},{"pak_tables",state.tables},{"outfit_stale",state.outfit_stale}};
 }
 void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
     ++appearance_revision;
+    fallback_outfit_=outfit.id;
     customize_ms.clear();
     auto step_from=std::chrono::steady_clock::now();
     auto step=[&](const char* name) {

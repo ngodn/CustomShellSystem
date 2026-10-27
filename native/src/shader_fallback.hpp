@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -74,6 +75,9 @@ inline bool valid_object_path(std::string_view path) {
 class Catalog {
     std::unordered_map<std::string,std::string> donors_;
     std::vector<VerifiedBuild> builds_;
+    // Released outfit versions whose packaged shaders are missing on the verified builds above
+    // (they failed the shader audit there). Players who never updated them still need the fallback.
+    std::map<std::string,std::set<std::string>,std::less<>> stale_;
 public:
     static Catalog parse(const nlohmann::json& json) {
         if(!json.is_object() || json.value("schema",0)!=1) throw std::runtime_error("Unsupported shader donor schema");
@@ -90,6 +94,19 @@ public:
                 entry.tables.emplace(name,static_cast<std::uintmax_t>(size.get<std::int64_t>()));
             }
             result.builds_.push_back(std::move(entry));
+        }
+        if(const auto stale=json.find("stale_outfits"); stale!=json.end()) {
+            if(!stale->is_object() || stale->size()>256) throw std::runtime_error("Invalid stale outfit list");
+            for(const auto& [id,versions]:stale->items()) {
+                if(id.empty() || id.size()>96 || !versions.is_array() || versions.empty() || versions.size()>64)
+                    throw std::runtime_error("Invalid stale outfit entry: "+id);
+                auto& set=result.stale_[id];
+                for(const auto& version:versions) {
+                    if(!version.is_string() || version.get_ref<const std::string&>().empty() || version.get_ref<const std::string&>().size()>32)
+                        throw std::runtime_error("Invalid stale outfit version for "+id);
+                    set.insert(version.get<std::string>());
+                }
+            }
         }
         const auto& donors=json.at("donors");
         if(!donors.is_object() || donors.size()>20000) throw std::runtime_error("Invalid shader donor table");
@@ -113,6 +130,10 @@ public:
         return found==donors_.end()?nullptr:&found->second;
     }
     size_t size() const { return donors_.size(); }
+    bool stale(std::string_view outfit,std::string_view version) const {
+        const auto found=stale_.find(outfit);
+        return found!=stale_.end() && found->second.contains(std::string(version));
+    }
 };
 
 // Auto rebuilds only on a game CSS has not verified, so a verified game draws exactly what it drew
@@ -120,5 +141,10 @@ public:
 inline bool active(Mode mode,bool verified,bool has_donors) {
     if(!has_donors) return false;
     return mode==Mode::always || (mode==Mode::automatic && !verified);
+}
+// Auto also rebuilds a worn outfit whose installed version is known to lack its shaders on this
+// verified game, so a player who has not updated that outfit still sees it textured.
+inline bool active_for_outfit(Mode mode,bool verified,bool has_donors,bool stale_outfit) {
+    return active(mode,verified,has_donors) || (has_donors && mode==Mode::automatic && stale_outfit);
 }
 }

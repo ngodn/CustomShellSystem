@@ -14,6 +14,12 @@ compiled permutation; anything else fails the build instead of guessing.
 
 Python 3.14. Usage:
   build_shader_donors.py --game <MortalShell2> --work <dir> --out <json> SOURCE...
+      [--include-report REPORT.json ...] [--stale-report REPORT.json=OUTFIT_ID@VERSION ...]
+
+--include-report reuses a finished audit report as a source (a release zip that is no longer on
+disk keeps its materials covered). --stale-report does the same for a release version that failed
+the audit on this game build and lists it under stale_outfits, so CSS auto-rebuilds that outfit's
+materials for players who never updated it. A stale report that passed is an error.
 """
 from __future__ import annotations
 
@@ -112,7 +118,9 @@ def main() -> None:
     parser.add_argument('--work', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--steam-build', required=True, help='Steam build id of the installed game')
-    parser.add_argument('sources', type=Path, nargs='+', help='Release zips or folders of containers')
+    parser.add_argument('sources', type=Path, nargs='*', help='Release zips or folders of containers')
+    parser.add_argument('--include-report', type=Path, action='append', default=[])
+    parser.add_argument('--stale-report', action='append', default=[], metavar='REPORT=ID@VERSION')
     args = parser.parse_args()
     args.work.mkdir(parents=True, exist_ok=True)
     paks = args.game / 'Content/Paks'
@@ -124,15 +132,31 @@ def main() -> None:
     for utoc in sorted(paks.glob('pakchunk*-Windows.utoc')):
         game_packages.update(package_names(utoc, args.work))
 
+    stale: dict[str, set[str]] = {}
+    reports: list[tuple[Path, Path]] = [(r, r) for r in args.include_report]
+    for rule in args.stale_report:
+        report_path, _, target = rule.partition('=')
+        outfit, _, version = target.partition('@')
+        if not report_path or not outfit or not version:
+            raise SystemExit(f'Bad --stale-report {rule}')
+        failed = json.loads(Path(report_path).read_text())
+        if failed.get('passed') and not failed.get('missing_hashes'):
+            raise SystemExit(f'{report_path} passed the audit; {outfit} {version} is not stale')
+        stale.setdefault(outfit, set()).add(version)
+        reports.append((Path(report_path), Path(report_path)))
+
     targets: dict[str, dict] = {}
     seen_sources = []
-    for source in args.sources:
-        stamp = f'{source.resolve()}:{source.stat().st_mtime_ns}'
-        name = f'{source.stem}-{hashlib.sha1(stamp.encode()).hexdigest()[:10]}'
-        cached = args.work / f'{name}-audit.json'
-        if cached.exists():   # same file, same timestamp: a finished audit stays valid
-            report = json.loads(cached.read_text())
+    for source in [*args.sources, *(r for r, _ in reports)]:
+        if source.suffix == '.json':   # a finished report standing in for its source
+            report = json.loads(source.read_text())
         else:
+          stamp = f'{source.resolve()}:{source.stat().st_mtime_ns}'
+          name = f'{source.stem}-{hashlib.sha1(stamp.encode()).hexdigest()[:10]}'
+          cached = args.work / f'{name}-audit.json'
+          if cached.exists():   # same file, same timestamp: a finished audit stays valid
+            report = json.loads(cached.read_text())
+          else:
             files = containers(source, args.work, name)
             packages = []
             for utoc in (f for f in files if f.suffix == '.utoc'):
@@ -191,6 +215,8 @@ def main() -> None:
         'verified_builds': [{'steam_build': args.steam_build, 'pak_tables': tables}],
         'donors': result,
     }
+    if stale:
+        document['stale_outfits'] = {outfit: sorted(versions) for outfit, versions in sorted(stale.items())}
     args.out.write_text(json.dumps(document, indent=1, sort_keys=False) + '\n')
     (args.work / 'sources.json').write_text(json.dumps({'sources': seen_sources, 'not_covered': problems}, indent=1) + '\n')
     print(f'{len(result)} materials, {len(set(result.values()))} donors -> {args.out}')

@@ -379,6 +379,15 @@ struct Core {
         if(!size || size>=32768) throw std::runtime_error("Cannot locate the game's outfit folder");
         return wardrobe_packages(fs::path(executable));
     }
+    // Each installed outfit's package version, for the shader fallback's stale-outfit rule.
+    static std::map<std::string,std::string> installed_outfit_versions(const Catalog& loaded) {
+        std::map<std::string,std::string> versions;
+        if(const auto files=loaded.diagnostics.find("files"); files!=loaded.diagnostics.end() && files->is_array())
+            for(const auto& file:*files)
+                if(const auto status=file.value("status",""); status!="rejected" && status!="ignored" && file.contains("id") && file.contains("version"))
+                    versions[file.at("id").get<std::string>()]=file.at("version").get<std::string>();
+        return versions;
+    }
     Catalog load_catalog(const fs::path& folder) const {
         auto path=folder.generic_u8string();
         host.log(("CSS outfit folder: "+std::string(path.begin(),path.end())).c_str());
@@ -429,6 +438,7 @@ struct Core {
         state=load_state(root / "state/state.json", &recovered);
         for(const auto& line:appearance.configure_shader_fallback(root/"catalog/shader-donors.json",package_root,state.shader_fallback))
             host.log(line.c_str());
+        appearance.set_installed_outfit_versions(installed_outfit_versions(catalog));
         std::error_code trace_error;
         if(fs::is_regular_file(root/"runtime/trace-idle-startup.enabled",trace_error)) {
             animation_trace.enable(host.log);
@@ -1117,6 +1127,7 @@ struct Core {
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
                     for(const auto& line:appearance.configure_shader_fallback(root/"catalog/shader-donors.json",package_root,state.shader_fallback))
                         host.log(line.c_str());
+                    appearance.set_installed_outfit_versions(installed_outfit_versions(catalog));
                     original_shells_attempts=0; original_shells_retry_after=0;
                     message=wardrobe_startup_message(catalog.outfits.size());
                 }
@@ -1324,6 +1335,7 @@ struct Core {
             appearance.performance.interrupt("Animation catalog changed");
             appearance.clear_shared_animations();appearance.clear_facial_failures();++animation_catalog_generation;
             catalog = std::move(updated);
+            appearance.set_installed_outfit_versions(installed_outfit_versions(catalog));
             original_shells_attempts=0; original_shells_retry_after=0;
             ui_refresh=true;
             report(catalog.outfits.empty()?wardrobe_startup_message(0):"Catalog reloaded.");

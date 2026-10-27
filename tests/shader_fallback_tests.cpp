@@ -51,6 +51,24 @@ int main() try {
     expect(!parse_mode("on") && !parse_mode("") && !parse_mode("AUTO"),"Unknown modes are rejected");
     expect(std::string(mode_name(Mode::always))=="always","Modes round-trip");
 
+    // An old outfit version known to lack its shaders on a verified game still gets the fallback.
+    expect(!catalog.stale("eins0fx.seduxtress","1.5.0"),"Without a stale list no outfit is stale");
+    auto with_stale=document; with_stale["stale_outfits"]={{"eins0fx.seduxtress",{"1.4.0","1.5.0"}},{"eins0fx.unholygenessa",{"0.3.0"}}};
+    const auto staled=Catalog::parse(with_stale);
+    expect(staled.stale("eins0fx.seduxtress","1.5.0") && staled.stale("eins0fx.unholygenessa","0.3.0"),"Listed versions are stale");
+    expect(!staled.stale("eins0fx.seduxtress","1.5.3") && !staled.stale("eins0fx.commanderwhite","0.1.0"),"Other versions and outfits are not");
+    expect(active_for_outfit(Mode::automatic,true,true,true),"Auto rebuilds a stale outfit on a verified game");
+    expect(!active_for_outfit(Mode::automatic,true,true,false),"Auto leaves a current outfit alone on a verified game");
+    expect(active_for_outfit(Mode::automatic,false,true,false),"Auto still rebuilds everything on an unverified game");
+    expect(!active_for_outfit(Mode::off,true,true,true),"Off never rebuilds, even a stale outfit");
+    expect(!active_for_outfit(Mode::automatic,true,false,true),"Without donors a stale outfit is not rebuilt");
+    for(const auto& invalid:{nlohmann::json::array(),nlohmann::json({{"eins0fx.seduxtress","1.5.0"}}),
+                             nlohmann::json({{"eins0fx.seduxtress",nlohmann::json::array()}}),
+                             nlohmann::json({{"eins0fx.seduxtress",{""}}}),nlohmann::json({{"",{"1.5.0"}}}),
+                             nlohmann::json({{"eins0fx.seduxtress",{1}}})}) {
+        expect(throws([&]{ auto bad=document; bad["stale_outfits"]=invalid; Catalog::parse(bad); }),"Malformed stale lists are rejected");
+    }
+
     expect(throws([]{ Catalog::parse({{"schema",2}}); }),"A newer schema is rejected");
     expect(throws([&]{ auto bad=document; bad["donors"]["/Game/CSS/x/MI_A.MI_B"]="/Game/y/MI_C.MI_C"; Catalog::parse(bad); }),"Mismatched object names are rejected");
     expect(throws([&]{ auto bad=document; bad["donors"]["/Engine/x/MI_A.MI_A"]="/Game/y/MI_C.MI_C"; Catalog::parse(bad); }),"Only game content paths are accepted");

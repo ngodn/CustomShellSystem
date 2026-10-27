@@ -10,6 +10,10 @@ struct ShaderFallbackGlobal {
     bool loaded=false, active=false;
     std::string catalog_error, verified_build;
     shader_fallback::PakTables tables;
+    // Installed outfit id -> its package version, and whether the worn outfit is a version the
+    // catalog lists as stale (shaders missing on this verified game); set at every apply.
+    std::map<std::string,std::string> installed_versions;
+    bool outfit_stale=false;
     // Every MID this feature created, with the outfit material it stands in for. Paths and
     // rollback read the source, so a fallback MID never looks like a temporary game effect.
     std::vector<ShaderFallbackOwned> owned;
@@ -20,6 +24,7 @@ struct ShaderFallbackGlobal {
     unsigned rebuilt=0, skipped=0;
 };
 ShaderFallbackGlobal& shader_fallback_state() { static ShaderFallbackGlobal state; return state; }
+bool shader_fallback_on() { const auto& state=shader_fallback_state(); return state.active || state.outfit_stale; }
 
 void shader_fallback_note(std::string key,std::string line) {
     auto& state=shader_fallback_state();
@@ -79,7 +84,7 @@ UObject* shader_fallback_anchor(UObject* source,const std::string*& donor_path) 
 // Returns the new MID on the slot, or null when this material keeps its own shaders.
 UObject* shader_fallback_mid(UObject* component,int slot,UObject* source) {
     auto& state=shader_fallback_state();
-    if(!state.active || !component || !source || dynamic_material(source)) return nullptr;
+    if(!shader_fallback_on() || !component || !source || dynamic_material(source)) return nullptr;
     const std::string* donor_path=nullptr;
     auto* anchor=shader_fallback_anchor(source,donor_path);
     if(!anchor || !donor_path) return nullptr;
@@ -114,7 +119,7 @@ UObject* shader_fallback_mid(UObject* component,int slot,UObject* source) {
 
 // Item components belong to CSS and are destroyed with the look, so they need no rollback.
 void shader_fallback_component(UObject* component) {
-    if(!shader_fallback_state().active || !component) return;
+    if(!shader_fallback_on() || !component) return;
     Call count(component,L"GetNumMaterials",1); count.run();
     const auto slots=count.get<int>();
     if(slots<0 || slots>256) throw std::runtime_error("Item material count exceeds the fallback limit");

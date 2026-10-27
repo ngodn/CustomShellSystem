@@ -395,6 +395,8 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
             // Support reads the version straight from CSS.log (an old outfit is the usual cause of a report).
             if(const auto version=manifest.find("version"); version!=manifest.end() && version->is_string() && version->get_ref<const std::string&>().size()<=32)
                 record["version"]=version->get<std::string>();
+            if(const auto id=manifest.find("id"); id!=manifest.end() && id->is_string() && id->get_ref<const std::string&>().size()<=96)
+                record["id"]=id->get<std::string>();
         }
         if(result.size()>begin) { record["status"]="validated"; record.erase("reason"); }
         } catch(const std::exception& error) {

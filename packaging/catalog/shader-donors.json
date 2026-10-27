@@ -620,5 +620,26 @@
   "/Game/CSS/f84ec158105de344/454482a7b32d3e7ec145d34d332bee5147942608eb57b7cc3bb0c03_1001.454482a7b32d3e7ec145d34d332bee5147942608eb57b7cc3bb0c03_1001": "/Game/Sparta/Characters/Shells/KnightLady/Art/Mesh/Textures/MI_LadyKnight_Obsidian_1001.MI_LadyKnight_Obsidian_1001",
   "/Game/CSS/fba7b0ee3f1238f8b076d8774867056f858971b13e0ec8ca/MI_ShellKeeper_Hair_01.MI_ShellKeeper_Hair_01": "/Game/Sparta/Characters/NPCs/ShellKeeper/Art/Mesh/Textures/MI_ShellKeeper_Hair_01.MI_ShellKeeper_Hair_01",
   "/Game/CSS/fc00ac91d4f5254428d7a74b5a255e52a021191c191f9de6/MI_ShellKeeper_Hair_01.MI_ShellKeeper_Hair_01": "/Game/Sparta/Characters/NPCs/ShellKeeper/Art/Mesh/Textures/MI_ShellKeeper_Hair_01.MI_ShellKeeper_Hair_01"
+ },
+ "stale_outfits": {
+  "eins0fx.commanderwhite": [
+   "0.1.0",
+   "0.1.1"
+  ],
+  "eins0fx.seduxtress": [
+   "1.2.0",
+   "1.3.0",
+   "1.4.0",
+   "1.5.0"
+  ],
+  "eins0fx.thornyproxima": [
+   "0.1.0",
+   "0.2.0",
+   "0.2.1"
+  ],
+  "eins0fx.unholygenessa": [
+   "0.1.0-trial.5",
+   "0.3.0"
+  ]
  }
 }
