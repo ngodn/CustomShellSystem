@@ -104,3 +104,6 @@ Thumbs.db
 
 # Blueprint exports pulled for research next to an extension; derived data, regenerated with the GameDump tool
 /extensions/*/work/export*/
+
+# CINE work folder: research dumps, live probes, agent runs, pack builds. Local only.
+/extensions/cine/work/
