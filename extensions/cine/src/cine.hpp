@@ -276,6 +276,7 @@ private:
     std::vector<bool> keys_previous_;
     std::string status_ = "Ready", error_;
     bool stopped_ = false;
+    bool photo_ = false;      // in the game's Photo Mode, opened from Activate CINE Mode (CSSX 1.3.2)
     // A take's look the restore could not put back yet (world change, CSS busy): retried once a
     // second for up to two minutes, in any mode.
     static constexpr double look_restore_window = 120.0;

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="256" height="256">
+<defs><mask id="m"><rect width="100" height="100" fill="white"/><g fill="black">
+ <rect x="16" y="24" width="8" height="6" rx="1"/><rect x="31" y="24" width="8" height="6" rx="1"/><rect x="46" y="24" width="8" height="6" rx="1"/><rect x="61" y="24" width="8" height="6" rx="1"/><rect x="76" y="24" width="8" height="6" rx="1"/>
+ <rect x="16" y="70" width="8" height="6" rx="1"/><rect x="31" y="70" width="8" height="6" rx="1"/><rect x="46" y="70" width="8" height="6" rx="1"/><rect x="61" y="70" width="8" height="6" rx="1"/><rect x="76" y="70" width="8" height="6" rx="1"/>
+ <polygon points="42,38 42,62 62,50"/></g></mask></defs>
+ <rect mask="url(#m)" x="8" y="18" width="84" height="64" rx="6" fill="white"/>
+</svg>

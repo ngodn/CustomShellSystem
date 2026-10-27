@@ -13,6 +13,37 @@
     "README.txt",
     "signature.txt",
     "fonts/OFL.txt",
-    "fonts/Rajdhani-SemiBold.ttf"
-  ]
+    "fonts/Rajdhani-SemiBold.ttf",
+    "tabs/take.png",
+    "tabs/route.png",
+    "tabs/animation.png",
+    "tabs/scene.png",
+    "tabs/look.png",
+    "tabs/render.png"
+  ],
+  "photo_mode": {
+    "entry": "Activate CINE Mode",
+    "tabs": [
+      {
+        "section": "take",
+        "icon": "tabs/take.png"
+      },
+      {
+        "section": "route",
+        "icon": "tabs/route.png"
+      },
+      {
+        "section": "animation",
+        "icon": "tabs/animation.png"
+      },
+      {
+        "section": "scene",
+        "icon": "tabs/scene.png"
+      },
+      {
+        "section": "look",
+        "icon": "tabs/look.png"
+      }
+    ]
+  }
 }

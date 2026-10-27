@@ -61,6 +61,10 @@ public:
     void play_music(const Json& sound);                 // starts it from its first sample
     void stop_music() noexcept;
     bool music_playing() const { return !music_.is_null(); }
+    // CINE Mode: a take needs the world running and the frame clear. Unpauses the game (when
+    // Photo Mode paused it) and hides the Photo Mode panel; the end puts both back as they were.
+    void photo_take_begin();
+    void photo_take_end() noexcept;
 
     // Action takes: who she fights, how the fight is going, and the take's own time and lens.
     Json locked_target();                                // the lock-on target actor, or null
@@ -120,6 +124,7 @@ private:
     std::vector<Json> cameras_;
     bool montage_playing_ = false;
     Json music_;                 // the audio component playing a pack's scene music
+    bool photo_paused_ = false, photo_hidden_ = false;   // what photo_take_begin changed
     std::vector<std::pair<Json, int>> hud_;
     bool hud_hidden_ = false, view_changed_ = false, speed_set_ = false, moving_ = false;
     int force_walk_sets_ = 0;

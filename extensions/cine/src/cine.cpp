@@ -431,7 +431,7 @@ void Extension::poll_keys() {
     if (cancel) {
         if (mode_ == Mode::Recording) { mode_ = record_return_; samples_.clear(); report("Route recording cancelled."); return; }
         if (take_) { finish_take("Take cancelled.", false); return; }
-        if (mode_ == Mode::Armed) { exit_world("Left Cine World."); return; }
+        if (mode_ == Mode::Armed && !photo_) { exit_world("Left Cine World."); return; }   // in CINE Mode, Photo Mode's own key closes it
     }
     if (mode_ != Mode::Armed) return;
     if (capture) capture_final_now();
@@ -450,12 +450,15 @@ void Extension::enter() {
     if (!frame_.valid || !frame_.ready) throw std::runtime_error("Load into the world first");
     rig_.resolve();
     world_ = frame_.world;
-    rig_.hide_hud();
+    // In CINE Mode the game's Photo Mode owns the HUD and the menus; CINE touches neither, so
+    // whatever Photo Mode puts back when it closes is never undone by CINE.
+    if (!photo_) rig_.hide_hud();
     keys_previous_.clear();
     mode_ = Mode::Armed;
     pak_missing_ = !rig_.asset_present("/Game/CSSX/CINE/MPC_Cine.MPC_Cine");
     load_signature();
     apply_scene();
+    if (photo_) { report("CINE Mode. Frame your shot with the Photo Mode camera, then Roll Take or press F8."); return; }
     try { host_.request({{"op", "menu.close"}}); } catch (...) {}
     report("In Cine World. Frame your shot, then press F8 to roll. F9 leaves.");
 }
@@ -514,6 +517,7 @@ void Extension::start_take() {
     take_->expression = settings_.expression;
     take_->idle_set = idle_taken;
     take_->world = frame_.world; take_->pawn = frame_.pawn;
+    if (photo_) rig_.photo_take_begin();
     mode_ = Mode::Preparing;
     report("Preparing the take...");
 }
@@ -1739,6 +1743,7 @@ void Extension::finish_take(const std::string& why, bool failed) {
     std::string note = take_->note;
     if (!repainted.empty()) note = note.empty() ? repainted : note + "  " + repainted;
     take_.reset();
+    if (photo_) rig_.photo_take_end();
     mode_ = Mode::Armed;
     keys_previous_.clear();
     if (!failures.empty()) report(why + " Could not restore: " + failures.front(), true);
@@ -1856,6 +1861,16 @@ Json Extension::model() const {
 
 void Extension::event(const Json& e) {
     const auto id = e.value("id", std::string());
+    // CSSX's notice that the CINE Mode session of Photo Mode opened or closed.
+    if (id == "cssx.photo_mode") {
+        const auto value = e.value("value", std::string());
+        try {
+            if (value == "open") { photo_ = true; error_.clear(); if (mode_ == Mode::Idle) enter(); }
+            else if (value == "closed") { if (mode_ != Mode::Idle) exit_world("CINE Mode closed."); photo_ = false; }
+        } catch (const std::exception& ex) { error_ = ex.what(); report(ex.what(), true); }
+        host_.invalidate();
+        return;
+    }
     try {
         error_.clear();
         if (id == "expression" || id == "expression_refresh") {

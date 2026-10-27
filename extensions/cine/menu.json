@@ -2,98 +2,415 @@
   "schema": 2,
   "sections": [
     {
-      "id": "cine",
-      "title": "Cine World",
-      "description": "Enter Cine World, frame the shot, start your recorder, then roll a take. F8 rolls, F9 cancels or leaves, F10 cycles the frame guide, F7 saves the current view as the final shot.",
+      "id": "take",
+      "title": "Take",
+      "description": "Pick a scene, frame it with the Photo Mode camera, start your recorder and roll. F8 rolls, F9 stops, F10 cycles the frame guide.",
       "controls": [
-        {"id": "status", "type": "label", "label": "Status", "description": "What CINE is doing now."},
-        {"id": "enter", "type": "button", "label": "Enter Cine World", "description": "Closes the menu and hides the game HUD. Nothing else changes until you roll a take.", "disabled_label": "Already in Cine World"},
-        {"id": "take", "type": "button", "label": "Roll a take", "description": "Closes the menu and starts the selected preset after the countdown. Same as F8 in Cine World.", "disabled_label": "Enter Cine World first"},
-        {"id": "exit", "type": "button", "label": "Leave Cine World", "description": "Ends any take and restores the HUD, the camera and the walk settings. Same as F9.", "disabled_label": "Not in Cine World"},
-        {"id": "countdown", "type": "slider", "label": "Countdown", "value": 3, "min": 0, "max": 10, "step": 1, "unit": "s", "description": "Seconds between rolling and action, to start your recorder. The countdown is shown small in a corner; trim it from the video."}
-      ]
-    },
-    {
-      "id": "shot",
-      "title": "Shot",
-      "description": "Presets are JSON files in this extension's presets folder. Copy one, edit it and use Reload presets.",
-      "controls": [
-        {"id": "preset", "type": "choice", "label": "Preset", "value": "fashion-walk-360", "options": [{"id": "fashion-walk-360", "label": "Fashion Walk 360"}], "description": "The camera recipe for the take."},
-        {"id": "preset_info", "type": "label", "label": "About this preset", "description": "The preset's own description."},
-        {"id": "zoom", "type": "slider", "label": "Distance", "value": 1, "min": 0.5, "max": 2, "step": 0.05, "unit": "x", "description": "Moves every camera closer or further."},
-        {"id": "height", "type": "slider", "label": "Height", "value": 0, "min": -150, "max": 150, "step": 5, "unit": "cm", "description": "Raises or lowers every camera and its aim together."},
-        {"id": "fov_scale", "type": "slider", "label": "Field of view", "value": 1, "min": 0.5, "max": 2, "step": 0.05, "unit": "x", "description": "Wider or tighter lens. Portrait (9:16) recordings usually want about 1.25x."},
-        {"id": "guide", "type": "radio", "label": "Frame guide", "value": "off", "options": [{"id": "off", "label": "Off"}, {"id": "16:9", "label": "16:9"}, {"id": "9:16", "label": "9:16"}, {"id": "1:1", "label": "1:1"}, {"id": "2.39:1", "label": "2.39:1"}], "description": "Darkens everything outside the chosen frame while you set up. Hidden during takes, so it never ends up in a recording. Breakdown labels, the caption and the signature stay inside the chosen frame."},
-        {"id": "signature", "type": "toggle", "label": "Signature", "value": false, "description": "Shows your signature block at the bottom left of the frame during takes. The text is signature.txt in the CINE folder: the first line is the name, the lines under it are small print. Edit it to your own."},
-        {"id": "picture", "type": "radio", "label": "Picture", "value": "sharp", "options": [{"id": "game", "label": "Game settings"}, {"id": "sharp", "label": "Sharp shadows"}, {"id": "full", "label": "Sharp shadows, full resolution"}], "description": "The game draws shadows for play: coarse on a moving character, which shows as blocky shadow edges and dotted skin in a close-up. For the length of a take CINE raises the shadow quality, and with the last choice also renders at full resolution (heavier). The game's own values go back when the take ends. Until the game is restarted, the graphics options for shadows and resolution may not take effect after a take that raised them."},
-        {"id": "walls", "type": "toggle", "label": "Ease in at walls", "value": true, "description": "Checks the camera path before the take and moves the camera closer where a wall would block it, instead of jumping to her other side."},
-        {"id": "reload", "type": "button", "label": "Reload presets", "description": "Reads the presets folder again. Broken files are skipped and named in the CSSX log."}
-      ]
-    },
-    {
-      "id": "performance_section",
-      "title": "Performance",
-      "description": "Play a dance or photo pose with a stationary camera preset. Needs CSS Locomotion Shared Assets and a supported outfit. Playback starts when the take rolls and stops when it ends. Movement, combat or opening a menu cancels playback.",
-      "controls": [
-        {"id": "performance_refresh", "type": "button", "label": "Refresh animations", "description": "Read the installed animation libraries and check the outfit you are wearing. Use this after changing outfits or installing a pack."},
-        {"id": "performance_library", "type": "choice", "label": "Library", "value": "none", "options": [{"id": "none", "label": "No installed library"}]},
-        {"id": "performance", "type": "choice", "label": "Animation", "value": "off", "options": [{"id": "off", "label": "Off (use locomotion)"}], "description": "Off keeps your selected locomotion. Performances keep their authored once, loop or held-pose behavior. F9 stops the take and restores locomotion."},
-        {"id": "performance_rate", "type": "slider", "label": "Animation speed", "value": 1, "min": 0.1, "max": 4, "step": 0.1, "unit": "x", "description": "Changes only the selected animation's playback rate. Camera timing, audio and game speed stay as set."},
-        {"id": "performance_start", "type": "number", "label": "Start at", "value": 0, "min": 0, "max": 86400, "step": 0.1, "unit": "s", "description": "Start at this point in the animation. A time beyond the selected clip is rejected before playback."},
-        {"id": "performance_info", "type": "label", "label": "Selected animation", "description": "Playback behavior or the reason the selected animation is unavailable."}
-      ]
-    },
-    {
-      "id": "expression_section",
-      "title": "Facial Expression",
-      "description": "Needs a supported outfit and CSS Locomotion Shared Assets. An expression applies before the camera starts and is restored after the take. For takes that change outfits or palettes, use As set in CSS.",
-      "controls": [
-        {"id": "expression_refresh", "type": "button", "label": "Refresh expressions", "description": "Check the expressions available for the outfit you are wearing."},
-        {"id": "expression", "type": "choice", "label": "Expression", "value": "unchanged", "options": [{"id": "unchanged", "label": "As set in CSS"}, {"id": "original", "label": "Original face"}], "description": "As set in CSS keeps your current face. Original face temporarily clears a selected expression. Other choices apply only for this take."},
-        {"id": "expression_info", "type": "label", "label": "Selected expression", "description": "Availability and restoration for the selected expression."}
+        {
+          "id": "status",
+          "type": "label",
+          "label": "Status",
+          "description": "What CINE is doing now."
+        },
+        {
+          "id": "preset",
+          "type": "choice",
+          "label": "Scene",
+          "value": "fashion-walk-360",
+          "options": [
+            {
+              "id": "fashion-walk-360",
+              "label": "Fashion Walk 360"
+            }
+          ],
+          "description": "The camera recipe for the take. Scenes come from the CINE packs installed in the game."
+        },
+        {
+          "id": "preset_info",
+          "type": "label",
+          "label": "About",
+          "description": "The scene's own description."
+        },
+        {
+          "id": "take",
+          "type": "button",
+          "label": "Roll Take",
+          "description": "Starts the scene after the countdown. Same as F8 or D-pad up while the camera has focus.",
+          "disabled_label": "Not ready"
+        },
+        {
+          "id": "countdown",
+          "type": "slider",
+          "label": "Countdown",
+          "value": 3,
+          "min": 0,
+          "max": 10,
+          "step": 1,
+          "unit": "s",
+          "description": "Seconds between rolling and action, to start your recorder. The countdown is shown small in a corner; trim it from the video."
+        },
+        {
+          "id": "zoom",
+          "type": "slider",
+          "label": "Distance",
+          "value": 1,
+          "min": 0.5,
+          "max": 2,
+          "step": 0.05,
+          "unit": "x",
+          "description": "Moves every camera closer or further."
+        },
+        {
+          "id": "height",
+          "type": "slider",
+          "label": "Height",
+          "value": 0,
+          "min": -150,
+          "max": 150,
+          "step": 5,
+          "unit": "cm",
+          "description": "Raises or lowers every camera and its aim together."
+        },
+        {
+          "id": "fov_scale",
+          "type": "slider",
+          "label": "Field of View",
+          "value": 1,
+          "min": 0.5,
+          "max": 2,
+          "step": 0.05,
+          "unit": "x",
+          "description": "Wider or tighter lens. Portrait (9:16) recordings usually want about 1.25x."
+        },
+        {
+          "id": "guide",
+          "type": "radio",
+          "label": "Frame Guide",
+          "value": "off",
+          "options": [
+            {
+              "id": "off",
+              "label": "Off"
+            },
+            {
+              "id": "16:9",
+              "label": "16:9"
+            },
+            {
+              "id": "9:16",
+              "label": "9:16"
+            },
+            {
+              "id": "1:1",
+              "label": "1:1"
+            },
+            {
+              "id": "2.39:1",
+              "label": "2.39:1"
+            }
+          ],
+          "description": "Darkens everything outside the chosen frame while you set up. Hidden during takes, so it never ends up in a recording. Breakdown labels, the caption and the signature stay inside the chosen frame."
+        },
+        {
+          "id": "walls",
+          "type": "toggle",
+          "label": "Ease In at Walls",
+          "value": true,
+          "description": "Checks the camera path before the take and moves the camera closer where a wall would block it, instead of jumping to her other side."
+        },
+        {
+          "id": "picture",
+          "type": "radio",
+          "label": "Picture",
+          "value": "sharp",
+          "options": [
+            {
+              "id": "game",
+              "label": "Game settings"
+            },
+            {
+              "id": "sharp",
+              "label": "Sharp shadows"
+            },
+            {
+              "id": "full",
+              "label": "Sharp shadows, full resolution"
+            }
+          ],
+          "description": "The game draws shadows for play: coarse on a moving character, which shows as blocky shadow edges and dotted skin in a close-up. For the length of a take CINE raises the shadow quality, and with the last choice also renders at full resolution (heavier). The game's own values go back when the take ends. Until the game is restarted, the graphics options for shadows and resolution may not take effect after a take that raised them."
+        },
+        {
+          "id": "signature",
+          "type": "toggle",
+          "label": "Signature",
+          "value": false,
+          "description": "Shows your signature block at the bottom left of the frame during takes. The text is signature.txt in the CINE folder: the first line is the name, the lines under it are small print. Edit it to your own."
+        },
+        {
+          "id": "reload",
+          "type": "button",
+          "label": "Reload Scenes",
+          "description": "Reads the installed CINE packs and the presets folder again. A pack installed while the game runs needs a restart."
+        }
       ]
     },
     {
       "id": "route",
       "title": "Route",
-      "description": "Walk shots follow a route you walk once. The final shot is the game camera's view where the walk should end.",
+      "description": "Walk scenes follow a route you walk once, and end on a final shot you frame yourself.",
       "controls": [
-        {"id": "route_info", "type": "label", "label": "Route", "description": "The saved route."},
-        {"id": "record", "type": "button", "label": "Record route", "description": "Closes the menu. Walk the route, then stand still for 3 seconds. F9 cancels.", "disabled_label": "Recording now"},
-        {"id": "final_info", "type": "label", "label": "Final shot", "description": "The saved last shot."},
-        {"id": "capture", "type": "button", "label": "Use the current view as final shot", "description": "Closes the menu and saves the game camera's view 1.5 seconds later. Stand her where the walk should end and frame it with the game camera first. F7 does the same in Cine World."},
-        {"id": "clear_route", "type": "button", "label": "Clear route", "disabled_label": "No route", "confirm": "Delete the saved route?"},
-        {"id": "clear_final", "type": "button", "label": "Clear final shot", "disabled_label": "No final shot"}
+        {
+          "id": "route_info",
+          "type": "label",
+          "label": "Route",
+          "description": "The saved route."
+        },
+        {
+          "id": "record",
+          "type": "button",
+          "label": "Record Route",
+          "description": "Closes the menu. Walk the route, then stand still for 3 seconds. F9 cancels.",
+          "disabled_label": "Recording now"
+        },
+        {
+          "id": "final_info",
+          "type": "label",
+          "label": "Final Shot",
+          "description": "The saved last shot."
+        },
+        {
+          "id": "capture",
+          "type": "button",
+          "label": "Use Current View as Final Shot",
+          "description": "Saves this view, relative to her, as the walk's last shot. Frame it with the Photo Mode camera first. F7 does the same."
+        },
+        {
+          "id": "clear_route",
+          "type": "button",
+          "label": "Clear Route",
+          "disabled_label": "No route",
+          "confirm": "Delete the saved route?"
+        },
+        {
+          "id": "clear_final",
+          "type": "button",
+          "label": "Clear Final Shot",
+          "disabled_label": "No final shot"
+        }
+      ]
+    },
+    {
+      "id": "animation",
+      "title": "Animation",
+      "description": "A dance, pose or expression for the take. Needs CSS Locomotion Shared Assets and a supported outfit.",
+      "controls": [
+        {
+          "id": "performance_library",
+          "type": "choice",
+          "label": "Library",
+          "value": "none",
+          "options": [
+            {
+              "id": "none",
+              "label": "No installed library"
+            }
+          ]
+        },
+        {
+          "id": "performance",
+          "type": "choice",
+          "label": "Animation",
+          "value": "off",
+          "options": [
+            {
+              "id": "off",
+              "label": "Off (use locomotion)"
+            }
+          ],
+          "description": "Off keeps your selected locomotion. Performances keep their authored once, loop or held-pose behavior. F9 stops the take and restores locomotion."
+        },
+        {
+          "id": "performance_rate",
+          "type": "slider",
+          "label": "Animation Speed",
+          "value": 1,
+          "min": 0.1,
+          "max": 4,
+          "step": 0.1,
+          "unit": "x",
+          "description": "Changes only the selected animation's playback rate. Camera timing, audio and game speed stay as set."
+        },
+        {
+          "id": "performance_start",
+          "type": "number",
+          "label": "Start At",
+          "value": 0,
+          "min": 0,
+          "max": 86400,
+          "step": 0.1,
+          "unit": "s",
+          "description": "Start at this point in the animation. A time beyond the selected clip is rejected before playback."
+        },
+        {
+          "id": "performance_info",
+          "type": "label",
+          "label": "Selected Animation",
+          "description": "Playback behavior or the reason the selected animation is unavailable."
+        },
+        {
+          "id": "performance_refresh",
+          "type": "button",
+          "label": "Refresh Animations",
+          "description": "Read the installed animation libraries and check the outfit you are wearing. Use this after changing outfits or installing a pack."
+        },
+        {
+          "id": "expression",
+          "type": "choice",
+          "label": "Expression",
+          "value": "unchanged",
+          "options": [
+            {
+              "id": "unchanged",
+              "label": "As set in CSS"
+            },
+            {
+              "id": "original",
+              "label": "Original face"
+            }
+          ],
+          "description": "As set in CSS keeps your current face. Original face temporarily clears a selected expression. Other choices apply only for this take."
+        },
+        {
+          "id": "expression_info",
+          "type": "label",
+          "label": "Selected Expression",
+          "description": "Availability and restoration for the selected expression."
+        },
+        {
+          "id": "expression_refresh",
+          "type": "button",
+          "label": "Refresh Expressions",
+          "description": "Check the expressions available for the outfit you are wearing."
+        }
       ]
     },
     {
       "id": "scene",
-      "title": "Clean scene",
-      "description": "Takes the people around you out of the picture while you are in Cine World. The world keeps running: time, weather, effects and your own character are untouched. Everyone comes back exactly as they were when you leave.",
+      "title": "Scene",
+      "description": "Clean scene and the VFX-style breakdown.",
       "controls": [
-        {"id": "scene", "type": "radio", "label": "Hide", "value": "off", "options": [{"id": "off", "label": "Nobody"}, {"id": "enemies", "label": "Enemies"}, {"id": "everyone", "label": "Enemies and NPCs"}], "description": "Hidden characters are frozen, cannot be hit and cannot hurt you, and new ones do not spawn while this is on. Bosses are left alone. With nobody kept you also cannot be hurt or noticed while it is on."},
-        {"id": "keep_target", "type": "toggle", "label": "Keep my lock-on target", "value": false, "description": "Leaves the enemy you are locked on to in the scene, so you can film a fight with just that one. The fight is real: it can see you and hurt you.", "disabled_label": "Turn Hide on first"},
-        {"id": "scene_info", "type": "label", "label": "Now", "description": "What clean scene is doing."}
-      ]
-    },
-    {
-      "id": "breakdown",
-      "title": "Breakdown",
-      "description": "Shows the take in layers like a VFX breakdown reel: clay, wireframe, skeleton, bones, collision and the frame passes, wiped in one after another. Works on any preset. Needs CINE's asset pak installed.",
-      "controls": [
-        {"id": "breakdown", "type": "radio", "label": "Breakdown track", "value": "off", "options": [{"id": "off", "label": "Off"}, {"id": "reel", "label": "Built-in reel"}, {"id": "preset", "label": "From the preset"}], "description": "Built-in reel: runs through every layer over the length of the take and ends on the final image. From the preset: breakdown steps written in the preset file."},
-        {"id": "labels", "type": "toggle", "label": "Labels and arrows", "value": true, "description": "Names what each layer shows, with an arrow to it, and a caption with the layers on screen.", "disabled_label": "Turn the breakdown on first"},
-        {"id": "breakdown_target", "type": "toggle", "label": "Include my lock-on target", "value": false, "description": "Also breaks down the enemy you are locked on to when the take starts.", "disabled_label": "Turn the breakdown on first"},
-        {"id": "breakdown_info", "type": "label", "label": "This take", "description": "What the breakdown track will do."}
+        {
+          "id": "scene",
+          "type": "radio",
+          "label": "Hide Characters",
+          "value": "off",
+          "options": [
+            {
+              "id": "off",
+              "label": "Nobody"
+            },
+            {
+              "id": "enemies",
+              "label": "Enemies"
+            },
+            {
+              "id": "everyone",
+              "label": "Enemies and NPCs"
+            }
+          ],
+          "description": "Hidden characters are frozen, cannot be hit and cannot hurt you, and new ones do not spawn while this is on. Bosses are left alone. With nobody kept you also cannot be hurt or noticed while it is on."
+        },
+        {
+          "id": "keep_target",
+          "type": "toggle",
+          "label": "Keep Lock-On Target",
+          "value": false,
+          "description": "Leaves the enemy you are locked on to in the scene, so you can film a fight with just that one. The fight is real: it can see you and hurt you.",
+          "disabled_label": "Turn Hide on first"
+        },
+        {
+          "id": "scene_info",
+          "type": "label",
+          "label": "Now",
+          "description": "What clean scene is doing."
+        },
+        {
+          "id": "breakdown",
+          "type": "radio",
+          "label": "Breakdown",
+          "value": "off",
+          "options": [
+            {
+              "id": "off",
+              "label": "Off"
+            },
+            {
+              "id": "reel",
+              "label": "Built-in reel"
+            },
+            {
+              "id": "preset",
+              "label": "From the preset"
+            }
+          ],
+          "description": "Built-in reel: runs through every layer over the length of the take and ends on the final image. From the preset: breakdown steps written in the preset file."
+        },
+        {
+          "id": "labels",
+          "type": "toggle",
+          "label": "Labels and Arrows",
+          "value": true,
+          "description": "Names what each layer shows, with an arrow to it, and a caption with the layers on screen.",
+          "disabled_label": "Turn the breakdown on first"
+        },
+        {
+          "id": "breakdown_target",
+          "type": "toggle",
+          "label": "Include Lock-On Target",
+          "value": false,
+          "description": "Also breaks down the enemy you are locked on to when the take starts.",
+          "disabled_label": "Turn the breakdown on first"
+        },
+        {
+          "id": "breakdown_info",
+          "type": "label",
+          "label": "This Take",
+          "description": "What the breakdown track will do."
+        }
       ]
     },
     {
       "id": "look",
       "title": "Look",
-      "description": "Needs Custom Shell System 1.0.0-beta.9 or newer. Your own customization is saved before the take and put back after it.",
+      "description": "Palette and outfit changes during the take, through Custom Shell System. Your own look comes back after it.",
       "controls": [
-        {"id": "look", "type": "radio", "label": "Look track", "value": "off", "options": [{"id": "off", "label": "Off"}, {"id": "palettes", "label": "Cycle palettes"}, {"id": "preset", "label": "From the preset"}], "description": "Cycle palettes: every palette of the worn outfit in turn, then your own look. From the preset: look steps written in a preset file; the shipped presets have none."},
-        {"id": "look_info", "type": "label", "label": "This take", "description": "What the look track will do."}
+        {
+          "id": "look",
+          "type": "radio",
+          "label": "Look Track",
+          "value": "off",
+          "options": [
+            {
+              "id": "off",
+              "label": "Off"
+            },
+            {
+              "id": "palettes",
+              "label": "Cycle palettes"
+            },
+            {
+              "id": "preset",
+              "label": "From the preset"
+            }
+          ],
+          "description": "Cycle palettes: every palette of the worn outfit in turn, then your own look. From the preset: look steps written in a preset file; the shipped presets have none."
+        },
+        {
+          "id": "look_info",
+          "type": "label",
+          "label": "This Take",
+          "description": "What the look track will do."
+        }
       ]
     }
   ]
