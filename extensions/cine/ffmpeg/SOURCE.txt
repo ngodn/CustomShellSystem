@@ -1,0 +1,40 @@
+FFmpeg for CINE
+
+Unmodified official BtbN win64 LGPL static build, release autobuild-2026-10-26-14-25.
+Binary archive: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-26-14-25/ffmpeg-n9.0.2-36-g6882969ce9-win64-lgpl-9.0.zip
+Archive SHA-256: 6005d82061921faee9a6bfe22861c70e842e88bedf32b05f867180347944c8a2
+ffmpeg.exe SHA-256: 6324bed4128c25a00e3d0e2280661c9d2e6f475f6f856e94a6860de71401a19d
+
+FFmpeg is a separate executable, not linked into CINE. You may replace it
+with your own compatible ffmpeg.exe. No source changes were made by CINE.
+The build uses LGPLv3 (including GPLv3 terms). See LICENSE.txt,
+COPYING.LGPLv3 and COPYING.GPLv3 beside this file.
+
+Corresponding source directions (GPLv3 section 6(d))
+
+Exact FFmpeg source:
+https://github.com/FFmpeg/FFmpeg/tree/6882969ce9fd2aa6aa1d0008b2bfe1c838aac11d
+Download:
+https://github.com/FFmpeg/FFmpeg/archive/6882969ce9fd2aa6aa1d0008b2bfe1c838aac11d.tar.gz
+
+Exact BtbN build scripts, patches and dependency source pins:
+https://github.com/BtbN/FFmpeg-Builds/tree/b4a2b1d7cc241786eb8e2b588a7ade40cad48bbd
+Download:
+https://github.com/BtbN/FFmpeg-Builds/archive/b4a2b1d7cc241786eb8e2b588a7ade40cad48bbd.tar.gz
+Each scripts.d file contains the source repository/archive URL and pinned
+revision/hash for its dependency. Fetch those sources at those revisions,
+including recursive submodules, with this checkout's download.sh. The
+variant is win64 lgpl with add-in 9.0. Keep the FFmpeg checkout at
+6882969ce9fd2aa6aa1d0008b2bfe1c838aac11d, rather than the moving release branch.
+Follow that checkout's README/build.sh for the Docker build environment.
+Run ffmpeg.exe -buildconf to see the embedded configure options.
+
+Upstream source retrieval guidance:
+https://github.com/BtbN/FFmpeg-Builds/issues/678
+https://github.com/BtbN/FFmpeg-Builds/issues/661
+The pinned scripts and source repositories, not a link to latest, identify
+this binary's sources. CINE distributors remain responsible for keeping
+these exact sources available for as long as required by section 6(d).
+Archive/mirror the pinned sources and dependency notices with the release.
+BtbN deletes daily binary assets after 14 days. This script never silently
+replaces a missing pin with a newer build.
