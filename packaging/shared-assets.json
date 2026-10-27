@@ -1,13 +1,13 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "container": "CSS_SharedAssets_P",
   "required_for": "shared_animations_facial_playback_customized_genessa_doubles_and_npc_appearances_shoulder_support",
   "files": {
-    "CSS_SharedAssets_P.pak": "51dce0702f77ae2395cd91aa22011a99cdb056afd0b7051afc06778598c38bc4",
+    "CSS_SharedAssets_P.pak": "f3cefdfc5a5d1bce9db22976b1732ec1dd0959cb4b572e3a1882ae87aafe857f",
     "CSS_SharedAssets_P.utoc": "6866994dfc5a91fad3dea70ebf7f0ff04af2fb144d2ed96066d51b12eb785e0b",
     "CSS_SharedAssets_P.ucas": "87ad051bfc0513aca908703e8ae7125f25ee3040e2d60fa0a674ac77b25757c9"
   },
-  "source_candidate": "shared-assets-1.0.8 (released 1.0.4 containers unchanged; metadata pak adds Eve 1.5.3 AIO 88b450457720 and the seven Eve standalone pins, keeps Eve 1.5.2 9e17a21d6e55 and drops older Eve pins to stay within 32 adapters)",
+  "source_candidate": "shared-assets-1.0.9 (released 1.0.4 containers unchanged; metadata pak adds Profane Proxima 0.2.4 pins 8578e4b9772e on top of 1.0.8)",
   "asset_containers_identical_to_accepted": true,
   "existing_assets_preserved": true,
   "asset_count": 310

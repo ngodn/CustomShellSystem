@@ -175,7 +175,7 @@ def solver_axes(controls:list) -> list[str]:
 def validate(recipe:dict) -> set[str]:
     if not isinstance(recipe,dict) or recipe.get('schema')!=1: raise ValueError('Unsupported customize schema')
     controls=recipe.get('controls');bounded_array(controls,128)
-    by_id={};used=set();files=set();dynamics_roots=set();rig_owner=False;body_owners=set()
+    by_id={};used=set();files=set();dynamics_roots=set();rig_owner=False;body_owners=set();shape_routes=[]
     solver_axes(controls)
     for c in controls:
         identifier(c['id'])
@@ -263,9 +263,30 @@ def validate(recipe:dict) -> set[str]:
             if len(options)<2: raise ValueError('A choice control needs between two and sixteen options')
             for option in options:
                 if not isinstance(option.get('name'),str) or not 1<=len(option['name'])<=96: raise ValueError('Invalid choice option name')
-                asset(option['texture'])
-            if not c.get('bindings'): raise ValueError('A choice control needs a texture parameter to write into')
+            if 'shape_control' in c:
+                # A shape route (CSS 1.0.9) picks the morph a Shape slider drives; no texture.
+                identifier(c['shape_control'])
+                if c.get('bindings') or c.get('sections'): raise ValueError('A shape route binds no materials or sections')
+                for option in options:
+                    if 'texture' in option: raise ValueError('A shape route option has no texture')
+                    if not isinstance(option.get('morph'),str) or not MORPH.fullmatch(option['morph']):
+                        raise ValueError('Invalid shape route morph')
+                    geometry=option.get('body_geometry_property')
+                    if geometry is not None and (not isinstance(geometry,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',geometry)):
+                        raise ValueError('Invalid body geometry property')
+                if len({o['morph'] for o in options})!=len(options): raise ValueError('A shape route repeats a morph')
+                if len({'body_geometry_property' in o for o in options})!=1:
+                    raise ValueError('A shape route needs a body geometry model on every option or none')
+                shape_routes.append(c)
+                used.add(c['id'])
+            else:
+                for option in options:
+                    if 'morph' in option or 'body_geometry_property' in option:
+                        raise ValueError('Only a shape route option names a morph')
+                    asset(option['texture'])
+                if not c.get('bindings'): raise ValueError('A choice control needs a texture parameter to write into')
         elif 'options' in c: raise ValueError('Only a choice control lists texture options')
+        elif 'shape_control' in c: raise ValueError('Only a choice control routes a shape')
         # The convention's three fields. All optional: CSS infers them from the id
         # for packages that predate it, so an old recipe still loads.
         if 'role' in c: identifier(c['role'])
@@ -341,6 +362,14 @@ def validate(recipe:dict) -> set[str]:
             a=b.get('association','global');index=b.get('layer',-1)
             if a not in ('global','layer','blend') or type(index) is not int or (index!=-1 if a=='global' else not 0<=index<=63): raise ValueError('Invalid parameter association')
             used.add(c['id'])
+    routed=set()
+    for route in shape_routes:
+        target=by_id.get(route['shape_control'])
+        if not target or kind_of(target)!='shape': raise ValueError('A shape route needs an existing shape control')
+        if route['shape_control'] in routed: raise ValueError('A shape control can have only one route')
+        routed.add(route['shape_control'])
+        if route['options'][0]['morph']!=target.get('morph'):
+            raise ValueError("A shape route's first option must be the shape's own morph")
     surfaces=recipe.get('surfaces',[]);bounded_array(surfaces,16)
     ids=set();destinations=set()
     for s in surfaces:
@@ -487,8 +516,9 @@ def check_shapes(recipe:dict,available:set[str]):
     that stops it shipping, and it needs no editor: the mesh JSON that CSSImportMesh
     consumes lists the shapes, and the recipe names them.
     """
-    missing=sorted(c['morph'] for c in recipe.get('controls',[])
-                   if kind_of(c)=='shape' and c.get('morph') not in available)
+    wanted=[c.get('morph') for c in recipe.get('controls',[]) if kind_of(c)=='shape']
+    wanted+=[o.get('morph') for c in recipe.get('controls',[]) if 'shape_control' in c for o in c.get('options',[])]
+    missing=sorted({m for m in wanted if m not in available})
     if missing:
         raise ValueError('Shape controls name morph targets the mesh does not have: '+', '.join(missing))
 

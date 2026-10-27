@@ -1020,7 +1020,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     action_button("tertiary","Reset all",confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Choice) {
                     const int here=std::clamp(int(std::lround(value[0])),0,int(control.options.size())-1);
-                    detail(control.name,worn->name,"Choose which of the author's textures this part wears.");
+                    detail(control.name,worn->name,control.shape_control.empty()?"Choose which of the author's textures this part wears.":
+                           "Choose the shape. Its size slider works the same with every shape.");
                     std::vector<Choice> choices;
                     for(size_t i=0;i<control.options.size();++i) choices.push_back({std::to_string(i),control.options[i].name,set_to(double(i))});
                     choice_rows(choices,std::to_string(here));

@@ -474,6 +474,34 @@ class ControlTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'does not have'):check_shapes(typo,shape_names(mesh))
         with self.assertRaisesRegex(ValueError,'does not have'):check_shapes(base,set())
 
+    def test_shape_route(self):
+        """1.0.9: a choice routes a shape slider to one of several morphs (Profane Chest shape)."""
+        from css_controls import check_shapes
+        base=dict(schema=1,controls=[
+            dict(id='hips',name='Hips',kind='shape',group='body',role='figure',
+                 morph='Hips',min=0,max=3,step=.05,default=[0,0,0,1]),
+            dict(id='hip_shape',name='Hip shape',kind='choice',group='body',role='figure',default=[0,0,0,1],
+                 shape_control='hips',options=[
+                     dict(name='Perky',morph='Hips',body_geometry_property='CSSBodyGeometryJson'),
+                     dict(name='Juicy',morph='HipsClassic',body_geometry_property='CSSBodyGeometryClassicJson')])])
+        validate(base)
+        check_shapes(base,{'Hips','HipsClassic'})
+        with self.assertRaisesRegex(ValueError,'does not have'):check_shapes(base,{'Hips'})
+        def bad(change,message):
+            r=copy.deepcopy(base);change(r['controls'][1])
+            with self.assertRaisesRegex(ValueError,message):validate(r)
+        bad(lambda c:c.update(shape_control='nobody'),'existing shape control')
+        bad(lambda c:c['options'][0].update(morph='Waist'),'first option')
+        bad(lambda c:c['options'][1].update(morph='Hips'),'repeats a morph')
+        bad(lambda c:c['options'][1].update(texture='/Game/CSS/x/T_A.T_A'),'no texture')
+        bad(lambda c:c['options'][1].pop('body_geometry_property'),'every option or none')
+        bad(lambda c:c.update(bindings=[dict(slot=0,parameter='Roughness')]),'binds no materials')
+        twice=copy.deepcopy(base);second=copy.deepcopy(base['controls'][1]);second['id']='hip_shape_2'
+        twice['controls'].append(second)
+        with self.assertRaisesRegex(ValueError,'only one route'):validate(twice)
+        stray=copy.deepcopy(base);stray['controls'][0]['shape_control']='hips'
+        with self.assertRaisesRegex(ValueError,'routes a shape'):validate(stray)
+
     def test_reviewed_recipes(self):
         root=Path(__file__).resolve().parents[1]/'work/color-recipes'
         recipes=list(root.glob('*/*.colors.json'))

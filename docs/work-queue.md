@@ -1,5 +1,13 @@
 # Current work queue
 
+## October 27: Profane Proxima 0.2.4 Chest shape (Perky / Juicy), CSS 1.0.9, Shared Assets 1.0.9
+
+Nexus (Primus2g): "Preferred tiddies from the previous version, possible to have the option to
+toggle?" Juicy = Profane's own 0.2.2 chest (exact, to size 3), Perky = the 0.2.3 anime model.
+Core shape routes in CSS 1.0.9 (docs/releases/v1.0.9). Package slimmed by 67 MB (six unreached
+packages). Open: Juicy ornament overlaps with the newer presets (up to 99 vertices on BBW) and the
+chest contact approximation (up to 26 mm) need an in-play look.
+
 ## October 26: Eve 1.5.3 (AIO + seven standalones), CSS 1.0.8, Shared Assets 1.0.8
 
 User asked for each Eve outfit as its own standalone download, fully self-contained, plus the

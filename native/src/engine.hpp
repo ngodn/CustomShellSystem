@@ -854,6 +854,8 @@ class Appearance {
     mutable bool travel_probe_=false;
     WeakObject body_geometry_instance_;
     std::optional<BodyGeometryModel> body_geometry_model_;
+    // Which cooked model property drives the contacts: the default, or a shape route's choice.
+    std::string body_geometry_property_="CSSBodyGeometryJson", body_geometry_loaded_;
     std::optional<BodyGeometry> body_geometry_original_, body_geometry_applied_;
     std::optional<std::vector<float>> body_geometry_morphs_;
     std::map<std::string,SpringOriginal> menu_spring_originals_;

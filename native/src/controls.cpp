@@ -418,13 +418,36 @@ ControlSet ControlSet::parse(const Json& j) {
                 control.occludes_sections.push_back(section);
             }
         }
+        if(c.contains("shape_control")) {
+            if(control.kind!=ControlKind::Choice) throw std::runtime_error("Only a choice control routes a shape");
+            control.shape_control=c.at("shape_control").get<std::string>();
+            if(!valid_id(control.shape_control)) throw std::runtime_error("Invalid routed shape control");
+        }
         if(c.contains("options")) {
             if(control.kind!=ControlKind::Choice) throw std::runtime_error("Only a choice control lists texture options");
             if(!c.at("options").is_array()) throw std::runtime_error("Choice options require an array");
             for(const auto& o:c.at("options")) {
-                ControlOption option{o.at("name"),o.at("texture")};
-                if(option.name.empty() || option.name.size()>96 || !valid_asset(option.texture))
-                    throw std::runtime_error("Invalid choice option");
+                ControlOption option;
+                option.name=o.at("name").get<std::string>();
+                if(option.name.empty() || option.name.size()>96) throw std::runtime_error("Invalid choice option");
+                if(!control.shape_control.empty()) {
+                    // A shape route picks a morph, never a texture.
+                    if(o.contains("texture")) throw std::runtime_error("A shape route option has no texture");
+                    option.morph=o.at("morph").get<std::string>();
+                    morph_name(option.morph);
+                    if(o.contains("body_geometry_property")) {
+                        option.body_geometry_property=o.at("body_geometry_property").get<std::string>();
+                        const auto& name=option.body_geometry_property;
+                        if(name.empty() || name.size()>64 || !std::all_of(name.begin(),name.end(),[](char ch){
+                               return (ch>='a' && ch<='z') || (ch>='A' && ch<='Z') || (ch>='0' && ch<='9') || ch=='_';}))
+                            throw std::runtime_error("Invalid body geometry property");
+                    }
+                } else {
+                    if(o.contains("morph") || o.contains("body_geometry_property"))
+                        throw std::runtime_error("Only a shape route option names a morph");
+                    option.texture=o.at("texture").get<std::string>();
+                    if(!valid_asset(option.texture)) throw std::runtime_error("Invalid choice option");
+                }
                 control.options.push_back(std::move(option));
             }
             if(control.options.size()<2 || control.options.size()>16)
@@ -722,9 +745,28 @@ ControlSet ControlSet::parse(const Json& j) {
         if(c.kind==ControlKind::Dynamics) for(const auto& root:c.nodes)
             if(!dynamics_roots.insert(root).second) throw std::runtime_error("Dynamics chain roots must have one control owner");
         // A section toggle needs no material parameter. Material toggles use bindings.
-        bool used=c.kind==ControlKind::Rig || !c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty();
+        bool used=c.kind==ControlKind::Rig || !c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty() ||
+                  !c.shape_control.empty();
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
         if(!used) throw std::runtime_error("Control has nothing to drive");
+    }
+    // Shape routes: each targets one Shape control, starts with that control's own morph, names
+    // distinct morphs, and either gives every option a body geometry model or none.
+    std::set<std::string> routed;
+    for(const auto& c:out.controls) {
+        if(c.shape_control.empty()) continue;
+        const auto* shape=out.find(c.shape_control);
+        if(!shape || shape->kind!=ControlKind::Shape) throw std::runtime_error("A shape route needs an existing shape control");
+        if(!routed.insert(c.shape_control).second) throw std::runtime_error("A shape control can have only one route");
+        if(!c.bindings.empty() || !c.sections.empty()) throw std::runtime_error("A shape route binds no materials or sections");
+        if(c.options.front().morph!=shape->morph) throw std::runtime_error("A shape route's first option must be the shape's own morph");
+        std::set<std::string> morphs;
+        size_t geometry=0;
+        for(const auto& option:c.options) {
+            if(!morphs.insert(option.morph).second) throw std::runtime_error("A shape route repeats a morph");
+            geometry+=!option.body_geometry_property.empty();
+        }
+        if(geometry && geometry!=c.options.size()) throw std::runtime_error("A shape route needs a body geometry model on every option or none");
     }
     for(const auto& c:out.controls) if(c.kind==ControlKind::Spring || c.kind==ControlKind::Dynamics)
         for(auto region:body_owners)
@@ -945,6 +987,16 @@ std::set<int> hidden_control_sections(const ControlSet& options,const std::map<s
         hidden.insert(sections.begin(),sections.end());
     }
     return hidden;
+}
+const Control* shape_route(const ControlSet& options,const std::string& shape_id) {
+    for(const auto& c:options.controls) if(c.shape_control==shape_id) return &c;
+    return nullptr;
+}
+size_t choice_index(const Control& choice,const std::map<std::string,ControlValue>& values) {
+    if(choice.options.empty()) return 0;
+    const auto found=values.find(choice.id);
+    const float raw=found!=values.end()?found->second[0]:choice.value[0];
+    return size_t(std::clamp(int(std::lround(raw)),0,int(choice.options.size())-1));
 }
 std::map<std::string,ControlValue> control_values(const ControlSet& options,const Customization& custom) {
     for(const auto& [group,tint]:custom.tints) valid_tint(group,tint);

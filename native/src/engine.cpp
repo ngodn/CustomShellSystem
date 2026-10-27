@@ -2074,7 +2074,7 @@ void Appearance::restore_dynamics() {
 void Appearance::restore_rig() {
     if(auto* instance=body_geometry_instance_.Get(); instance && body_geometry_original_)
         body_geometry_inputs(instance).apply(*body_geometry_original_);
-    body_geometry_instance_.Reset(); body_geometry_model_.reset(); body_geometry_morphs_.reset();
+    body_geometry_instance_.Reset(); body_geometry_model_.reset(); body_geometry_morphs_.reset(); body_geometry_loaded_.clear();
     body_geometry_original_.reset(); body_geometry_applied_.reset();
     if(auto* instance=rig_instance_.Get(); instance && rig_original_)
         rig_inputs(instance).apply(*rig_original_);
@@ -2180,7 +2180,7 @@ void Appearance::sync_menu_physics(UObject* component) {
             // A verified performance adapter has a different class but retains
             // the outfit's geometry model. Never transfer another outfit's model.
             if(instance->GetClassPrivate()!=source->GetClassPrivate() &&
-               (!body_geometry_model_ || body_geometry_model(instance)!=body_geometry_model_))
+               (!body_geometry_model_ || body_geometry_model(instance,body_geometry_loaded_)!=body_geometry_model_))
                 throw std::runtime_error("Preview body geometry model differs from player");
             const auto inputs=body_geometry_inputs(instance);
             if(!menu_body_geometry_original_) menu_body_geometry_original_=inputs.capture();
@@ -2232,14 +2232,18 @@ void Appearance::sync_menu_physics(UObject* component) {
 void Appearance::sync_body_geometry(UObject* component) {
     auto* instance=post_process_instance(component);
     if(!instance) return;
-    if(body_geometry_instance_.Get()!=instance) {
-        body_geometry_model_=body_geometry_model(instance);
-        body_geometry_original_.reset(); body_geometry_applied_.reset(); body_geometry_morphs_.reset();
-        body_geometry_instance_=instance;
+    const bool fresh=body_geometry_instance_.Get()!=instance;
+    if(fresh || body_geometry_loaded_!=body_geometry_property_) {
+        // A new instance starts clean. A shape route switching models on the same instance keeps
+        // the inputs captured first, so teardown still restores what the blueprint shipped with.
+        if(fresh) body_geometry_original_.reset();
+        body_geometry_model_=body_geometry_model(instance,body_geometry_property_);
+        body_geometry_applied_.reset(); body_geometry_morphs_.reset();
+        body_geometry_instance_=instance; body_geometry_loaded_=body_geometry_property_;
         if(body_geometry_model_) {
             for(const auto& name:body_geometry_model_->morphs)
                 if(!mesh_has_morph(applied_.Get(),name)) throw std::runtime_error("Body geometry requires missing mesh morph: "+name);
-            body_geometry_original_=body_geometry_inputs(instance).capture();
+            if(!body_geometry_original_) body_geometry_original_=body_geometry_inputs(instance).capture();
         }
     }
     if(!body_geometry_model_) return;
@@ -2680,16 +2684,35 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         for(const auto& control:options.controls) {
             bool active=values.contains(control.id),previous=last_values_.contains(control.id);
             if(!active) continue;
-            if(active && previous && values.at(control.id)==last_values_.at(control.id)) continue;
+            // A routed shape also reapplies when its route picks another morph.
+            const auto* route=control.kind==ControlKind::Shape?shape_route(options,control.id):nullptr;
+            const bool route_changed=route && (!last_values_.contains(route->id) || !values.contains(route->id) ||
+                                               values.at(route->id)!=last_values_.at(route->id));
+            if(active && previous && values.at(control.id)==last_values_.at(control.id) && !route_changed) continue;
             if(control.kind==ControlKind::Toggle && control.bindings.empty()) continue;
             // 1.0: a shape drives a morph target the package cooked into its own mesh.
             // Stock shells carry none and never will, which is checked here rather than
             // left to silently do nothing: every stock mesh reads back zero morph targets.
             if(control.kind==ControlKind::Shape) {
-                if(!mesh_has_morph(applied_.Get(),control.morph))
-                    throw std::runtime_error("This outfit's mesh has no shape called "+control.morph);
+                // A shape route sends the slider to the selected option's morph and holds every
+                // other option's morph at zero, so an old shape never survives a switch.
+                std::string morph=control.morph;
+                if(route) {
+                    const auto selected=choice_index(*route,values);
+                    morph=route->options[selected].morph;
+                    for(size_t i=0;i<route->options.size();++i) {
+                        const auto& other=route->options[i].morph;
+                        if(i==selected || !mesh_has_morph(applied_.Get(),other)) continue;
+                        Call clear(component,L"SetMorphTarget",3);
+                        clear.set(L"MorphTargetName",FName(wide(other).c_str(),FNAME_Add)); clear.set(L"Value",0.f);
+                        clear.set(L"bRemoveZeroWeight",false); clear.run();
+                        driven_morphs_[other]=0.f;
+                    }
+                }
+                if(!mesh_has_morph(applied_.Get(),morph))
+                    throw std::runtime_error("This outfit's mesh has no shape called "+morph);
                 const float weight=values.at(control.id)[0];
-                auto name=FName(wide(control.morph).c_str(),FNAME_Add);
+                auto name=FName(wide(morph).c_str(),FNAME_Add);
                 Call set(component,L"SetMorphTarget",3);
                 set.set(L"MorphTargetName",name); set.set(L"Value",weight);
                 // Keep a zero weight on the component rather than dropping the curve, so
@@ -2699,7 +2722,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 readback.set(L"MorphTargetName",name); readback.run();
                 if(std::abs(readback.get<float>()-weight)>.0001f)
                     throw std::runtime_error("Shape weight read-back failed");
-                driven_morphs_[control.morph]=weight;
+                driven_morphs_[morph]=weight;
                 for(const auto& formula:control.formulas) {
                     const double delta=double(weight*formula.multiplier);
                     auto& off=formula_offsets_[formula.target];
@@ -2806,6 +2829,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             // a scalar or vector binding, with SetTextureParameterValueByInfo, which this
             // build reflects alongside the other two.
             if(control.kind==ControlKind::Choice) {
+                if(!control.shape_control.empty()) continue;   // a shape route acts through its Shape control
                 const int index=std::clamp(int(std::lround(values.at(control.id)[0])),0,int(control.options.size())-1);
                 AssetLoadRoots roots;
                 auto* texture=load(control.options[index].texture); roots.keep(texture);
@@ -2870,6 +2894,11 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         world_morph_deformer_.sync(component,driven_morphs_);
         items_.sync_morphs(driven_morphs_);
         menu_items_.sync_morphs(driven_morphs_);
+        body_geometry_property_="CSSBodyGeometryJson";
+        for(const auto& c:options.controls) if(!c.shape_control.empty()) {
+            const auto& option=c.options[choice_index(c,values)];
+            if(!option.body_geometry_property.empty()) { body_geometry_property_=option.body_geometry_property; break; }
+        }
         sync_body_geometry(component);
         step("geometry");
         if(dynamics_needs_reset) reset_dynamics(dynamics_instance_.Get());

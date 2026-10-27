@@ -887,6 +887,50 @@ int main() {
             expect(control_values(shaped,shape_custom).at("hips")[0]==.5f,"Shape weight lost");
             shape_custom.values["hips"]={1.5f,0,0,1};
             rejects([&]{control_values(shaped,shape_custom);});
+
+            // A shape route (Profane 0.2.4 Chest shape) picks which morph a Shape slider drives,
+            // plus the body geometry model that goes with that shape. It binds no texture.
+            auto routed=shapes;
+            routed["controls"].push_back(Json::parse(R"({"id":"hip_shape","name":"Hip shape","kind":"choice","group":"body",
+              "role":"figure","default":[0,0,0,1],"shape_control":"hips","options":[
+                {"name":"Perky","morph":"Hips","body_geometry_property":"CSSBodyGeometryJson"},
+                {"name":"Juicy","morph":"HipsClassic","body_geometry_property":"CSSBodyGeometryClassicJson"}]})"));
+            auto route_model=ControlSet::parse(routed);
+            const auto* route=shape_route(route_model,"hips");
+            expect(route && route->id=="hip_shape" && route->options.size()==2,"Shape route not found");
+            expect(route->options[1].morph=="HipsClassic" && route->options[1].texture.empty(),"Shape route option lost its morph");
+            expect(route->options[1].body_geometry_property=="CSSBodyGeometryClassicJson","Shape route lost its geometry model");
+            expect(route->maximum==1 && route->step==1,"Shape route range must be its option list");
+            expect(!shape_route(route_model,"cloth"),"An unrouted control has no route");
+            std::map<std::string,ControlValue> picked;
+            expect(choice_index(*route,picked)==0,"An unset route uses its default option");
+            picked["hip_shape"]={1,0,0,1};
+            expect(choice_index(*route,picked)==1,"A route follows the saved option");
+            picked["hip_shape"]={7,0,0,1};
+            expect(choice_index(*route,picked)==1,"A route clamps to its last option");
+            // Old saved looks without the route load with the default shape and keep the slider.
+            Customization old_look; old_look.values["hips"]={0.4f,0,0,1};
+            const auto old_values=control_values(route_model,old_look);
+            expect(choice_index(*route,old_values)==0 && old_values.at("hips")[0]==.4f,"Old looks must keep the default shape");
+            auto bad_route=[&](auto change){ auto r=routed; change(r["controls"][2]); rejects([&]{ControlSet::parse(r);}); };
+            bad_route([](Json& c){ c["shape_control"]="nobody"; });
+            bad_route([](Json& c){ c["shape_control"]="cloth"; });
+            bad_route([](Json& c){ c["options"][0]["morph"]="Waist"; });
+            bad_route([](Json& c){ c["options"][1]["morph"]="Hips"; });
+            bad_route([](Json& c){ c["options"][1]["morph"]="Hips classic"; });
+            bad_route([](Json& c){ c["options"][1]["texture"]="/Game/CSS/x/T_A.T_A"; });
+            bad_route([](Json& c){ c["options"][1].erase("body_geometry_property"); });
+            bad_route([](Json& c){ c["options"][1]["body_geometry_property"]="Bad Name"; });
+            bad_route([](Json& c){ c["kind"]="scalar"; });
+            auto two_routes=routed; auto second_route=routed["controls"][2]; second_route["id"]="hip_shape_2";
+            two_routes["controls"].push_back(second_route);
+            rejects([&]{ControlSet::parse(two_routes);});
+            auto texture_morph=routed; texture_morph["controls"][2].erase("shape_control");
+            rejects([&]{ControlSet::parse(texture_morph);});
+            auto no_geometry=routed;
+            for(auto& option:no_geometry["controls"][2]["options"]) option.erase("body_geometry_property");
+            expect(!ControlSet::parse(no_geometry).find("hip_shape")->options[0].body_geometry_property.size(),
+                   "A route without geometry models is valid");
         }
         {
             // 1.0.0-beta Next-Gen: Glow, Opacity, and Shape with Morph Formulas

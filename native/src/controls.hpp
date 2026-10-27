@@ -56,8 +56,10 @@ enum class ControlGroup { Outfit, Body };
 //   Dynamics   direct AnimDynamics angular stiffness, damping and gravity
 enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring, Shape, Glow, Opacity, Dynamics, Rig };
 const char* control_kind_name(ControlKind);
-// A Choice option: what the player sees, and the cooked texture it binds.
-struct ControlOption { std::string name, texture; };
+// A Choice option: what the player sees, and either the cooked texture it binds or, for a
+// shape route, the morph the routed Shape control drives (plus the post-process blueprint's
+// body geometry model that goes with that shape).
+struct ControlOption { std::string name, texture, morph, body_geometry_property; };
 // A morph formula: shifts joint center or orientation alongside a morph target
 struct MorphFormula {
     std::string target;      // target bone
@@ -102,7 +104,8 @@ struct Control {
     bool scalar = false;          // numeric controls, excluded from color tinting
     std::vector<int> sections;    // Toggle only: the material sections it shows or hides
     std::vector<int> occludes_sections; // Toggle only: covered sections hidden while it is on
-    std::vector<ControlOption> options;   // Choice only: the textures it picks between
+    std::vector<ControlOption> options;   // Choice only: the textures (or shape morphs) it picks between
+    std::string shape_control;            // Choice only: the Shape control whose slider it routes
     std::vector<std::string> nodes;       // Spring bones or Dynamics chain root bones
     std::optional<DynamicsControl> dynamics;
     std::optional<RigControl> rig;
@@ -258,6 +261,10 @@ struct Customization {
 };
 const char* control_group_name(ControlGroup);
 ControlValue apply_tint(const ColorTint&, const ControlValue&, bool hue_locked);
+// A shape route: the Choice that picks which morph a Shape control drives, or null.
+const Control* shape_route(const ControlSet& options,const std::string& shape_id);
+// The option a Choice has selected for these values (its default when unset).
+size_t choice_index(const Control& choice,const std::map<std::string,ControlValue>& values);
 std::map<std::string,ControlValue> control_values(const ControlSet&, const Customization&);
 // The travel overrides this outfit accepts, validated against each control's range.
 std::map<std::string,float> control_travel(const ControlSet&, const Customization&);

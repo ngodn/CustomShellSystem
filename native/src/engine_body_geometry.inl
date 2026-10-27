@@ -24,8 +24,9 @@ FProperty* body_geometry_property(UObject* instance,const wchar_t* name) {
     return result;
 }
 
-std::optional<BodyGeometryModel> body_geometry_model(UObject* instance) {
-    auto* property=body_geometry_property(instance,L"CSSBodyGeometryJson");
+// The model is a string property cooked into the AnimBP; a shape route can select another one.
+std::optional<BodyGeometryModel> body_geometry_model(UObject* instance,const std::string& name="CSSBodyGeometryJson") {
+    auto* property=body_geometry_property(instance,wide(name).c_str());
     if(!property) return std::nullopt;
     if(!property->IsA<FStrProperty>() || property->GetElementSize()!=sizeof(FString))
         throw std::runtime_error("Body geometry requires a string model");
