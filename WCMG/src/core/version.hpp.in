@@ -1,0 +1,2 @@
+#pragma once
+#define WCMG_VERSION "@WCMG_VERSION@"

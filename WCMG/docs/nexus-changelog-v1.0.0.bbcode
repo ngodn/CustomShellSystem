@@ -1,0 +1,16 @@
+[b]1.0.0[/b]
+
+First release. The cat has arrived.
+
+[list]
+[*]Finds the game on its own (Steam library folders, registry), with a Browse button when it cannot.
+[*]Reads Unreal crash reports and their minidumps: crash type, call stack, loaded DLLs, GPU breadcrumbs, memory state.
+[*]Reads UE4SS: build hash, settings, mods.txt and enabled.txt, every Lua and C++ mod, the log, Lua errors and tracebacks, UE4SS crash dumps.
+[*]Reads CSS, CSSX and CCS logs and version files, and flags a mismatched loader, a missing core, corrupt state files and log errors.
+[*]Checks pak containers in ~mods: incomplete trios, mods shipping the same package, mods replacing shared game assets, stray archives, containers outside ~mods.
+[*]Checks game files against the shipped manifest: missing files, injected DLLs beside the exe, loose containers.
+[*]Checks Engine.ini for forced frame generation, overlays seen in crashes, Wine/Proton, low RAM, and mods older than the last game update.
+[*]Verdict with confidence and next step, findings with plain explanations and evidence, full report as text, Markdown or JSON.
+[*]Collect ZIP: report plus crash reports, logs and config for bug reports. No save games.
+[*]Command line mode for scripts and Linux.
+[/list]

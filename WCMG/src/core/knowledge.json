@@ -1,0 +1,26 @@
+{
+  "version": "2026-10-27",
+  "builds": [
+    {"build_id": "26147827", "date": "2026-10-22", "note": "Current Steam build at the time this knowledge file was written (engine CL97404)."},
+    {"build_id": "26073152", "date": "2026-10-10", "note": "Patch that dropped shared shader hashes; outfit packages built before it show grey skin until rebuilt."}
+  ],
+  "ue4ss": [
+    {"sha256": "fb1839ee91f71f83d508d44a2763a15ac1bb0c5fb4e504ac0fcfca64376a054a", "version": "3.0.1-1111-g97b7e501 (UE4SS For MS2, NO AOB)", "supported": true, "note": "The build CSS, CSSX and CCS are pinned to."},
+    {"sha256": "4cdd44e79df2a01fb00cf885791f933c1dd3a83324767c7a084c4da5a82f33bc", "version": "3.0.1-1028-gd7e7826d (development zip)", "supported": false, "note": "Older experimental build; CSS 1.x does not link against it."}
+  ],
+  "mods": [
+    {"match": "UUEPBS", "display": "UUEPBS (Universal UE Physics Body Sliders)", "severity": "medium", "affected_versions": "all", "note": "Installs a pose hook on the skeletal mesh vtable from Lua plus a native DLL. It drives bones every frame; crashes while it is active with a changed body mesh are worth testing without it first."},
+    {"match": "FastTravelAnywhere", "display": "Fast Travel Anywhere (Lua)", "severity": "low", "affected_versions": "all", "note": "Global script hook; harmless on its own, but it runs on every Blueprint call."},
+    {"match": "CheatManagerEnabler", "display": "CheatManagerEnabler (UE4SS built-in)", "severity": "info", "affected_versions": "all", "note": "Creates a CheatManager on the player controller; the game already has one, so this usually logs 'already exist, skipping'."}
+  ],
+  "overlay_modules": [
+    "GameOverlayRenderer64.dll", "RTSSHooks64.dll", "DiscordHook64.dll", "overlay64.dll", "nvspcap64.dll",
+    "MSIAfterburner", "SpecialK64.dll", "ReShade64.dll", "d3d11.dll", "dxgi.dll", "d3d12.dll", "opengl32.dll",
+    "winmm.dll", "version.dll", "dinput8.dll", "xinput1_3.dll", "fraps64.dll", "bdcam64.dll", "obs-hook"
+  ],
+  "builtin_mods": [
+    "ActorDumperMod", "BPML_GenericFunctions", "BPModLoaderMod", "CheatManagerEnablerMod", "ConsoleCommandsMod",
+    "ConsoleEnablerMod", "EventViewerMod", "jsbLuaProfilerMod", "Keybinds", "KismetDebuggerMod", "LineTraceMod",
+    "SplitScreenMod", "shared"
+  ]
+}

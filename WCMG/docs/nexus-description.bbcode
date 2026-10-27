@@ -1,0 +1,51 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/docs/wcmg-1.0.0-media/wcmg-meme-1280.png[/img][/center]
+
+[size=5][b]Who Crashed My Game[/b][/size]
+
+Mortal Shell II crashed. Was it UE4SS? That one Lua mod? The outfit pack? The GPU? Everyone is pointing at everyone else, and you are the cat.
+
+WCMG reads what the game and UE4SS already wrote down when things went wrong, lines it up, and tells you who most likely did it, in plain words, with the evidence. One small exe, no install, nothing sent anywhere.
+
+[size=4][b]What it does[/b][/size]
+
+[list]
+[*]Finds your game folder on its own (Steam library, registry). If it cannot, you point it at the folder.
+[*]Reads the Unreal crash reports (Saved/Crashes), including the minidump: crash type, the call stack, and every DLL that was inside the game when it died.
+[*]Reads UE4SS: build, settings, mods.txt, every Lua and C++ mod, the log, Lua errors, UE4SS's own crash dumps.
+[*]Reads CSS, CSSX and CCS logs and version files, because I wrote those and I want their problems caught first.
+[*]Checks every pak container in ~mods: incomplete installs, two mods shipping the same asset, mods that replace shared game assets, archives someone forgot to extract.
+[*]Checks the game's own files against its shipped manifest: missing files, replaced binaries, injected DLLs beside the exe.
+[*]Checks the usual suspects: frame generation forced through Engine.ini, overlays, Wine/Proton, low memory, mods older than the last game update.
+[/list]
+
+Then it shows a verdict (most probable cause, confidence, what to do next) and a list of findings, each with a short explanation and the lines that support it.
+
+[size=4][b]Collect ZIP[/b][/size]
+
+One button packs the report, the newest crash reports, UE4SS.log, mod logs and config into a ZIP you can attach to a bug report. No save games, no personal files. Mod authors get what they need in one go instead of ten follow-up questions.
+
+[size=4][b]Use[/b][/size]
+
+[list=1]
+[*]Extract the ZIP anywhere. It is a single WCMG.exe plus a README.
+[*]Run it. Check the game folder it found, or Browse to it.
+[*]Click Diagnose. Read the verdict.
+[*]If you are reporting a crash to a mod author, click Collect ZIP and attach the file.
+[/list]
+
+Command line works too: [code]WCMG.exe --cli "D:\SteamLibrary\steamapps\common\Sparta" --md[/code]
+
+[size=4][b]Honest notes[/b][/size]
+
+[list]
+[*]It cannot see function names inside the game (no symbols), so it reasons from modules, offsets, logs and file state. That is enough to tell a mod from the game from the driver most of the time.
+[*]A GPU crash blames the graphics side; that is where the evidence points, not a verdict on your card.
+[*]It does not change anything on your disk. Every fix it suggests, you do yourself.
+[*]Works on Windows and under Proton (run it inside the game's prefix with protontricks, or use the --cli build on Linux).
+[/list]
+
+[size=4][b]Requirements[/b][/size]
+
+Mortal Shell II on Steam. UE4SS is optional; without it there is just less to read.
+
+Source and issues: [url=https://github.com/ngodn/CustomShellSystem]GitHub[/url]. Built by eins0fx, the same person behind CSS, CSSX and CCS.

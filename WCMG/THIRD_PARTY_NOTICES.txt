@@ -1,0 +1,9 @@
+WCMG bundles two third-party libraries, both compiled into the executable.
+
+nlohmann/json (vendor/nlohmann/json.hpp)
+  MIT License, Copyright (c) 2013-2025 Niels Lohmann. See vendor/nlohmann/LICENSE.MIT.
+
+miniz 2.1.0 (vendor/miniz)
+  Public domain (unlicense), Rich Geldreich and contributors. See the end of vendor/miniz/miniz.c.
+
+The Windows build links the static Microsoft C runtime through the Windows SDK terms.

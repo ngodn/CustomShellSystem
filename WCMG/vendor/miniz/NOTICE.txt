@@ -1,0 +1,4 @@
+miniz 2.1.0 by Rich Geldreich, public domain (unlicense), see the end of miniz.c.
+Copied from the DirectXShaderCompiler tree inside the UE 5.6.1 source; the four
+"HLSL Change" defines that disabled stdio, time, the archive API and malloc were
+removed so the stock library is what builds here.
