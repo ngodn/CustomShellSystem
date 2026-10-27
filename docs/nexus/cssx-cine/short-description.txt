@@ -1,1 +1,1 @@
-A CSSX extension for showcase videos: camera presets, a clean scene, a VFX-style breakdown, and music scenes (separate packs, one per song) that change your CSS outfits, skins and palettes on the beat. You record it with your own recorder.
+A CSSX extension for showcase videos inside the game's Photo Mode: camera scenes, a clean scene, a VFX-style breakdown, music scenes that change your CSS outfits, skins and palettes on the beat, and rendering a take straight to a video file.

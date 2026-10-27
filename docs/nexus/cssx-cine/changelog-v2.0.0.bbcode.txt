@@ -1,13 +1,27 @@
-[b]CSSX CINE 2.0.0[/b] (2026-10-25)
+[b]CSSX CINE 2.0.0[/b] (2026-10-28)
 
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/0a18bfc30623b53feb42548c8269362626b47a9d/docs/media/cine-v2.0.0/cine-v2.0.0-header.jpg[/img][/center]
 
 Hey everyone. CINE grew a lot since 1.0.0, so this one is 2.0.0.
 
+[b]CINE Mode, inside the game's Photo Mode[/b]
+[list]
+[*]Pause, go to [b]System[/b] and choose [b]Activate CINE Mode[/b], right under Activate Photo Mode. The game's own Photo Mode opens with CINE's tabs next to its own: Take, Route, Animation, Scene, Look and Render, in the game's own rows and style.[/*]
+[*]Frame her with the Photo Mode camera and roll from the Take tab. Photo Mode steps aside while the take runs and comes back when it ends.[/*]
+[*][b]Record Route[/b] works from CINE Mode: Photo Mode closes while you walk the path, and comes back on the Route tab once you stand still. [b]Use Current View as Final Shot[/b] keeps the Photo Mode view.[/*]
+[*]Roll Take says why it can't roll yet: no route, a route recorded somewhere else, or a final shot she can't walk into.[/*]
+[/list]
+
+[b]Render to video[/b]
+[list]
+[*]The Render tab turns a take into a video file: every frame captured at 24, 30 or 60 fps, the scene's music recorded, and the bundled FFmpeg encoding them with your graphics card's encoder when it has one. No recorder needed.[/*]
+[*]Videos land in [b]renders/[/b] inside the CINE folder, one folder per render.[/*]
+[/list]
+
 [b]Music scenes[/b]
 [list]
 [*]CINE can now play a scene: a preset timed to a song that plays the music from the roll and cuts the camera on its beat, while CSS changes the outfit, the skin, the palette and the pieces with the song. Your own look comes back when the scene ends.[/*]
-[*]Scenes come as separate downloads, one per song, with the music included: [b]CINE Scenes: Iris Out[/b], [b]CINE Scenes: Something Ain't Right[/b] and [b]CINE Scenes: They Know Not What They Do[/b]. Each one unzips into the CINE folder.[/*]
+[*]Scenes come as packs, each its own small game mod with its music inside: [b]Iris Out[/b], [b]Something Ain't Right[/b], [b]They Know Not What They Do[/b] and [b]Mark of the Beast[/b], plus the everyday scenes in [b]Walks[/b], [b]Turntable[/b], [b]Pose Glide[/b] and [b]Photo Orbit[/b]. Install only the ones you want.[/*]
 [*]A dance keeps going through outfit changes, a look can be staged from wireframe to clay to the finished outfit, and a short title names each change.[/*]
 [/list]
 
@@ -23,17 +37,17 @@ Hey everyone. CINE grew a lot since 1.0.0, so this one is 2.0.0.
 
 [b]Clean scene[/b]
 [list]
-[*]Hide enemies, or enemies and NPCs, while you're in Cine World, without pausing the world. They're frozen and can't be hit, new ones don't spawn, and everyone comes back as they were when you leave. Bosses are left alone.[/*]
+[*]Hide enemies, or enemies and NPCs, while you're in CINE Mode, without pausing the world. They're frozen and can't be hit, new ones don't spawn, and everyone comes back as they were when you leave. Bosses are left alone.[/*]
 [*][b]Keep my lock-on target[/b]: with clean scene on, everyone goes except the enemy you're locked on to.[/*]
 [/list]
 
 [b]Install[/b]
 [list]
-[*]Replace the [b]eins0fx.cine[/b] folder in [b]ue4ss/Mods/CSSX/extensions/[/b], then extract any scene packs you want on top of it.[/*]
-[*]New: put the [b]CSSX_CINE_eins0fx_P[/b] folder into [b]MortalShell2/Content/Paks/~mods/[/b]. It holds the materials the breakdown draws with.[/*]
-[*]Presets you made yourself: copy them back into the new presets folder.[/*]
+[*]Replace the [b]eins0fx.cine[/b] folder in [b]ue4ss/Mods/CSSX/extensions/[/b].[/*]
+[*]Put the [b]CSSX_CINE_eins0fx_P[/b] folder into [b]MortalShell2/Content/Paks/~mods/[/b], and each scene pack folder ([b]CINE_<Pack>_eins0fx_P[/b]) you want next to it.[/*]
+[*]Presets you made yourself keep working from the presets folder.[/*]
 [/list]
 
-Needs CSSX 1.3.1. The look track and the scenes need CSS 1.0.5; each scene pack lists the outfits it shows.
+Needs CSSX 1.3.2. The look track and the scenes need CSS 1.0.5; each scene pack lists the outfits it shows.
 
 [url=https://github.com/ngodn/CustomShellSystem/releases/tag/cine-v2.0.0]Download CINE 2.0.0[/url]
