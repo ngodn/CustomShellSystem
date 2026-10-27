@@ -183,7 +183,9 @@ Worked through without hand-backs: drive the game through the bridge, fix, conti
    - [ ] a take in Photo Mode: unpause, panel hidden, camera, music, return to the panel
    - [ ] Render tab wired to the renderer (size, frame rate, quality, Render Take to Video, Last Render),
      plus the `SM_CINE_Render` submix in the core pak
-   - [ ] hardcoded content moved to pack `recipe.*` / `style.*` rows (lane B table)
+   - [ ] hardcoded content moved to data (lane B table, Astra lane E): shared style and recipes in
+     `DT_CINE_Core` in CINE's main pak; a scene pack may override any of them for its own scenes
+     (user, 28 Oct)
 5. [x] Pack pipeline: authoring (DataTable + SoundWave), cook, pack, verify; eight packs built.
 6. [ ] Tests and Windows builds (done criteria), frame cost in and out of Photo Mode.
 7. [ ] Live checks: a take per pack, route record, rendered video, menu reopen, world change, death, leave
