@@ -104,6 +104,7 @@ struct Control {
     bool scalar = false;          // numeric controls, excluded from color tinting
     std::vector<int> sections;    // Toggle only: the material sections it shows or hides
     std::vector<int> occludes_sections; // Toggle only: covered sections hidden while it is on
+    std::string anim_switch;              // Toggle only: bool on the post-process AnimBP that follows the toggle
     std::vector<ControlOption> options;   // Choice only: the textures (or shape morphs) it picks between
     std::string shape_control;            // Choice only: the Shape control whose slider it routes
     std::vector<std::string> nodes;       // Spring bones or Dynamics chain root bones
@@ -269,6 +270,9 @@ std::map<std::string,ControlValue> control_values(const ControlSet&, const Custo
 // The travel overrides this outfit accepts, validated against each control's range.
 std::map<std::string,float> control_travel(const ControlSet&, const Customization&);
 std::set<int> hidden_control_sections(const ControlSet&, const std::map<std::string,ControlValue>&);
+// Each anim_switch property and whether the graph part behind it should run: true while
+// any toggle naming it is on. A package uses this to stop work for a hidden garment.
+std::map<std::string,bool> control_anim_switches(const ControlSet&, const std::map<std::string,ControlValue>&);
 Customization compatible_values(const ControlSet&, const Customization&);
 Customization choose_palette(const ControlSet&, const Customization&, const std::string& palette);
 // The palette and per-part changes of a CSS request (palette, control, reset_control, color,

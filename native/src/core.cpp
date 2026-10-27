@@ -203,6 +203,16 @@ struct Core {
     std::string walk_error;
     std::string hand_support_error;
     uint64_t hand_support_after=0;
+    std::string anim_switch_error;
+    uint64_t anim_switch_after=0;
+    void sync_anim_switches_safely(uint64_t now) {
+        if(now<anim_switch_after) return;
+        try {appearance.sync_anim_switches();anim_switch_error.clear();}
+        catch(const std::exception& error) {
+            if(anim_switch_error!=error.what()) {anim_switch_error=error.what();host.log(("Animation switch deferred: "+anim_switch_error).c_str());}
+            anim_switch_after=now+1000;
+        }
+    }
     void sync_hand_support_safely(uint64_t now) {
         if(now<hand_support_after) return;
         try {appearance.sync_hand_support();hand_support_error.clear();}
@@ -1171,7 +1181,7 @@ struct Core {
             finish_performance_face();
         });
         measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
-        measured(FrameProfile::attachments,[&] { sync_hand_support_safely(now); sync_native_foot_ik_safely(now); });
+        measured(FrameProfile::attachments,[&] { sync_hand_support_safely(now); sync_native_foot_ik_safely(now); sync_anim_switches_safely(now); });
         if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
         measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
         if(!restore_performance_face && !apply_pending && !restore_pending && !appearance.performance.active())

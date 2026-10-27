@@ -318,6 +318,17 @@ class ControlTests(unittest.TestCase):
         del bad['controls'][0]['sections']
         with self.assertRaisesRegex(ValueError,'toggle'):validate(bad)
 
+    def test_toggle_anim_switch(self):
+        recipe=dict(schema=1,controls=[dict(id='belt',name='Belt',kind='toggle',
+            default=[1,0,0,1],sections=[14],anim_switch='CSSBeltActive')])
+        validate(recipe)
+        for invalid in ('','1Belt','Belt Active','Belt.Active','a'*65,3):
+            with self.subTest(value=invalid):
+                bad=copy.deepcopy(recipe);bad['controls'][0]['anim_switch']=invalid
+                with self.assertRaisesRegex(ValueError,'switch'):validate(bad)
+        bad=dict(schema=1,controls=[dict(id='hue',name='Hue',kind='color',default=[1,1,1,1],anim_switch='CSSBeltActive')])
+        with self.assertRaisesRegex(ValueError,'toggle'):validate(bad)
+
     def test_control_kinds(self):
         """1.0: colour is one kind among several, and every kind but colour is a number."""
         from css_controls import kind_of

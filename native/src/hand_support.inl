@@ -233,7 +233,7 @@ void HandSupport::release() {
     }
     // Keep the compatible class on a surviving instance. Disabling its appended
     // stage preserves the original graph without restarting CW's body simulation.
-    rig_=nullptr;instance_=nullptr;component_=nullptr;candidate_=nullptr;inputs_.clear();
+    rig_=nullptr;instance_=nullptr;component_=nullptr;candidate_=nullptr;unmatched_=nullptr;inputs_.clear();
     carry_weapon_=nullptr;carry_.reset();last_tick_=0;moving_phase_=0.;
     roots_.release();node_offset_=-1;enabled_=false;state_="inactive";
 }
@@ -255,13 +255,17 @@ void HandSupport::sync(UObject* component,bool enabled,UObject* pawn) {
     if(component_.Get()!=component || instance_.Get()!=instance || !binding) release();
     if(!binding) return;
     if(!enabled && !candidate_.Get()) {state_="default game";return;}
-    hand_runtime::barrier(instance);
+    // A graph that was searched once and holds no bound rig stays that way for this instance.
+    if(unmatched_.Get()==instance) return;
     auto* type=hand_runtime::node_type();
     auto* rig_field=hand_runtime::object_field(type,L"ControlRig");
     auto* class_field=hand_runtime::object_field(type,L"ControlRigClass");
     auto* default_field=hand_runtime::object_field(type,L"DefaultControlRigClass");
     if(node_offset_<0) {
+        // Read-only search: node rig pointers are set when the graph initialises, never by
+        // the evaluation task, so no barrier is needed until something is written.
         int32_t selected=-1;
+        bool initialised=false;
         for(auto* property:instance->GetClassPrivate()->ForEachProperty()) {
             if(!property->IsA<FStructProperty>() || static_cast<FStructProperty*>(property)->GetStruct().Get()!=type) continue;
             if(property->GetArrayDim()!=1 || property->GetElementSize()!=type->GetPropertiesSize() || property->GetOffset_Internal()<0 ||
@@ -270,12 +274,18 @@ void HandSupport::sync(UObject* component,bool enabled,UObject* pawn) {
             auto* node=hand_runtime::address(instance,property);
             auto* rig=hand_runtime::object(node,rig_field);
             if(!rig) continue;
+            initialised=true;
             const auto path=narrow(rig->GetClassPrivate()->GetPathName());
             if(path!=binding->original && path!=binding->candidate) continue;
             if(selected>=0) throw std::runtime_error("Ambiguous hand rig node");
             selected=property->GetOffset_Internal();
         }
-        if(selected<0) {state_="waiting for original rig";return;}
+        if(selected<0) {
+            // Rigs exist but none is the catalog's original: the package changed its graph.
+            if(initialised) {component_=component;instance_=instance;unmatched_=instance;state_="original rig not in graph";}
+            else state_="waiting for original rig";
+            return;
+        }
         WeakObject pending_component(component),pending_instance(instance),pending_mesh(mesh);
         AssetLoadRoots loading;
         auto* candidate=load(std::string(binding->candidate));loading.keep(candidate);
@@ -305,6 +315,15 @@ void HandSupport::sync(UObject* component,bool enabled,UObject* pawn) {
             throw std::runtime_error("Engine rejected or replaced the hand support rig");
         state_="waiting for compatible rig";return;
     }
+    {
+        // The one wait per tick: the rig's inputs and targets are written below.
+        const auto start=std::chrono::steady_clock::now();
+        hand_runtime::barrier(instance);
+        const double waited=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-start).count();
+        barrier_max_us_=std::max(barrier_max_us_,waited);
+        barrier_avg_us_=barrier_samples_?barrier_avg_us_+(waited-barrier_avg_us_)/std::min<double>(barrier_samples_+1,600.):waited;
+        ++barrier_samples_;
+    }
     hand_runtime::enable(rig,false);
     enabled_=false;
     try {
@@ -331,7 +350,8 @@ void HandSupport::sync(UObject* component,bool enabled,UObject* pawn) {
 }
 Json HandSupport::status() const {
     return Json{{"catalog_loaded",catalog_.has_value()},{"catalog_error",catalog_error_},{"state",state_},{"enabled",enabled_},{"carry_alpha",carry_.value()},{"moving_phase",moving_phase_},
-                {"rig",rig_.Get()?narrow(rig_.Get()->GetPathName()):""}};
+                {"rig",rig_.Get()?narrow(rig_.Get()->GetPathName()):""},
+                {"barrier_avg_us",barrier_avg_us_},{"barrier_max_us",barrier_max_us_},{"barrier_samples",barrier_samples_}};
 }
 void Appearance::sync_hand_support() {
     // Imported CSS clips already carry their authored finger poses. Calibration

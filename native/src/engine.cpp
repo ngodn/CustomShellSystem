@@ -1455,7 +1455,7 @@ bool Appearance::restore() {
     items_.release();
     current_items_.clear(); current_items_identity_.clear();
     // The mesh is going back to the game's own, so nothing CSS hid on it may survive.
-    toggle_hidden_.clear(); item_hidden_.clear(); reconcile_sections();
+    toggle_hidden_.clear(); item_hidden_.clear(); reconcile_sections(); anim_switches_.clear();
     restore_menu();
     detach_residual_controls();
     auto* component = component_.Get();
@@ -2029,6 +2029,30 @@ void Appearance::reconcile_sections() {
         applied_hidden_.erase(section);
     }
 }
+void Appearance::write_anim_switches(UObject* component,AnimSwitchTarget& target) {
+    auto* instance=component?post_process_instance(component):nullptr;
+    // A rebuilt instance (mesh swap, facial swap, menu reopen) starts from the graph's defaults.
+    if(target.instance.Get()!=instance) { target.instance=instance; target.written.clear(); }
+    if(!instance) return;
+    for(const auto& [name,on]:anim_switches_) {
+        const auto written=target.written.find(name);
+        if(written!=target.written.end() && written->second==on) continue;
+        // Recorded first, so a graph without this switch is not searched again every tick.
+        target.written[name]=on;
+        auto* property=optional_field(instance,wide(name).c_str());
+        if(!property) continue;
+        if(!property->IsA<FBoolProperty>() || property->GetArrayDim()!=1 || property->GetOffset_Internal()<0 ||
+           property->GetOffset_Internal()+property->GetElementSize()>instance->GetClassPrivate()->GetPropertiesSize())
+            throw std::runtime_error("Animation switch is not a bool: "+name);
+        // One byte the graph only reads; written between frames from the game thread.
+        static_cast<FBoolProperty*>(property)->SetPropertyValueInContainer(instance,on);
+    }
+}
+void Appearance::sync_anim_switches() {
+    if(anim_switches_.empty()) { world_switches_={}; menu_switches_={}; return; }
+    write_anim_switches(active()?component_.Get():nullptr,world_switches_);
+    write_anim_switches(menu_component_.Get(),menu_switches_);
+}
 void Appearance::clear_driven_morphs() {
     world_morph_deformer_.release(); menu_morph_deformer_.release();
     for(auto* component:{component_.Get(),menu_component_.Get()})
@@ -2450,6 +2474,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     try {
         overlay_controls_.prepare(component,applied_.Get());
         toggle_hidden_=hidden_control_sections(options,values);
+        anim_switches_=control_anim_switches(options,values);
         reconcile_sections();
     } catch(...) { reset_controls(); throw; }
     if(values.empty() && travel.empty() && !has_parameters) { control_outfit_=control_identity; control_palette_=custom.palette; material_debug=material_snapshot(component,applied_.Get()); material_debug["controls"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }

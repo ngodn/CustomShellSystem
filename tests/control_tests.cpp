@@ -724,6 +724,30 @@ int main() {
             rejects([&]{ControlSet::parse(stray);});
         }
         {
+            // A garment's rig runs only while one of its toggles shows it.
+            auto rigged=Json::parse(R"({"schema":1,"controls":[
+              {"id":"belt","name":"Belt","kind":"toggle","default":[1,0,0,1],"sections":[14],"anim_switch":"CSSBeltActive"},
+              {"id":"buckle","name":"Buckle","kind":"toggle","default":[0,0,0,1],"sections":[15],"anim_switch":"CSSBeltActive"},
+              {"id":"cape","name":"Cape","kind":"toggle","default":[1,0,0,1],"sections":[16]}]})");
+            auto model=ControlSet::parse(rigged);
+            expect(model.controls[0].anim_switch=="CSSBeltActive" && model.controls[2].anim_switch.empty(),"Toggle must keep its animation switch");
+            Customization custom;
+            auto switches=[&]{return control_anim_switches(model,control_values(model,custom));};
+            expect(switches()==std::map<std::string,bool>{{"CSSBeltActive",true}},"Original must run the shown belt");
+            custom.values["belt"]={0,0,0,1};
+            expect(switches()==std::map<std::string,bool>{{"CSSBeltActive",false}},"Hiding every belt toggle must stop its rig");
+            custom.values["buckle"]={1,0,0,1};
+            expect(switches().at("CSSBeltActive"),"Any shown toggle must keep a shared switch on");
+            custom.values.clear();
+            expect(switches().at("CSSBeltActive"),"Clearing customization must restore the authored switch");
+            for(const auto& invalid:{Json(""),Json("1Belt"),Json("Belt Active"),Json("Belt.Active"),Json(std::string(65,'a')),Json(3)}) {
+                auto bad=rigged; bad["controls"][0]["anim_switch"]=invalid;
+                rejects([&]{ControlSet::parse(bad);});
+            }
+            auto stray=Json::parse(R"({"schema":1,"controls":[{"id":"hue","name":"Hue","kind":"color","default":[1,1,1,1],"anim_switch":"CSSBeltActive"}]})");
+            rejects([&]{ControlSet::parse(stray);});
+        }
+        {
             // Heeled fabric requires both toggles, while skin lining requires
             // only shoes. Exercise every combination and a return to Original.
             const auto wardrobe=ControlSet::parse(Json::parse(R"({"schema":1,"controls":[

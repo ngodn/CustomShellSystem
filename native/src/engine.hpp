@@ -97,6 +97,7 @@ class HandSupport {
     std::optional<hand_support::Catalog> catalog_;
     std::string catalog_error_;
     WeakObject component_, instance_, rig_, candidate_;
+    WeakObject unmatched_;     // instance searched with no bound rig in its graph
     WeakObject carry_weapon_;
     AssetLoadRoots roots_;
     hand_support::CarryBlend carry_;
@@ -105,6 +106,8 @@ class HandSupport {
     double moving_phase_=0.;
     int32_t node_offset_=-1;
     bool busy_=false, enabled_=false;
+    double barrier_avg_us_=0., barrier_max_us_=0.;
+    uint64_t barrier_samples_=0;
     std::string state_="inactive";
 public:
     std::string configure(const fs::path& path);
@@ -837,6 +840,12 @@ class Appearance {
     // together, because one owner clearing its own set must not put back what the other
     // still wants hidden. `applied_hidden_` is what the component was last told.
     std::set<int> toggle_hidden_, item_hidden_, applied_hidden_;
+    // Toggle-driven AnimBP switches (control_anim_switches): what the controls want, and per
+    // post-process instance what was last written, so a steady look writes nothing.
+    std::map<std::string,bool> anim_switches_;
+    struct AnimSwitchTarget { WeakObject instance; std::map<std::string,bool> written; };
+    AnimSwitchTarget world_switches_, menu_switches_;
+    void write_anim_switches(RC::Unreal::UObject* component,AnimSwitchTarget& target);
     // Spring: every field CSS may write on a node, remembered on first touch and keyed by
     // bone, so dropping the control puts the author's own motion back with no mesh reload.
     using SpringOriginal=SpringSettings;
@@ -1017,6 +1026,7 @@ public:
     std::vector<std::string> take_shader_fallback_log();
     Json shader_fallback_status() const;
     void sync_hand_support();
+    void sync_anim_switches();
     Json hand_support_status() const { return hand_support_.status(); }
     void sync_native_foot_ik(bool eligible);
     Json native_foot_ik_status() const { return native_foot_ik_.status(); }

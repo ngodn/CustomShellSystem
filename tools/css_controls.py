@@ -198,6 +198,11 @@ def validate(recipe:dict) -> set[str]:
                 number(index,0,127)
             used.add(c['id'])
         elif 'sections' in c: raise ValueError('Only a toggle control hides material sections')
+        if 'anim_switch' in c:
+            if kind_of(c)!='toggle': raise ValueError('Only a toggle control drives an animation switch')
+            name=c['anim_switch']
+            if not isinstance(name,str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,63}',name):
+                raise ValueError('Invalid animation switch name')
         if 'occludes_sections' in c:
             if kind_of(c)!='toggle' or not c.get('sections'): raise ValueError('Only a section toggle occludes material sections')
             covered=c['occludes_sections'];bounded_array(covered,128)

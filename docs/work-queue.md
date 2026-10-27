@@ -1,5 +1,18 @@
 # Current work queue
 
+## October 27: Commander White 0.1.3 optimize (lighter package, cheaper belt), next CSS core
+
+Record: `CSS_CommanderWhite_eins0fx_P/work/optimize-013/` (MEASURE.md, Astra REPORT.md), brief
+`aaa-prompts/ASTRA_CW_OPTIMIZE_013.md`. Core: toggle `anim_switch` (belt rig off while the belt is
+hidden), hand support stops scanning and waiting every tick on a graph with no bound rig, barrier
+timing in status. Found on the way:
+- The first 0.1.3 hair build patched `CR_HairH4`, which no worn graph runs; the fix now goes into
+  `CR_Strands1`.
+- Queued: CW shoulder hold has not bound since 0.1.2. `hand-support.json` swaps `CR_BodyB3`, but the
+  0.1.2 graphs run `CR_BodyV11` (body-feel). Needs a V11-based shoulder support rig under
+  `/Game/CSS/Runtime/Hands/` and new catalog rows; swapping V11 for the B3-based rig would drop the
+  24 body controls' motion.
+
 ## October 27: Profane Proxima 0.2.4 Chest shape (Perky / Juicy), CSS 1.0.9, Shared Assets 1.0.9
 
 Nexus (Primus2g): "Preferred tiddies from the previous version, possible to have the option to

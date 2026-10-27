@@ -418,6 +418,14 @@ ControlSet ControlSet::parse(const Json& j) {
                 control.occludes_sections.push_back(section);
             }
         }
+        if(c.contains("anim_switch")) {
+            if(control.kind!=ControlKind::Toggle) throw std::runtime_error("Only a toggle control drives an animation switch");
+            control.anim_switch=c.at("anim_switch").get<std::string>();
+            const auto& name=control.anim_switch;
+            const auto word=[](char ch){return std::isalnum(static_cast<unsigned char>(ch)) || ch=='_';};
+            if(name.empty() || name.size()>64 || std::isdigit(static_cast<unsigned char>(name[0])) || !std::all_of(name.begin(),name.end(),word))
+                throw std::runtime_error("Invalid animation switch name");
+        }
         if(c.contains("shape_control")) {
             if(control.kind!=ControlKind::Choice) throw std::runtime_error("Only a choice control routes a shape");
             control.shape_control=c.at("shape_control").get<std::string>();
@@ -987,6 +995,16 @@ std::set<int> hidden_control_sections(const ControlSet& options,const std::map<s
         hidden.insert(sections.begin(),sections.end());
     }
     return hidden;
+}
+std::map<std::string,bool> control_anim_switches(const ControlSet& options,const std::map<std::string,ControlValue>& values) {
+    std::map<std::string,bool> out;
+    for(const auto& control:options.controls) if(control.kind==ControlKind::Toggle && !control.anim_switch.empty()) {
+        const auto found=values.find(control.id);
+        const auto& value=found==values.end()?control.value:found->second;
+        valid_value(control,value);
+        out[control.anim_switch]=out[control.anim_switch] || value[0]>=.5f;
+    }
+    return out;
 }
 const Control* shape_route(const ControlSet& options,const std::string& shape_id) {
     for(const auto& c:options.controls) if(c.shape_control==shape_id) return &c;
