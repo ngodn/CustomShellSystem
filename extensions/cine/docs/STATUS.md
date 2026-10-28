@@ -13,7 +13,8 @@ FFmpeg (`tools/fetch_ffmpeg.py`, git-ignored exe), music through `SM_CINE_Render
 Scenes ship as pak packs (`CINE_<Pack>_eins0fx_P`, built by `assets/packs/build_pack.py`,
 packaged by `tools/scene_packs.py` into `extensions/core/dist/cine-pack-<slug>-v1.0.0/`); the main
 CINE ships no scenes. `cine-v2.0.0` is a local tag (not pushed) at 3f89e93; the release zip in
-`extensions/core/dist/cine-v2.0.0/` is built from it and verified. Ready to ship once the user pushes and uploads.
+`extensions/core/dist/cine-v2.0.0/` is built from it and verified. The CINE commits through 38b4b2b are on public main (pushed with the Profane pins, 28 Oct); the
+tag push and the Nexus upload are still for the user.
 
 Verified live 28 Oct: pause row (game confirm input), tabs and rows in the game's look, Record
 Route with a scripted walk, final shot from the Photo Mode view, Fashion Walk 360 rolled and
