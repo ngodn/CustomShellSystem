@@ -362,7 +362,8 @@ void Extension::tick(double seconds) {
     if (stopped_) return;
     try {
         if (!core_loader_.done() && (mode_ == Mode::Idle || mode_ == Mode::Armed)) { load_core(); return; }
-        if (!pack_queue_.empty() && mode_ == Mode::Idle) {
+        // Also while CINE Mode is open: a player who opens it right after loading still gets the packs.
+        if (!pack_queue_.empty() && (mode_ == Mode::Idle || mode_ == Mode::Armed)) {
             // Waiting for the game (main menu, loading): ask about once a second, not every tick.
             if (pack_wait_ > 0) { pack_wait_ -= std::isfinite(seconds) ? seconds : 0.1; return; }
             load_next_pack();
