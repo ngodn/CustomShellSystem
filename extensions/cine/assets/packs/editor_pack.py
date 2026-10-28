@@ -39,7 +39,7 @@ def inspect_audio(sound, expected):
     require(abs(actual["seconds"] - expected["seconds"]) <= max(1 / expected["rate"], 0.00002), str(actual))
     require(actual["rate"] == expected["rate"] and actual["channels"] == expected["channels"], str(actual))
     require(sound.get_editor_property("sound_asset_compression_type") == unreal.SoundAssetCompressionType.BINK_AUDIO, str(actual))
-    require(sound.get_editor_property("loading_behavior") == unreal.SoundWaveLoadingBehavior.FORCE_INLINE, str(actual))
+    require(sound.get_editor_property("loading_behavior") == unreal.SoundWaveLoadingBehavior.INHERITED, str(actual))
     require(actual["quality"] == 80 and not actual["looping"], str(actual))
     require(sound.get_editor_property("sound_class_object") is None, str(actual))
     return actual
@@ -73,7 +73,9 @@ if MODE == "author":
         require(isinstance(sound, unreal.SoundWave), "SoundWave import failed: " + audio_id)
         sound.set_editor_property("sound_asset_compression_type", unreal.SoundAssetCompressionType.BINK_AUDIO)
         sound.set_editor_property("compression_quality", 80)
-        sound.set_editor_property("loading_behavior", unreal.SoundWaveLoadingBehavior.FORCE_INLINE)
+        # Streamed like the game's own waves. A ForceInline wave is looked up at runtime by a format key
+        # built from the game's audio cook settings, which this project does not share, so it never played.
+        sound.set_editor_property("loading_behavior", unreal.SoundWaveLoadingBehavior.INHERITED)
         sound.set_editor_property("looping", False)
         sound.set_editor_property("sound_class_object", None)
         inspect_audio(sound, expected)

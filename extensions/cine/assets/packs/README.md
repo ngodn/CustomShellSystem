@@ -50,7 +50,7 @@ Case-insensitive row collisions are rejected. No extra rows are supplied here.
 Audio IDs keep hyphens, such as `profane-proxima`. Object names replace hyphens
 with underscores, such as `SW_profane_proxima`. The manifest's `audio.asset`
 is the exact object path. Its duration comes from WAV frame count divided by
-sample rate. SoundWaves use Bink quality 80, ForceInline loading, no loop, and
+sample rate. SoundWaves use Bink quality 80, inherited (streamed) loading, no loop, and
 no SoundClass. The runtime must assign the game's Music class override.
 
 This pipeline verifies assets and containers offline. It does not establish

@@ -197,14 +197,17 @@ def verify_exports(dump_dir, spec, rows):
         props = obj["Properties"]
         require(props["NumChannels"] == expected["channels"] and props["SampleRate"] == expected["rate"], "Cooked audio metadata differs")
         require(abs(props["Duration"] - expected["seconds"]) <= max(1 / expected["rate"], 0.00002), "Cooked duration differs")
-        require(props["LoadingBehavior"] == "ESoundWaveLoadingBehavior::ForceInline", "Cooked sound is not ForceInline")
+        require("LoadingBehavior" not in props, "Cooked sound must inherit its loading behavior")
         require(not props.get("bLooping", False) and props.get("SoundClassObject") is None, "Unexpected sound routing/loop")
-        formats = obj["CompressedFormatData"]
-        require(formats and obj["RunningPlatformData"] is None, "Missing inline compressed data")
-        require(len(formats) == 1 and next(iter(formats)).startswith("BINKA"), "Expected cooked Bink audio")
-        require(all(item["ElementCount"] > 0 and item["SizeOnDisk"] > 0 for item in formats.values()), "Empty cooked audio payload")
-        audio_result[audio_id] = {"asset": expected["asset"], "properties": props, "formats": formats,
-                                  "compressed_bytes": sum(item["SizeOnDisk"] for item in formats.values())}
+        # Streamed chunks, like the game's own waves; inline format data never plays in the game.
+        stream = obj["RunningPlatformData"]
+        require(stream and not obj["CompressedFormatData"], "Missing streamed audio chunks")
+        require(stream["AudioFormat"] == "BINKA", "Expected cooked Bink audio")
+        chunks = stream["Chunks"]
+        require(stream["NumChunks"] == len(chunks) >= 2, "Expected a header chunk and audio chunks")
+        require(all(c["DataSize"] > 0 and c["BulkData"]["SizeOnDisk"] > 0 for c in chunks), "Empty cooked audio chunk")
+        audio_result[audio_id] = {"asset": expected["asset"], "properties": props, "chunks": len(chunks),
+                                  "compressed_bytes": sum(c["DataSize"] for c in chunks)}
     require(not exports, "Unexpected exports: " + str(list(exports)))
     return audio_result
 
@@ -252,6 +255,7 @@ def build(pack):
         actual = {str(p.relative_to(source).with_suffix("")) for p in files if p.suffix == ".uasset"}
         require(actual == expected, "Cooked package set differs")
         require(all((source / (name + ".uexp")).is_file() for name in expected), "Missing export payload")
+        require(all((source / (name + ".ubulk")).is_file() for name in expected if name.startswith("Audio/")), "Missing streamed audio chunks")
         legacy = run_dir / "legacy"
         shutil.copytree(source, legacy / f"MortalShell2/Content/CSSX/CINE/{pack}")
         container = f"CINE_{pack}_eins0fx_P"
@@ -274,7 +278,11 @@ def build(pack):
         dump_cmd = [DOTNET_ROOT / "dotnet", DUMP, mount, USMAP, dump_dir]
         run([*dump_cmd, "list"], logs / "dump-list.log", env)
         listed = (dump_dir / "files.txt").read_text().splitlines()
-        require({p.casefold() for p in listed} == {f"mortalshell2/content/cssx/cine/{pack}/{name}.uasset".casefold() for name in expected}, "Container paths differ: " + repr(listed))
+        # Each streamed song lists its .ubulk (the audio chunks) next to its .uasset.
+        songs = {"Audio/" + a["asset"].rsplit(".", 1)[1] for a in spec["audio"].values()}
+        listed_expected = {f"mortalshell2/content/cssx/cine/{pack}/{name}.uasset" for name in expected} | \
+                          {f"mortalshell2/content/cssx/cine/{pack}/{name}.ubulk" for name in songs}
+        require({p.casefold() for p in listed} == {p.casefold() for p in listed_expected}, "Container paths differ: " + repr(listed))
         result = run([*dump_cmd, "export", f"/CSSX/CINE/{pack}/"], logs / "dump-export.log", env)
         require(f"exported {len(expected)}, failed 0" in result, "GameDump did not export every package")
         audio = verify_exports(dump_dir, spec, rows)

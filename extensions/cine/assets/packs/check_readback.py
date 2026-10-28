@@ -45,8 +45,9 @@ def main():
     if spec["audio"]:
         sound_file = next(name for name, objects in original.items() if objects[0]["Type"] == "SoundWave")
         trial("resampled audio rejected", lambda data: data[sound_file][0]["Properties"].update(SampleRate=16000))
-        trial("missing platform data rejected", lambda data: data[sound_file][0].update(CompressedFormatData=None))
-        trial("empty compressed audio rejected", lambda data: next(iter(data[sound_file][0]["CompressedFormatData"].values())).update(SizeOnDisk=0))
+        trial("missing streamed chunks rejected", lambda data: data[sound_file][0].update(RunningPlatformData=None))
+        trial("inline-only audio rejected", lambda data: data[sound_file][0].update(CompressedFormatData={"BINKA": {"SizeOnDisk": 1}}))
+        trial("empty audio chunk rejected", lambda data: data[sound_file][0]["RunningPlatformData"]["Chunks"][-1].update(DataSize=0))
     require(tests, "No negative controls ran")
     write_json(source / "readback-controls.json", {"undamaged": "passed", "rejected": tests})
     print(f"PASS: undamaged {spec['pack']} accepted; {len(tests)} damaged copies rejected")
