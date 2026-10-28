@@ -12,15 +12,16 @@ their tab. The Render tab renders a take to `renders/<scene>-<date>/video.mp4` w
 FFmpeg (`tools/fetch_ffmpeg.py`, git-ignored exe), music through `SM_CINE_Render` in the main pak.
 Scenes ship as pak packs (`CINE_<Pack>_eins0fx_P`, built by `assets/packs/build_pack.py`,
 packaged by `tools/scene_packs.py` into `extensions/core/dist/cine-pack-<slug>-v1.0.0/`); the main
-CINE ships no scenes. `cine-v2.0.0` is a local tag (not pushed) to be moved at release.
+CINE ships no scenes. `cine-v2.0.0` is a local tag (not pushed) at 3f89e93; the release zip in
+`extensions/core/dist/cine-v2.0.0/` is built from it and verified. Ready to ship once the user pushes and uploads.
 
 Verified live 28 Oct: pause row (game confirm input), tabs and rows in the game's look, Record
 Route with a scripted walk, final shot from the Photo Mode view, Fashion Walk 360 rolled and
-back on the Take tab, close returns the game's Photo Mode untouched. Live 28 Oct (second session): HUD hidden during takes, renders at 30/24 fps, all rows. Open: render
-music records silence (blocks release), a click-through of the Animation, Scene
-and Look rows, the main pak rebuild with the mixer (queued: `work/core-pak/build.sh`), content
-moved out of C++ into `DT_CINE_Core` (Astra lane E), pack text fixes (Beast "Track:" notes,
-Commander White Walk row names), then the release zip and tag.
+back on the Take tab, close returns the game's Photo Mode untouched. Live 28 Oct (second session): HUD hidden during takes, renders at 30/24 fps, all rows. Live 28 Oct (evening): render music records
+(profane-proxima, -14.7 dB peak in music.wav and the video's AAC track) after the pack songs were
+re-cooked as streamed audio (569cf09; ForceInline songs never played in the game). Still to check
+live: packs loading when CINE Mode is opened right after the save loads (3f89e93), breakdown, label
+and guide look after lane E, a pack style override, frame cost in and out of CINE Mode, no-pak fallback.
 
 The three fight presets are held back from 2.0.0 (the code stays). In the live demo on 25 Oct
 the user found player-driven fight takes awkward, and two bugs showed: a death mid-take ends

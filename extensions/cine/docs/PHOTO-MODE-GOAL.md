@@ -191,11 +191,11 @@ Worked through without hand-backs: drive the game through the bridge, fix, conti
 7. [ ] Live checks. Done 28 Oct (second session): DT_CINE_Core read from the cooked pak (after a
    loader fix), 32 scenes from 8 packs, HUD hidden during a take, take returns to CINE Mode, every
    row of Animation, Scene and Look changes and restores, Render Take to Video at 30 and 24 fps
-   (h264_vulkan, progress row), CSS state unchanged. **Open, blocks release: render music recorded
-   silence** (UE wrote the WAV, peak 0): cause found in UE source, the unfocused app volume (0 by
-   default) scales every source; fixed in 4cd26a0 with `au.DisableAppVolume` for the audio pass,
-   host-tested, live music render still to do (`work/render-live/silent-music.wav` is the failure). Deferred to the next game window: music render
-   after that fix, breakdown/label/guide look after lane E, a pack style override, frame cost in
+   (h264_vulkan, progress row), CSS state unchanged. Render music verified live 28 Oct evening
+   (-14.7 dB peak). The cause was the pack songs, not app volume: ForceInline SoundWaves load with 0
+   channels and never play in this game; songs now cook streamed (569cf09) and the app-volume change
+   is reverted (20b3277). Deferred to the next game window: packs loading with CINE Mode already open
+   (3f89e93), breakdown/label/guide look after lane E, a pack style override, frame cost in
    and out of CINE Mode, no-pak fallback. Original list: a take per pack, route record, rendered video, menu reopen, world change, death, leave
    Photo Mode with the game exactly as it was. Plus, after lane E: the cooked pak reads back
    `DT_CINE_Core` (15 rows, schema 1, bytes equal `assets/core/content.json`) and the inline font
