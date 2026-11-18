@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 int checks=0;
@@ -11,6 +12,70 @@ void expect(bool condition,const char* message) {
     if(!condition) throw std::runtime_error(message);
 }
 template<class F> bool throws(F&& f) { try { f(); } catch(const std::exception&) { return true; } return false; }
+
+struct ModeChange {
+    using Mode=css::shader_fallback::Mode;
+    struct Component { std::vector<int> overrides{8,9}; };
+
+    css::shader_fallback::ModeState state;
+    Component* component=nullptr;
+    std::vector<int> expected{8,9};
+    int resets=0, resolutions=0, reads=0;
+
+    explicit ModeChange(Mode mode=Mode::automatic)
+        : state{mode,css::shader_fallback::active(mode,false,true)} {}
+
+    bool turn_off(bool expires_on_reset=false) {
+        return state.set_mode("off",false,true,[]{ return false; },[&]{
+            ++resets;
+            if(expires_on_reset) component=nullptr;
+            if(component) component->overrides={17,31};
+        },[&]{
+            css::shader_fallback::snapshot_materials(expected,[&]{
+                expect(resets==1,"Resolve the tracked component after resetting controls");
+                ++resolutions;
+                return component;
+            },[&](Component* resolved,auto& slots){
+                ++reads;
+                expect(resolved!=nullptr,"The override reader received a null component");
+                slots.insert(slots.end(),resolved->overrides.begin(),resolved->overrides.end());
+            });
+        });
+    }
+};
+
+void test_mode_change() {
+    using css::shader_fallback::Mode;
+    ModeChange stock;
+    expect(stock.state.active,"Auto is active on an unverified build with donors");
+    expect(stock.turn_off(),"Auto to Off changes the effective fallback mode");
+    expect(stock.state.mode==Mode::off && !stock.state.active && !stock.state.outfit_stale,
+           "Off is stored and fallback is inactive on the stock mesh");
+    expect(stock.expected.empty(),"A missing component clears the old snapshot");
+    expect(stock.resets==1 && stock.resolutions==1 && stock.reads==0,
+           "A missing component is resolved once without reading overrides");
+
+    ModeChange::Component component;
+    ModeChange expired;
+    expired.component=&component;
+    expect(expired.turn_off(true),"A component expiring during reset still allows the mode change");
+    expect(expired.expected.empty() && expired.resets==1 && expired.resolutions==1 && expired.reads==0,
+           "A component expiring during reset leaves an empty snapshot without reading overrides");
+
+    ModeChange live;
+    live.component=&component;
+    expect(live.turn_off(),"A live appearance also changes the effective fallback mode");
+    expect(live.expected==std::vector<int>{17,31},"The snapshot preserves the order of restored overrides");
+    expect(live.resets==1 && live.resolutions==1 && live.reads==1,
+           "A live component is resolved and read once");
+
+    ModeChange already_off{Mode::off};
+    already_off.component=&component;
+    expect(!already_off.turn_off(),"Off to Off leaves the effective fallback mode unchanged");
+    expect(already_off.expected==std::vector<int>{8,9} && already_off.resets==0 &&
+           already_off.resolutions==0 && already_off.reads==0,
+           "An unchanged mode leaves the old snapshot and controls alone");
+}
 }
 
 int main() try {
@@ -50,6 +115,7 @@ int main() try {
     expect(parse_mode("auto")==Mode::automatic && parse_mode("always")==Mode::always && parse_mode("off")==Mode::off,"Modes parse");
     expect(!parse_mode("on") && !parse_mode("") && !parse_mode("AUTO"),"Unknown modes are rejected");
     expect(std::string(mode_name(Mode::always))=="always","Modes round-trip");
+    test_mode_change();
 
     // An old outfit version known to lack its shaders on a verified game still gets the fallback.
     expect(!catalog.stale("eins0fx.seduxtress","1.5.0"),"Without a stale list no outfit is stale");

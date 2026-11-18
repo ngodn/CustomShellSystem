@@ -4,16 +4,13 @@
 // customize, never per frame, and does nothing at all while the fallback is inactive.
 namespace {
 struct ShaderFallbackOwned { WeakObject mid, source; };
-struct ShaderFallbackGlobal {
+struct ShaderFallbackGlobal : shader_fallback::ModeState {
     shader_fallback::Catalog catalog;
-    shader_fallback::Mode mode=shader_fallback::Mode::automatic;
-    bool loaded=false, active=false;
+    bool loaded=false;
     std::string catalog_error, verified_build;
     shader_fallback::PakTables tables;
-    // Installed outfit id -> its package version, and whether the worn outfit is a version the
-    // catalog lists as stale (shaders missing on this verified game); set at every apply.
+    // Installed outfit id -> its package version, used to check for missing shaders on verified builds.
     std::map<std::string,std::string> installed_versions;
-    bool outfit_stale=false;
     // Every MID this feature created, with the outfit material it stands in for. Paths and
     // rollback read the source, so a fallback MID never looks like a temporary game effect.
     std::vector<ShaderFallbackOwned> owned;
