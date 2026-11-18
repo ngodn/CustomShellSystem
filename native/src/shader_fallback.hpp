@@ -67,9 +67,9 @@ inline bool valid_object_path(std::string_view path) {
     if(!path.starts_with("/Game/") || path.size()>512) return false;
     const auto dot=path.rfind('.');
     const auto slash=path.rfind('/');
-    if(dot==std::string_view::npos || dot<slash || dot+1==path.size()) return false;
+    if(dot==std::string_view::npos || dot<=slash+1 || dot+1==path.size()) return false;
     for(unsigned char c:path) if(c<0x20 || c==0x7f || c==':' || c=='\\') return false;
-    return path.substr(slash+1,dot-slash-1)==path.substr(dot+1);
+    return true;
 }
 
 class Catalog {
