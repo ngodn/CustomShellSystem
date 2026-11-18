@@ -47,7 +47,8 @@ BodyGeometryModel BodyGeometryModel::parse(const Json& data) {
         array(data.at("morphs"),6);
         axes=6;
     } else {
-        require(model.schema==2 && data.size()==4,"Unsupported body geometry schema");
+        require((model.schema==2 && data.size()==4) || (model.schema==3 && data.size()==5),
+                "Unsupported body geometry schema");
         require(data.at("morphs").is_array(),"Body geometry requires a morph list");
         axes=data.at("morphs").size();
         require(axes>=body_geometry_min_axes && axes<=body_geometry_max_axes,"Body geometry axis count outside 6..8");
@@ -55,6 +56,11 @@ BodyGeometryModel BodyGeometryModel::parse(const Json& data) {
                 "Body geometry corner count must be 2^axes");
     }
     const size_t corners=size_t{1}<<axes;
+    if(model.schema==3) {
+        const auto& maxima=data.at("axis_maxima");
+        array(maxima,axes);
+        for(const auto& v:maxima) model.axis_maxima.push_back(float(number(v,1,8)));
+    }
     array(data.at("helpers"),7);
     std::set<std::string> seen;
     for(size_t i=0;i<axes;++i) {
@@ -97,10 +103,24 @@ BodyGeometryModel BodyGeometryModel::parse(const Json& data) {
     // Catch invalid corner inertia at load time. Interior values are checked before use.
     for(size_t mask=0;mask<corners;++mask) {
         std::vector<float> values(axes);
-        for(size_t i=0;i<axes;++i) values[i]=float((mask>>i)&1);
+        for(size_t i=0;i<axes;++i)
+            values[i]=float((mask>>i)&1)*(model.axis_maxima.empty()?1.f:model.axis_maxima[i]);
         model.evaluate(values);
     }
     return model;
+}
+
+float BodyGeometryModel::axis_maximum(std::size_t axis) const {
+    return axis_maxima.empty()?max_body_morph_weight:axis_maxima[axis];
+}
+
+std::vector<float> BodyGeometryModel::bounded_weights(std::vector<float> morphs) const {
+    require(morphs.size()==axes(),"Body morph count differs from the model");
+    for(size_t axis=0;axis<morphs.size();++axis) {
+        require(std::isfinite(morphs[axis]),"Nonfinite body morph");
+        morphs[axis]=std::clamp(morphs[axis],0.f,axis_maximum(axis));
+    }
+    return morphs;
 }
 
 BodyGeometry BodyGeometryModel::evaluate(const std::vector<float>& morphs) const {
@@ -109,11 +129,16 @@ BodyGeometry BodyGeometryModel::evaluate(const std::vector<float>& morphs) const
     // Outfits may push a body slider past its authored morph (weight above 1) to reach a larger
     // shape. The model is linear/quadratic in the weights, so it extends past 1; the inertia and
     // bounds checks below still reject a result that stops being physical.
-    for(float value:morphs) require(std::isfinite(value) && value>=0 && value<=max_body_morph_weight,"Body morph outside [0,3]");
+    auto samples=morphs;
+    for(size_t i=0;i<count;++i) {
+        const float maximum=axis_maximum(i);
+        require(std::isfinite(morphs[i]) && morphs[i]>=0 && morphs[i]<=maximum,"Body morph outside model range");
+        if(!axis_maxima.empty()) samples[i]/=maximum;
+    }
     std::vector<double> weights(total);
     for(size_t mask=0;mask<total;++mask) {
         weights[mask]=1;
-        for(size_t m=0;m<count;++m) weights[mask]*=(mask&(size_t{1}<<m))?double(morphs[m]):1-double(morphs[m]);
+        for(size_t m=0;m<count;++m) weights[mask]*=(mask&(size_t{1}<<m))?double(samples[m]):1-double(samples[m]);
     }
     BodyGeometry result;
     result.shape=morphs;

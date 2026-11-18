@@ -101,6 +101,18 @@ int main(int argc,char** argv) {
                 {"skeleton",human},{"source_toc_sha256",std::string(64,'a')},
                 {"source_bulk_bytes",uint64_t{1234}}}};
             const std::vector<AnimationLibrary> migrated_libraries{AnimationLibrary::parse(migrated)};
+            auto many=migrated;
+            const auto row=many["adapters"][0];
+            for(unsigned i=1;i<64;++i) {
+                auto adapter=row;
+                adapter["source_outfit"]="outfit."+std::to_string(i);
+                many["adapters"].push_back(adapter);
+            }
+            expect(AnimationLibrary::parse(many).adapters.size()==64,"64 playback pins must load");
+            auto extra=row;
+            extra["source_outfit"]="outfit.64";
+            many["adapters"].push_back(extra);
+            rejects([&]{AnimationLibrary::parse(many);});
             const auto selected=resolve_library_animation(migrated_libraries,AnimationSlot::Idle,
                 "css.eve.idle",{},human);
             expect(selected.candidates.size()==1 && selected.candidates[0].asset==prefix+"AN_Idle.AN_Idle" &&

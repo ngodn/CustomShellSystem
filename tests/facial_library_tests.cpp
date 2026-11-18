@@ -33,6 +33,18 @@ int main(int argc,char** argv) {
                 {"skeleton",skeleton},{"source_toc_sha256",hash},{"source_bulk_bytes",uint64_t{1234}}}}}
         };
         auto rig=FacialRig::parse(document);
+        auto many=document;
+        const auto row=many["adapters"][0];
+        for(unsigned i=1;i<64;++i) {
+            auto adapter=row;
+            adapter["source_outfit"]="outfit."+std::to_string(i);
+            many["adapters"].push_back(adapter);
+        }
+        expect(FacialRig::parse(many).adapters.size()==64,"64 facial pins must load on one rig");
+        auto extra=row;
+        extra["source_outfit"]="outfit.64";
+        many["adapters"].push_back(extra);
+        rejects([&]{FacialRig::parse(many);});
         for(const std::string prefix:{"/Game/CSS/eins0fx/EveSB/Faces/",
                 "/Game/CSS/eins0fx/UnholyGenessa/Faces/",
                 "/Game/CSS/eins0fx/CommanderWhite/Faces/",

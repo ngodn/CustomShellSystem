@@ -80,7 +80,8 @@ FacialRig FacialRig::parse(const Json& value) {
         }
     }
     const auto& adapters=value.at("adapters");
-    if(!adapters.is_array() || adapters.empty() || adapters.size()>32) throw std::runtime_error("Invalid facial adapter count");
+    if(!adapters.is_array() || adapters.empty() || adapters.size()>max_shared_adapter_rows)
+        throw std::runtime_error("Invalid facial adapter count");
     std::set<std::tuple<std::string,std::string,std::string>> sources;
     for(const auto& item:adapters) {
         fields(item,{"source_outfit","source_mesh","target_mesh","skeleton","source_toc_sha256","source_bulk_bytes"});

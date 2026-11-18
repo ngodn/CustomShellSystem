@@ -48,6 +48,8 @@ class ReleaseTests(unittest.TestCase):
         self.files['core.json'] = json.dumps({'abi': 1, 'file': 'css_core-' + version + '.dll'}).encode()
         self.files['catalog/hand-support.json'] = (Path(__file__).resolve().parents[1] /
                                                   'packaging/catalog/hand-support.json').read_bytes()
+        self.files['catalog/native-foot-ik.json'] = (Path(__file__).resolve().parents[1] /
+                                                   'packaging/catalog/native-foot-ik.json').read_bytes()
         del self.files['release.json']
         self.files['release.json'] = json.dumps({'version': version, 'interface': 'inventory',
             'files': {p: digest(data) for p, data in self.files.items()}}).encode()

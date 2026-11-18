@@ -436,6 +436,7 @@ struct Core {
         }
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
+        dirty|=migrate_saved_customizations(state,catalog);
         for(const auto& line:appearance.configure_shader_fallback(root/"catalog/shader-donors.json",package_root,state.shader_fallback))
             host.log(line.c_str());
         appearance.set_installed_outfit_versions(installed_outfit_versions(catalog));
@@ -566,7 +567,7 @@ struct Core {
                     appearance.set_ground_offset(selection.custom.ground_offset_cm.value_or(
                         authored_ground_offset(outfit,*variant,selection.custom)));
                     appearance.sync_items(outfit,selection.variant);
-                    appearance.customize(outfit,selection.variant,selection.custom);
+                    appearance.customize(outfit,selection.variant,selection.custom,host.log);
                 }
                 appearance.set_expression(plan);
                 sync_menu_safely();
@@ -674,7 +675,8 @@ struct Core {
             if(!catalog.compatible(outfit,appearance.shell)) throw std::runtime_error("This outfit does not support the current shell: "+appearance.shell);
             std::optional<Customization> custom;
             if(command.contains("customize")) {
-                for(const auto& o:catalog.outfits) if(o.id==outfit) custom=restore_customization(o.controls_for(variant),command.at("customize"));
+                for(const auto& o:catalog.outfits) if(o.id==outfit)
+                    custom=compatible_customization(o,variant,Customization::parse(command.at("customize")));
             }
             selected_outfit=outfit; selected_variant=variant;
             pending_custom=std::move(custom); custom_only=false;
@@ -733,10 +735,11 @@ struct Core {
         auto custom=selected->second.custom;
         for(const auto& step:commands) {
             if(!step.is_object()) throw std::runtime_error("Invalid customize command");
-            if(step.value("action",std::string{})=="restore") custom=restore_customization(options,step.at("customize"));
+            if(step.value("action",std::string{})=="restore")
+                custom=compatible_customization(*outfit,selected->second.variant,Customization::parse(step.at("customize")));
             else if(step.value("action",std::string{})=="expression")
                 custom=select_expression(custom,outfit->id,selected->second.variant,step.at("expression").get<std::string>());
-            else custom=apply_customize(options,custom,step);
+            else custom=apply_customize(options,custom,step,host.log);
         }
         control_values(options,custom);   // whole result valid, or nothing is committed
         selected->second.custom=custom;
@@ -1075,7 +1078,7 @@ struct Core {
                     if(tint.neutral()) custom.tints.erase(group); else custom.tints[group]=tint;
                 }
             }
-            else custom=apply_customize(options,custom,command);   // control, reset_control, color, reset_color
+            else custom=apply_customize(options,custom,command,host.log);   // control, reset_control, color, reset_color
             control_values(options,custom);
             selected->second.custom=custom;
             pending_custom=std::move(custom); custom_only=true; refresh_custom=command.value("refresh",true);
@@ -1125,6 +1128,7 @@ struct Core {
                     appearance.performance.interrupt("Animation catalog changed");
                     appearance.clear_shared_animations();appearance.clear_facial_failures();++animation_catalog_generation;
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
+                    dirty|=migrate_saved_customizations(state,catalog);
                     for(const auto& line:appearance.configure_shader_fallback(root/"catalog/shader-donors.json",package_root,state.shader_fallback))
                         host.log(line.c_str());
                     appearance.set_installed_outfit_versions(installed_outfit_versions(catalog));
@@ -1335,6 +1339,7 @@ struct Core {
             appearance.performance.interrupt("Animation catalog changed");
             appearance.clear_shared_animations();appearance.clear_facial_failures();++animation_catalog_generation;
             catalog = std::move(updated);
+            dirty|=migrate_saved_customizations(state,catalog);
             appearance.set_installed_outfit_versions(installed_outfit_versions(catalog));
             original_shells_attempts=0; original_shells_retry_after=0;
             ui_refresh=true;
@@ -1471,7 +1476,7 @@ struct Core {
                     if(state.remembered_custom.contains(custom_key)) requested.custom=state.remembered_custom.at(custom_key);
                     else if(state.remembered_custom.contains(requested.outfit)) requested.custom=state.remembered_custom.at(requested.outfit);
                     for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit)
-                        requested.custom=compatible_values(outfit.controls_for(requested.variant),requested.custom);
+                        requested.custom=compatible_customization(outfit,requested.variant,std::move(requested.custom));
                     selected_outfit.clear(); selected_variant.clear();
                     if (!catalog.compatible(requested.outfit, shell))
                         throw std::runtime_error("This outfit does not support the current shell: " + shell);
@@ -1483,7 +1488,7 @@ struct Core {
                     // a variant can carry its own recipe. Dropping the part it cannot place
                     // leaves you dressed; letting it through leaves you in nothing.
                     for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit)
-                        requested.custom=compatible_values(outfit.controls_for(requested.variant),requested.custom);
+                        requested.custom=compatible_customization(outfit,requested.variant,std::move(requested.custom));
                 } else {
                     host.log(("No saved appearance for shell "+shell+"; leaving it alone").c_str());
                 }
@@ -1527,7 +1532,7 @@ struct Core {
                                 // sections, and a toggle may then show one of them again.
                                 appearance.sync_items(outfit,requested.variant);
                                 lap("items");
-                                appearance.customize(outfit,requested.variant,requested.custom);
+                                appearance.customize(outfit,requested.variant,requested.custom,host.log);
                                 appearance.set_expression(face);
                                 lap("customize");
                                 laps+=" (";

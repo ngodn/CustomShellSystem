@@ -781,6 +781,62 @@ ControlSet ControlSet::parse(const Json& j) {
             if(std::find(c.nodes.begin(),c.nodes.end(),body_region_names[region])!=c.nodes.end())
                 throw std::runtime_error("Body region cannot also be driven by a spring or AnimDynamics control");
     ids.clear();
+    if(j.contains("shape_range")) {
+        const auto& block=j.at("shape_range");
+        if(!block.is_object() || block.size()!=5)
+            throw std::runtime_error("Invalid extended shape range");
+        ShapeRange range;
+        const auto& legacy=block.at("legacy_limits");
+        const auto& caps=block.at("stack_caps");
+        const auto& stages=block.at("stages");
+        if(!legacy.is_object() || legacy.empty() || !caps.is_object() ||
+           !stages.is_array() || stages.size()>64)
+            throw std::runtime_error("Invalid extended shape range fields");
+        range.stack_load_start=block.at("stack_load_start").get<float>();
+        range.stack_load_full=block.at("stack_load_full").get<float>();
+        if(!std::isfinite(range.stack_load_start) || !std::isfinite(range.stack_load_full) ||
+           range.stack_load_start<0 || range.stack_load_full<=range.stack_load_start)
+            throw std::runtime_error("Invalid extended shape stack load");
+        for(const auto& [id,max]:legacy.items()) {
+            const auto* control=out.find(id);
+            const auto limit=max.get<float>();
+            if(!control || control->kind!=ControlKind::Shape || !std::isfinite(limit) ||
+               limit<control->value[0] || limit>=control->maximum)
+                throw std::runtime_error("Invalid previous shape limit");
+            range.legacy_limits.emplace(id,limit);
+        }
+        for(const auto& [id,entry]:caps.items()) {
+            const auto cap=entry.get<float>();
+            const auto* control=out.find(id);
+            if(!range.legacy_limits.contains(id) || !control || !std::isfinite(cap) ||
+               cap<control->value[0] || cap>control->maximum)
+                throw std::runtime_error("Invalid extended stack cap");
+            range.stack_caps.emplace(id,cap);
+        }
+        std::set<std::string> stage_morphs;
+        for(const auto& row:stages) {
+            ShapeRangeStage stage;
+            stage.control=row.at("control").get<std::string>();
+            stage.morph=row.at("morph").get<std::string>();
+            stage.route=row.value("route",std::string{});
+            stage.blend_when_extended=row.value("blend_when_extended",false);
+            morph_name(stage.morph);
+            if(!range.legacy_limits.contains(stage.control) || !stage_morphs.insert(stage.morph).second)
+                throw std::runtime_error("Invalid extended shape stage");
+            const auto* route=shape_route(out,stage.control);
+            if(!stage.route.empty() &&
+               (!route || std::none_of(route->options.begin(),route->options.end(),
+                   [&](const auto& option){return option.morph==stage.route;})))
+                throw std::runtime_error("Invalid extended shape stage route");
+            for(const auto& control:out.controls) {
+                if(control.morph==stage.morph || std::any_of(control.options.begin(),control.options.end(),
+                    [&](const auto& option){return option.morph==stage.morph;}))
+                    throw std::runtime_error("Extended shape stage reuses a primary morph");
+            }
+            range.stages.push_back(std::move(stage));
+        }
+        out.shape_range=std::move(range);
+    }
     for(const auto& p:j.value("palettes",Json::array())) {
         Palette palette; palette.id=p.at("id"); palette.name=p.at("name");
         if(!valid_id(palette.id) || palette.id=="original" || !ids.insert(palette.id).second || palette.name.empty() || palette.name.size()>96 || out.palettes.size()>=64)
@@ -1042,6 +1098,47 @@ std::map<std::string,ControlValue> control_values(const ControlSet& options,cons
     }
     return result;
 }
+std::map<std::string,float> apply_shape_range(const ControlSet& options,std::map<std::string,ControlValue>& values) {
+    if(!options.shape_range) return {};
+    const auto& range=*options.shape_range;
+    const auto ramp=[](float value,float lo,float hi) {
+        const float t=std::clamp((value-lo)/(hi-lo),0.f,1.f);
+        return t*t*(3.f-2.f*t);
+    };
+    float extended=0, stack_load=0, largest_load=0;
+    for(const auto& [id,previous]:range.legacy_limits) {
+        const auto value=values.find(id);
+        if(value==values.end()) continue;
+        const auto& control=*options.find(id);
+        extended=std::max(extended,ramp(value->second[0],previous,control.maximum));
+        if(range.stack_caps.contains(id)) {
+            const float load=std::max(0.f,(value->second[0]-control.value[0])/(control.maximum-control.value[0]));
+            stack_load+=load;
+            largest_load=std::max(largest_load,load);
+        }
+    }
+    const float limit=extended*ramp(stack_load-largest_load,range.stack_load_start,range.stack_load_full);
+    for(const auto& [id,cap]:range.stack_caps) {
+        const auto value=values.find(id);
+        if(value==values.end()) continue;
+        float& weight=value->second[0];
+        weight-=limit*std::max(0.f,weight-cap);
+    }
+    std::map<std::string,float> result;
+    for(const auto& stage:range.stages) {
+        float weight=0;
+        const auto value=values.find(stage.control);
+        const auto* route=shape_route(options,stage.control);
+        if(value!=values.end() && (stage.route.empty() || route->options[choice_index(*route,values)].morph==stage.route)) {
+            const auto previous=range.legacy_limits.at(stage.control);
+            const auto maximum=options.find(stage.control)->maximum;
+            weight=stage.blend_when_extended ? extended*value->second[0]/maximum :
+                std::clamp((value->second[0]-previous)/(maximum-previous),0.f,1.f);
+        }
+        result.emplace(stage.morph,weight);
+    }
+    return result;
+}
 std::map<std::string,float> control_travel(const ControlSet& options,const Customization& custom) {
     for(const auto& [id,degrees]:custom.travel) {
         auto* c=options.find(id); if(!c) throw std::runtime_error("Saved part is not installed");
@@ -1049,7 +1146,8 @@ std::map<std::string,float> control_travel(const ControlSet& options,const Custo
     }
     return custom.travel;
 }
-Customization apply_customize(const ControlSet& options, Customization custom, const nlohmann::json& command) {
+Customization apply_customize(const ControlSet& options, Customization custom, const nlohmann::json& command,
+                               void (*log)(const char*)) {
     const auto action=command.at("action").get<std::string>();
     if(action=="reset_customization") custom=Customization{};
     else if(action=="palette") custom=choose_palette(options,custom,command.at("palette").get<std::string>());
@@ -1058,13 +1156,25 @@ Customization apply_customize(const ControlSet& options, Customization custom, c
         auto id=command.at("control").get<std::string>();
         auto* control=options.find(id);
         if(!control) throw std::runtime_error("Unknown part");
+        const auto clamp_value=[&](double requested,int channel,const SliderRange& slider) {
+            if(!std::isfinite(requested)) throw std::runtime_error("Nonfinite control value: "+id);
+            const auto clamped=std::clamp(requested,double(slider.minimum),double(slider.maximum));
+            if(log && clamped!=requested)
+                log(("Control "+id+" channel "+std::to_string(channel)+" clamped from "+
+                     std::to_string(requested)+" to "+std::to_string(clamped)).c_str());
+            return float(clamped);
+        };
+        const auto slider_value=[&](float held,int channel,const SliderRange& slider) {
+            const auto requested=command.contains("value")?command.at("value").get<double>()
+                : held+command.at("delta").get<double>()*slider.step;
+            return clamp_value(requested,channel,slider);
+        };
         if(clearing) { custom.values.erase(id); custom.travel.erase(id); }
         else if(command.value("channel",0)==4 && !command.contains("rgb")) {
             // Travel lives beside the four-number value, not in it.
             const auto slider=control_channel(*control,4);
             const float held=custom.travel.contains(id)?custom.travel.at(id):slider.value;
-            custom.travel[id]=command.contains("value")?command.at("value").get<float>()
-                :std::clamp(held+command.at("delta").get<float>()*slider.step,slider.minimum,slider.maximum);
+            custom.travel[id]=slider_value(held,4,slider);
         }
         else {
             // Read the value before the group tint, or the tint would be folded
@@ -1077,12 +1187,11 @@ Customization apply_customize(const ControlSet& options, Customization custom, c
                 const auto& rgb=command.at("rgb");
                 if(control->scalar || !rgb.is_array() || rgb.size()!=3) throw std::runtime_error("Invalid colour value");
                 for(int i=0;i<3;++i)
-                    value[i]=std::clamp(rgb[i].get<float>(),control->minimum,control->maximum);
+                    value[i]=clamp_value(rgb[i].get<double>(),i,control_channel(*control,i));
             } else {
                 int channel=command.value("channel",0);
                 const auto slider=control_channel(*control,channel);
-                if(command.contains("value")) value[channel]=command.at("value").get<float>();
-                else value[channel]=std::clamp(value[channel]+command.at("delta").get<float>()*slider.step,slider.minimum,slider.maximum);
+                value[channel]=slider_value(value[channel],channel,slider);
             }
             custom.values[id]=value;
         }

@@ -9,7 +9,7 @@ A handoff file is what a package lane writes after a recook
 (`work/uuepbs/step6/shared-adapter-handoff.json`): `expected_adapters`, a list of
 {"pointer": "/catalog/animation_library/adapters/0", "adapter": {...row...}}.
 The pointer names the array the row belongs to; its index is ignored. With --prune, rows of one outfit whose revision is not listed are removed first
-(superseded development builds; the core accepts at most 32 rows per list). Rows are
+(superseded development builds; the core accepts at most 64 rows per list). Rows are
 appended, never replaced: the core keys performance adapters by (outfit, revision
 hash, source class) and facial adapters by (outfit, revision hash, source mesh), so
 the previous revision keeps resolving and rollback is a trio swap only.
@@ -152,11 +152,11 @@ def main():
             array.append(copy.deepcopy(row))
             appended.append((where, ident, row['source_bulk_bytes']))
 
-    if len(library['adapters']) > 32:
-        sys.exit('more than 32 performance adapters')
+    if len(library['adapters']) > 64:
+        sys.exit('more than 64 performance adapters')
     for rig in library.get('faces', []):
-        if len(rig['adapters']) > 32:
-            sys.exit(f'more than 32 facial adapters on {rig["id"]}')
+        if len(rig['adapters']) > 64:
+            sys.exit(f'more than 64 facial adapters on {rig["id"]}')
     candidate['version'] = a.version
     library['version'] = a.version
     if not appended and not pruned:

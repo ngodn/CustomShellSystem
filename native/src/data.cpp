@@ -76,6 +76,67 @@ bool valid_id(const std::string& s) {
                (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-';
     }) && s != "." && s != "..";
 }
+
+namespace {
+const std::string legacy_eve_calf="shape_PBMCalvesSize", eve_calf="shape_EveCalfSize";
+
+const Control* eve_calf_control(const Outfit& outfit,const std::string& variant) {
+    constexpr std::string_view eve_outfits[]={
+        "eins0fx.seduxtress","eins0fx.eve.bikini","eins0fx.eve.black_pearl","eins0fx.eve.casual_sweater",
+        "eins0fx.eve.midsummer_alice","eins0fx.eve.peony","eins0fx.eve.prototype","eins0fx.eve.skin_suit"
+    };
+    if(std::ranges::find(eve_outfits,outfit.id)==std::end(eve_outfits)) return nullptr;
+    if(std::ranges::find(outfit.variants,variant,&Variant::id)==outfit.variants.end()) return nullptr;
+    const auto& controls=outfit.controls_for(variant);
+    const auto* calf=controls.find(eve_calf);
+    if(!calf || calf->kind!=ControlKind::Shape || calf->morph!="PBMCalvesSize" ||
+       calf->minimum!=0 || calf->maximum!=2 || calf->value[0]!=1 || controls.find(legacy_eve_calf))
+        return nullptr;
+    return calf;
+}
+
+bool migrate_eve_calf(Customization& custom,const Control& calf) {
+    const auto old=custom.values.find(legacy_eve_calf);
+    if(old==custom.values.end()) return false;
+    auto value=calf.value;
+    value[0]=std::clamp(old->second[0]+1.f,calf.minimum,calf.maximum);
+    custom.values.try_emplace(eve_calf,value);
+    custom.values.erase(old);
+    return true;
+}
+}
+
+Customization compatible_customization(const Outfit& outfit,const std::string& variant,Customization custom) {
+    if(custom.values.contains(legacy_eve_calf))
+        if(const auto* calf=eve_calf_control(outfit,variant)) migrate_eve_calf(custom,*calf);
+    return compatible_values(outfit.controls_for(variant),custom);
+}
+
+bool migrate_saved_customizations(State& state,const Catalog& catalog) {
+    bool changed=false;
+    const auto migrate=[&](const std::string& id,const std::string& variant,Customization& custom) {
+        if(!custom.values.contains(legacy_eve_calf)) return;
+        const auto outfit=std::ranges::find(catalog.outfits,id,&Outfit::id);
+        if(outfit==catalog.outfits.end()) return;
+        if(!variant.empty()) {
+            if(const auto* calf=eve_calf_control(*outfit,variant)) changed|=migrate_eve_calf(custom,*calf);
+        } else if(!outfit->variants.empty() && std::ranges::all_of(outfit->variants,[&](const auto& look) {
+            return eve_calf_control(*outfit,look.id)!=nullptr;
+        })) {
+            // A remembered outfit-wide value can be shared by any installed variant.
+            changed|=migrate_eve_calf(custom,*eve_calf_control(*outfit,outfit->variants.front().id));
+        }
+    };
+    for(auto& [_,selection]:state.selections) migrate(selection.outfit,selection.variant,selection.custom);
+    for(auto& [_,profile]:state.presets)
+        for(auto& [slot,selection]:profile.selections) migrate(selection.outfit,selection.variant,selection.custom);
+    for(auto& [key,custom]:state.remembered_custom) {
+        const auto slash=key.find('/');
+        migrate(key.substr(0,slash),slash==key.npos?std::string{}:key.substr(slash+1),custom);
+    }
+    return changed;
+}
+
 void save_profile_snapshot(State& state,const std::string& name) {
     if(name.empty()) throw std::runtime_error("Enter a profile name, for example profile.1.");
     if(name.size()>96) throw std::runtime_error("Profile names must be 96 characters or fewer.");

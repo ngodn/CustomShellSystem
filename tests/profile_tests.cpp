@@ -16,6 +16,67 @@ static void rejected(css::State& state,const std::string& name,const std::string
 }
 int main(int argc,char** argv) {
     {
+        using namespace css;
+        const std::string shell="CharacterId.Player.Shell.KnightLady";
+        const std::string old_key="shape_PBMCalvesSize", new_key="shape_EveCalfSize";
+        const auto recipe=[&](const std::string& key,int maximum,int initial) {
+            return ControlSet::parse({{"schema",1},{"controls",Json::array({{
+                {"id",key},{"name","Calf size"},{"kind","shape"},{"morph","PBMCalvesSize"},
+                {"max",maximum},{"default",{initial,0,0,1}}
+            }})}});
+        };
+        Outfit eve;
+        eve.id="eins0fx.seduxtress";
+        eve.controls=recipe(new_key,2,1);
+        Variant upgraded; upgraded.id="black_pearl";
+        Variant legacy; legacy.id="other"; legacy.controls=recipe(old_key,1,0);
+        eve.variants={upgraded,legacy};
+        auto standalone=eve;
+        standalone.id="eins0fx.eve.peony";
+        standalone.variants={upgraded};
+        standalone.variants.front().id="peony";
+        auto unrelated=eve;
+        unrelated.id="other.outfit";
+        Catalog catalog;
+        catalog.outfits={eve,standalone,unrelated};
+        Customization zero, one;
+        zero.values[old_key]={0,0,0,1};
+        one.values[old_key]={1,0,0,1};
+        one.expression="smile";
+        State saved;
+        saved.selections[shell]={eve.id,upgraded.id,zero};
+        saved.presets["old"].selections[shell]={standalone.id,"peony",one};
+        saved.remembered_custom[eve.id]=one;
+        saved.remembered_custom[eve.id+"/black_pearl"]=zero;
+        saved.remembered_custom[eve.id+"/other"]=one;
+        saved.remembered_custom[standalone.id]=one;
+        saved.remembered_custom[unrelated.id+"/black_pearl"]=one;
+        saved.remembered_custom["eins0fx.eve.prototype/prototype"]=one;
+        auto loaded=State::parse(saved.json());
+        bool changed=migrate_saved_customizations(loaded,catalog);
+        const auto migrated=[&](const Customization& custom,float expected) {
+            return !custom.values.contains(old_key) && custom.values.at(new_key)[0]==expected;
+        };
+        check(changed && migrated(loaded.selections.at(shell).custom,1),"Saved Eve zero must become an explicit one");
+        check(migrated(loaded.presets.at("old").selections.at(shell).custom,2) &&
+              loaded.presets.at("old").selections.at(shell).custom.expression=="smile",
+              "Saved profile lost the Eve calf offset or an unrelated setting");
+        check(migrated(loaded.remembered_custom.at(eve.id+"/black_pearl"),1) &&
+              migrated(loaded.remembered_custom.at(standalone.id),2),"Remembered settings did not migrate");
+        for(const auto& key:{eve.id,eve.id+"/other",unrelated.id+"/black_pearl",std::string("eins0fx.eve.prototype/prototype")})
+            check(loaded.remembered_custom.at(key)==one,"A legacy, unrelated or missing look was prematurely migrated");
+        check(migrated(compatible_customization(eve,"black_pearl",one),2) &&
+              compatible_customization(eve,"other",one)==one,
+              "Outfit-wide fallback did not resolve against the requested variant");
+        check(compatible_customization(eve,"black_pearl",{}).values.empty(),"Unset calf value became an explicit override");
+        auto both=one;
+        both.values[new_key]={.5f,0,0,1};
+        check(migrated(compatible_customization(eve,"black_pearl",both),.5f),"Explicit new calf value must win");
+        auto reloaded=State::parse(loaded.json());
+        check(reloaded.json()==loaded.json() && !migrate_saved_customizations(reloaded,catalog),
+              "Migration must survive save/reload and run only once per saved value");
+    }
+    {
         const std::string living="CharacterId.Player.Shell.Genessa";
         const std::string stray="CharacterId.Player.Darkform.CorruptedGenessa";
         css::State state;

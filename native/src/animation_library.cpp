@@ -62,7 +62,7 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
     }
     if(value.contains("adapters")) {
         const auto& adapters=value.at("adapters");
-        if(!adapters.is_array() || adapters.size()>32)
+        if(!adapters.is_array() || adapters.size()>max_shared_adapter_rows)
             throw std::runtime_error("Invalid performance adapter list");
         std::set<std::tuple<std::string,std::string,std::string>> sources;
         for(const auto& item:adapters) {

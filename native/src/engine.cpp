@@ -2258,7 +2258,7 @@ void Appearance::sync_menu_physics(UObject* component) {
         if(needs_reset) reset_dynamics(instance);
     }
 }
-void Appearance::sync_body_geometry(UObject* component) {
+void Appearance::sync_body_geometry(UObject* component, void (*log)(const char*)) {
     auto* instance=post_process_instance(component);
     if(!instance) return;
     const bool fresh=body_geometry_instance_.Get()!=instance;
@@ -2283,9 +2283,15 @@ void Appearance::sync_body_geometry(UObject* component) {
         values[i]=get.get<float>();
     }
     if(body_geometry_morphs_==values) return;
-    const auto value=body_geometry_model_->evaluate(values);
+    // Keep the mesh's morph weights while sampling the cooked contact table within its domain.
+    const auto samples=body_geometry_model_->bounded_weights(values);
+    const auto value=body_geometry_model_->evaluate(samples);
     body_geometry_inputs(instance).apply(value);
     body_geometry_applied_=value; body_geometry_morphs_=values;
+    if(log) for(size_t i=0;i<values.size();++i) if(samples[i]!=values[i]) {
+        log(("Body contact clamped "+body_geometry_model_->morphs[i]+" from "+
+             std::to_string(values[i])+" to "+std::to_string(samples[i])).c_str());
+    }
 }
 
 #include "astral_source.inl"
@@ -2459,7 +2465,8 @@ Json Appearance::shader_fallback_status() const {
             {"catalog_materials",state.catalog.size()},{"catalog_error",state.catalog_error},
             {"rebuilt",state.rebuilt},{"skipped",state.skipped},{"pak_tables",state.tables},{"outfit_stale",state.outfit_stale}};
 }
-void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
+void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom,
+                           void (*log)(const char*)) {
     ++appearance_revision;
     fallback_outfit_=outfit.id;
     customize_ms.clear();
@@ -2470,6 +2477,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     };
     const auto& options=outfit.controls_for(variant);
     auto values=control_values(options,custom);
+    const auto shape_stages=apply_shape_range(options,values);
     // Body rig travel overrides, degrees. Saved beside the four-number values.
     auto travel=control_travel(options,custom);
     const auto palette=std::find_if(options.palettes.begin(),options.palettes.end(),[&](const auto& p){return p.id==custom.palette;});
@@ -2514,7 +2522,14 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     }
     if((body_geometry_model_ || body_geometry_instance_.Get()) && body_geometry_instance_.Get()!=post_process_instance(component))
         { last_values_.clear(); last_travel_.clear(); }
-    if(values==last_values_ && travel==last_travel_ && control_palette_==custom.palette) return;
+    const auto stage_changed=[&](const std::string& morph,float weight) {
+        const auto old=driven_morphs_.find(morph);
+        return weight!=(old==driven_morphs_.end()?0.f:old->second);
+    };
+    if(values==last_values_ && travel==last_travel_ && control_palette_==custom.palette &&
+       std::none_of(shape_stages.begin(),shape_stages.end(),[&](const auto& stage){
+           return stage_changed(stage.first,stage.second);
+       })) return;
     color_check_valid_=false;
     auto mid_for=[&](int index) {
         Call count(component,L"GetNumMaterials",1); count.run();
@@ -2931,6 +2946,20 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             color_check_valid_=true;
             break;
         }
+        for(const auto& [morph,weight]:shape_stages) {
+            if(!stage_changed(morph,weight)) continue;
+            if(!mesh_has_morph(applied_.Get(),morph))
+                throw std::runtime_error("This outfit's mesh has no extended shape called "+morph);
+            const auto name=FName(wide(morph).c_str(),FNAME_Add);
+            Call set(component,L"SetMorphTarget",3);
+            set.set(L"MorphTargetName",name); set.set(L"Value",weight);
+            set.set(L"bRemoveZeroWeight",false); set.run();
+            Call readback(component,L"GetMorphTarget",2);
+            readback.set(L"MorphTargetName",name); readback.run();
+            if(std::abs(readback.get<float>()-weight)>.0001f)
+                throw std::runtime_error("Extended shape weight read-back failed");
+            driven_morphs_[morph]=weight;
+        }
         world_morph_deformer_.sync(component,driven_morphs_);
         items_.sync_morphs(driven_morphs_);
         menu_items_.sync_morphs(driven_morphs_);
@@ -2939,7 +2968,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             const auto& option=c.options[choice_index(c,values)];
             if(!option.body_geometry_property.empty()) { body_geometry_property_=option.body_geometry_property; break; }
         }
-        sync_body_geometry(component);
+        sync_body_geometry(component,log);
         step("geometry");
         if(dynamics_needs_reset) reset_dynamics(dynamics_instance_.Get());
         prepare_deformation_materials();

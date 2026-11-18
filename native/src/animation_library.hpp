@@ -1,9 +1,11 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include "animations.hpp"
 #include "facial_library.hpp"
 
 namespace css {
+inline constexpr std::size_t max_shared_adapter_rows=64;
 struct AnimationContainerRevision {
     std::string toc_sha256;
     uint64_t bulk_bytes = 0;

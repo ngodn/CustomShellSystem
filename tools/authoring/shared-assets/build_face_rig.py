@@ -151,8 +151,8 @@ def main():
         # Players who update Shared Assets before the outfit keep their face on the released revision.
         new_revision = hand['source_toc_sha256']
         adapters += [x for x in existing[0]['adapters'] if x['source_toc_sha256'] != new_revision]
-        if len(adapters) > 32:
-            sys.exit('more than 32 facial adapters; drop an older revision')
+    if len(adapters) > 64:
+        sys.exit('more than 64 facial adapters; drop an older revision')
     rig = dict(id=a.rig, morphs=morphs, expressions=expressions, adapters=adapters)
     if performances:
         rig['performances'] = performances

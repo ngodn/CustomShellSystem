@@ -234,6 +234,8 @@ struct State {
     Json json() const;
 };
 State load_state(const fs::path&, bool* recovered = nullptr);
+bool migrate_saved_customizations(State&, const Catalog&);
+Customization compatible_customization(const Outfit&, const std::string& variant, Customization);
 void save_profile_snapshot(State&,const std::string& name);
 struct ProfileSelection {
     std::string slot;

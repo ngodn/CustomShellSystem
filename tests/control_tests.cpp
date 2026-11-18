@@ -6,6 +6,8 @@
 #include <stdexcept>
 using namespace css;
 unsigned checks;
+std::vector<std::string> clamp_log;
+void log_clamp(const char* line) { clamp_log.emplace_back(line); }
 void expect(bool condition,const char* message) { ++checks; if(!condition) throw std::runtime_error(message); }
 template<class F> void rejects(F action) { bool rejected=false; try { action(); } catch(const std::exception&) { rejected=true; } expect(rejected,"Invalid colors accepted"); }
 css::Control hair_rig_fixture() {
@@ -15,6 +17,46 @@ css::Control hair_rig_fixture() {
 }
 int main() {
     try {
+        {
+            const auto recipe=Json::parse(R"({"schema":1,"controls":[
+                {"id":"belly","kind":"shape","name":"Belly","morph":"Belly","max":5,"default":[0,0,0,1]},
+                {"id":"hips","kind":"shape","name":"Hips","morph":"Hips","max":4,"default":[0,0,0,1]},
+                {"id":"chest_shape","kind":"choice","name":"Chest shape","default":[0,0,0,1],"shape_control":"belly",
+                    "options":[{"name":"Perky","morph":"Belly"},{"name":"Juicy","morph":"BellyJuicy"}]}],
+                "shape_range":{"legacy_limits":{"belly":3,"hips":3},"stack_caps":{"belly":4,"hips":2},
+                    "stack_load_start":0.2,"stack_load_full":0.5,"stages":[
+                    {"control":"belly","morph":"BellyStage","route":"Belly"},
+                    {"control":"belly","morph":"BellyJuicyStage","route":"BellyJuicy"}]}})");
+            const auto options=ControlSet::parse(recipe);
+            const auto request=[&](Customization current,const char* id,double requested) {
+                return apply_customize(options,std::move(current),
+                    {{"action","control"},{"control",id},{"value",requested}},log_clamp);
+            };
+            const auto solo=request({},"belly",6);
+            expect(solo.values.at("belly")[0]==5 && clamp_log.size()==1 &&
+                   clamp_log.back().find("Control belly channel 0 clamped from 6")!=std::string::npos,
+                   "Belly 6 must clamp and log its endpoint");
+            auto values=control_values(options,solo);
+            auto stages=apply_shape_range(options,values);
+            expect(values.at("belly")[0]==5 && stages.at("BellyStage")==1 && stages.at("BellyJuicyStage")==0,
+                   "Solo maximum did not reach its authored Perky stage");
+            const auto stacked=request(request(solo,"hips",4),"chest_shape",1);
+            values=control_values(options,stacked);
+            stages=apply_shape_range(options,values);
+            expect(values.at("belly")[0]==4 && values.at("hips")[0]==2 && stacked.values.at("belly")[0]==5 &&
+                   stages.at("BellyStage")==0 && stages.at("BellyJuicyStage")==.5f,
+                   "Stack caps must apply only to runtime values and the selected stage");
+            values=control_values(options,request(request({},"belly",3),"hips",3));
+            const auto legacy=values;
+            expect(apply_shape_range(options,values).at("BellyStage")==0 && values==legacy,
+                   "A legacy shape stack changed");
+            expect(request(solo,"belly",-1).values.at("belly")[0]==0 && clamp_log.size()==2,
+                   "The lower endpoint did not clamp and log");
+            rejects([&]{request(solo,"belly",std::numeric_limits<double>::infinity());});
+            auto invalid=recipe;
+            invalid["shape_range"]["stages"][0]["route"]="UnusedMorph";
+            rejects([&]{ControlSet::parse(invalid);});
+        }
         {
             auto recipe=Json::parse(R"({"schema":1,"controls":[
                 {"id":"glow","name":"Glow","kind":"intensity","max":8,"default":[0,0,0,1],"bindings":[{"slot":3,"parameter":"GlowStrength"}]}],
@@ -304,7 +346,10 @@ int main() {
             expect(look.travel.at("chest-motion")==4.5f && look.values.empty(),"Travel step must not touch the saved value");
             look=apply_customize(model,look,{{"action","control"},{"control","chest-motion"},{"channel",4},{"value",12}});
             expect(look.travel.at("chest-motion")==12,"Travel value not set");
-            rejects([&]{apply_customize(model,look,{{"action","control"},{"control","chest-motion"},{"channel",4},{"value",30}});});
+            const auto clamped=apply_customize(model,look,{{"action","control"},{"control","chest-motion"},{"channel",4},{"value",30}},log_clamp);
+            expect(clamped.travel.at("chest-motion")==range.maximum &&
+                   clamp_log.back().find("Control chest-motion channel 4 clamped from 30")!=std::string::npos,
+                   "Travel did not clamp and log its endpoint");
             rejects([&]{apply_customize(model,look,{{"action","control"},{"control","chest-motion"},{"channel",5},{"value",3}});});
             expect(control_travel(model,look).at("chest-motion")==12,"Travel overrides not reported");
             expect(!apply_customize(model,look,{{"action","reset_control"},{"control","chest-motion"}}).travel.contains("chest-motion"),

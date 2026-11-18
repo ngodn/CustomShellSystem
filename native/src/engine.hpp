@@ -979,7 +979,7 @@ class Appearance {
     bool reuse_materials();
     void detach_residual_controls();
     void reset_controls();
-    void sync_body_geometry(RC::Unreal::UObject* component);
+    void sync_body_geometry(RC::Unreal::UObject* component, void (*log)(const char*));
     void prepare_deformation_materials();
     // Shader fallback MIDs live in control_mids_ like every other owned MID. Rollback and dyes
     // read the outfit material a MID stands for through control_source, never its raw parent.
@@ -1110,6 +1110,6 @@ public:
     void test_effect(bool begin,bool parameters=false);
     void test_cursor(void* engine, bool visible);
 #endif
-    void customize(const Outfit&, const std::string& variant, const Customization&);
+    void customize(const Outfit&, const std::string& variant, const Customization&, void (*log)(const char*));
 };
 }

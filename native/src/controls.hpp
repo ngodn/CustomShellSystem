@@ -238,10 +238,20 @@ struct Palette {
     std::map<std::string,ControlValue> values;
     std::vector<PaletteParameter> parameters;
 };
+struct ShapeRangeStage {
+    std::string control, morph, route;
+    bool blend_when_extended = false;
+};
+struct ShapeRange {
+    std::map<std::string,float> legacy_limits, stack_caps;
+    std::vector<ShapeRangeStage> stages;
+    float stack_load_start = 0, stack_load_full = 1;
+};
 struct ControlSet {
     std::vector<Control> controls;
     std::vector<DyeSurface> surfaces;
     std::vector<Palette> palettes;
+    std::optional<ShapeRange> shape_range;
     static ControlSet parse(const nlohmann::json&);
     const Control* find(const std::string&) const;
 };
@@ -267,6 +277,7 @@ const Control* shape_route(const ControlSet& options,const std::string& shape_id
 // The option a Choice has selected for these values (its default when unset).
 size_t choice_index(const Control& choice,const std::map<std::string,ControlValue>& values);
 std::map<std::string,ControlValue> control_values(const ControlSet&, const Customization&);
+std::map<std::string,float> apply_shape_range(const ControlSet&, std::map<std::string,ControlValue>&);
 // The travel overrides this outfit accepts, validated against each control's range.
 std::map<std::string,float> control_travel(const ControlSet&, const Customization&);
 std::set<int> hidden_control_sections(const ControlSet&, const std::map<std::string,ControlValue>&);
@@ -279,7 +290,8 @@ Customization choose_palette(const ControlSet&, const Customization&, const std:
 // reset_color). Core::request and the customize export both go through here, so a change made
 // from the CSS page and one made by a CSSX extension cannot drift apart. Throws on a bad
 // command; validates the result like the request path did.
-Customization apply_customize(const ControlSet&, Customization, const nlohmann::json& command);
+Customization apply_customize(const ControlSet&, Customization, const nlohmann::json& command,
+                              void (*log)(const char*) = nullptr);
 // A customization snapshot put back onto an outfit: parsed with Customization::parse, then
 // only values, tints and offsets this outfit accepts are kept (compatible_values).
 Customization restore_customization(const ControlSet&, const nlohmann::json& snapshot);

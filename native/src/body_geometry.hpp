@@ -8,8 +8,8 @@
 namespace css {
 using BodyVector = std::array<double,3>;
 // The measured body model is multilinear in 6 to 8 morph axes (2^n corners).
-// Schema 1 is the six-axis model cooked before the axis list was declared;
-// schema 2 records the axes ("morphs") and the corner count ("corners").
+// Schema 1 stores six axes, schema 2 declares the axis count, and schema 3
+// gives each axis its own contact-table domain.
 inline constexpr std::size_t body_geometry_min_axes=6, body_geometry_max_axes=8;
 struct BodyGeometry {
     // The morph values the geometry was evaluated at, one per model axis. Empty when
@@ -39,11 +39,15 @@ struct BodyGeometryModel {
     };
     int schema=2;
     std::vector<std::string> morphs;
+    std::vector<float> axis_maxima;
     std::array<Helper,7> helpers;
     std::size_t axes() const { return morphs.size(); }
     std::size_t corners() const { return std::size_t{1}<<morphs.size(); }
     bool operator==(const BodyGeometryModel&) const = default;
     static BodyGeometryModel parse(const nlohmann::json&);
+    std::vector<float> bounded_weights(std::vector<float>) const;
     BodyGeometry evaluate(const std::vector<float>&) const;
+private:
+    float axis_maximum(std::size_t axis) const;
 };
 }

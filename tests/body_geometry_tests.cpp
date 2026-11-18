@@ -77,6 +77,28 @@ void reference_check(const Json& source,const BodyGeometryModel& model,const std
 }
 
 void synthetic_suite() {
+    {
+        auto source=synthetic(6,2);
+        const auto legacy=BodyGeometryModel::parse(source);
+        source["schema"]=3;
+        source["axis_maxima"]={5,2,1,1,1,1};
+        const auto extended=BodyGeometryModel::parse(source);
+        const std::vector<float> requested{5,2,0,0,0,0};
+        const auto at_maximum=extended.evaluate(requested);
+        const auto legacy_corner=legacy.evaluate({1,1,0,0,0,0});
+        expect(at_maximum.contact_centers==legacy_corner.contact_centers &&
+               at_maximum.contact_axes==legacy_corner.contact_axes,"Extended corner must normalize each contact axis");
+        expect(at_maximum.shape==requested && at_maximum.offsets[0][0]==2.25,
+               "Shape and inertia inputs must use raw morph weights");
+        expect(extended.bounded_weights({9,6,-1,0,0,0})==requested,"Extended contact domain did not clamp per axis");
+        expect(legacy.bounded_weights(requested)==std::vector<float>{3,2,0,0,0,0},
+               "A legacy contact table must cap Belly 5 at its supported weight");
+        rejects([&]{legacy.evaluate(requested);});
+        rejects([&]{extended.evaluate({5.01f,2,0,0,0,0});});
+        rejects([&]{extended.bounded_weights({std::numeric_limits<float>::infinity(),0,0,0,0,0});});
+        source["axis_maxima"][0]=9;
+        rejects([&]{BodyGeometryModel::parse(source);});
+    }
     for(size_t axes:{6,7,8}) {
         const auto source=synthetic(axes,2);
         const auto model=BodyGeometryModel::parse(source);
