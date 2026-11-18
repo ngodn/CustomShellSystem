@@ -70,7 +70,12 @@ int main() try {
     }
 
     expect(throws([]{ Catalog::parse({{"schema",2}}); }),"A newer schema is rejected");
-    expect(throws([&]{ auto bad=document; bad["donors"]["/Game/CSS/x/MI_A.MI_B"]="/Game/y/MI_C.MI_C"; Catalog::parse(bad); }),"Mismatched object names are rejected");
+    auto renamed=document;
+    renamed["donors"]["/Game/CSS/x/PackageHash.MI_B"]="/Game/y/MI_C.MI_C";
+    const auto renamed_catalog=Catalog::parse(renamed);
+    expect(renamed_catalog.donor("/Game/CSS/x/PackageHash.MI_B")!=nullptr,"A relocated material uses its export name");
+    expect(renamed_catalog.donor("/Game/CSS/x/PackageHash.PackageHash")==nullptr,"The package leaf does not replace the export name");
+    expect(throws([&]{ auto bad=document; bad["donors"]["/Game/CSS/x/.MI_B"]="/Game/y/MI_C.MI_C"; Catalog::parse(bad); }),"Missing package names are rejected");
     expect(throws([&]{ auto bad=document; bad["donors"]["/Engine/x/MI_A.MI_A"]="/Game/y/MI_C.MI_C"; Catalog::parse(bad); }),"Only game content paths are accepted");
     expect(throws([&]{ auto bad=document; bad["donors"]["/Game/x/MI_A.MI_A"]="/Game/x/MI_A.MI_A"; Catalog::parse(bad); }),"A material cannot be its own donor");
     expect(throws([&]{ auto bad=document; bad["verified_builds"][0]["pak_tables"]["evil.utoc"]=1; Catalog::parse(bad); }),"Unknown table names are rejected");

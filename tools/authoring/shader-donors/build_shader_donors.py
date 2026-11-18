@@ -145,7 +145,7 @@ def main() -> None:
         stale.setdefault(outfit, set()).add(version)
         reports.append((Path(report_path), Path(report_path)))
 
-    targets: dict[str, dict] = {}
+    targets: dict[tuple[str, str], dict] = {}
     seen_sources = []
     for source in [*args.sources, *(r for r, _ in reports)]:
         if source.suffix == '.json':   # a finished report standing in for its source
@@ -171,35 +171,35 @@ def main() -> None:
             if not any(entry['storage'] != 'inline' for entry in material['maps']):
                 continue
             path = material['package']
-            row = targets.setdefault(path, {'signatures': {}, 'sources': []})
+            row = targets.setdefault((path, material['export']), {'signatures': {}, 'sources': []})
             row['signatures'].setdefault(signature(material['properties']), []).append(str(source))
             row['sources'].append(str(source))
             count += 1
         seen_sources.append({'source': str(source), 'materials': len(report['materials']), 'shared': count})
         print(f'{source}: {count} of {len(report["materials"])} materials borrow game shaders', flush=True)
 
-    names = {path.rsplit('/', 1)[1] for path in targets}
-    candidates = sorted(set(KNOWN_DONORS) | {p for p in game_packages if p.rsplit('/', 1)[1] in names})
+    names = {export.casefold() for _, export in targets}
+    candidates = sorted(set(KNOWN_DONORS) | {p for p in game_packages if p.rsplit('/', 1)[1].casefold() in names})
     donor_report = audit(mount_dir(args.work, 'donors', paks, []), candidates, args.work, 'donors', mapping)
     if donor_report.get('missing_hashes'):
         raise RuntimeError('A donor itself lacks shaders on this game build')
-    donors = {m['package']: signature(m['properties']) for m in donor_report['materials']}
+    donors = {(m['package'], m['export']): signature(m['properties']) for m in donor_report['materials']}
     shutil.rmtree(args.work / 'donors-mount', ignore_errors=True)
 
     result, problems = {}, []
-    for path, row in sorted(targets.items()):
+    for (path, export), row in sorted(targets.items()):
+        object_path = f'{path}.{export}'
         if len(row['signatures']) != 1:
-            problems.append(f'{path}: versions disagree on the static permutation ({len(row["signatures"])} variants)')
+            problems.append(f'{object_path}: versions disagree on the static permutation ({len(row["signatures"])} variants)')
             continue
         wanted = next(iter(row['signatures']))
-        same_name = path.rsplit('/', 1)[1]
-        matches = sorted((p for p, s in donors.items() if s == wanted),
-                         key=lambda p: (p.rsplit('/', 1)[1] != same_name, p))
+        matches = sorted((donor for donor, fields in donors.items() if fields == wanted),
+                         key=lambda donor: (donor[1].casefold() != export.casefold(), donor))
         if not matches:
-            problems.append(f'{path}: no game material with the same permutation')
+            problems.append(f'{object_path}: no game material with the same permutation')
             continue
-        donor = matches[0]
-        result[f'{path}.{path.rsplit("/", 1)[1]}'] = f'{donor}.{donor.rsplit("/", 1)[1]}'
+        donor_path, donor_export = matches[0]
+        result[object_path] = f'{donor_path}.{donor_export}'
     # Our own outfits must all be covered. Other authors' converted packs keep whatever has an
     # exact donor; the rest stay on their packaged shaders, listed in the report.
     ours = [line for line in problems if line.startswith('/Game/CSS/eins0fx/')]
