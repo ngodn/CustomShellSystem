@@ -174,7 +174,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     // same press: carry each one's state over instead of seeing a fresh click.
     std::map<UObject*,bool> held;
     for(const auto& hit:hits_) if(auto* w=hit.widget.Get()) held[w]=hit.down;
-    hits_.clear(); rows_.clear(); sliders_.clear(); name_input_.Reset(); native_search_input_.Reset(); idle_search_accept_=nullptr;
+    hits_.clear(); rows_.clear(); sliders_.clear(); name_input_.Reset(); native_search_input_.Reset(); idle_search_input_.Reset(); idle_search_accept_=nullptr;
     for(auto* stack:{&tab_items_,&list_,&panel_head_,&panel_,&actions_,&footer_,&camera_bar_}) stack->used=0;
     native_budget_=native_budget_per_build;
     bool deferred=false;   // a long list stopped at the budget; build again next frame
@@ -436,10 +436,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                "Type to narrow the list. Up / Down to move, then Select.");
         auto& input=native_take(panel_head_,NativeKind::input);
         native_search_input_=input.extra;
-        if(input.value!=native_search_query_) {
-            if(!has_focus(input.extra.Get())) text_value(input.extra.Get(),native_search_query_);
-            input.value=native_search_query_;
-        }
+        if(input.input_text.bind(InventoryInputRole::PickerSearch,native_search_query_,has_focus(input.extra.Get())))
+            text_value(input.extra.Get(),native_search_query_);
         const auto& search=native_options_;
         // The field and the count stay above the results while they scroll.
         auto& count=native_take(panel_head_,NativeKind::paragraph);
@@ -1266,11 +1264,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         std::vector<Choice> choices;
         if((slot==AnimationSlot::Idle || slot==AnimationSlot::Vista) && panel_open) {
             auto& input=native_take(panel_head_,NativeKind::input);
-            native_search_input_=input.extra;
-            if(input.value!=idle_search_query_) {
-                if(!has_focus(input.extra.Get())) text_value(input.extra.Get(),idle_search_query_);
-                input.value=idle_search_query_;
-            }
+            idle_search_input_=input.extra;
+            if(input.input_text.bind(InventoryInputRole::AnimationSearch,idle_search_query_,has_focus(input.extra.Get())))
+                text_value(input.extra.Get(),idle_search_query_);
             note("Search by name, then select an idle. Enter selects the first available match.");
             for(const auto index:idle_options_.matches) {
                 const auto& item=menu.items[index];
@@ -1465,8 +1461,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(panel_open) {
             auto& input=native_take(panel_head_,NativeKind::input);
             name_input_=input.extra;
-            // Only rewrite the field when what it should suggest changed, never under typing.
-            if(input.value!=suggested && !has_focus(input.extra.Get())) { text_value(input.extra.Get(),suggested); input.value=suggested; }
+            if(input.input_text.bind(InventoryInputRole::ProfileName,suggested,has_focus(input.extra.Get())))
+                text_value(input.extra.Get(),suggested);
         }
         note("Up to 96 characters: A-Z, 0-9, periods, underscores or hyphens. No spaces. Example: Eve_BlackPearl");
         if(!row_) action_button(gamepad_?"accept":"profile_save","Save profile",{{"action","ui_save_profile"}},3,true,
@@ -2103,25 +2099,26 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         const bool gamepad=read<uint8_t>(prompt,L"InputType")==1;
         if(gamepad!=gamepad_) { gamepad_=gamepad; dirty_=true; }
     }
-    const bool idle_search=section_==2 && (row_==0 || row_==5) && !native_picker_ && native_search_input_.Get();
-    bool editing_native=false;
-    if(native_picker_ || idle_search) if(auto* search=native_search_input_.Get()) {
+    const auto search_input=[&]() -> UObject* {
+        if(native_picker_) return native_search_input_.Get();
+        if(section_==2 && (row_==0 || row_==5)) return idle_search_input_.Get();
+        return nullptr;
+    };
+    if(auto* search=search_input()) {
         try {
             const auto query=inventory_text(search,256);
-            auto& stored_query=idle_search?idle_search_query_:native_search_query_;
-            auto& options=idle_search?idle_options_:native_options_;
+            auto& stored_query=native_picker_?native_search_query_:idle_search_query_;
+            auto& options=native_picker_?native_options_:idle_options_;
             if(query!=stored_query) {
                 stored_query=query;
                 if(options.filter(query)) dirty_=true;
             }
         } catch(...) {}
-        editing_native=true;
     }
 #ifdef CSS_INVENTORY_DEV
     if(frozen_) dirty_=false;   // dev prototyping: keep hands off the page
 #endif
     // The search field is a kept widget now, so a rebuild while typing leaves it alone.
-    (void)editing_native;
     native_fit_panel();   // measures the previous build, which has laid out by now
     native_reveal_pending();
     if(dirty_) build(catalog,state,appearance);
@@ -2148,7 +2145,9 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(submit_profile) return dispatch({{"action","ui_save_profile"}},state);
     bool typing=false;
     if(auto* input=name_input_.Get()) { Call focus(input,L"HasKeyboardFocus",1); focus.run(); typing=focus.get<bool>(); }
-    if(native_picker_ || idle_search) if(auto* search=native_search_input_.Get()) { Call focus(search,L"HasKeyboardFocus",1); focus.run(); typing=typing || focus.get<bool>(); }
+    auto* search=search_input();
+    const bool idle_search=search && !native_picker_;
+    if(search) { Call focus(search,L"HasKeyboardFocus",1); focus.run(); typing=typing || focus.get<bool>(); }
     if(idle_search_shortcut_.update(focused && idle_search && typing,
         (GetAsyncKeyState(VK_RETURN)&0x8000)!=0) && !idle_search_accept_.is_null())
         return idle_search_accept_;

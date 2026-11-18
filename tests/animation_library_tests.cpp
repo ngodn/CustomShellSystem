@@ -1,5 +1,6 @@
 #include "data.hpp"
 #include "extension_search.hpp"
+#include "inventory_text_input.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -47,6 +48,43 @@ int main(int argc,char** argv) {
           ]
         })");
         const auto parsed=AnimationLibrary::parse(library);
+        {
+            extensions::OptionSearch search;
+            Json choices=Json::array();
+            const auto idle=animation_menu(merge_library_animation_options({parsed},AnimationSlot::Idle,{}),
+                AnimationSlot::Idle,nullptr,false);
+            for(const auto& option:idle.items) choices.push_back({{"id",option.id},{"label",option.name}});
+            search.reset(choices);
+
+            InventoryTextInput input;
+            std::string field_text;
+            const auto bind=[&](InventoryInputRole role,const std::string& value,bool focused) {
+                if(input.bind(role,value,focused)) field_text=value;
+            };
+            bind(InventoryInputRole::ProfileName,"profile.1",false);
+            expect(field_text=="profile.1","Profile name suggestion was not shown");
+            bind(InventoryInputRole::AnimationSearch,"",true);
+            search.filter(field_text);
+            expect(field_text.empty() && search.matches.size()==idle.items.size(),
+                   "Focused profile name leaked into Idle Animation and hid its choices");
+
+            field_text="eve default";
+            search.filter(field_text);
+            expect(!input.bind(InventoryInputRole::AnimationSearch,field_text,true),
+                   "Rebuilding Idle Animation rewrote the search while typing");
+            expect(search.matches.size()==1 && search.value()=="css.eve.idle",
+                   "A typed Idle Animation search stopped filtering");
+            bind(InventoryInputRole::PickerSearch,"",true);
+            expect(field_text.empty(),"Idle Animation search leaked into the outfit picker");
+            field_text="profile.1";
+            bind(InventoryInputRole::ProfileName,"profile.2",true);
+            expect(field_text=="profile.2","Picker text survived a switch to Profile");
+            field_text="unsaved-name";
+            bind(InventoryInputRole::ProfileName,"profile.3",true);
+            expect(field_text=="unsaved-name","Rebuilding Profile replaced a name while typing");
+            bind(InventoryInputRole::AnimationSearch,"eve default",true);
+            expect(field_text=="eve default","Reopening Idle Animation lost its search query");
+        }
         expect(parsed.entries.size()==2,"Shared performances lost");
         expect(parsed.entries[0].slot==AnimationSlot::Idle && parsed.entries[0].hide_weapons,"Idle contract lost");
         expect(!parsed.entries[1].slot && parsed.entries[1].playback==AnimationPlayback::Once,"Performance forced into idle");

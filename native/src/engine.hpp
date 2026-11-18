@@ -23,6 +23,7 @@
 #include "inventory_keys.hpp"
 #include "inventory_light_keys.hpp"
 #include "profile_input.hpp"
+#include "inventory_text_input.hpp"
 #include "ground_offset.hpp"
 #include "mesh_scale.hpp"
 #include "hook_api.hpp"
@@ -447,7 +448,7 @@ class InventoryUI {
     std::string idle_search_query_;
     Json idle_search_accept_;
     ProfileSaveShortcut idle_search_shortcut_;
-    WeakObject native_search_input_, native_search_results_, native_search_count_;
+    WeakObject native_search_input_, idle_search_input_, native_search_results_, native_search_count_;
     std::string native_search_query_;
     uint64_t native_wheel_after_=0;
     const Catalog* catalog_=nullptr;
@@ -482,6 +483,7 @@ class InventoryUI {
         WeakObject widget, hit, hit_left, hit_right, text_block, value_block, extra;
         std::vector<WeakObject> cells;                 // swatch chips: frame, colour, selection, button
         std::string text, value;                       // what is on screen now
+        InventoryTextInput input_text;
         int selected=-1, badge=-1, shown=-1, enabled=-1, icon_shown=-1;   // icon_shown: 0 none, 1 picture, 2 colour chip, 3 empty slot; +4 in a two-line list
         const void* icon=nullptr; std::array<float,4> chip{}; float fill=-2.f;
         float name_width=-1.f;                         // list rows: the name box, shortened by a state word
