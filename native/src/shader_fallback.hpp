@@ -147,4 +147,31 @@ inline bool active(Mode mode,bool verified,bool has_donors) {
 inline bool active_for_outfit(Mode mode,bool verified,bool has_donors,bool stale_outfit) {
     return active(mode,verified,has_donors) || (has_donors && mode==Mode::automatic && stale_outfit);
 }
+
+struct ModeState {
+    Mode mode=Mode::automatic;
+    bool active=false;
+    bool outfit_stale=false;
+
+    bool set_mode(std::string_view requested,bool verified,bool has_donors,
+                  auto&& stale_outfit,auto&& reset_controls,auto&& remember_materials) {
+        const auto parsed=parse_mode(requested);
+        if(!parsed) throw std::runtime_error("Unknown outfit material mode");
+        const bool before=active || outfit_stale;
+        mode=*parsed;
+        active=shader_fallback::active(mode,verified,has_donors);
+        outfit_stale=stale_outfit();
+        if((active || outfit_stale)==before) return false;
+        reset_controls();
+        remember_materials();
+        return true;
+    }
+};
+
+void snapshot_materials(auto& expected,auto&& resolve_component,auto&& read_overrides) {
+    expected.clear();
+    auto* component=resolve_component();
+    if(!component) return;
+    read_overrides(component,expected);
+}
 }

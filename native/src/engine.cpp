@@ -438,6 +438,7 @@ static void set_mesh(UObject* component, UObject* mesh) {
     layers.restore(component);
 }
 static FScriptArrayHelper overrides(UObject* component) {
+    if(!component) throw std::runtime_error("Missing mesh component for material overrides");
     auto* p=component->GetPropertyByNameInChain(L"OverrideMaterials");
     if(!p || !p->IsA<FArrayProperty>()) throw std::runtime_error("Missing material overrides");
     auto* a=static_cast<FArrayProperty*>(p);
@@ -748,12 +749,14 @@ void Appearance::sync_menu() {
     // character itself), so it also works on a default shell where this function returns early.
 }
 void Appearance::remember_materials() {
-    expected_materials_.clear();
-    auto values=overrides(component_.Get());
-    for(int i=0;i<values.Num();++i) {
-        UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
-        expected_materials_.emplace_back(value);
-    }
+    shader_fallback::snapshot_materials(expected_materials_,[this]{ return component_.Get(); },
+        [](UObject* component,auto& expected) {
+            auto values=overrides(component);
+            for(int i=0;i<values.Num();++i) {
+                UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
+                expected.emplace_back(value);
+            }
+        });
 }
 void Appearance::detach_residual_controls() {
     if(auto* component=component_.Get();component && mesh_asset(component)!=applied_.Get()) {
@@ -835,6 +838,7 @@ bool Appearance::reuse_materials() {
     }
     for(const auto& [id,weak]:dye_targets_) if(!weak.Get()) return false;
     auto* component=component_.Get();
+    if(!component) return false;
     const auto count=std::max(static_cast<size_t>(overrides(component).Num()),expected_materials_.size());
     for(size_t i=0;i<count;++i)
         material(component,static_cast<int>(i),i<expected_materials_.size()?expected_materials_[i].Get():nullptr);
@@ -2436,23 +2440,14 @@ std::vector<std::string> Appearance::configure_shader_fallback(const fs::path& c
 }
 bool Appearance::set_shader_fallback_mode(const std::string& mode) {
     auto& state=shader_fallback_state();
-    const auto parsed=shader_fallback::parse_mode(mode);
-    if(!parsed) throw std::runtime_error("Unknown outfit material mode");
-    const bool before=state.active || state.outfit_stale;
-    state.mode=*parsed;
-    state.active=shader_fallback::active(state.mode,!state.verified_build.empty(),state.loaded && state.catalog.size()>0);
-    state.outfit_stale=shader_fallback_stale_outfit();
-    const bool next=state.active || state.outfit_stale;
-    if(next==before) return false;
     // Put every outfit material back (fallbacks resolve to their source), then let the next
-    // apply rebuild controls and items under the new decision.
-    reset_controls();
-    // The restored slots are now the expected ones, so the next apply rebuilds controls on
-    // them instead of putting back the MIDs reset_controls just removed.
-    remember_materials();
+    // apply rebuild controls and items using the restored slots as its baseline.
+    if(!state.set_mode(mode,!state.verified_build.empty(),state.loaded && state.catalog.size()>0,
+        [this]{ return shader_fallback_stale_outfit(); },[this]{ reset_controls(); },
+        [this]{ remember_materials(); })) return false;
     items_.release(); menu_items_.release();
     shader_fallback_note("mode:"+std::to_string(appearance_revision)+shader_fallback::mode_name(state.mode),
-        std::string("Shader fallback turned ")+(next?"on":"off")+" (setting "+shader_fallback::mode_name(state.mode)+")");
+        std::string("Shader fallback turned ")+(shader_fallback_on()?"on":"off")+" (setting "+shader_fallback::mode_name(state.mode)+")");
     return true;
 }
 std::vector<std::string> Appearance::take_shader_fallback_log() {
