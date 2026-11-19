@@ -5,6 +5,11 @@ struct PlayerRootLink {
     std::byte* address;
     std::byte* original;
     std::byte* selected;
+    int32_t source_id() const {
+        int32_t id{};
+        std::memcpy(&id,address+sizeof(void*),sizeof(id));
+        return id;
+    }
     std::byte* current() const {
         std::byte* value{};std::memcpy(&value,address,sizeof(value));return value;
     }
@@ -20,8 +25,9 @@ PlayerRootLink player_idle_link(UObject* animation,IdleOutput output) {
        L"/Game/Sparta/Characters/Humans/Player/Animations/ABP_Player.ABP_Player_C")
         throw std::runtime_error("Idle requires the player animation graph");
     join_player_animation(animation);
-    auto node=[&](const wchar_t* name,const wchar_t* type) {
-        auto* p=optional_field(animation,name);
+    auto node=[&](std::wstring_view name,const wchar_t* type) {
+        auto* p=idle_graph_property<FProperty>(animation->GetClassPrivate()->ForEachProperty(),name,
+            [](FProperty* property){return property->GetName();});
         if(!p || !p->IsA<FStructProperty>() || p->GetArrayDim()!=1 ||
            !static_cast<FStructProperty*>(p)->GetStruct().Get() ||
            static_cast<FStructProperty*>(p)->GetStruct()->GetFName()!=FName(type) ||
@@ -29,7 +35,7 @@ PlayerRootLink player_idle_link(UObject* animation,IdleOutput output) {
             throw std::runtime_error("Player idle graph node layout changed");
         return reinterpret_cast<std::byte*>(animation)+p->GetOffset_Internal();
     };
-    auto* root=node(L"AnimGraphNode_Root",L"AnimNode_Root");
+    auto* root=node(player_idle_root,L"AnimNode_Root");
     auto* root_type=static_cast<UStruct*>(find(L"/Script/Engine.AnimNode_Root"));
     auto* result=optional_field(root_type,L"Result");
     auto* pose=find(L"/Script/Engine.PoseLink");
@@ -39,36 +45,46 @@ PlayerRootLink player_idle_link(UObject* animation,IdleOutput output) {
        result->GetOffset_Internal()<0 || result->GetOffset_Internal()>root_type->GetPropertiesSize()-result->GetElementSize())
         throw std::runtime_error("Player idle root link layout changed");
     auto* link=root+result->GetOffset_Internal();
-    int32_t link_id{};std::memcpy(&link_id,link+id->GetOffset_Internal(),sizeof(link_id));
-    if(link_id!=30) throw std::runtime_error("Player idle root has a different source");
-    auto* original=node(L"AnimGraphNode_LinkedAnimGraph_1",L"AnimNode_LinkedAnimGraph");
-    auto* selected=output==IdleOutput::carrier ? node(L"AnimGraphNode_BlendSpacePlayer",L"AnimNode_BlendSpacePlayer") :
-                                                node(L"AnimGraphNode_Slot_5",L"AnimNode_Slot");
+    auto* original=node(player_idle_source,L"AnimNode_LinkedAnimGraph");
+    auto* selected=output==IdleOutput::carrier ? node(player_idle_carrier,L"AnimNode_BlendSpacePlayer") :
+                                                node(player_idle_slot,L"AnimNode_Slot");
     return {link,original,selected};
 }
 }
 bool PlayerIdleOutput::linked() const {
     auto* owner=owner_.Get();
-    if(!owner) return false;
+    if(!owner || !address_) return false;
     join_player_animation(owner);
     return PlayerRootLink{address_,original_,selected_}.current()==selected_;
 }
 void PlayerIdleOutput::bind(UObject* animation,IdleOutput output) {
     if(output==IdleOutput::game) { release();return; }
-    if(owner_.Get()==animation && output_==output && linked()) return;
-    release();
-    auto link=player_idle_link(animation,output);
-    WeakObject guard=animation;
-    acquire_idle_link(link.current(),link.original,link.selected,[&](auto* value){link.set(value);});
-    owner_=guard;address_=link.address;original_=link.original;selected_=link.selected;output_=output;
+    const bool same=owner_.Get()==animation && output_==output;
+    if(same && address_ && linked()) return;
+    if(!same || address_) {
+        release();
+        owner_=animation;
+        output_=output;
+    }
+    // The 1.0.11 BlendSpace or the positioned menu montage is already playing.
+    // A rejected direct link must leave that playback running.
+    fallback_.attempt(GetTickCount64(),[&] {
+        auto link=player_idle_link(animation,output);
+        const int32_t source_id=link.source_id();
+        acquire_idle_link(link.current(),link.original,link.selected,[&](auto* value){link.set(value);});
+        source_id_=source_id;
+        address_=link.address;
+        original_=link.original;
+        selected_=link.selected;
+    });
 }
 void PlayerIdleOutput::release() {
-    if(auto* owner=owner_.Get()) {
+    if(auto* owner=owner_.Get(); owner && address_) {
         join_player_animation(owner);
         PlayerRootLink link{address_,original_,selected_};
-        int32_t id{};std::memcpy(&id,address_+sizeof(void*),sizeof(id));
         // If another owner changed the serialized source, let Unreal relink that new source.
-        restore_idle_link(link.current(),selected_,id==30 ? original_ : nullptr,[&](auto* value){link.set(value);});
+        restore_idle_link(link.current(),selected_,link.source_id()==source_id_ ? original_ : nullptr,[&](auto* value){link.set(value);});
     }
+    fallback_.reset();
     owner_.Reset();address_=original_=selected_=nullptr;output_=IdleOutput::game;
 }

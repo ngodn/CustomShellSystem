@@ -712,9 +712,12 @@ public:
 class PlayerIdleOutput {
     WeakObject owner_;
     IdleOutput output_=IdleOutput::game;
+    IdleDirectFallback fallback_;
+    int32_t source_id_=0;
     std::byte *address_=nullptr,*original_=nullptr,*selected_=nullptr;
 public:
     bool linked() const;
+    void report_fallback(const char* route,void (*log)(const char*)) { fallback_.report(route,log); }
     void bind(RC::Unreal::UObject* animation,IdleOutput output);
     void release();
 };
@@ -787,6 +790,7 @@ public:
     bool genessa_walk_active() const { return genessa_active_; }
     bool proxima_walk_active() const { return proxima_active_; }
     bool engaged() const { return engaged_ || custom_idle_engaged_; }
+    void report_idle_fallback(void (*log)(const char*)) { idle_output_.report_fallback("player BlendSpace",log); }
     bool direct_idle_linked() const { return idle_output_.linked(); }
     bool custom_idle_engaged() const { return custom_idle_engaged_; }
     const std::string& reason() const { return reason_; }
@@ -1056,6 +1060,7 @@ public:
     void sync_menu(bool effects_page);
     void tick_menu_effects(bool effects_page);
     void sync_menu_idle(const Catalog&,const InventoryIdleChoice&);
+    void report_menu_idle_fallback(void (*log)(const char*)) { menu_idle_output_.report_fallback("Inventory montage",log); }
     Json inspect_menu_idle() const;
     Json inspect_menu_effects() const;
     void tick_menu_idle(uint64_t now);

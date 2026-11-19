@@ -359,6 +359,7 @@ struct Core {
             appearance.sync_walk(vista_feminine || feminine,
                                  !vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
                                  custom_idle.asset,custom_idle.hide_weapons,idle_carrier,vista_rest);
+            appearance.walk.report_idle_fallback(host.log);
             if(animation_trace && traced_idle_engaged!=appearance.walk.custom_idle_engaged()) {
                 traced_idle_engaged=appearance.walk.custom_idle_engaged();
                 animation_trace.write(std::string("body idle ")+(traced_idle_engaged?"active: ":"released: ")+custom_idle.asset);
@@ -413,6 +414,7 @@ struct Core {
             try {
                 appearance.sync_menu_idle(catalog,{selection.outfit,selection.variant,choice,selection.custom.expression,
                                                   animation_catalog_generation});
+                appearance.report_menu_idle_fallback(host.log);
             } catch(const std::exception& error) {
                 host.log(("Inventory idle "+choice+" unavailable for "+applied_id+": "+error.what()).c_str());
                 return;

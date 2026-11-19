@@ -35,7 +35,8 @@ void Appearance::sync_menu_idle(const Catalog& catalog,const InventoryIdleChoice
     if(same && anim && menu_idle_.playing()) {
         Call active(anim,L"Montage_IsActive",2);
         active.set(L"Montage",menu_idle_montage_.Get());active.run();
-        same=active.get<bool>() && menu_idle_output_.linked();
+        same=active.get<bool>();
+        if(same) menu_idle_output_.bind(anim,IdleOutput::slot);
     }
     menu_idle_.sync(choice,same,GetTickCount64(),[this]{release_menu_idle();},[&]() -> double {
         menu_idle_component_=component;menu_idle_mesh_=mesh;menu_idle_anim_=anim;menu_idle_post_=post;
@@ -47,9 +48,8 @@ double Appearance::start_menu_idle(const Catalog& catalog,const InventoryIdleCho
     auto* mesh=menu_idle_mesh_.Get();
     auto* anim=menu_idle_anim_.Get();
     auto* post=menu_idle_post_.Get();
-    if(!anim || anim->GetClassPrivate()->GetPathName()!=
-       L"/Game/Sparta/Characters/Humans/Player/Animations/ABP_Player.ABP_Player_C")
-        throw std::runtime_error("Inventory display has no player animation graph");
+    if(!anim || !anim->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"))))
+        throw std::runtime_error("Inventory display has no animation instance");
     const bool feminine=choice.idle==feminine_animation_id;
     const auto bundled=resolve_animation(catalog.animation_options(choice.outfit,choice.variant,AnimationSlot::Idle),
                                          AnimationSlot::Idle,choice.idle);
