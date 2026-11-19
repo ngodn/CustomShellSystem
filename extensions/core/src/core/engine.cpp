@@ -7,6 +7,9 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FNumericProperty.hpp>
+#include <Unreal/Property/FStructProperty.hpp>
 
 namespace cssx::engine {
 std::wstring wide(const std::string& s) {
@@ -166,6 +169,21 @@ FProperty* Call::param(const wchar_t* name) {
     for(auto* p:*params_) if(p->GetName()==name) return p;
     throw std::runtime_error("Missing parameter: "+narrow(name));
 }
+WidgetParam Call::describe_widget_parameter(FProperty* field) {
+    auto role=WidgetParamRole::input;
+    if(field->HasAnyPropertyFlags(CPF_ReturnParm)) role=WidgetParamRole::result;
+    else if(field->HasAnyPropertyFlags(CPF_OutParm|CPF_ReferenceParm)) role=WidgetParamRole::other;
+    auto type=WidgetParamType::other;
+    if(field->IsA<FObjectProperty>() && field->GetElementSize()==sizeof(UObject*))
+        type=WidgetParamType::object;
+    else if((field->IsA<FByteProperty>() || field->IsA<FEnumProperty>()) && field->GetElementSize()==1)
+        type=WidgetParamType::byte_enum;
+    else if(field->IsA<FStructProperty>() && field->GetElementSize()==sizeof(Margin)) {
+        auto* structure=static_cast<FStructProperty*>(field)->GetStruct().Get();
+        if(structure && structure==find_cached(L"/Script/SlateCore.Margin")) type=WidgetParamType::margin;
+    }
+    return {field->GetName(),type,role};
+}
 void Call::set_single_bool_input(bool value) {
     if(params_->size()!=1 || !params_->front()->IsA<FBoolProperty>() ||
        params_->front()->HasAnyPropertyFlags(CPF_OutParm|CPF_ReturnParm|CPF_ReferenceParm))
@@ -275,7 +293,7 @@ void text_property(UObject* object,const wchar_t* name,const std::string& value)
     if(!p || !p->SameType(result)) throw std::runtime_error("Text property mismatch: "+narrow(name));
     p->CopyCompleteValue(reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal(),convert.data(result));
 }
-UObject* content(UObject* parent,UObject* child) { Call c(parent,L"SetContent",2); c.set(L"content",child); c.run(); return c.get<UObject*>(); }
+UObject* content(UObject* parent,UObject* child) { return set_widget_child<Call>(parent,L"SetContent",child); }
 std::vector<UObject*> children(UObject* panel,int limit) {
     Call count(panel,L"GetChildrenCount",1); count.run(); auto n=count.get<int32_t>();
     if(n<0 || n>limit) throw std::runtime_error("Child count out of bounds");

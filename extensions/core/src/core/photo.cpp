@@ -51,8 +51,8 @@ int child_index(UObject* panel,UObject* child) {
     Call c(panel,L"GetChildIndex",2); c.set(L"content",child); c.run(); return c.get<int32_t>();
 }
 void add_vertical(UObject* box,UObject* child) { Call c(box,L"AddChildToVerticalBox",2); c.set(L"content",child); c.run(); }
-void add_horizontal(UObject* box,UObject* child) { Call c(box,L"AddChildToHorizontalBox",2); c.set(L"content",child); c.run(); }
-void add_child(UObject* panel,UObject* child) { Call c(panel,L"AddChild",2); c.set(L"content",child); c.run(); }
+void add_horizontal(UObject* box,UObject* child) { set_widget_child<Call>(box,L"AddChildToHorizontalBox",child); }
+void add_child(UObject* panel,UObject* child) { set_widget_child<Call>(panel,L"AddChild",child); }
 void remove(UObject* widget) { if(widget) try { invoke(widget,L"RemoveFromParent"); } catch(...) {} }
 bool visible_now(UObject* widget) { Call c(widget,L"IsVisible",1); c.run(); return c.get<bool>(); }
 }
@@ -474,7 +474,7 @@ void PhotoMode::add_tab_widget(Tab& tab,const Manifest::PhotoTab& spec) {
     for(auto fn:{L"UpdateImage",L"CommitSize",L"CommitScale"}) invoke(icon,fn);
     add_horizontal(strip,icon);
     if(auto* slot=object_of(icon,L"Slot")) if(auto* ref_slot=object_of(reference,L"Slot"))
-        invoke(slot,L"SetPadding",L"InPadding",read<std::array<float,4>>(ref_slot,L"Padding"));
+        set_widget_option<Call>(slot,L"SetPadding",WidgetParamType::margin,read<Margin>(ref_slot,L"Padding"));
     rescan(strip);
 }
 
@@ -663,13 +663,8 @@ PhotoMode::Row PhotoMode::make_row(PhotoRow::Kind kind) {
         if(column && value) {
             // Bypass the value's shrink-to-fit box. The centered size-box slot clamps the
             // text block to the available width, where Slate can paint the overflow marker.
-            Call content(column,L"SetContent",2);
-            content.set(L"Content",value); content.run();
-            auto* slot=content.get<UObject*>();
-            invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{2});
-            invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});
-            invoke(value,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
-            invoke(value,L"SetClipping",L"InClipping",uint8_t{1});
+            try { fit_information_value<Call>(column,value); }
+            catch(const std::exception& e) { report(std::string("information row layout: ")+e.what()); }
         }
     }
     return row;

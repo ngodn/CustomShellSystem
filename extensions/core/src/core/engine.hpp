@@ -3,6 +3,7 @@
 // game thread. Layouts, offsets and parameter frames come from live reflection
 // at each call; nothing assumes a header struct layout for game objects.
 #include "common.hpp"
+#include "widget_calls.hpp"
 #include <array>
 #include <cstring>
 #include <memory>
@@ -65,6 +66,8 @@ public:
     Call(const Call&)=delete;
     Call& operator=(const Call&)=delete;
     FProperty* param(const wchar_t* name);
+    const std::vector<FProperty*>& parameters() const { return *params_; }
+    static WidgetParam describe_widget_parameter(FProperty* field);
     void set_single_bool_input(bool value);
     void* data(FProperty* p) { return bytes_.data()+p->GetOffset_Internal(); }
     template<typename T> void set(const wchar_t* name,const T& value) {
