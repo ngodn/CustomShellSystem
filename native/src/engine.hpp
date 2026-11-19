@@ -20,6 +20,7 @@
 #include "inventory_motion.hpp"
 #include "inventory_idle.hpp"
 #include "idle_output.hpp"
+#include "arm_stretch.hpp"
 #include "inventory_effects.hpp"
 #include "inventory_backdrop.hpp"
 #include "inventory_light.hpp"
@@ -53,6 +54,19 @@ public:
     WeakObject() = default;
     WeakObject(RC::Unreal::UObject* object);
     WeakObject& operator=(RC::Unreal::UObject* object);
+};
+class PlayerArmStretch {
+    WeakObject instance_;
+    std::array<int32_t,2> offsets_{};
+    RC::Unreal::FProperty *allow_=nullptr,*maximum_=nullptr;
+    ArmStretchLease lease_;
+    void resolve(RC::Unreal::UObject* instance);
+    ArmStretchPair read_values(RC::Unreal::UObject* instance) const;
+    void write_values(RC::Unreal::UObject* instance,const ArmStretchPair& values) const;
+public:
+    void sync(RC::Unreal::UObject* instance);
+    void release();
+    Json inspect(RC::Unreal::UObject* current) const;
 };
 class GenessaRevival {
     const CssHookHost* host_=nullptr;
@@ -1006,6 +1020,8 @@ class Appearance {
     bool fit_defaults_=true, fit_stale_=false;
     HandSupport hand_support_;
     NativeFootIk native_foot_ik_;
+    PlayerArmStretch arm_stretch_;
+    RC::Unreal::UObject* arm_animation() const;
     std::string fit_shell_, fit_error_;
     std::map<std::string,std::string> shell_data_;   // CharacterId -> its character data asset
     WeakObject fit_worn_data_;
@@ -1079,6 +1095,8 @@ public:
     std::vector<std::string> take_shader_fallback_log();
     Json shader_fallback_status() const;
     void sync_hand_support();
+    void sync_arm_stretch(bool locked);
+    Json inspect_arm_stretch() const { return arm_stretch_.inspect(arm_animation()); }
     void sync_anim_switches();
     Json hand_support_status() const { return hand_support_.status(); }
     void sync_native_foot_ik(bool eligible);

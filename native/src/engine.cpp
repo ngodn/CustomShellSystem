@@ -611,6 +611,7 @@ static bool gameplay_input_blocked(UObject* pawn) {
     return values.Num()!=0;
 }
 #include "walk_override.inl"
+#include "arm_stretch.inl"
 #include "misc_visibility.inl"
 UObject* Appearance::player(void* engine) {
     shell.clear(); pawn_name.clear(); current_mesh.clear();

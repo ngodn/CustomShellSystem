@@ -379,6 +379,8 @@ struct Core {
     bool menu_effects_active() const {
         return inventory.active() && !inventory_failed && state.enabled && !restore_pending && !(apply_pending && !custom_only);
     }
+    uint64_t arm_stretch_retry_=0;
+    std::string arm_stretch_error_;
     std::string idle_warning_;
     void idle_unavailable(const std::string& choice,const std::string& reason) {
         const auto message="Idle "+choice+" unavailable for "+appearance.performance_mesh()+": "+reason;
@@ -989,6 +991,12 @@ struct Core {
             if(choice!=(mode=="css")) { choice=mode=="css";dirty=true; }
             ui_refresh=true;
         }
+        else if(action=="arm_stretch") {
+            const auto mode=command.at("mode").get<std::string>();
+            if(mode!="locked" && mode!="game") throw std::runtime_error("Unknown arm stretch mode");
+            if(state.arm_stretch!=mode) { state.arm_stretch=mode; arm_stretch_retry_=0; dirty=true; }
+            ui_refresh=true;
+        }
         else if(action=="shader_fallback") {
             const auto mode=command.at("mode").get<std::string>();
             if(!shader_fallback::parse_mode(mode)) throw std::runtime_error("Unknown outfit material mode");
@@ -1256,6 +1264,16 @@ struct Core {
         measured(FrameProfile::attachments,[&] { sync_hand_support_safely(now); sync_native_foot_ik_safely(now); sync_anim_switches_safely(now); });
         if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
         measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
+        if(now>=arm_stretch_retry_) {
+            try {
+                appearance.sync_arm_stretch(state.arm_stretch=="locked");
+                arm_stretch_error_.clear();
+            } catch(const std::exception& error) {
+                if(arm_stretch_error_!=error.what()) host.log((std::string("Arm stretch: ")+error.what()).c_str());
+                arm_stretch_error_=error.what();
+                arm_stretch_retry_=now+1000;
+            }
+        }
         if(!restore_performance_face && !apply_pending && !restore_pending && !appearance.performance.active())
             performance_face_mesh_roots.release();
         measured(FrameProfile::astral,[&] {
@@ -1452,8 +1470,10 @@ struct Core {
             forget_current = false;
             dirty = true; ui_refresh = true; report("Original appearance restored.");
         }
-        if (state.enabled || apply_pending) {
+        // Arm length is a player setting even on a fresh install with no wardrobe selection.
+        if(state.enabled || apply_pending || state.arm_stretch=="locked" || inspect_pending)
             appearance.player(engine);
+        if (state.enabled || apply_pending) {
             // Player tags come in two families, each per body: a worn shell
             // (CharacterId.Player.Shell.<Name>) and the bare Harbinger it severs into
             // on death (CharacterId.Player.Darkform.<Name>). Remember the living shell
@@ -1654,6 +1674,9 @@ struct Core {
         }
         if(inspect_pending) {
             auto result=appearance.transition_state(engine); result["id"]=last_request; result["inventory"]=inventory.diagnostics();
+            result["arm_stretch"]=appearance.inspect_arm_stretch();
+            result["arm_stretch"]["mode"]=state.arm_stretch;
+            result["arm_stretch"]["error"]=arm_stretch_error_;
             result["world_idle_direct"]=appearance.walk.direct_idle_linked();
             result["inventory_idle"]=appearance.inspect_menu_idle();
             result["inventory_effects"]=appearance.inspect_menu_effects();
@@ -1813,6 +1836,7 @@ bool stop(void* ptr) noexcept {
         if(!core.astral.clear()) throw std::runtime_error("Genessa double visuals could not be released");
         core.inventory.detach();
         core.appearance.performance.interrupt("CSS stopped");
+        core.appearance.sync_arm_stretch(false);
         core.appearance.walk.release();
         core.appearance.clear_shared_animations();
         core.appearance.restore_misc();

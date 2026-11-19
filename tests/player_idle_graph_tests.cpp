@@ -1,4 +1,6 @@
 #include "idle_output.hpp"
+#include "arm_stretch.hpp"
+#include "data.hpp"
 #include "inventory_idle.hpp"
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -72,6 +74,47 @@ int main(int argc,char** argv) {
         fallback.attempt(2000,bind);
         check(current==target && !fallback.active(),"Could not recover when the engine linked the original graph");
     }
+    ArmStretchPair shipped{};
+    const auto stretch_count=std::count_if(nodes.begin(),nodes.end(),[](const Json& row) {
+        return row.value("bAllowStretching",false);
+    });
+    check(stretch_count==arm_ik_nodes.size(),"Unaccounted stretch-enabled node in the shipped graph");
+    for(size_t i=0;i<arm_ik_nodes.size();++i) {
+        const auto* arm=lookup(arm_ik_nodes[i]);
+        check(arm && arm->at("type")=="AnimNode_TwoBoneIK" && arm->at("bone")==(i==0?"hand_l":"hand_r"),
+              "Arm cap addresses the wrong node or limb");
+        check(arm->at("exposed_destinations")==Json::array({Json::array({"Alpha"})}),
+              "Animation update can overwrite a stretch setting");
+        shipped[i]={arm->at("bAllowStretching").get<bool>(),arm->at("MaxStretchScale").get<double>()};
+        check(shipped[i]==ArmStretchValues{true,1.2} && arm->at("StartStretchRatio")==1.0,"Shipped stretch inputs changed");
+        check(locked_arm_pair[i]==ArmStretchValues{false,1.0},"Locked arm could still stretch");
+    }
+    ArmStretchLease arms;
+    arms.lock(shipped);
+    arms.lock(locked_arm_pair);
+    check(arms.restoration(locked_arm_pair)==shipped,"Game mode lost a shipped arm setting");
+    ArmStretchPair reinit={ArmStretchValues{true,1.35},ArmStretchValues{true,1.07}};
+    arms.lock(reinit);
+    check(arms.restoration(locked_arm_pair)==reinit,"Same-instance reinit retained stale scales");
+    auto external=locked_arm_pair;
+    external[1].maximum=1.14;
+    check(arms.restoration(external)[1].maximum==1.14,"Release overwrote another writer");
+    arms.reset();
+    ArmStretchPair replacement={ArmStretchValues{false,1.05},ArmStretchValues{true,1.0}};
+    arms.lock(replacement);
+    check(arms.restoration(locked_arm_pair)==replacement,"Swapping instances leaked the previous arm settings");
+    arms.reset();
+    check(!arms.bound() && arms.restoration(shipped)==shipped,"Game mode claimed an untouched instance");
+    State settings;
+    check(settings.arm_stretch=="locked","New installs must default to Locked");
+    auto saved=settings.json();
+    saved.erase("arm_stretch");
+    check(State::parse(saved).arm_stretch=="locked","Upgraded installs must default to Locked");
+    saved["arm_stretch"]=42;
+    check(State::parse(saved).arm_stretch=="locked","Invalid saved stretch mode did not fall back");
+    settings.arm_stretch="game";
+    check(State::parse(settings.json()).arm_stretch=="game","Game did not survive save and reload");
+
     InventoryIdlePlayback menu;
     InventoryIdleChoice choice;
     choice.idle="eve.default";
@@ -101,5 +144,5 @@ int main(int argc,char** argv) {
     update(1100);
     check(montage && current==slot && menu.position(1100)==1. && starts==1,
           "Inventory lost the clip phase when direct output recovered");
-    std::cout<<checks<<" cooked player graph and fallback checks passed\n";
+    std::cout<<checks<<" cooked player graph, fallback and arm stretch checks passed\n";
 }
