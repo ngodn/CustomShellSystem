@@ -19,6 +19,7 @@
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
 #include "inventory_idle.hpp"
+#include "idle_output.hpp"
 #include "inventory_effects.hpp"
 #include "inventory_backdrop.hpp"
 #include "inventory_light.hpp"
@@ -708,7 +709,17 @@ public:
 };
 // Shared owner for the built-in feminine idle/walk and mod movement options.
 // The game's animation instance evaluates the selected locomotion BlendSpace.
+class PlayerIdleOutput {
+    WeakObject owner_;
+    IdleOutput output_=IdleOutput::game;
+    std::byte *address_=nullptr,*original_=nullptr,*selected_=nullptr;
+public:
+    bool linked() const;
+    void bind(RC::Unreal::UObject* animation,IdleOutput output);
+    void release();
+};
 class WalkOverride {
+    PlayerIdleOutput idle_output_;
     struct SameWeakObject {
         bool operator()(const WeakObject& a,const WeakObject& b) const {
             return a.ObjectIndex==b.ObjectIndex && a.ObjectSerialNumber==b.ObjectSerialNumber;
@@ -776,6 +787,7 @@ public:
     bool genessa_walk_active() const { return genessa_active_; }
     bool proxima_walk_active() const { return proxima_active_; }
     bool engaged() const { return engaged_ || custom_idle_engaged_; }
+    bool direct_idle_linked() const { return idle_output_.linked(); }
     bool custom_idle_engaged() const { return custom_idle_engaged_; }
     const std::string& reason() const { return reason_; }
     void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,
@@ -893,6 +905,7 @@ class Appearance {
     };
     FacialBinding facial_world_, facial_preview_;
     InventoryIdlePlayback menu_idle_;
+    PlayerIdleOutput menu_idle_output_;
     WeakObject menu_idle_component_, menu_idle_mesh_, menu_idle_anim_, menu_idle_post_, menu_idle_clip_, menu_idle_montage_;
     AssetLoadRoots menu_idle_roots_;
     std::optional<FacialPerformancePose> menu_idle_face_;

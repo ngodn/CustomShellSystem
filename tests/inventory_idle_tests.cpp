@@ -1,3 +1,5 @@
+#include "animation_override.hpp"
+#include "animation_library.hpp"
 #include "animations.hpp"
 #include "facial_performance.hpp"
 #include "inventory_idle.hpp"
@@ -91,5 +93,50 @@ int main() {
     pending=false;
     sync(6500);
     expect(playback.playing() && starts>1,"Pending load did not retry");
+    LibraryAnimation entry;
+    entry.id="idle.nl2";
+    entry.slot=AnimationSlot::Idle;
+    entry.assets={{"eve",std::string(authored_base_skeleton),{}},{"nl2",std::string(human),"nl2-grid"}};
+    AnimationLibrary library;
+    library.entries={entry};
+    const std::vector<AnimationLibrary> libraries{library};
+    for(auto rig:{std::string_view(human),authored_base_skeleton,authored_cw_belt_skeleton,
+                  authored_wing_skeleton,legacy_base_skeleton,seductress_idle_skeleton}) {
+        const auto match=resolve_library_animation(libraries,AnimationSlot::Idle,entry.id,{},std::string(rig));
+        expect(match.candidates.size()==1,"idle resolver selected an incompatible alternative");
+        const auto& candidate=match.candidates.front();
+        expect(candidate.asset==(rig==human?"nl2":"eve"),"idle resolver changed the reference pose");
+        expect(idle_carrier_path(*match.entry,candidate)=="nl2-grid","missing idle grid on a layerless human look");
+    }
+    expect(resolve_library_animation(libraries,AnimationSlot::Idle,entry.id,{},"creature").candidates.empty(),
+           "unsupported rig did not keep the game pose");
+    expect(resolve_library_animation(libraries,AnimationSlot::Walk,entry.id,{},std::string(human)).candidates.empty(),
+           "walking accepted an idle carrier");
+    int game_node=0,carrier_node=1,slot_node=2;
+    int* root=&game_node;
+    auto set_root=[&](int* node){root=node;};
+    acquire_idle_link(root,&game_node,&carrier_node,set_root);
+    expect(root==&carrier_node,"native idle passed through hand IK");
+    restore_idle_link(root,&carrier_node,&game_node,set_root);
+    expect(root==&game_node,"walking did not reacquire the game output");
+    acquire_idle_link(root,&game_node,&slot_node,set_root);
+    root=&carrier_node;
+    restore_idle_link(root,&slot_node,&game_node,set_root);
+    expect(root==&carrier_node,"page exit replaced a newer output");
+    bool rejected=false;
+    try { acquire_idle_link(root,&game_node,&slot_node,set_root); } catch(const std::runtime_error&) { rejected=true; }
+    expect(rejected && root==&carrier_node,"unrecognized root displaced the game pose");
+    expect(world_idle_output(false,true,false,true,false)==IdleOutput::carrier,"settled third-party idle did not bypass IK");
+    expect(world_idle_output(false,true,false,false,true)==IdleOutput::carrier,"settled Feminine missed its carrier");
+    expect(world_idle_output(false,true,false,false,false)==IdleOutput::game,"authored post-process route changed");
+    for(auto speed:{85.,540.,800.}) {
+        auto gait=animation_gait(speed,speed==85.,speed==800.,true);
+        expect(gait!=AnimationGait::Idle && world_idle_output(false,false,true,true,false)==IdleOutput::game,
+               "movement retained direct idle output");
+    }
+    expect(world_idle_output(true,true,false,true,false)==IdleOutput::game,"Vista lost its game output");
+    expect(compatible_idle_skeletons(authored_base_skeleton,seductress_idle_skeleton) &&
+           !compatible_animation_skeletons(authored_base_skeleton,seductress_idle_skeleton),"idle alias changed gait matching");
+    expect(!compatible_idle_skeletons(authored_base_skeleton,"/Other/Skeleton"),"unverified skeleton selected an idle");
     std::cout<<checks<<" inventory idle checks passed\n";
 }

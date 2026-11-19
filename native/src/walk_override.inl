@@ -73,6 +73,8 @@ UObject* WalkOverride::blendspace(WeakObject& slot,const wchar_t* path) {
     if(!asset || !asset->IsA(static_cast<UClass*>(find(L"/Script/Engine.BlendSpace")))) throw std::runtime_error("Locomotion blendspace is unavailable");
     slot=asset; return asset;
 }
+namespace { UObject* idle_carrier_for(UObject* owner,UObject* donor,UObject* clip,AssetLoadRoots& roots); }
+#include "idle_output.inl"
 void WalkOverride::preload_assets() {
     auto warm=[&](const std::string& path)->UObject* {
         if(path.empty()) return nullptr;
@@ -83,7 +85,9 @@ void WalkOverride::preload_assets() {
     };
     for(const auto& path:custom_paths_) warm(path);
     custom_idle_asset_=warm(custom_idle_clip_);
-    custom_idle_carrier_=warm(custom_idle_blend_);
+    auto* donor=warm(custom_idle_blend_);
+    custom_idle_carrier_=donor && custom_idle_asset_.Get() ?
+        idle_carrier_for(pawn_.Get(),donor,custom_idle_asset_.Get(),rooted_assets_) : nullptr;
 }
 void WalkOverride::unroot_assets() {
     rooted_assets_.release(); custom_idle_asset_.Reset();custom_idle_carrier_.Reset();
@@ -92,8 +96,10 @@ namespace {
 void validate_movement_blendspace(UObject* asset,UObject* skeleton,UObject* idle_sequence=nullptr) {
     const auto compatible=[&](UObject* animation) {
         auto* source=read<UObject*>(animation,L"Skeleton");
-        return source && (source==skeleton || compatible_animation_skeletons(
-            narrow(source->GetPathName()),narrow(skeleton->GetPathName())));
+        if(!source || !skeleton) return false;
+        if(source==skeleton) return true;
+        const auto from=narrow(source->GetPathName()),to=narrow(skeleton->GetPathName());
+        return idle_sequence ? compatible_idle_skeletons(from,to) : compatible_animation_skeletons(from,to);
     };
     if(!asset || asset->GetClassPrivate()!=find(L"/Script/Engine.BlendSpace") ||
        !compatible(asset))
@@ -145,6 +151,45 @@ void validate_movement_blendspace(UObject* asset,UObject* skeleton,UObject* idle
            static_cast<FBoolProperty*>(root_motion)->GetPropertyValueInContainer(sequence))
             throw std::runtime_error("Custom movement samples must be in-place without root motion");
     }
+}
+UObject* idle_carrier_for(UObject* owner,UObject* donor,UObject* clip,AssetLoadRoots& roots) {
+    if(!owner || !donor || donor->GetClassPrivate()!=find(L"/Script/Engine.BlendSpace"))
+        throw std::runtime_error("Invalid idle carrier class");
+    auto* skeleton=read<UObject*>(clip,L"Skeleton");
+    auto* data=field(donor,L"SampleData",sizeof(FScriptArray));
+    if(!data->IsA<FArrayProperty>()) throw std::runtime_error("Idle carrier samples are not an array");
+    auto* samples=static_cast<FArrayProperty*>(data);
+    if(!samples->GetInner() || !samples->GetInner()->IsA<FStructProperty>())
+        throw std::runtime_error("Idle carrier has no sample data");
+    auto* type=static_cast<FStructProperty*>(samples->GetInner())->GetStruct().Get();
+    auto* animation=field(type,L"Animation",sizeof(UObject*));
+    if(!animation->IsA<FObjectProperty>() || animation->GetOffset_Internal()<0 ||
+       animation->GetOffset_Internal()>samples->GetInner()->GetElementSize()-int(sizeof(UObject*)))
+        throw std::runtime_error("Idle carrier sample layout changed");
+    auto array=[&](UObject* asset) {
+        return FScriptArrayHelper(samples,reinterpret_cast<std::byte*>(asset)+samples->GetOffset_Internal());
+    };
+    auto source=array(donor);
+    if(source.Num()<1 || source.Num()>256) throw std::runtime_error("Invalid idle carrier sample count");
+    auto* original=static_cast<FObjectProperty*>(animation)->GetObjectPropertyValue(source.GetRawPtr(0)+animation->GetOffset_Internal());
+    if(!original) throw std::runtime_error("Empty idle carrier sample");
+    validate_movement_blendspace(donor,read<UObject*>(donor,L"Skeleton"),original);
+    if(original==clip) return donor;
+    // Some Shared entries supply a carrier only for their native-human alternative.
+    // Construct a private copy of its cooked interpolation grid; every sample supplies the same clip.
+    FStaticConstructObjectParameters params(donor->GetClassPrivate(),owner);
+    params.Template=donor;params.SetFlags=RF_Transient;
+    auto* copy=UObjectGlobals::StaticConstructObject(params);
+    if(!copy || copy==donor) throw std::runtime_error("Could not construct an idle carrier");
+    roots.keep(copy);
+    auto dest=array(copy);
+    if(dest.Num()!=source.Num() || dest.GetRawPtr(0)==source.GetRawPtr(0))
+        throw std::runtime_error("Idle carrier sample storage was not copied");
+    write_field(copy,L"Skeleton",skeleton);
+    for(int i=0;i<dest.Num();++i)
+        animation->CopyCompleteValue(dest.GetRawPtr(i)+animation->GetOffset_Internal(),&clip);
+    validate_movement_blendspace(copy,skeleton,clip);
+    return copy;
 }
 }
 UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
@@ -260,7 +305,8 @@ SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catal
             auto* expected=static_cast<UClass*>(find(slot==AnimationSlot::Idle?L"/Script/Engine.AnimSequence":L"/Script/Engine.BlendSpace"));
             if(!asset || !asset->IsA(expected)) throw std::runtime_error("Shared animation has the wrong asset type");
             auto* source=read<UObject*>(asset,L"Skeleton");
-            if(!source || !compatible_animation_skeletons(narrow(source->GetPathName()),narrow(skeleton->GetPathName())) ||
+            if(!source || !(slot==AnimationSlot::Idle ? compatible_idle_skeletons(narrow(source->GetPathName()),narrow(skeleton->GetPathName())) :
+                                                        compatible_animation_skeletons(narrow(source->GetPathName()),narrow(skeleton->GetPathName()))) ||
                (!candidate.declared_skeleton.empty() && candidate.declared_skeleton!=narrow(source->GetPathName())))
                 throw std::runtime_error("Shared animation skeleton mismatch: source="+
                     asset_evidence(source)+", target="+narrow(skeleton->GetPathName())+
@@ -270,14 +316,12 @@ SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catal
                 if(read<uint8_t>(asset,L"AdditiveAnimType")!=0)
                     throw std::runtime_error("Shared idle cannot use additive animation data");
                 if(!idle_layer) {
-                    if(candidate.idle_blend_space.empty() || narrow(skeleton->GetPathName())!=
-                       "/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton")
-                        throw std::runtime_error("This appearance has no compatible idle layer or native carrier");
-                    auto* carrier=load(candidate.idle_blend_space);
+                    idle_carrier=idle_carrier_path(*match.entry,candidate);
+                    if(idle_carrier.empty()) throw std::runtime_error("Shared idle has no direct playback carrier");
+                    auto* carrier=load(idle_carrier);
                     retained.keep(carrier);
                     if(!still_current()) { cache.result={true,false,{},"Player changed while loading idle carrier"};return cache.result; }
-                    validate_movement_blendspace(carrier,skeleton,asset);
-                    idle_carrier=candidate.idle_blend_space;
+                    if(!candidate.idle_blend_space.empty()) validate_movement_blendspace(carrier,skeleton,asset);
                 }
             } else validate_movement_blendspace(asset,skeleton);
             if(!still_current()) { cache.result={true,false,{},"Player changed while validating animation"};return cache.result; }
@@ -354,6 +398,7 @@ void WalkOverride::forget_blend_lease() {
     original_blend_root_.release();blend_lease_.reset();
 }
 void WalkOverride::push_off() {
+    idle_output_.release();
     if(auto* anim=anim_.Get()) {
         const BlendLease::Value current{WeakObject(read<UObject*>(anim,L"ActiveBlendSpace")),read<bool>(anim,L"UseActiveBlendspace")};
         if(const auto before=blend_lease_.restoration(current)) {
@@ -747,6 +792,13 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
             if(clip) {
                 if(!custom_idle_engaged_ || custom_idle_post_.Get()!=post ||
                    read<UObject*>(post,L"CSSIdleSequence")!=clip || !read<bool>(post,L"CSSIdleEnabled")) {
+                    auto* asset=mesh_asset(current_mesh);
+                    auto* target=asset ? read<UObject*>(asset,L"Skeleton") : nullptr;
+                    auto* source=clip->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimSequence"))) ?
+                        read<UObject*>(clip,L"Skeleton") : nullptr;
+                    if(!source || !target || !compatible_idle_skeletons(narrow(source->GetPathName()),narrow(target->GetPathName())) ||
+                       read<uint8_t>(clip,L"AdditiveAnimType")!=0)
+                        throw std::runtime_error("Idle sequence is incompatible with the worn mesh");
                     write_field<UObject*>(post,L"CSSIdleSequence",clip);
                     write_field<bool>(post,L"CSSIdleEnabled",true);
                     custom_idle_engaged_=true;
@@ -798,12 +850,16 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     if(want) off_ticks_=0;
     else if(hard_off) off_ticks_=WALK_OFF_DWELL;
     else if(++off_ticks_<WALK_OFF_DWELL && engaged_ && active_.Get() && (!speed_known || speed<=WALK_SLIDE_MAX)) { want=active_.Get(); reason=reason_.empty()?"hold":reason_; }
+    const auto output=world_idle_output(vista_rest,settled && !aiming_sidearm,custom_index.has_value() || walk_now,
+        want && reason=="custom idle",want && reason=="idle");
+    if(output==IdleOutput::game) idle_output_.release();
     if(vista_rest && want) mute_vista_slot(anim);
     else restore_vista_slot();
     if(want) {
         // Re-assert on every mismatch, not on a timer: a walk mod ticking against the same
         // two fields must not silently replace the option the player selected.
         if(!engaged_ || active_.Get()!=want || !read<bool>(anim,L"UseActiveBlendspace") || read<UObject*>(anim,L"ActiveBlendSpace")!=want) { push_on(want); last_heal_=now; }
+        idle_output_.bind(anim,output);
         reason_=reason;
     } else if(engaged_) push_off();
 

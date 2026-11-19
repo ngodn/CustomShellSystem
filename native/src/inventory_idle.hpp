@@ -1,5 +1,5 @@
 #pragma once
-#include "skeleton_compatibility.hpp"
+#include "idle_output.hpp"
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -15,10 +15,11 @@ struct InventoryIdleChoice {
 
 // The feminine blend space samples this game-human sequence at zero speed.
 // Its human tracks also drive the audited CSS base and its extensions.
+inline constexpr std::string_view native_human_idle_skeleton="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
 inline bool inventory_idle_skeleton(bool feminine,std::string_view source,std::string_view target) {
-    constexpr std::string_view human="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
-    if(feminine) return source==human && (target==human || compatible_animation_skeletons(authored_base_skeleton,target));
-    return compatible_animation_skeletons(source,target);
+    constexpr auto human=native_human_idle_skeleton;
+    if(feminine) return source==human && (target==human || compatible_idle_skeletons(authored_base_skeleton,target));
+    return compatible_idle_skeletons(source,target);
 }
 
 inline void require_inventory_idle_rig(bool feminine,bool idle_layer,bool native_carrier,

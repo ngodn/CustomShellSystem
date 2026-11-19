@@ -654,7 +654,7 @@ UObject* Appearance::player(void* engine) {
 #include "inventory_effects.inl"
 void Appearance::restore_menu() {
     restore_menu_effects();
-    stop_menu_idle();
+    if(menu_component_.Get() && menu_component_.Get()==menu_idle_component_.Get()) stop_menu_idle();
     restore_visual_scale(true);
     menu_morph_deformer_.release();
     restore_facial_binding(facial_preview_);
@@ -1470,6 +1470,7 @@ void Appearance::set_ground_offset(double offset) {
         throw std::runtime_error("World mesh height read-back failed");
 }
 bool Appearance::restore() {
+    stop_menu_idle();
     ++appearance_revision;
     hand_support_.release();
     try {native_foot_ik_.release();} catch(const std::exception&) {}   // never blocks the outfit restore; status says "restore failed"

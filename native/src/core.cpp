@@ -310,7 +310,11 @@ struct Core {
                     custom_idle=resolve_animation(idles,AnimationSlot::Idle,choice);
                     const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
                         selection.outfit,selection.variant,AnimationSlot::Idle,choice,&animation_trace);
-                    if(shared.matched) { custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space; }
+                    if(shared.matched) {
+                        custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;
+                        if(shared.asset.empty() && appearance.shared_animation_available(AnimationSlot::Idle,choice)==false)
+                            idle_unavailable(choice,shared.reason);
+                    }
                 }
             }
             if(!selected_animations && state.enabled && !apply_pending && !restore_pending &&
@@ -324,7 +328,12 @@ struct Core {
                 }
                 const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
                     "","",AnimationSlot::Idle,state.animation_choices.get("","",idle_slot),&animation_trace);
-                if(shared.matched) {custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;}
+                if(shared.matched) {
+                    custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;
+                    const auto choice=state.animation_choices.get("","",idle_slot);
+                    if(shared.asset.empty() && appearance.shared_animation_available(AnimationSlot::Idle,choice)==false)
+                        idle_unavailable(choice,shared.reason);
+                }
             }
             if(!selected_animations) appearance.clear_shared_animations();
             bool vista_feminine=false;
@@ -343,7 +352,11 @@ struct Core {
                 shared_animation_revision=appearance.shared_animation_revision();
                 ui_refresh=true;status_dirty=true;
             }
-            appearance.sync_walk(vista_feminine || (!vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Idle)),
+            bool feminine= !vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Idle);
+            if(feminine && !inventory_idle_skeleton(true,native_human_idle_skeleton,appearance.animation_skeleton())) {
+                idle_unavailable(feminine_animation_id,"Incompatible idle skeleton");feminine=false;
+            }
+            appearance.sync_walk(vista_feminine || feminine,
                                  !vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
                                  custom_idle.asset,custom_idle.hide_weapons,idle_carrier,vista_rest);
             if(animation_trace && traced_idle_engaged!=appearance.walk.custom_idle_engaged()) {
@@ -364,6 +377,11 @@ struct Core {
     }
     bool menu_effects_active() const {
         return inventory.active() && !inventory_failed && state.enabled && !restore_pending && !(apply_pending && !custom_only);
+    }
+    std::string idle_warning_;
+    void idle_unavailable(const std::string& choice,const std::string& reason) {
+        const auto message="Idle "+choice+" unavailable for "+appearance.performance_mesh()+": "+reason;
+        if(idle_warning_!=message) { host.log(message.c_str());idle_warning_=message; }
     }
     void sync_menu_safely() {
         if(GetTickCount64()<maintenance_after) return;
@@ -386,10 +404,11 @@ struct Core {
         if(now>=menu_idle_after) {
             menu_idle_after=now+150;
             const auto it=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
-            if(it==state.selections.end() || applied_id!=it->second.outfit+"/"+it->second.variant) {
-                appearance.stop_menu_idle();return;
-            }
-            const auto& selection=it->second;
+            const bool worn=it!=state.selections.end() && applied_id==it->second.outfit+"/"+it->second.variant;
+            const bool bare=it==state.selections.end() || !catalog.find(it->second.outfit,it->second.variant);
+            if(!worn && !bare) { appearance.stop_menu_idle();return; }
+            const Selection native{};
+            const auto& selection=worn ? it->second : native;
             const auto choice=selected_idle_choice(selection);
             try {
                 appearance.sync_menu_idle(catalog,{selection.outfit,selection.variant,choice,selection.custom.expression,
@@ -1633,6 +1652,7 @@ struct Core {
         }
         if(inspect_pending) {
             auto result=appearance.transition_state(engine); result["id"]=last_request; result["inventory"]=inventory.diagnostics();
+            result["world_idle_direct"]=appearance.walk.direct_idle_linked();
             result["inventory_idle"]=appearance.inspect_menu_idle();
             result["inventory_effects"]=appearance.inspect_menu_effects();
             // The per-item MISC report walks every attached mesh; it is on demand, never on a timer.

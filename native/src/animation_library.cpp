@@ -1,4 +1,5 @@
 #include "animation_library.hpp"
+#include "idle_output.hpp"
 #include "asset_namespace.hpp"
 #include "data.hpp"
 #include "skeleton_compatibility.hpp"
@@ -239,6 +240,12 @@ std::vector<AnimationOption> merge_library_animation_options(const std::vector<A
     }
     return result;
 }
+std::string idle_carrier_path(const LibraryAnimation& entry,const AnimationAssetCandidate& selected) {
+    if(!selected.idle_blend_space.empty()) return selected.idle_blend_space;
+    for(const auto& alternative:entry.assets)
+        if(!alternative.idle_blend_space.empty()) return alternative.idle_blend_space;
+    return {};
+}
 AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibrary>& libraries,
     AnimationSlot requested_slot,const std::string& choice,const std::vector<AnimationOption>& bundled,
     const std::string& target_skeleton,const std::string& weapon) {
@@ -272,7 +279,8 @@ AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibra
         const int rank=alternative.skeleton==target_skeleton ? 0 :
             equivalent_animation_skeletons(alternative.skeleton,target_skeleton) ? 1 : 2;
         if(rank==priority &&
-           compatible_animation_skeletons(alternative.skeleton,target_skeleton))
+           (requested_slot==AnimationSlot::Idle ? compatible_idle_skeletons(alternative.skeleton,target_skeleton) :
+                                                compatible_animation_skeletons(alternative.skeleton,target_skeleton)))
             append(alternative.asset,alternative.skeleton,false,alternative.idle_blend_space);
     }
     for(const auto& alias:found->aliases) {

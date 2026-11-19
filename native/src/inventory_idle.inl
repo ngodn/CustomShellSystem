@@ -1,4 +1,5 @@
 void Appearance::release_menu_idle() {
+    menu_idle_output_.release();
     if(auto* anim=menu_idle_anim_.Get(); anim && menu_idle_montage_.Get()) {
         Call stop(anim,L"Montage_Stop",2);
         stop.set(L"Montage",menu_idle_montage_.Get());stop.set(L"InBlendOutTime",0.f);stop.run();
@@ -18,9 +19,15 @@ void Appearance::stop_menu_idle() {
 void Appearance::sync_menu_idle(const Catalog& catalog,const InventoryIdleChoice& choice) {
     auto* component=menu_component_.Get();
     auto* mesh=menu_applied_.Get();
-    if(!component || !mesh || mesh!=applied_.Get() || mesh_asset(component)!=mesh) {
-        stop_menu_idle();return;
-    }
+    if(choice.outfit.empty()) {
+        auto* pawn=observed_pawn_.Get();
+        auto* display=pawn ? menu_character(pawn) : nullptr;
+        component=display && display!=pawn && read<FName>(display,L"CharacterId")==read<FName>(pawn,L"CharacterId")
+            ? read<UObject*>(display,L"Mesh") : nullptr;
+        auto* world=observed_component_.Get();
+        mesh=world && world!=component ? mesh_asset(world) : nullptr;
+    } else if(mesh!=applied_.Get()) mesh=nullptr;
+    if(!component || !mesh || mesh_asset(component)!=mesh) { stop_menu_idle();return; }
     auto* anim=read<UObject*>(component,L"AnimScriptInstance");
     auto* post=read<UObject*>(component,L"PostProcessAnimInstance");
     bool same=menu_idle_component_.Get()==component && menu_idle_mesh_.Get()==mesh &&
@@ -28,7 +35,7 @@ void Appearance::sync_menu_idle(const Catalog& catalog,const InventoryIdleChoice
     if(same && anim && menu_idle_.playing()) {
         Call active(anim,L"Montage_IsActive",2);
         active.set(L"Montage",menu_idle_montage_.Get());active.run();
-        same=active.get<bool>();
+        same=active.get<bool>() && menu_idle_output_.linked();
     }
     menu_idle_.sync(choice,same,GetTickCount64(),[this]{release_menu_idle();},[&]() -> double {
         menu_idle_component_=component;menu_idle_mesh_=mesh;menu_idle_anim_=anim;menu_idle_post_=post;
@@ -91,12 +98,13 @@ double Appearance::start_menu_idle(const Catalog& catalog,const InventoryIdleCho
     auto* montage=create_positioned_montage(clip,0.f);
     menu_idle_roots_.keep(montage);menu_idle_montage_=montage;
     play_positioned_montage(anim,montage,0.f);
+    menu_idle_output_.bind(anim,IdleOutput::slot);
     return duration;
 }
 void Appearance::tick_menu_idle(uint64_t now) {
     if(!menu_idle_.playing()) return;
     auto* component=menu_idle_component_.Get();auto* anim=menu_idle_anim_.Get();auto* montage=menu_idle_montage_.Get();
-    if(!component || !anim || !montage || !menu_idle_mesh_.Get() || menu_component_.Get()!=component ||
+    if(!component || !anim || !montage || !menu_idle_mesh_.Get() ||
        mesh_asset(component)!=menu_idle_mesh_.Get() || read<UObject*>(component,L"AnimScriptInstance")!=anim) {
         stop_menu_idle();return;
     }
@@ -118,7 +126,7 @@ Json Appearance::inspect_menu_idle() const {
     active.set(L"Montage",montage);active.run();
     Call position(anim,L"Montage_GetPosition",2);
     position.set(L"Montage",montage);position.run();
-    Json result={{"playing",active.get<bool>()},{"clip",narrow(clip->GetPathName())},
+    Json result={{"playing",active.get<bool>()},{"direct_slot",menu_idle_output_.linked()},{"clip",narrow(clip->GetPathName())},
                  {"instance",narrow(anim->GetPathName())},{"seconds",position.get<float>()}};
     if(auto* component=menu_idle_face_binding_.component.Get(); component && menu_idle_face_ &&
        mesh_asset(component)==menu_idle_face_binding_.mesh.Get())
