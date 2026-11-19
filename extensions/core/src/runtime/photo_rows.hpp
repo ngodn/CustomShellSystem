@@ -9,25 +9,13 @@
 namespace cssx {
 struct PhotoRow {
     std::string id, name, value;
-    bool slider=false;     // a slider row (bar under the value) instead of an option row
+    enum Kind { option, slider, information, kind_count } kind=option;
     bool arrows=false;     // left/right change it
     bool enabled=true;
     double fill=0;         // slider position 0..1
 };
 
-// The value column of a game row holds about this many characters at the game's size.
-constexpr size_t photo_value_chars=22;
-
-// Characters (UTF-8 code points) in a text.
-inline size_t photo_chars(const std::string& text) {
-    size_t count=0;
-    for(unsigned char c:text) count+=(c&0xC0)!=0x80;
-    return count;
-}
-
-// The rows of one menu section, in order. Left out, so every row reads like one of the game's:
-// text input (the panel has no text field), and a label whose text is too long for the value
-// column (prose belongs in the Player Menu, where it has room).
+// Photo Mode has no text input. Read-only labels use the game's own value text block.
 inline std::vector<PhotoRow> photo_rows(const Json& model,const std::string& section) {
     std::vector<PhotoRow> rows;
     if(!model.is_object() || !model.contains("sections")) return rows;
@@ -40,19 +28,19 @@ inline std::vector<PhotoRow> photo_rows(const Json& model,const std::string& sec
             row.id=c.at("id").get<std::string>();
             row.name=c.value("label",row.id);
             row.enabled=interactive(c) || type=="label" || type=="progress" || type=="loading";
-            row.slider=type=="slider";
+            if(type=="slider") row.kind=PhotoRow::slider;
             row.arrows=interactive(c) && (adjustable(c) || type=="toggle");
             if(type=="button") {
                 row.value=c.value("enabled",true) ? std::string() : c.value("disabled_label",std::string());
             } else if(type=="label") {
+                row.kind=PhotoRow::information;
                 row.value=c.contains("value") && c.at("value").is_string() ? c.at("value").get<std::string>() : std::string();
-                if(photo_chars(row.value)>photo_value_chars) continue;
             } else {
                 row.value=display_value(c);
                 if(!c.value("enabled",true) && c.contains("disabled_label")) row.value=c.at("disabled_label").get<std::string>();
                 else if((type=="number" || type=="slider") && c.contains("unit")) row.value+=" "+c.at("unit").get<std::string>();
             }
-            if(row.slider) {
+            if(row.kind==PhotoRow::slider) {
                 const double low=c.at("min"),high=c.at("max"),value=c.at("value");
                 row.fill=high>low ? std::clamp((value-low)/(high-low),0.,1.) : 0.;
             }

@@ -71,20 +71,21 @@ int main() {
             {{"id","off"},{"type","button"},{"label","Exit"},{"enabled",false},{"disabled_label","Not in a take"}}})}}})}};
         const auto rows=photo_rows(model,"take");
         check(rows.size()==7,"text controls are left out of Photo Mode rows");
-        check(rows[0].value=="Beta" && rows[0].arrows && !rows[0].slider,"a choice shows its option label with arrows");
-        check(rows[1].slider && rows[1].value=="1 x" && std::abs(rows[1].fill-1.0/3.0)<1e-9,"a slider shows value, unit and fill");
+        check(rows[0].value=="Beta" && rows[0].arrows && rows[0].kind==PhotoRow::option,"a choice shows its option label with arrows");
+        check(rows[1].kind==PhotoRow::slider && rows[1].value=="1 x" && std::abs(rows[1].fill-1.0/3.0)<1e-9,"a slider shows value, unit and fill");
         check(rows[2].value=="On" && rows[2].arrows,"a toggle shows On with arrows");
         check(rows[3].value.empty() && !rows[3].arrows && rows[3].enabled,"a button has no value and no arrows");
         check(rows[5].value=="Ready" && rows[5].enabled,"a label shows its text");
         check(!rows[6].enabled && rows[6].value=="Not in a take","a disabled button shows its reason");
         check(photo_rows(model,"missing").empty() && photo_rows(Json(),"take").empty(),"unknown section or model is no rows");
-        check(photo_chars("Fashion Walk 360")==16 && photo_chars("\xC3\xA9\xC3\xA9")==2,"characters are counted, not bytes");
-        {
-            auto m=model; m["sections"][0]["controls"][5]["value"]="She walks your recorded route while the camera circles her once.";
-            const auto r=photo_rows(m,"take");
-            check(r.size()==6 && std::none_of(r.begin(),r.end(),[](const PhotoRow& x){ return x.id=="status"; }),"a label too long for the value column is left out");
-            m["sections"][0]["controls"][5]["value"]=std::string(22,'x');
-            check(photo_rows(m,"take").size()==7,"a label that fits stays");
+        for(size_t length:{22,23,80,4096}) {
+            std::string value(length-1,'x');
+            value+="界";  // the last character takes three UTF-8 bytes
+            auto m=model;
+            m["sections"][0]["controls"][5]["value"]=value;
+            const auto info=photo_rows(m,"take");
+            check(info.size()==rows.size() && info[5].id=="status" && info[5].kind==PhotoRow::information &&
+                  info[5].value==value && !info[5].arrows,"information rows keep their order and complete UTF-8 value");
         }
         const auto& c=model["sections"][0]["controls"];
         check(photo_event(c[0],"right",false)==Json({{"id","scene"},{"value","a"}}),"right on a choice wraps to the next option");

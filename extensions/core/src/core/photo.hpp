@@ -61,8 +61,8 @@ private:
     struct Tab {
         const Manifest* provider=nullptr;
         std::string section; WeakObject tab, page, box; WeakObject icon;
-        std::vector<Row> option_rows, slider_rows;   // pooled per kind
-        std::vector<std::pair<bool,size_t>> order;  // row i of the page: (slider?, index in its pool)
+        std::array<std::vector<Row>,PhotoRow::kind_count> pools;
+        std::vector<std::pair<PhotoRow::Kind,size_t>> order;
         std::vector<PhotoRow> rows;                  // what the page shows now
         int selected=-1;
         bool complete=false;                         // every row of the model has its widget
@@ -138,7 +138,7 @@ private:
     void add_page_widget(Tab&);
     void build_page(Tab& tab,bool slow);
     Row& row_at(Tab& tab,size_t i);
-    Row make_row(bool slider);
+    Row make_row(PhotoRow::Kind kind);
     void recheck(Tab& tab);
     void recheck_row(Row& row);
     void fill(Row& row,const PhotoRow& value);

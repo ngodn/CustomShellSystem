@@ -610,18 +610,21 @@ void PhotoMode::build_page(Tab& tab,bool slow) {
         auto rows=photo_rows(model_,tab.section);
         for(auto& r:rows) if(r.id==pending_confirm_) r.value="Confirm again";   // until it runs out
         // Pool: one widget per row and kind, created a few per tick so a big tab never hitches.
-        std::vector<std::pair<bool,size_t>> order; size_t options=0, sliders=0; int budget=rows_per_tick;
+        decltype(tab.order) order;
+        std::array<size_t,PhotoRow::kind_count> used{};
+        int budget=rows_per_tick;
         for(const auto& r:rows) {
-            auto& pool=r.slider?tab.slider_rows:tab.option_rows; auto& n=r.slider?sliders:options;
+            auto& pool=tab.pools[r.kind];
+            auto& n=used[r.kind];
             if(n>=pool.size()) {
                 if(budget--<=0) break;
-                pool.push_back(make_row(r.slider));
+                pool.push_back(make_row(r.kind));
             }
-            order.push_back({r.slider,n++});
+            order.push_back({r.kind,n++});
         }
         if(order!=tab.order) {
             invoke(box,L"ClearChildren");
-            for(const auto& [slider,i]:order) if(auto* w=(slider?tab.slider_rows:tab.option_rows)[i].widget.Get()) add_vertical(box,w);
+            for(const auto& [kind,i]:order) if(auto* w=tab.pools[kind][i].widget.Get()) add_vertical(box,w);
             tab.order=order;
             rescan(box);
             // The page spaces its rows itself (they overlap by the highlight's margin).
@@ -639,11 +642,12 @@ void PhotoMode::build_page(Tab& tab,bool slow) {
 }
 
 PhotoMode::Row& PhotoMode::row_at(Tab& tab,size_t i) {
-    const auto& [slider,index]=tab.order[i];
-    return (slider?tab.slider_rows:tab.option_rows)[index];
+    const auto& [kind,index]=tab.order[i];
+    return tab.pools[kind][index];
 }
 
-PhotoMode::Row PhotoMode::make_row(bool slider) {
+PhotoMode::Row PhotoMode::make_row(PhotoRow::Kind kind) {
+    const bool slider=kind==PhotoRow::slider;
     Row row; row.slider=slider; row.settle_until=now_ms()+settle_ms;
     row.widget=create_widget(pc_.Get(),widget_class(slider?slider_class:row_class));
     auto* w=row.widget.Get();
@@ -652,6 +656,21 @@ PhotoMode::Row PhotoMode::make_row(bool slider) {
     if(look.known) {
         Call type(w,L"SetNavigableType",1); type.set(L"NewParam",look.type); type.run();
         set_bool(w,L"bSelectOnHover",look.hover);
+    }
+    if(kind==PhotoRow::information) {
+        auto* value=object_of(w,L"Text_Option_Value");
+        auto* column=object_of(w,L"SizeBox_OptionValue");
+        if(column && value) {
+            // Bypass the value's shrink-to-fit box. The centered size-box slot clamps the
+            // text block to the available width, where Slate can paint the overflow marker.
+            Call content(column,L"SetContent",2);
+            content.set(L"Content",value); content.run();
+            auto* slot=content.get<UObject*>();
+            invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{2});
+            invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});
+            invoke(value,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
+            invoke(value,L"SetClipping",L"InClipping",uint8_t{1});
+        }
     }
     return row;
 }
@@ -682,7 +701,8 @@ void PhotoMode::recheck(Tab& tab) {
 void PhotoMode::recheck_row(Row& row) {
     auto* w=row.widget.Get(); if(!w || row.fresh) return;
     const auto& shown=row.shown;
-    if(text_of(object_of(w,L"Text_Option_Value"),4096)!=shown.value) { row.fresh=true; return; }
+    // A label can occupy most of the 1 MiB menu. GetText returns the full value plus a terminator.
+    if(text_of(object_of(w,L"Text_Option_Value"),1024*1024+1)!=shown.value) { row.fresh=true; return; }
     if(text_of(object_of(w,L"Text_Option"),4096)!=shown.name) { row.fresh=true; return; }
     if(auto* arrow=object_of(w,L"WBP_ArrowButton_L"))
         if(read<uint8_t>(arrow,L"Visibility")!=(shown.arrows?vis_self_passive:vis_hidden)) { row.fresh=true; return; }
@@ -755,7 +775,11 @@ Json PhotoMode::attach_steps() const {
 
 Json PhotoMode::diagnostics() const {
     Json tabs=Json::array();
-    for(const auto& t:tabs_) tabs.push_back({{"extension",t.provider->id},{"section",t.section},{"rows",t.rows.size()},{"selected",t.selected},{"widgets",t.option_rows.size()+t.slider_rows.size()}});
+    for(const auto& t:tabs_) {
+        size_t widgets=0;
+        for(const auto& pool:t.pools) widgets+=pool.size();
+        tabs.push_back({{"extension",t.provider->id},{"section",t.section},{"rows",t.rows.size()},{"selected",t.selected},{"widgets",widgets}});
+    }
     Json declared=Json::array();
     for(const auto& d:declared_) declared.push_back({{"id",d.owner->id},{"entry",d.owner->photo_entry},{"tabs",d.tabs.size()}});
     return {{"declared",declared},{"pause_rows",pause_rows_.size()},{"session",session_},{"live",activation_.live},

@@ -50,8 +50,9 @@ seconds; since 1.3.1 also `mean_ms, p95_ms, p99_ms, max_ms, hitches, seconds`, a
 Photo Mode (CSSX 1.3.2). An extension whose manifest has `"photo_mode": {"entry": "...", "tabs":
 [{"section", "icon"}]}` gets a row under the game's Activate Photo Mode on the pause menu's System page.
 The row opens the game's Photo Mode with the extension's menu sections added as tabs, built from the
-game's own tab, page and row widgets. Only the extension's rows that read like the game's are shown:
-no text inputs, and no label whose text is too long for the value column. The extension hears
+game's own tab, page and row widgets. Text input is available in the Player Menu. Since 1.3.3,
+Photo Mode also shows long read-only labels. The value column displays an ellipsis when the text
+exceeds its available width. The extension hears
 `{"id":"cssx.photo_mode","value":"open"|"parked"|"closed"}`. The owner can request two operations that run on the next tick.
 `photo.step_out` closes Photo Mode the way the game's own exit does and parks the session (the
 extension hears `parked`, not `closed`), so the player can move or the extension can use its own
