@@ -1,4 +1,4 @@
-CINE 2.0.0 for CSSX
+CINE 2.0.1 for CSSX
 ===================
 
 Cinematic camera for showcases, inside the game's own Photo Mode. CINE moves the camera and
@@ -31,7 +31,8 @@ Quick start
    camera and choose Use Current View as Final Shot.
 4. Close Photo Mode the usual way to leave CINE Mode.
 
-Keys in CINE Mode: F8 roll, F9 cancel, F10 frame guide, F7 save final shot.
+In CINE Mode, F5 cycles the frame guide, F7 saves the final shot, F8 rolls a take and
+F9 cancels a take or route recording. Escape closes Photo Mode.
 
 Render to video
 Render > Render Take to Video rolls the chosen scene and saves it as video.mp4 in

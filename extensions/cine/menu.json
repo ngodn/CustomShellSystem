@@ -4,7 +4,7 @@
     {
       "id": "take",
       "title": "Take",
-      "description": "Pick a scene, frame it with the Photo Mode camera, start your recorder and roll. F8 rolls, F9 stops, F10 cycles the frame guide.",
+      "description": "F5 cycles the frame guide, F7 saves the final shot, F8 rolls a take and F9 cancels a take or route recording.",
       "controls": [
         {
           "id": "status",
@@ -35,7 +35,7 @@
           "id": "take",
           "type": "button",
           "label": "Roll Take",
-          "description": "Starts the scene after the countdown. Same as F8 or D-pad up while the camera has focus.",
+          "description": "Starts the scene after the countdown. You can also press F8 from the panel or the camera.",
           "disabled_label": "Not ready"
         },
         {

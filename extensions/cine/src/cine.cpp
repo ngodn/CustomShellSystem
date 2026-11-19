@@ -12,9 +12,9 @@ constexpr size_t traces_per_tick = 20;     // preparing never hitches
 constexpr size_t max_samples = 12000;      // 20 minutes at 10 Hz
 constexpr double max_route_points = 600;
 // Keyboard only: the D-pad uses items in Mortal Shell II, so it would drink a flask mid-take.
-const std::vector<std::string> hotkeys{"F7", "F8", "F9", "F10"};
+const std::vector<std::string> hotkeys{"F7", "F8", "F9", "F5"};
 enum Hotkey { CaptureKey, TakeKey, CancelKey, GuideKey };
-const char* help_line = "CINE   F8 take   F9 cancel / exit   F10 frame guide   F7 use this view as final shot";
+const char* help_line = "CINE   F5 frame guide   F7 save final shot   F8 roll take   F9 leave Cine World";
 const std::vector<std::string> scene_ids{"off", "enemies", "everyone"};
 const std::vector<std::string> picture_ids{"game", "sharp", "full"};
 constexpr double route_reach_cm = 3000;   // a saved route farther than this from her is somewhere else

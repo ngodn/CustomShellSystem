@@ -583,6 +583,11 @@ int main(int argc, char** argv) {
             expect(r.host.invalidations > revision, "asynchronous pack completion refreshes the open model");
             const auto model = cssx::bind_menu(definition, r.ext->model());
             expect(cssx::photo_control(model, "take", "preset")->at("options")[0].at("label") == "Callout Test", "reloaded pack on the Take tab");
+            const auto initial_guide = r.ext->model()["values"]["guide"];
+            r.press("F10");
+            expect(r.ext->model()["values"]["guide"] == initial_guide, "the console key leaves the frame guide alone");
+            r.press("F5");
+            expect(r.ext->model()["values"]["guide"] != initial_guide, "F5 cycles the frame guide in CINE Mode");
             r.ext->event({{"id", "cssx.photo_mode"}, {"value", "closed"}});
             r.ext->event({{"id", "enter"}});
             const auto original = cine::content().callouts.label_font;
