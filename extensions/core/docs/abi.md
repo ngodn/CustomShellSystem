@@ -192,3 +192,23 @@ CSSX 1.3.3 provides three JSON requests through the ABI 3 client. Pass the objec
 | `component.pause_tick.release` | Restores the saved bit and returns true if the caller held the component. Repeated release returns false. An expired component is forgotten by its weak handle. |
 
 For example, send `{"op":"component.pause_tick.acquire","target":{"$object":42}}` with the handle obtained for your component. A successful result of `false` means paused ticking was off before acquisition. Release the handle when playback ends. CSSX also restores it on park, close, detach, world change, extension failure and unload. After stepping back in, acquire again from the next `open` callback if playback continues. A stale handle or incompatible component yields an error on read or acquire.
+
+### Loading a set of assets asynchronously
+
+With CSSX 1.3.3, an ABI 3 extension can submit soft object paths from gameplay or Photo Mode. Preparation needs a live world and local player controller. Submit once and keep the returned integer request handle.
+
+```json
+{"op":"asset.load_async","paths":["/Game/Example/Walk.Walk","/Game/Example/Look.Look"]}
+```
+
+CSSX queues the request immediately. It sends `cssx.asset_load` to the requesting extension's event callback when each path finishes. This example shows the final event for request 7.
+
+```json
+{"id":"cssx.asset_load","value":{"handle":7,"state":"complete","finished":2,"total":2,"results":{"/Game/Example/Walk.Walk":{"$object":101},"/Game/Example/Look.Look":{"$object":102}},"errors":{}}}
+```
+
+Use the returned object handles directly in bridge calls. Progress is the number of unique paths finished. Intermediate events use `progress`. The last event uses `complete` when all paths loaded, or `failed` when any failed. Results are cumulative. A failed path has a null result and a message in `errors`. Successfully loaded objects stay resident even after a partial failure.
+
+Send `{"op":"asset.release","handle":7}` to cancel pending work or drop the objects when finished. The first release by the owner returns true. An unknown, expired or other extension's handle returns false. Release is safe inside the event callback. CSSX suppresses subsequent events. The engine may finish I/O already in flight. Release your own references if the objects should become collectible.
+
+A handle survives step-out, park and return to the same Photo Mode session. Closing or detaching the participant's session, changing worlds, or unloading or suspending the extension releases its batches. Outside Photo Mode, release explicitly when finished. An extension may hold two batches, including completed batches, with eight across CSSX. Each submission accepts 1 to 32 absolute object paths and deduplicates repeated paths. CSSX starts or polls one path per engine frame across all callers, with up to two loads in flight. A path that has spent 120 seconds waiting for engine completion fails on the next poll.

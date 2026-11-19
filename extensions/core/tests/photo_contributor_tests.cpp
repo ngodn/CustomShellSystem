@@ -53,6 +53,137 @@ void install(const fs::path& root,std::string id,std::string title,std::string t
     )";
 }
 
+struct StreamProbe {
+    int starts=0,polls=0,resident=0,pending=0,late=0;
+    bool finish=false,throw_start=false;
+};
+class FakeStream final : public AssetStream {
+    StreamProbe& state_;
+    std::string path_;
+    int held_=0;
+public:
+    explicit FakeStream(StreamProbe& state):state_(state) {}
+    ~FakeStream() override { cancel_path(); state_.resident-=held_; }
+    void start(const std::string& path) override {
+        check(path_.empty(),"only one outstanding path per stream");
+        ++state_.starts; path_=path; ++state_.pending;
+        if(state_.throw_start) throw std::runtime_error("fixture start failed");
+    }
+    std::optional<uint64_t> poll() override {
+        ++state_.polls;
+        if(!state_.finish) return {};
+        bool missing=path_.ends_with("Missing");
+        --state_.pending; path_.clear();
+        if(missing) return 0;
+        ++held_; ++state_.resident;
+        return 100+held_;
+    }
+    void cancel_path() noexcept override {
+        if(!path_.empty()) { --state_.pending; ++state_.late; path_.clear(); }
+    }
+};
+
+void check_async_assets() {
+    Directory dir;
+    const std::string owner="test.owner",guest="test.guest";
+    for(const auto& id:{owner,guest}) {
+        install(dir.path,id,id,id==owner?"":owner);
+        std::ofstream(dir.path/"extensions"/id/"main.lua")<<R"(
+            return { model=function() return {} end, event=function(e)
+                if e.id=="cssx.probe" then
+                    local result,err=cssx.request(e.value)
+                    cssx.request{op="test.reply",result=result,err=err}
+                elseif e.id=="cssx.asset_load" then
+                    local release=cssx.request{op="test.notice",value=e.value}
+                    if release then cssx.request{op="asset.release",handle=e.value.handle} end
+                end
+            end }
+        )";
+    }
+    StreamProbe probe;
+    Json reply; std::vector<Json> events;
+    bool release_in_callback=false;
+    HostServices host;
+    host.asset_stream=[&]{ return std::make_unique<FakeStream>(probe); };
+    host.request=[&](const Json& r)->Json {
+        if(r.at("op")=="test.notice") { events.push_back(r); return release_in_callback; }
+        reply=r;
+        return nullptr;
+    };
+    Runtime runtime(dir.path,host);
+    PhotoSession session;
+    auto mode=runtime.photo_modes().front();
+    auto ask=[&](const std::string& who,Json args) {
+        reply=nullptr; runtime.host_event(who,"probe",args); return reply;
+    };
+    const std::string a="/Game/A.A",b="/Game/B.B",missing="/Game/Absent.Missing";
+    auto request=[&](const std::string& who,Json paths) { return ask(who,{{"op","asset.load_async"},{"paths",paths}}); };
+    auto start=[&](const std::string& who) { return request(who,Json::array({a,b})).at("result").get<uint64_t>(); };
+    auto release=[&](const std::string& who,uint64_t id) { return ask(who,{{"op","asset.release"},{"handle",id}}).at("result").get<bool>(); };
+    auto tick=[&] {
+        int before=probe.starts+probe.polls;
+        runtime.tick(.016);
+        check(probe.starts+probe.polls-before<=1 && probe.pending<=2,"global stream work exceeded per-frame cap");
+    };
+    auto empty=[&] { check(probe.resident==0 && probe.pending==0,"scope retained an asset or pending stream"); };
+    check(request(owner,Json::array({"relative"})).contains("err"),"invalid paths rejected");
+    check(request(owner,Json::array()).contains("err"),"empty batch rejected");
+    check(request(owner,std::vector<std::string>(33,a)).contains("err"),"oversized batch rejected");
+    auto id=request(guest,Json::array({a,b,a})).at("result").get<uint64_t>();
+    check(!release(owner,id) && probe.starts==0,"queue returns immediately and caller owns the handle");
+    tick(); tick();
+    check(events.empty() && probe.pending==1,"pending IO does not deliver completion or block");
+    probe.finish=true;
+    tick(); tick(); tick();
+    check(events.size()==2 && events[0]["extension"]==guest && events[0]["value"]["state"]=="progress" &&
+          events[1]["value"]["state"]=="complete" && events[1]["value"]["finished"]==2 &&
+          events[1]["value"]["total"]==2 && events[1]["value"]["results"][a]["$object"]==101 &&
+          events[1]["value"]["results"][b]["$object"]==102 && probe.resident==2,"deduplicated paths complete and stay resident");
+    tick(); check(events.size()==2,"terminal event delivered once");
+    check(release(guest,id) && !release(guest,id),"double release is harmless"); empty();
+    id=request(owner,Json::array({a,missing})).at("result").get<uint64_t>();
+    for(int i=0;i<4;++i) tick();
+    check(events.back()["value"]["state"]=="failed" && events.back()["value"]["results"][missing].is_null() &&
+          events.back()["value"]["results"][a]["$object"]==101 && probe.resident==1,"partial results retained on failure");
+    release(owner,id); empty();
+    probe.throw_start=true; id=start(owner);
+    tick(); tick();
+    check(events.back()["value"]["state"]=="failed" && events.back()["value"]["errors"].size()==2,"submission errors finish the batch");
+    release(owner,id); probe.throw_start=false; empty();
+    id=start(owner); check(release(owner,id),"cancel queued request"); empty();
+    for(int exit=0;exit<5;++exit) {
+        session.open(runtime,mode); id=start(guest);
+        tick(); tick(); tick();
+        check(probe.resident==1 && probe.pending==1,"exit fixture holds a resident and a pending path");
+        auto seen=events.size();
+        if(exit==0) release(guest,id);
+        if(exit==1) {
+            session.park(runtime);
+            check(probe.resident==1 && probe.pending==1,"park preserves the held batch");
+            session.open(runtime,mode);
+            check(probe.resident==1 && probe.pending==1,"resume preserves the same handle");
+            session.end(runtime,false);
+        }
+        if(exit==2) session.end(runtime,false);
+        if(exit==3) session.end(runtime,true);
+        if(exit==4) runtime.world_changed();
+        empty(); tick(); check(events.size()==seen && !release(guest,id),"released work cannot deliver a late event");
+        session.end(runtime,true);
+    }
+    release_in_callback=true; id=start(owner);
+    tick(); tick(); empty(); check(!release(owner,id),"release from progress callback is safe");
+    release_in_callback=false;
+    id=start(owner); auto second=start(owner); auto third=start(guest);
+    check(request(owner,Json::array({a})).contains("err"),"per-owner hold limit");
+    probe.finish=false;
+    for(int i=0;i<12;++i) tick();
+    check(probe.pending==2,"global in-flight limit");
+    release(owner,id); release(owner,second); release(guest,third); empty();
+    probe.finish=true; session.open(runtime,mode); start(guest); tick(); tick(); tick();
+    runtime.disable_photo_contribution(*mode.contributors.front(),"fixture failure"); empty();
+    start(owner); tick(); tick(); tick(); check(runtime.stop(),"unload releases pending and resident assets"); empty();
+}
+
 void check_pause_tick_scopes() {
     Directory dir;
     const std::string owner="test.owner",guest="test.guest";
@@ -125,6 +256,7 @@ void check_pause_tick_scopes() {
 }
 
 int main() try {
+    check_async_assets();
     check_pause_tick_scopes();
     Directory dir;
     const std::string owner="test.host", guest="test.b", other="test.a";

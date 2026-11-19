@@ -32,6 +32,9 @@ UObject* find_cached(const wchar_t* path);
 void set_find_cache(bool enabled);   // kept for the core switch log; no cache exists
 // Load an asset by path (blocking on first use), cached by weak handle.
 UObject* load(const std::string& path);
+// For private objects owned exclusively by the caller.
+void keep_alive(UObject* instance,UObject* object);
+void let_go(UObject* instance,UObject* object) noexcept;
 FProperty* field(UObject* object,const wchar_t* name,size_t size);
 template<typename T> T read(UObject* object,const wchar_t* name) {
     auto* p=field(object,name,sizeof(T));

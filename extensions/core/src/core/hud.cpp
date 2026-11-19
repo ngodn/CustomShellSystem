@@ -47,6 +47,8 @@ ObjectArray& referenced_objects(UObject* instance) {
     if(a.num<0 || a.max<a.num || a.num>65536 || (a.max && !a.data)) throw std::runtime_error("ReferencedObjects is not a valid array");
     return a;
 }
+} // namespace
+namespace engine {
 void keep_alive(UObject* instance,UObject* object) {
     Call cvar(find_cached(L"/Script/Engine.Default__KismetSystemLibrary"),L"GetConsoleVariableIntValue",2);
     cvar.set(L"VariableName",FString(L"gc.AllowIncrementalReachability")); cvar.run();
@@ -70,8 +72,8 @@ void let_go(UObject* instance,UObject* object) noexcept {
         }
     } catch(...) {}
 }
-HudService* g_hud=nullptr;
-}
+} // namespace engine
+namespace { HudService* g_hud=nullptr; }
 HudService::HudService() { g_hud=this; }
 HudService::~HudService() { if(g_hud==this) g_hud=nullptr; }
 void HudService::drop_scene() {

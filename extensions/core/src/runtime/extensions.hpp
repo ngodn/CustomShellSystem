@@ -4,6 +4,7 @@
 // Portable: the engine-facing services arrive through HostServices so this
 // compiles on Linux for the lifecycle test.
 #include "common.hpp"
+#include "async_assets.hpp"
 #include "manifest.hpp"
 #include "storage.hpp"
 #include "cssx/abi.h"
@@ -22,6 +23,7 @@ struct HostServices {
     std::function<void(const std::string& level,const std::string& message,const Json& fields)> log;
     // Returns the previous bit, or nullopt if the weak component expired.
     std::function<std::optional<bool>(uint64_t,std::optional<bool>)> component_pause_tick;
+    AsyncAssets::Factory asset_stream;
 };
 struct ExtensionCost {
     uint64_t tick_calls=0, tick_us=0, render_calls=0, render_us=0, model_calls=0, model_us=0, event_calls=0, event_us=0, requests=0;
@@ -65,6 +67,7 @@ private:
     fs::path root_;
     HostServices services_;
     Storage storage_;
+    AsyncAssets assets_;
     std::vector<std::unique_ptr<Entry>> entries_;
     Json errors_=Json::array();
     uint64_t revision_=1, photo_revision_=1;

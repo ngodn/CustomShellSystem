@@ -124,6 +124,7 @@ struct Runtime::Entry {
     double status_age=1e9;
     bool suspended=false, stopped=false, dirty=true;
     bool used_hooks=false;
+    bool closing_assets=false;
     bool photo_open=false;
     std::map<uint64_t,bool> original_pause_ticks;
     Json pause_tick(const std::string& op,uint64_t target);
@@ -247,6 +248,12 @@ Json Runtime::Entry::service(const Json& j) {
     if(++requests>4096) throw std::runtime_error("Extension host request budget exceeded");
     ++cost.requests;
     const auto op=j.at("op").get<std::string>();
+    if(op=="asset.load_async") {
+        if(closing_assets || stopped || suspended || !runtime->services_.asset_stream)
+            throw std::runtime_error("Async asset loading unavailable during teardown or in this host");
+        return runtime->assets_.request(manifest.id,j.at("paths"));
+    }
+    if(op=="asset.release") return runtime->assets_.release(manifest.id,j.at("handle").get<uint64_t>());
     if(op.starts_with("component.pause_tick.")) return pause_tick(op,j.at("target").at("$object").get<uint64_t>());
     const auto state=runtime->root()/"state"/utf8_path(manifest.id+".json");
     if(op=="state.load") {
@@ -394,6 +401,8 @@ void Runtime::Entry::render(const CssxFrame* frame) {
 }
 bool Runtime::Entry::stop() {
     if(stopped) return true;requests=0;
+    closing_assets=true;
+    runtime->assets_.clear(manifest.id);
     try {
         leave_pause_scope();
         if(used_hooks && runtime->services_.request) {runtime->services_.request({{"op","hooks.clear"},{"extension",manifest.id}});used_hooks=false;}
@@ -489,6 +498,7 @@ void Runtime::disable_photo_contribution(const Manifest& provider,const std::str
     auto& entry=find(provider.id);
     if(provider.photo_target.empty() || entry.photo_disabled) return;
     entry.photo_disabled=true;
+    assets_.clear(provider.id);
     ++photo_revision_;
     entry.leave_pause_scope();
     log("cssx","warning","Photo Mode contribution disabled",{{"extension",provider.id},{"reason",reason}});
@@ -510,8 +520,11 @@ void Runtime::photo_notice(const Manifest& provider,const char* value) {
     try {
         auto& e=find(provider.id);
         const std::string_view notice_value=value;
+        const bool closing=notice_value=="parked" || notice_value=="step_out" || notice_value=="detached" || notice_value=="closed";
+        struct Reset { bool& flag; bool original; ~Reset(){ flag=original; } } reset{e.closing_assets,e.closing_assets};
+        if(notice_value=="closed" || notice_value=="detached") { e.closing_assets=true; assets_.clear(provider.id); }
         if(notice_value=="open") e.photo_open=!e.photo_disabled && !e.suspended && !e.stopped;
-        else if(notice_value=="parked" || notice_value=="step_out" || notice_value=="detached" || notice_value=="closed")
+        else if(closing)
             e.leave_pause_scope();
         if(provider.photo_target.empty()) return host_event(provider.id,"photo_mode",value);
         if(e.suspended || e.stopped) return;
@@ -542,6 +555,7 @@ Json Runtime::request(const Json& j) {
     throw std::runtime_error("Unknown CSSX runtime request");
 }
 void Runtime::world_changed() {
+    assets_.clear();
     for(auto& e:entries_) try { e->leave_pause_scope(); }
     catch(const std::exception& error) { log(e->manifest.id,"warning",error.what()); }
 }
@@ -551,6 +565,11 @@ void Runtime::tick(double seconds) {
             try { e->leave_pause_scope(); } catch(const std::exception&) { continue; }
         }
         if(!e->suspended) try { e->tick(seconds); } catch(const std::exception& error) { e->fail(error.what()); }
+    }
+    if(auto notice=assets_.tick(services_.asset_stream)) {
+        auto& entry=find(notice->owner);
+        try { entry.deliver({{"id","cssx.asset_load"},{"value",std::move(notice->value)}}); }
+        catch(const std::exception& error) { entry.fail(error.what()); }
     }
 }
 void Runtime::render(const CssxFrame& frame) { for(auto& e:entries_) if(!e->suspended) try { e->render(&frame); } catch(const std::exception& error) { e->fail(error.what()); } }

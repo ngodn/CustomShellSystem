@@ -64,6 +64,7 @@ void Core::start_runtime() {
     if(runtime_) return;
     HostServices services;
     services.hud=hud_.api();
+    services.asset_stream=[this]{ return bridge_->asset_stream(player_); };
     services.component_pause_tick=[this](uint64_t id,std::optional<bool> value){ return bridge_->component_pause_tick(id,value); };
     services.request=[this](const Json& r){ return service(r); };
     services.log=[this](const std::string& level,const std::string& message,const Json& fields){ log(level,message,fields); };

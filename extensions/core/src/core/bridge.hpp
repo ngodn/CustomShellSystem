@@ -5,6 +5,7 @@
 // changes: handle creation is O(log n) through a reverse index, and hooks go
 // to the loader's hook host instead of CSS.
 #include "engine.hpp"
+#include "async_assets.hpp"
 #include "core_abi.h"
 #include <map>
 #include <set>
@@ -25,6 +26,7 @@ public:
     uint64_t track(engine::UObject* object);       // id only, 0 for null
     engine::UObject* resolve(const Json& value);   // throws when expired
     std::optional<bool> component_pause_tick(uint64_t handle,std::optional<bool> value);
+    std::unique_ptr<AssetStream> asset_stream(const engine::PlayerContext&);
     bool stop_hooks();                             // remove every rule; false while one is busy
     Json hook_stats() const;
     const CssxHookHost* hook_host() const { return hooks_; }   // null when the loader has none
