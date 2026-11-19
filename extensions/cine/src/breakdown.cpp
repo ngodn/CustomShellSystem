@@ -160,7 +160,7 @@ Json Breakdown::instance(const std::string& path, Vec3 colour, double opacity) {
         set_param(mid, "DepthRange", m.depth_range); set_param(mid, "LightingScale", m.lighting_scale);
         set_param(mid, "LightingFloor", m.lighting_floor); set_param(mid, "Gain", m.gain);
         set_param(mid, "Gamma", m.gamma); set_param(mid, "LineGlow", m.line_glow);
-        call(mid, "SetVectorParameterValue", {{"ParameterName", "LineColor"}, {"Value", {{"R", m.line_color[0]}, {"G", m.line_color[1]}, {"B", m.line_color[2]}, {"A", m.line_color[3]}}}});
+        call(mid, "SetVectorParameterValue", {{"ParameterName", "LineColor"}, {"Value", {{"R", m.line_color[0]}, {"G", m.line_color[1]}, {"B", m.line_color[2]}, {"A", 1.0}}}});
     }
     if (opacity >= 0) set_param(mid, "Opacity", opacity);
     return mid;

@@ -277,8 +277,8 @@ struct Host {
             return done();
         }
         if (fn == "RemoveBlendable") { drop(flag("_blendables"), [&](const Json& e) { return e == a.at("InBlendableObject"); }); return done(); }
-        if (fn == "SetScalarParameterValue") { flag("_params")[a.at("ParameterName").get<std::string>()] = a.at("Value"); return done(); }
-        for (const char* quiet : {"SetVectorParameterValue", "SetCollisionEnabled", "SetStaticMesh", "SetCastShadow", "K2_SetRelativeTransform", "SetCapsuleSize",
+        if (fn == "SetScalarParameterValue" || fn == "SetVectorParameterValue") { flag("_params")[a.at("ParameterName").get<std::string>()] = a.at("Value"); return done(); }
+        for (const char* quiet : {"SetCollisionEnabled", "SetStaticMesh", "SetCastShadow", "K2_SetRelativeTransform", "SetCapsuleSize",
                                   "SetSphereRadius", "SetBoxExtent", "SetLineThickness", "SetSkeletalMeshAsset", "SetLeaderPoseComponent"})
             if (fn == quiet) return done();
         return false;
@@ -888,6 +888,27 @@ int main(int argc, char** argv) {
             const auto idle = h.requests;
             r.steps(30);
             expect(h.requests == idle, "and CINE is idle in the new world");
+        }
+        {
+            Host host;
+            host.populate();
+            cssx::Client client(&host.api);
+            cine::Breakdown breakdown(client);
+            auto style = cine::content();
+            style.materials.line_color = {0.2, 0.4, 0.6};
+            style.materials.line_glow = 3.0;
+            cine::install_content(std::move(style));
+            const auto camera = host.make("camera_component", {{"_blendables", Json::array()}});
+            breakdown.begin(object(Host::Pawn), object(camera), cine::bit(cine::Layer::BaseColor), {});
+            const auto passes = host.prop(camera, "_blendables");
+            expect(passes.size() == 2, "both buffer passes received a material");
+            for (const auto& pass : passes) {
+                const auto& params = host.prop(id_of(pass), "_params");
+                expect(params.at("LineColor") == Json{{"R", 0.2}, {"G", 0.4}, {"B", 0.6}, {"A", 1.0}} &&
+                       params.at("LineGlow") == 3.0, "breakdown line alpha stays opaque at a custom glow");
+            }
+            breakdown.end();
+            cine::reset_content();
         }
         {   // Breakdown: layers build over ticks, wipe in on the preset's track, and it is all put back.
             Rig r(dir); r.host.populate(); auto& h = r.host;
