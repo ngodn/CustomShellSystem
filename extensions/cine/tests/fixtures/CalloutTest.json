@@ -1,0 +1,22 @@
+{
+  "manifest": {
+    "pack_schema": 1,
+    "pack": "CalloutTest",
+    "name": "Callout Test",
+    "version": "1",
+    "presets": ["callout-test"]
+  },
+  "preset.callout-test": {
+    "schema": 1,
+    "id": "callout-test",
+    "name": "Callout Test",
+    "description": "Callout size test",
+    "kind": "glide",
+    "duration": 3,
+    "keys": [
+      {"at": 0, "azimuth": 0, "distance": 230, "height": 60, "aim": -40, "fov": 42},
+      {"at": 1, "azimuth": 90, "distance": 330, "height": -10, "aim": -35, "fov": 42}
+    ]
+  },
+  "style.callouts": {"label_font": 31}
+}

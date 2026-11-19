@@ -28,7 +28,7 @@ Vec3 json_vec(const Json& j) { return {j.at(0).get<double>(), j.at(1).get<double
 double clampd(double v, double lo, double hi) { return std::isfinite(v) ? std::clamp(v, lo, hi) : lo; }
 }
 
-Extension::Extension(const CssxHost* host) : host_(host), rig_(host_), scene_(host_), breakdown_(host_), breakdown_opponent_(host_) {
+Extension::Extension(const CssxHost* host, fs::path mods) : host_(host), rig_(host_), scene_(host_), breakdown_(host_), breakdown_opponent_(host_), mods_(std::move(mods)) {
     reset_content();
     core_content_ = content();
     // Passive start (ABI contract): read files and state, change nothing in the game.
@@ -74,7 +74,7 @@ void Extension::load_presets() {
     pack_queue_.clear(); packs_loading_ = true;
     try {
         std::vector<std::string> problems;
-        pack_queue_ = find_pack_folders(mods_folder(), problems);
+        pack_queue_ = find_pack_folders(mods_, problems);
         for (auto& p : problems) preset_problems_.push_back(std::move(p));
     } catch (const std::exception& e) { preset_problems_.push_back(std::string("CINE packs: ") + e.what()); }
     if (pack_queue_.empty()) packs_loading_ = false;
@@ -150,7 +150,11 @@ void Extension::load_next_pack() {
         pack.rows.clear();   // parsed presets and typed styles own everything needed for takes
         packs_.push_back(std::move(pack));
     } catch (const std::exception& e) { install_content(core_content_); preset_problems_.push_back("CINE_" + token + "_eins0fx_P: " + e.what()); }
-    if (pack_queue_.empty()) { packs_loading_ = false; finish_presets(); }
+    if (pack_queue_.empty()) {
+        packs_loading_ = false;
+        finish_presets();
+        host_.invalidate();
+    }
 }
 
 // After the folder or the last pack: user presets naming a pack's audio id find its SoundWave,
@@ -369,7 +373,7 @@ void Extension::tick(double seconds) {
             load_next_pack();
             return;
         }
-        if (render_watch_ && renderer_ && !renderer_->active()) render_finished();
+        if (render_watch_ && renderer_->finished()) render_finished();
         if (render_watch_) {
             // The Render row follows the renderer (frames, encoding): menus refresh on invalidate only.
             auto line = render_line();
@@ -1852,7 +1856,11 @@ void Extension::start_render() {
         video::Take callbacks;
         callbacks.begin = [this](video::Pass pass) { if (pass == video::Pass::Frames) release_render(); };
         callbacks.frame = [](unsigned, double) {};   // the engine's fixed frame rate steps the take one frame a frame
-        callbacks.end = [this] { if (take_ && take_->rendering) finish_take("Take rendered.", false); };
+        callbacks.end = [this] {
+            if (!take_ || !take_->rendering) return;
+            const bool failed = renderer_->status().state == video::State::Failed;
+            finish_take(failed ? "Render stopped." : "Take rendered.", failed);
+        };
         renderer_ = std::make_unique<video::Renderer>(host_, std::move(callbacks));
     }
     video::Request r;
@@ -1901,7 +1909,6 @@ void Extension::render_frame_tick() {
 }
 
 void Extension::render_finished() {
-    render_watch_ = false;
     const auto& s = renderer_->status();
     if (take_ && take_->rendering) finish_take("Render stopped.", true);
     if (s.state == video::State::Done) {
@@ -1911,6 +1918,7 @@ void Extension::render_finished() {
         status_ = "Render failed";
         report("Render failed: " + (s.error.empty() ? s.line : s.error), true);
     }
+    render_watch_ = false;
     step_back_in("render");
 }
 
@@ -1968,9 +1976,16 @@ std::string Extension::performance_conflict(const Preset& p) const {
 
 Json Extension::model() const {
     Json options = Json::array();
+    const bool no_packs = !packs_loading_ && presets_.empty() && packs_.empty() && preset_problems_.empty();
+    const auto selection = settings_.preset.empty() ? std::string("none") : settings_.preset;
     for (const auto& [id, p] : presets_) options.push_back({{"id", id}, {"label", p.name}});
-    if (!settings_.preset.empty() && !presets_.contains(settings_.preset)) options.push_back({{"id", settings_.preset}, {"label", settings_.preset + " (unavailable)"}});
-    if (options.empty()) options.push_back({{"id", "none"}, {"label", "No presets found"}});
+    if (!presets_.contains(selection)) {
+        std::string label = selection + " (unavailable)";
+        if (packs_loading_) label = "Reading scene packs";
+        else if (no_packs) label = "No scene pack installed";
+        else if (settings_.preset.empty()) label = "No scene selected";
+        options.push_back({{"id", selection}, {"label", label}});
+    }
     const auto* p = current_preset();
     std::string route = route_ ? std::to_string(int(route_->length() / 100)) + " m route saved" : "No route recorded";
     std::string final_shot = final_ ? "Final shot saved" : "No final shot (the walk ends on the last camera key)";
@@ -2013,11 +2028,15 @@ Json Extension::model() const {
     if (!busy && settings_.expression != "unchanged" && (settings_.look != "off" || (p && p->kind == ShotKind::Sequence && !p->sequence.looks.empty())))
         disabled["take"] = "Use As set in CSS for takes that change looks, or turn the look track off.";
     if (!core_loader_.done()) disabled["take"] = "Reading CINE core data";
-    if (!p) disabled["take"] = "The selected scene is unavailable";
+    if (!p) {
+        if (packs_loading_) disabled["take"] = "Reading scene packs";
+        else if (no_packs) disabled["take"] = "Use Content/Paks/~mods";
+        else disabled["take"] = "The selected scene is unavailable";
+    }
     if (!route_) disabled["clear_route"] = "No route";
     if (!final_) disabled["clear_final"] = "No final shot";
     const bool rendering = renderer_ && renderer_->active();
-    disabled["render_take"] = rendering ? "Rendering now" : disabled.value("take", std::string());
+    disabled["render_take"] = render_watch_ ? (rendering ? "Rendering now" : "Finishing render") : disabled.value("take", std::string());
     if (!rendering) disabled["render_cancel"] = "Not rendering";
     if (disabled["render_take"].get<std::string>().empty()) disabled.erase("render_take");
     Json enabled = Json::object();
@@ -2027,8 +2046,8 @@ Json Extension::model() const {
     std::string summary = status_;
     if (!core_loader_.problem().empty()) summary += "  Core data unavailable; using built-in defaults.";
     if (!preset_problems_.empty()) summary += "  (" + std::to_string(preset_problems_.size()) + " preset file(s) skipped; see CSSX log)";
-    return {{"values", {{"status", summary}, {"preset", settings_.preset.empty() ? std::string("none") : settings_.preset},
-                        {"preset_info", p ? p->description : std::string()}, {"zoom", settings_.zoom}, {"height", settings_.height},
+    return {{"values", {{"status", summary}, {"preset", selection},
+                        {"preset_info", p ? p->description : no_packs ? "Separate pack download" : packs_loading_ ? "Reading scene packs" : "Check scene files"}, {"zoom", settings_.zoom}, {"height", settings_.height},
                         {"fov_scale", settings_.fov_scale}, {"countdown", settings_.countdown}, {"guide", settings_.guide},
                         {"walls", settings_.walls}, {"look", settings_.look}, {"look_info", look}, {"route_info", route}, {"final_info", final_shot},
                         {"scene", settings_.scene}, {"keep_target", settings_.keep_target}, {"scene_info", scene},
@@ -2094,7 +2113,7 @@ void Extension::event(const Json& e) {
         else if (id == "exit") exit_world("Left Cine World.");
         else if (id == "render_take") {
             if (mode_ != Mode::Armed) throw std::runtime_error("Enter Cine World first");
-            if (renderer_ && renderer_->active()) throw std::runtime_error("A render is running");
+            if (render_watch_) throw std::runtime_error("Wait for the previous render to finish");
             render_pending_ = true;
             if (photo_) start_take();   // steps out of Photo Mode first
             else { start_pending_ = true; host_.request({{"op", "menu.close"}}); report("Closing the menu; the render starts in a moment."); }

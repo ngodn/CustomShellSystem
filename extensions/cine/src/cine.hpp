@@ -27,7 +27,7 @@ namespace cine {
 
 class Extension {
 public:
-    explicit Extension(const CssxHost* host);
+    explicit Extension(const CssxHost* host, std::filesystem::path mods = mods_folder());
     void tick(double seconds);
     int render(const CssxFrame* frame);
     Json model() const;
@@ -268,6 +268,7 @@ private:
     Settings settings_;
     std::map<std::string, Preset> presets_;
     std::vector<std::string> preset_order_;     // pack presets in pack and manifest order; folder presets follow by id
+    std::filesystem::path mods_;
     std::vector<Pack> packs_;                   // installed packs, including validated effective styles
     std::map<std::string, std::string> audio_ids_;   // audio id -> SoundWave, across packs
     std::vector<std::string> pack_queue_;       // packs still to read

@@ -247,7 +247,18 @@ void state_tests() {
         expect(f.render->status().state == state, "cancel reaches requested state");
         f.render->cancel();
         expect(f.render->status().state == State::Failed && f.host.rate == 48 && !f.host.fixed, "cancel restores from each state");
-        f.drain(); expect(f.render->stop(), "cancel teardown completes");
+        expect(!f.render->finished(), "cancel waits for the worker or WAV export");
+        for (unsigned n = 0; n < 3 && f.io->busy(); ++n) {
+            f.io->done();
+            f.render->finished();
+        }
+        expect(f.render->finished(), "cancel teardown completes");
+        f.applied = 0;
+        f.request.sound.clear();
+        f.start_frames();
+        f.finish_frames();
+        f.io->done(); f.tick();
+        expect(f.render->status().state == State::Done, "next render completes on the same renderer");
     }
     {
         Fixture f; f.start_frames(); f.io->done(false); f.tick();

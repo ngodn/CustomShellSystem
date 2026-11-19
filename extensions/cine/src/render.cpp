@@ -358,8 +358,12 @@ class AsyncIO final : public IO {
             if (!std::strftime(stamp.data(), stamp.size(), "%Y%m%d-%H%M%S", &date)) throw std::runtime_error("Cannot format render date");
             const auto root = j.request.cine_folder / "renders";
             fs::create_directories(root);
-            auto folder = root / (j.request.preset + "-" + stamp.data());
-            if (!fs::create_directory(folder)) throw std::runtime_error("Render folder already exists. Try again in a second");
+            const auto name = j.request.preset + "-" + stamp.data();
+            auto folder = root / name;
+            for (unsigned suffix = 2; !fs::create_directory(folder); ++suffix) {
+                check_cancel();
+                folder = root / (name + "-" + std::to_string(suffix));
+            }
             fs::create_directory(folder / "frames");
             if (fs::space(folder).available < 256ull * 1024 * 1024) throw std::runtime_error("Less than 256 MiB free in render folder");
             if (!j.encoder.empty()) return {true, {}, j.encoder, folder};
@@ -661,6 +665,10 @@ void Renderer::fail(const std::string& reason) noexcept {
 }
 void Renderer::cancel() noexcept {
     if (active()) fail("Render cancelled");
+}
+bool Renderer::finished() noexcept {
+    // A failed pass can still own a worker future or an asynchronous WAV export.
+    return !active() && stop();
 }
 bool Renderer::stop() noexcept {
     if (active()) cancel();

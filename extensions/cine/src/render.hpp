@@ -105,6 +105,7 @@ public:
     void cancel() noexcept;
     // Return false to CSSX stop() until restoration and worker teardown finish.
     bool stop() noexcept;
+    bool finished() noexcept;
     const Status& status() const noexcept { return status_; }
     bool active() const noexcept;
 private:

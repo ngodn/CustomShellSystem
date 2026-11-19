@@ -3,6 +3,7 @@
 // as argv[1].
 #include "cine.hpp"
 #include "manifest.hpp"
+#include "photo_rows.hpp"
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -21,6 +22,8 @@ uint64_t id_of(const Json& j) { return j.is_object() && j.contains("$object") ? 
 
 struct Host {
     fs::path dir;
+    Json pack_rows;
+    unsigned invalidations = 0;
     Json state = Json::object();
     uint64_t next = 100;
     std::set<uint64_t> cameras, destroyed;
@@ -313,7 +316,14 @@ struct Host {
         if (op == "state.load") return state;
         if (op == "state.save") { state = j.at("value"); return true; }
         if (op == "log") { logs.push_back(j.value("message", std::string())); return nullptr; }
-        if (op == "invalidate" || op == "menu.close") return nullptr;
+        if (op == "invalidate") { ++invalidations; return nullptr; }
+        if (op == "menu.close") return nullptr;
+        if (op == "table.rows") {
+            Json names = Json::array();
+            for (const auto& [name, value] : pack_rows.items()) names.push_back(name);
+            return names;
+        }
+        if (op == "table.row") return {{"DevComment", pack_rows.at(j.at("row").get<std::string>()).dump()}};
         if (op == "extension.info") return {{"directory", dir.string()}, {"id", "eins0fx.cine"}};
         if (op == "player") return model ? Json{{"pawn", object(Pawn)}, {"controller", object(Controller)}, {"world", object(World)}} : Json{{"pawn", object(1)}, {"controller", object(2)}};
         if (op == "load" && j.at("path") == cine::core_table_path) return nullptr;
@@ -538,6 +548,49 @@ int main(int argc, char** argv) {
             r.ext->event({{"id", "preset"}, {"value", "pose-glide-3"}});
             r.ext->event({{"id", "reload"}});
             expect(r.ext->model()["values"]["preset"] == "pose-glide-3", "explicit choice survives reload");
+        }
+        {
+            const auto empty = dir / "empty";
+            for (const auto* saved : {"", "callout-test"}) {
+                Rig r(empty);
+                r.host.state = {{"settings", {{"preset", saved}}}};
+                r.ext = std::make_unique<cine::Extension>(&r.host.api, empty);
+                r.step();
+                auto rows = cssx::photo_rows(cssx::bind_menu(definition, r.ext->model()), "take");
+                auto row = [&](const std::string& id) -> const cssx::PhotoRow& {
+                    for (const auto& item : rows) if (item.id == id) return item;
+                    throw std::runtime_error("Missing Photo Mode row " + id);
+                };
+                expect(row("preset").value == "No scene pack installed", "empty pack list explains missing scenes");
+                expect(row("preset_info").value == "Separate pack download", "About fits the Photo Mode value column");
+                expect(!row("take").enabled && row("take").value == "Use Content/Paks/~mods", "disabled take gives the install folder");
+            }
+        }
+        {
+            const auto mods = dir / "mods";
+            const std::string stem = "CINE_CalloutTest_eins0fx_P";
+            fs::create_directories(mods / stem);
+            for (const auto* suffix : {".pak", ".utoc", ".ucas"}) std::ofstream(mods / stem / (stem + suffix)).put('x');
+            Rig r(dir / "empty");
+            r.host.pack_rows = Json::parse(std::ifstream(shipped / "tests/fixtures/CalloutTest.json"));
+            r.ext = std::make_unique<cine::Extension>(&r.host.api, mods);
+            r.steps(3);
+            r.ext->event({{"id", "cssx.photo_mode"}, {"value", "open"}});
+            r.ext->event({{"id", "reload"}});
+            expect(r.ext->model()["options"]["preset"][0]["label"] == "Reading scene packs", "reload shows pending selection");
+            const auto revision = r.host.invalidations;
+            r.step();
+            expect(r.host.invalidations > revision, "asynchronous pack completion refreshes the open model");
+            const auto model = cssx::bind_menu(definition, r.ext->model());
+            expect(cssx::photo_control(model, "take", "preset")->at("options")[0].at("label") == "Callout Test", "reloaded pack on the Take tab");
+            r.ext->event({{"id", "cssx.photo_mode"}, {"value", "closed"}});
+            r.ext->event({{"id", "enter"}});
+            const auto original = cine::content().callouts.label_font;
+            r.ext->event({{"id", "take"}});
+            r.step();
+            expect(cine::content().callouts.label_font == 31 && original != 31, "selected pack applies its callout size");
+            r.steps(120);
+            expect(cine::content().callouts.label_font == original, "finishing the pack take restores the core callout size");
         }
         {   // Enter, glide take, everything restored, still in Cine World; then leave.
             Rig r(dir);
