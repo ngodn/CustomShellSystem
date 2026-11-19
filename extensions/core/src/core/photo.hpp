@@ -18,6 +18,7 @@
 #include "extensions.hpp"
 #include "menu_input.hpp"
 #include "photo_rows.hpp"
+#include "photo_activation.hpp"
 #include <array>
 #include <functional>
 #include <map>
@@ -80,8 +81,8 @@ private:
     std::string session_;                   // extension id that owns the open Photo Mode session
     std::string parked_, open_section_;     // a session stepped out of; the tab to reopen on
     struct Step { enum Kind { none, out, in } kind=none; std::string section; } step_;
-    uint64_t session_started_=0;
-    bool session_live_=false;               // Photo Mode was seen active in this session
+    PhotoActivation activation_;
+    uint64_t component_check_at_=0;
     WeakObject panel_, strip_, switcher_, strip_box_, scroll_, size_box_;
     std::vector<Tab> tabs_;
     int game_tabs_=0, active_tab_=-1;
@@ -110,6 +111,8 @@ private:
     // pause menu
     void pause_tick(UObject* handler);
     UObject* ensure_pause_row(PauseRow& p,UObject* box,UObject* reference,UObject* after);
+    void detach_player() noexcept;
+    void queue_open(const std::string& id);
     void begin_session(const std::string& id,UObject* system_page);
     void watch_confirms(UObject* row,bool on) noexcept;
     static void on_confirmed(void* user,void* object,void* frame,void* result);

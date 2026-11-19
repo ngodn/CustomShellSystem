@@ -94,20 +94,24 @@ void PhotoMode::tick(const PlayerContext& player,double) {
     if(!deps_.runtime) return;
     refresh_declared();
     if(declared_.empty() && session_.empty() && pause_rows_.empty()) return;
-    if(!player.pc) { if(!session_.empty() || !pause_rows_.empty()) detach(); return; }
+    if(!player.pc) { if(pc_.Get() || activation_.live || !pause_rows_.empty()) detach_player(); return; }
     if(pc_.Get()!=player.pc) {
-        detach();
+        detach_player();
         pc_=player.pc;
+        component_check_at_=0;
+        keys_.clear(); keys_retry_=0;
+    }
+    if((!handler_.Get() || !component_.Get()) && now_ms()>=component_check_at_) {
+        component_check_at_=now_ms()+check_every_ms;
         handler_=object_of(player.pc,L"User Interface Handler Component");
         component_=object_of(player.pc,L"Photography Mode Component");
-        keys_.clear(); keys_retry_=0;
     }
     auto* handler=handler_.Get(); auto* component=component_.Get();
     if(!handler || !component) return;
     try {
         run_step(component);
         if(!declared_.empty() && bool_of(handler,L"bIsInGameMenu")) pause_tick(handler);
-        if(!session_.empty()) panel_tick(component);
+        if(!session_.empty() && (activation_.live || (player.world && player.pawn))) panel_tick(component);
     } catch(const std::exception& e) {
         report(e.what());
         end_session();
@@ -146,7 +150,7 @@ void PhotoMode::pause_tick(UObject* handler) {
     if(!page || !visible_now(page)) { for(auto& p:pause_rows_) p.down=p.confirmed=false; watch_confirms(nullptr,false); return; }
     system_page_=page;
     auto* box=object_of(page,L"BP_VBC_System"); auto* photo=object_of(page,L"WBP_NBS_ActivatePhotomode");
-    if(!box || !photo) throw std::runtime_error("The System page layout changed");
+    if(!box || !photo || child_index(box,photo)<0) return;
     if(keys_.empty() && now_ms()>=keys_retry_) {
         try { keys_=read_menu_bindings(pc_.Get(),handler); } catch(const std::exception& e) { keys_retry_=now_ms()+1000; report(e.what()); }
     }
@@ -226,21 +230,21 @@ void PhotoMode::begin_session(const std::string& id,UObject* system_page) {
     // The game's own chain for Activate Photo Mode (WBP_MOT_System.HandlePhotomodeButton).
     invoke(system_page,L"OnMenuClose");
     { Call c(handler,L"HandleOptionsMenu",2); c.set(L"SubTabIndex",int32_t{0}); c.set(L"AllowClose",true); c.run(); }
-    invoke(component,L"ActivatePlayerMode");
-    session_=id; session_started_=now_ms(); session_live_=false; announced_=false; active_tab_=-1; model_=nullptr; rows_dirty_=true;
-    if(deps_.log) deps_.log("Photo Mode opened for "+id);
+    queue_open(id);
+}
+
+void PhotoMode::queue_open(const std::string& id) {
+    session_=id; activation_={}; announced_=false; active_tab_=-1; model_=nullptr; rows_dirty_=true;
+    last_error_.clear();
+    if(deps_.log) deps_.log("Photo Mode requested for "+id);
 }
 
 void PhotoMode::dev_open(const std::string& id) {
     if(std::none_of(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==id; }))
         throw std::runtime_error("no loaded extension declares photo_mode: "+id);
-    auto* component=component_.Get();
-    if(!component) throw std::runtime_error("no player yet");
     end_session();
-    // Joins a Photo Mode that is already open; otherwise opens it the way the game's camera key does.
-    if(!bool_of(component,L"bIsPhotoModeActive")) invoke(component,L"ActivatePlayerMode");
-    session_=id; session_started_=now_ms(); session_live_=false; announced_=false; active_tab_=-1; model_=nullptr; rows_dirty_=true;
-    if(deps_.log) deps_.log("Photo Mode opened for "+id+" (dev)");
+    open_section_.clear();
+    queue_open(id);
 }
 
 void PhotoMode::dev_press(const std::string& key) {
@@ -256,7 +260,7 @@ void PhotoMode::end_session(const char* how) noexcept {
     announced_=false;
     detach_panel();
     const auto id=session_;
-    session_.clear(); session_live_=false; model_=nullptr; pending_confirm_.clear();
+    session_.clear(); activation_={}; model_=nullptr; pending_confirm_.clear();
     if(told && deps_.runtime) { try { deps_.runtime->host_event(id,"photo_mode",how); } catch(...) {} }
     if(deps_.log) try { deps_.log(std::string("Photo Mode ")+how+" for "+id); } catch(...) {}
 }
@@ -299,24 +303,26 @@ void PhotoMode::run_step(UObject* component) {
     }
     if(parked_.empty()) return;
     if(std::none_of(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==parked_; })) { parked_.clear(); return; }
-    if(!bool_of(component,L"bIsPhotoModeActive")) invoke(component,L"ActivatePlayerMode");
-    session_=std::exchange(parked_,{}); open_section_=step.section;
-    session_started_=now_ms(); session_live_=false; announced_=false; active_tab_=-1; model_=nullptr; rows_dirty_=true;
-    if(deps_.log) deps_.log("Photo Mode reopened for "+session_);
+    open_section_=step.section;
+    queue_open(std::exchange(parked_,{}));
 }
 
 // ---------------------------------------------------------------- panel
 
 void PhotoMode::panel_tick(UObject* component) {
-    if(!bool_of(component,L"bIsPhotoModeActive")) {
-        // Closed, or never opened (the game refused): give it five seconds to start.
-        if(session_live_ || now_ms()-session_started_>5000) end_session();
+    const auto now=now_ms();
+    switch(activation_.poll(now,bool_of(component,L"bIsPhotoModeActive"))) {
+    case PhotoActivation::try_activate: {
+        Call ready(component,L"IsPlayerInterfaceEnabled",1); ready.run();
+        if(ready.get<bool>()) invoke(component,L"ActivatePlayerMode");
         return;
     }
-    session_live_=true;
+    case PhotoActivation::wait: return;
+    case PhotoActivation::closed: end_session(); return;
+    case PhotoActivation::panel: break;
+    }
     auto* panel=object_of(component,L"PhotoModeUI");
     if(!panel) return;
-    const auto now=now_ms();
     const bool slow=now>=slow_at_;   // checks that only need to run four times a second
     if(slow) slow_at_=now+check_every_ms;
     // A new panel, or the game rebuilt the strip: start over.
@@ -325,7 +331,7 @@ void PhotoMode::panel_tick(UObject* component) {
         const auto attached=attach(panel);
         if(attached==Attach::failed) { end_session(); return; }
         if(attached==Attach::later) {
-            if(now_ms()-session_started_>5000) { report("the Photo Mode tab strip never laid out; tabs not added"); end_session(); }
+            if(now_ms()-activation_.active_since>5000) { report("the Photo Mode tab strip never laid out; tabs not added"); end_session(); }
             return;
         }
     }
@@ -543,11 +549,17 @@ void PhotoMode::detach_panel() noexcept {
 }
 
 void PhotoMode::detach() noexcept {
-    watch_confirms(nullptr,false);
     end_session();
+    detach_player();
+}
+
+void PhotoMode::detach_player() noexcept {
+    watch_confirms(nullptr,false);
+    if(activation_.live) end_session();
     for(auto& p:pause_rows_) remove(p.row.Get());
     try { if(auto* page=system_page_.Get()) if(auto* box=object_of(page,L"BP_VBC_System")) rescan(box); } catch(...) {}
     pause_rows_.clear(); system_page_.Reset();
+    pc_.Reset(); handler_.Reset(); component_.Reset();
 }
 
 void PhotoMode::forget() noexcept {
@@ -713,7 +725,7 @@ Json PhotoMode::diagnostics() const {
     for(const auto& t:tabs_) tabs.push_back({{"section",t.section},{"rows",t.rows.size()},{"selected",t.selected},{"widgets",t.option_rows.size()+t.slider_rows.size()}});
     Json declared=Json::array();
     for(const auto& d:declared_) declared.push_back({{"id",d.id},{"entry",d.entry},{"tabs",d.tabs.size()}});
-    return {{"declared",declared},{"pause_rows",pause_rows_.size()},{"session",session_},{"live",session_live_},
+    return {{"declared",declared},{"pause_rows",pause_rows_.size()},{"session",session_},{"live",activation_.live},
             {"attached",panel_.Get()!=nullptr},{"game_tabs",game_tabs_},{"active_tab",active_tab_},{"tabs",tabs},{"attach_us",attach_steps()},{"error",last_error_}};
 }
 }

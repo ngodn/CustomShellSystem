@@ -2,6 +2,7 @@
 // settings recovery, frame statistics. No engine, no Windows.
 #include "manifest.hpp"
 #include "photo_rows.hpp"
+#include "photo_activation.hpp"
 #include "controls.hpp"
 #include "storage.hpp"
 #include "writer.hpp"
@@ -47,6 +48,16 @@ int main() {
         bad=photo; bad["photo_mode"]["tabs"]=Json::array(); for(int i=0;i<9;++i) bad["photo_mode"]["tabs"].push_back({{"section","s"+std::to_string(i)},{"icon","tabs/a.png"}});
         rejects([&]{Manifest::parse(bad,root/"valid");},"more than eight photo tabs rejected");
         fs::remove(root/"valid/menu.json"); fs::remove_all(root/"valid/tabs");
+    }
+    {
+        PhotoActivation opening;
+        check(opening.poll(100,false)==PhotoActivation::try_activate, "first open checks native readiness");
+        check(opening.poll(101,false)==PhotoActivation::wait, "pending open avoids repeated calls every frame");
+        check(opening.poll(6100,false)==PhotoActivation::try_activate, "cold world still gets an activation after five seconds");
+        check(opening.poll(6350,false)==PhotoActivation::try_activate, "a refused activation is retried");
+        check(opening.poll(6360,true)==PhotoActivation::panel && opening.active_since==6360, "panel layout gets a fresh deadline");
+        check(opening.poll(6361,true)==PhotoActivation::panel && opening.active_since==6360, "active panel is never reactivated");
+        check(opening.poll(6362,false)==PhotoActivation::closed, "normal native close ends the session");
     }
     {   // photo_rows / photo_event: menu controls as Photo Mode rows and what their keys send
         Json model={{"sections",Json::array({{{"id","take"},{"title","Take"},{"controls",Json::array({
