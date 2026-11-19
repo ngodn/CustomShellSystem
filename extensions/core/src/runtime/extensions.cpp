@@ -123,6 +123,8 @@ struct Runtime::Entry {
     double status_age=1e9;
     bool suspended=false, stopped=false, dirty=true;
     bool used_hooks=false;
+    bool photo_disabled=false;
+    template<class Callback> void photo_call(Callback&& callback);
     unsigned requests=0;
     double elapsed=0, menu_check=0;
     fs::file_time_type menu_time{};
@@ -216,7 +218,7 @@ Json Runtime::Entry::service(const Json& j) {
     return result;
 }
 void Runtime::Entry::fail(const std::string& text) {
-    error=text;suspended=true;++runtime->revision_;
+    error=text;suspended=true;++runtime->revision_;++runtime->photo_revision_;
     if(!stop()) error+="; cleanup incomplete, unload blocked";
     try { runtime->log(manifest.id,"error",text); runtime->log("cssx","error","Extension suspended",{{"id",manifest.id},{"error",text}}); } catch(...) {}
 }
@@ -362,6 +364,19 @@ Runtime::Runtime(fs::path root,HostServices services):root_(std::move(root)),ser
         try { entry->start(); } catch(const std::exception& e) { entry->fail(e.what()); }
         entries_.push_back(std::move(entry));
     }
+    for(auto& entry:entries_) {
+        const auto& m=entry->manifest;
+        if(m.photo_target.empty() || entry->suspended) continue;
+        const auto owner=std::ranges::find_if(entries_,[&](const auto& e){return e->manifest.id==m.photo_target;});
+        std::string reason;
+        if(owner==entries_.end()) reason="target is missing";
+        else if((*owner)->suspended || (*owner)->manifest.photo_entry.empty()) reason="target has no available Photo Mode";
+        else if(!photo_version_matches((*owner)->manifest.version,m.photo_min_version)) reason="installed "+(*owner)->manifest.version+", need "+m.photo_min_version+" or later";
+        if(!reason.empty()) {
+            entry->photo_disabled=true;
+            log("cssx","info","Photo Mode contribution idle",{{"extension",m.id},{"target",m.photo_target},{"reason",reason}});
+        }
+    }
 }
 Runtime::~Runtime()=default;
 void Runtime::log(const std::string& id,const std::string& level,const std::string& message,const Json& fields) {
@@ -381,10 +396,78 @@ Json Runtime::library() {
     }
     return result;
 }
-std::vector<const Manifest*> Runtime::photo_extensions() const {
-    std::vector<const Manifest*> result;
-    for(const auto& entry:entries_) if(!entry->suspended && !entry->manifest.photo_entry.empty()) result.push_back(&entry->manifest);
-    return result;
+std::vector<PhotoModeDefinition> Runtime::photo_modes() const {
+    std::vector<PhotoModeDefinition> modes;
+    std::vector<const Manifest*> guests;
+    for(const auto& entry:entries_) {
+        if(entry->suspended || entry->stopped) continue;
+        const auto& m=entry->manifest;
+        if(!m.photo_entry.empty()) {
+            auto& mode=modes.emplace_back(PhotoModeDefinition{&m,{},{}});
+            for(const auto& tab:m.photo_tabs) mode.tabs.push_back({&m,&tab});
+        } else if(!m.photo_target.empty() && !entry->photo_disabled) guests.push_back(&m);
+    }
+    std::ranges::sort(guests,{},&Manifest::id);
+    for(const auto* guest:guests) {
+        auto mode=std::ranges::find_if(modes,[&](const auto& d){return d.owner->id==guest->photo_target;});
+        if(mode==modes.end()) continue;
+        mode->contributors.push_back(guest);
+        for(const auto& tab:guest->photo_tabs) mode->tabs.push_back({guest,&tab});
+    }
+    return modes;
+}
+
+// Calls that use the engine must stay on its thread. Retire only the contribution after a
+// callback fails or returns late. The ordinary menu and the owner's callbacks stay independent.
+template<class Callback> void Runtime::Entry::photo_call(Callback&& callback) {
+    if(photo_disabled || suspended || stopped) throw std::runtime_error("Photo Mode contribution unavailable: "+manifest.id);
+    constexpr uint64_t limit_us=50000;
+    const auto started=monotonic_us();
+    std::string reason;
+    try {
+        callback();
+        const auto elapsed=monotonic_us()-started;
+        if(elapsed<=limit_us) return;
+        reason="callback took "+std::to_string(elapsed)+" us (limit "+std::to_string(limit_us)+" us)";
+    } catch(const std::exception& e) { reason=e.what(); }
+    catch(...) { reason="unknown callback exception"; }
+    runtime->disable_photo_contribution(manifest,reason);
+    throw std::runtime_error(manifest.id+": "+reason);
+}
+void Runtime::disable_photo_contribution(const Manifest& provider,const std::string& reason) {
+    auto& entry=find(provider.id);
+    if(provider.photo_target.empty() || entry.photo_disabled) return;
+    entry.photo_disabled=true;
+    ++photo_revision_;
+    log("cssx","warning","Photo Mode contribution disabled",{{"extension",provider.id},{"reason",reason}});
+}
+Json Runtime::photo_model(const Manifest& provider) {
+    if(provider.photo_target.empty()) return model(provider.id);
+    auto& e=find(provider.id);
+    e.photo_call([&]{ if(e.dirty) e.refresh(); });
+    return e.model;
+}
+void Runtime::photo_action(const Manifest& provider,const Json& action) {
+    if(provider.photo_target.empty()) return event(provider.id,action);
+    auto& e=find(provider.id);
+    if(e.dirty) e.photo_call([&]{ e.refresh(); });
+    validate_event(e.model,action);
+    e.photo_call([&]{ e.deliver(action); });
+}
+void Runtime::photo_notice(const Manifest& provider,const char* value) {
+    try {
+        if(provider.photo_target.empty()) return host_event(provider.id,"photo_mode",value);
+        auto& e=find(provider.id);
+        if(e.suspended || e.stopped) return;
+        const Json notice={{"id","cssx.photo_mode"},{"value",value}};
+        if(e.photo_disabled) {
+            if(std::string_view(value)=="detached") e.deliver(notice);
+            return;
+        }
+        e.photo_call([&]{ e.deliver(notice); });
+    } catch(const std::exception& e) {
+        if(provider.photo_target.empty()) log("cssx","warning","Photo Mode owner notification failed",{{"extension",provider.id},{"reason",e.what()}});
+    } catch(...) {}
 }
 Json Runtime::model(const std::string& id) { auto& e=find(id); if(e.suspended) throw std::runtime_error(e.error); if(e.dirty) e.refresh(); return e.model; }
 void Runtime::event(const std::string& id,const Json& event) { auto& e=find(id); if(e.suspended) throw std::runtime_error(e.error); e.event(event); }

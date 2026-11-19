@@ -9,13 +9,13 @@
 // Hide UI, Take Shot and closing. CSSX reads only left, right and confirm on the extension's
 // rows and turns them into the extension's control events. Everything CSSX adds is removed when
 // that Photo Mode session ends, so the game's Activate Photo Mode always opens the panel exactly
-// as shipped. The extension hears {"id":"cssx.photo_mode","value":"open"|"closed"}.
+// as shipped. Since 1.3.3, other extensions can contribute tabs to the owner's session.
 //
 // Cost: nothing unless an extension declares photo_mode. Then two cached flag reads a frame;
 // while an extension tab is showing, a key poll and a model refresh four times a second.
 #include "engine.hpp"
 #include "core_abi.h"
-#include "extensions.hpp"
+#include "photo_session.hpp"
 #include "menu_input.hpp"
 #include "photo_rows.hpp"
 #include "photo_activation.hpp"
@@ -55,10 +55,11 @@ public:
 private:
     using UObject=RC::Unreal::UObject;
     using WeakObject=engine::WeakObject;
-    struct Declared { std::string id, entry; std::vector<Manifest::PhotoTab> tabs; };
+    using Declared=PhotoModeDefinition;
     struct PauseRow { std::string id; WeakObject row; bool down=false, confirmed=false; };
     struct Row { WeakObject widget; bool slider=false; PhotoRow shown; bool fresh=true; uint64_t settle_until=0; };
     struct Tab {
+        const Manifest* provider=nullptr;
         std::string section; WeakObject tab, page, box; WeakObject icon;
         std::vector<Row> option_rows, slider_rows;   // pooled per kind
         std::vector<std::pair<bool,size_t>> order;  // row i of the page: (slider?, index in its pool)
@@ -68,7 +69,7 @@ private:
     };
 
     Deps deps_;
-    uint64_t library_revision_=0;
+    uint64_t photo_revision_=0;
     std::vector<Declared> declared_;
     WeakObject pc_, handler_, component_;
     // pause menu
@@ -79,8 +80,10 @@ private:
     bool watch_reported_=false;
     // session
     std::string session_;                   // extension id that owns the open Photo Mode session
+    PhotoSession participants_;
+    std::string open_provider_;
+    const Manifest* model_provider_=nullptr;
     std::string parked_, open_section_;     // a session stepped out of; the tab to reopen on
-    struct Step { enum Kind { none, out, in } kind=none; std::string section; } step_;
     PhotoActivation activation_;
     uint64_t component_check_at_=0;
     WeakObject panel_, strip_, switcher_, strip_box_, scroll_, size_box_;
@@ -93,7 +96,7 @@ private:
     uint64_t model_revision_=0, slow_at_=0;
     bool rows_dirty_=true;
     struct { std::vector<std::pair<const char*,uint64_t>> steps; } attach_cost_;   // last attach, microseconds a step
-    size_t pages_ready_=0;                  // tabs whose page is in the switcher
+    size_t icons_ready_=0, pages_ready_=0;
     bool announced_=false;                  // the extension heard "open" this session
     std::map<std::wstring,WeakObject> icons_;   // imported tab icons
     std::string pending_confirm_; uint64_t confirm_until_=0;
@@ -105,7 +108,8 @@ private:
     RowLook option_look_, slider_look_;
 
     void refresh_declared();
-    void forget() noexcept;
+    const Declared* declaration(const std::string&) const;
+    void trim_tabs(size_t keep);
     void report(const std::string& message);
     void apply_visual_bool(UObject* widget,const wchar_t* function,bool value);
     // pause menu
@@ -129,7 +133,9 @@ private:
     void learn_row_looks(UObject* box);
     UObject* icon_texture(const fs::path& file);
     void prefetch_icons();
-    bool grow(const Declared& declared);
+    void grow(const Declared& declared);
+    void add_tab_widget(Tab&,const Manifest::PhotoTab&);
+    void add_page_widget(Tab&);
     void build_page(Tab& tab,bool slow);
     Row& row_at(Tab& tab,size_t i);
     Row make_row(bool slider);

@@ -74,18 +74,28 @@ void PhotoMode::apply_visual_bool(UObject* widget,const wchar_t* function,bool v
 void PhotoMode::set_runtime(Runtime* runtime) {
     if(runtime==deps_.runtime) return;
     detach();
-    deps_.runtime=runtime; library_revision_=0; declared_.clear();
+    deps_.runtime=runtime; photo_revision_=0; declared_.clear();
+}
+
+const PhotoMode::Declared* PhotoMode::declaration(const std::string& id) const {
+    const auto found=std::ranges::find_if(declared_,[&](const auto& d){ return d.owner->id==id; });
+    return found==declared_.end()?nullptr:&*found;
 }
 
 void PhotoMode::refresh_declared() {
-    if(!deps_.runtime || deps_.runtime->revision()==library_revision_) return;
-    library_revision_=deps_.runtime->revision();
-    declared_.clear();
-    for(const auto* m:deps_.runtime->photo_extensions()) declared_.push_back({m->id,m->photo_entry,m->photo_tabs});
-    if(!session_.empty() && std::none_of(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==session_; })) end_session();
-    // An extension that left (suspended, removed) loses its pause row.
+    if(!deps_.runtime || deps_.runtime->photo_revision()==photo_revision_) return;
+    photo_revision_=deps_.runtime->photo_revision();
+    declared_=deps_.runtime->photo_modes();
+    if(!session_.empty() || !parked_.empty()) {
+        if(auto* mode=declaration(session_.empty()?parked_:session_)) {
+            participants_.prune(*deps_.runtime,*mode);
+            size_t keep=0;
+            while(keep<tabs_.size() && keep<mode->tabs.size() && tabs_[keep].provider==mode->tabs[keep].provider) ++keep;
+            if(keep<tabs_.size()) trim_tabs(keep);
+        } else end_session("detached");
+    }
     for(auto it=pause_rows_.begin();it!=pause_rows_.end();) {
-        if(std::none_of(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==it->id; })) { remove(it->row.Get()); it=pause_rows_.erase(it); }
+        if(!declaration(it->id)) { remove(it->row.Get()); it=pause_rows_.erase(it); }
         else ++it;
     }
 }
@@ -94,7 +104,7 @@ void PhotoMode::tick(const PlayerContext& player,double) {
     if(!deps_.runtime) return;
     refresh_declared();
     if(declared_.empty() && session_.empty() && pause_rows_.empty()) return;
-    if(!player.pc) { if(pc_.Get() || activation_.live || !pause_rows_.empty()) detach_player(); return; }
+    if(!player.pc) { if(pc_.Get() || session() || !parked_.empty() || !pause_rows_.empty()) detach_player(); return; }
     if(pc_.Get()!=player.pc) {
         detach_player();
         pc_=player.pc;
@@ -126,8 +136,7 @@ UObject* PhotoMode::ensure_pause_row(PauseRow& p,UObject* box,UObject* reference
         row=create_widget(pc_.Get(),widget_class(system_row_class));
         if(!row) throw std::runtime_error("The game would not create a System row");
         for(auto name:{L"DefaultTextColor",L"HighlightTextColor",L"DefaultButtonColor",L"HighlightButtonColor"}) copy_property(row,reference,name);
-        const auto& d=*std::find_if(declared_.begin(),declared_.end(),[&](const Declared& x){ return x.id==p.id; });
-        text_property(row,L"Text",d.entry);
+        text_property(row,L"Text",declaration(p.id)->owner->photo_entry);
         invoke(row,L"InitText");
         p.row=row;
     }
@@ -159,9 +168,8 @@ void PhotoMode::pause_tick(UObject* handler) {
     const bool enabled=bool_of(photo,L"bEnabled",true);
     UObject* after=photo;
     for(const auto& d:declared_) {
-        if(d.entry.empty()) continue;
-        auto it=std::find_if(pause_rows_.begin(),pause_rows_.end(),[&](const PauseRow& p){ return p.id==d.id; });
-        if(it==pause_rows_.end()) { pause_rows_.push_back({d.id,{},false}); it=pause_rows_.end()-1; }
+        auto it=std::find_if(pause_rows_.begin(),pause_rows_.end(),[&](const PauseRow& p){ return p.id==d.owner->id; });
+        if(it==pause_rows_.end()) { pause_rows_.push_back({d.owner->id,{},false}); it=pause_rows_.end()-1; }
         auto* row=ensure_pause_row(*it,box,photo,after);
         after=row;
         watch_confirms(row,true);
@@ -175,7 +183,7 @@ void PhotoMode::pause_tick(UObject* handler) {
         // selected row is read too, in case a state change is undone within the same frame.
         const bool pressed=it->confirmed || state==state_confirmed || (state==state_selected && accept && !it->down);
         it->down=accept; it->confirmed=false;
-        if(enabled && pressed) { begin_session(d.id,page); return; }
+        if(enabled && pressed) { begin_session(d.owner->id,page); return; }
     }
     prefetch_icons();
 }
@@ -230,6 +238,7 @@ void PhotoMode::begin_session(const std::string& id,UObject* system_page) {
     // The game's own chain for Activate Photo Mode (WBP_MOT_System.HandlePhotomodeButton).
     invoke(system_page,L"OnMenuClose");
     { Call c(handler,L"HandleOptionsMenu",2); c.set(L"SubTabIndex",int32_t{0}); c.set(L"AllowClose",true); c.run(); }
+    end_session("detached");
     queue_open(id);
 }
 
@@ -240,10 +249,9 @@ void PhotoMode::queue_open(const std::string& id) {
 }
 
 void PhotoMode::dev_open(const std::string& id) {
-    if(std::none_of(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==id; }))
+    if(!declaration(id))
         throw std::runtime_error("no loaded extension declares photo_mode: "+id);
-    end_session();
-    open_section_.clear();
+    end_session("detached");
     queue_open(id);
 }
 
@@ -255,14 +263,19 @@ void PhotoMode::dev_press(const std::string& key) {
 }
 
 void PhotoMode::end_session(const char* how) noexcept {
-    if(session_.empty()) return;
-    const bool told=announced_;
+    if(session_.empty() && parked_.empty()) return;
+    const auto id=session_.empty()?parked_:session_;
+    const bool park=std::string_view(how)=="parked";
     announced_=false;
     detach_panel();
-    const auto id=session_;
-    session_.clear(); activation_={}; model_=nullptr; pending_confirm_.clear();
-    if(told && deps_.runtime) { try { deps_.runtime->host_event(id,"photo_mode",how); } catch(...) {} }
-    if(deps_.log) try { deps_.log(std::string("Photo Mode ")+how+" for "+id); } catch(...) {}
+    session_.clear(); activation_={}; model_=nullptr; model_provider_=nullptr; pending_confirm_.clear();
+    open_provider_.clear(); open_section_.clear();
+    if(!park) parked_.clear();
+    try {
+        if(park) participants_.park(*deps_.runtime);
+        else participants_.end(*deps_.runtime,std::string_view(how)=="detached");
+        if(deps_.log) deps_.log(std::string("Photo Mode ")+how+" for "+id);
+    } catch(...) {}
 }
 
 // ---------------------------------------------------------------- stepping out and back in
@@ -270,24 +283,15 @@ void PhotoMode::end_session(const char* how) noexcept {
 // An extension in a session can leave Photo Mode for a while (to let the player move) and come
 // back into the same session. Both happen on the next tick, never inside the extension's own call.
 Json PhotoMode::request(const Json& r) {
-    const auto op=r.at("op").get<std::string>();
-    if(op=="photo.step_out") {
-        if(session_.empty() || !announced_) throw std::runtime_error("No Photo Mode session to step out of");
-        step_={Step::out,{}};
-        return true;
-    }
-    if(op=="photo.step_in") {
-        if(parked_.empty() && !(step_.kind==Step::out)) throw std::runtime_error("No parked Photo Mode session to step back into");
-        step_={Step::in,r.value("section",std::string())};
-        return true;
-    }
-    throw std::runtime_error("Unknown Photo Mode request");
+    participants_.request(r);
+    return true;
 }
 
 void PhotoMode::run_step(UObject* component) {
-    if(step_.kind==Step::none) return;
-    const auto step=std::exchange(step_,{});
-    if(step.kind==Step::out) {
+    if(!participants_.has_step()) return;
+    const auto step=participants_.take_step();
+    if(step.kind==PhotoSession::Step::none) return;
+    if(step.kind==PhotoSession::Step::out) {
         if(session_.empty()) return;
         parked_=session_;
         end_session("parked");
@@ -302,7 +306,8 @@ void PhotoMode::run_step(UObject* component) {
         return;
     }
     if(parked_.empty()) return;
-    if(std::none_of(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==parked_; })) { parked_.clear(); return; }
+    if(!declaration(parked_)) { end_session("detached"); return; }
+    open_provider_=step.provider;
     open_section_=step.section;
     queue_open(std::exchange(parked_,{}));
 }
@@ -327,6 +332,11 @@ void PhotoMode::panel_tick(UObject* component) {
     if(slow) slow_at_=now+check_every_ms;
     // A new panel, or the game rebuilt the strip: start over.
     if(panel_.Get()!=panel || (!tabs_.empty() && (!tabs_.front().tab.Get() || (slow && child_index(strip_.Get(),tabs_.front().tab.Get())<0)))) {
+        const int previous=active_tab_-game_tabs_;
+        if(previous>=0 && size_t(previous)<tabs_.size() && open_provider_.empty()) {
+            open_provider_=tabs_[size_t(previous)].provider->id;
+            open_section_=tabs_[size_t(previous)].section;
+        }
         detach_panel();
         const auto attached=attach(panel);
         if(attached==Attach::failed) { end_session(); return; }
@@ -335,44 +345,44 @@ void PhotoMode::panel_tick(UObject* component) {
             return;
         }
     }
-    {
-        auto declared=std::find_if(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==session_; });
-        if(declared==declared_.end()) { end_session(); return; }
-        if(!grow(*declared)) return;
-    }
+    const auto* mode=declaration(session_);
+    if(!mode) { end_session("detached"); return; }
+    if(icons_ready_<mode->tabs.size() || pages_ready_<mode->tabs.size()) grow(*mode);
+    if(pages_ready_<mode->owner->photo_tabs.size()) return;
     if(!announced_) {
         announced_=true;
-        try { deps_.runtime->host_event(session_,"photo_mode","open"); } catch(const std::exception& e) { report(e.what()); }
-        // Open on the tab the extension asked for when it stepped back in, else on its first tab.
-        int first=0;
-        for(size_t i=0;i<tabs_.size();++i) if(!open_section_.empty() && tabs_[i].section==open_section_) first=int(i);
-        open_section_.clear();
-        try { navigate(strip_.Get(),game_tabs_+first); } catch(const std::exception& e) { report(e.what()); }
+        participants_.open(*deps_.runtime,*mode);
+        if(open_provider_.empty()) open_provider_=session_;
+    }
+    if(!open_provider_.empty()) {
+        const size_t first=mode->focus_tab(open_provider_,open_section_);
+        if(first<pages_ready_ && first<icons_ready_) {
+            try { navigate(strip_.Get(),game_tabs_+int(first)); } catch(const std::exception& e) { report(e.what()); }
+            open_provider_.clear(); open_section_.clear();
+        }
     }
     auto* strip=strip_.Get(); if(!strip) return;
     const int index=active_index(strip);
     if(index!=active_tab_) {
-        active_tab_=index; rows_dirty_=true;
+        active_tab_=index; rows_dirty_=true; pending_confirm_.clear();
         // Scroll by whole tabs so no icon is ever cut at the strip's edge: the window of tabs
         // that fit moves only as far as needed to show the active one.
         if(auto* scroll=scroll_.Get()) if(index>=0 && tab_pitch_>0) {
             const int fit=std::max(1,int(std::floor(strip_width_/tab_pitch_+0.01)));
-            const int total=game_tabs_+int(tabs_.size());
-            if(index<first_tab_) first_tab_=index;
-            else if(index>=first_tab_+fit) first_tab_=index-fit+1;
-            first_tab_=std::clamp(first_tab_,0,std::max(0,total-fit));
+            const int total=game_tabs_+int(icons_ready_);
+            first_tab_=photo_first_visible(first_tab_,index,total,fit);
             invoke(scroll,L"SetScrollOffset",L"NewScrollOffset",float(first_tab_*tab_pitch_));
         }
     }
     const int ours=active_tab_-game_tabs_;
-    const bool on_ours=ours>=0 && ours<int(tabs_.size());
+    const bool on_ours=ours>=0 && ours<int(pages_ready_);
     if(!on_ours) return;
     auto& tab=tabs_[size_t(ours)];
     // The rows follow the extension's model, which changes only when an extension says so.
     const auto revision=deps_.runtime->revision();
-    if(model_.is_null() || revision!=model_revision_) {
-        try { model_=deps_.runtime->model(session_); } catch(const std::exception& e) { report(e.what()); return; }
-        model_revision_=revision; rows_dirty_=true;
+    if(model_provider_!=tab.provider || model_.is_null() || revision!=model_revision_) {
+        try { model_=deps_.runtime->photo_model(*tab.provider); } catch(const std::exception& e) { report(e.what()); return; }
+        model_provider_=tab.provider; model_revision_=revision; rows_dirty_=true;
     }
     if(!pending_confirm_.empty() && now>confirm_until_) { pending_confirm_.clear(); rows_dirty_=true; }   // "Confirm again" ran out
     build_page(tab,slow);
@@ -396,15 +406,13 @@ UObject* PhotoMode::icon_texture(const fs::path& file) {
 // the extension's Photo Mode does not decode them all at once.
 void PhotoMode::prefetch_icons() {
     for(const auto& d:declared_) for(const auto& t:d.tabs) {
-        if(auto it=icons_.find(t.icon.native()); it!=icons_.end() && it->second.Get()) continue;
-        try { icon_texture(t.icon); } catch(const std::exception& e) { report(e.what()); }
+        if(auto it=icons_.find(t.spec->icon.native()); it!=icons_.end() && it->second.Get()) continue;
+        try { icon_texture(t.spec->icon); } catch(const std::exception& e) { report(e.what()); }
         return;
     }
 }
 
 PhotoMode::Attach PhotoMode::attach(UObject* panel) {
-    auto declared=std::find_if(declared_.begin(),declared_.end(),[&](const Declared& d){ return d.id==session_; });
-    if(declared==declared_.end()) return Attach::failed;
     auto* strip=object_of(panel,L"BP_HBC_Menu_Options"); auto* switcher=object_of(panel,L"WS_Tabs");
     if(!strip || !switcher) { report("the Photo Mode panel layout changed; tabs not added"); return Attach::failed; }
     const auto game=children(strip);
@@ -419,7 +427,7 @@ PhotoMode::Attach PhotoMode::attach(UObject* panel) {
     attach_cost_.steps.push_back({"measure",clock_us()-measure});
     if(!(width>1)) return Attach::later;
     panel_=panel; strip_=strip; switcher_=switcher; game_tabs_=int(game.size());
-    pages_ready_=0;
+    icons_ready_=pages_ready_=0;
     const auto started=clock_us();
     wrap_strip(panel);
     attach_cost_.steps.push_back({"wrap",clock_us()-started});
@@ -428,47 +436,56 @@ PhotoMode::Attach PhotoMode::attach(UObject* panel) {
     return Attach::done;
 }
 
-// The extension's tabs go in one widget a frame (each costs a few milliseconds): first every
-// tab icon, then every page. True once all are in.
-bool PhotoMode::grow(const Declared& declared) {
+// The owner's original strip is built icons first. Once its tabs are usable, give each
+// guest a page before making its icon navigable. Create at most one widget per frame.
+void PhotoMode::grow(const Declared& declared) {
+    const bool icon=icons_ready_<declared.owner->photo_tabs.size() || icons_ready_<pages_ready_;
+    const size_t index=icon?icons_ready_:pages_ready_;
+    const auto& binding=declared.tabs[index];
+    if(index==tabs_.size()) {
+        auto& tab=tabs_.emplace_back();
+        tab.provider=binding.provider;
+        tab.section=binding.spec->section;
+    }
     const auto started=clock_us();
-    auto* strip=strip_.Get(); auto* switcher=switcher_.Get();
-    if(!strip || !switcher) return false;
-    if(tabs_.size()<declared.tabs.size()) {
-        const auto& t=declared.tabs[tabs_.size()];
-        auto* reference=children(strip).front();
-        Tab tab; tab.section=t.section;
-        auto* icon=create_widget(pc_.Get(),widget_class(tab_class));
-        for(auto name:{L"ImageStretchMode",L"SelectedColor",L"DefaultColor",L"RootSize",L"RootScale",L"HighlightY",L"bUseHighlight",L"IconSizeX",L"IconSizeY",L"HighlightColor"})
-            copy_property(icon,reference,name);
-        if(auto* texture=icon_texture(t.icon)) { object_property(icon,L"IconTexture",texture); tab.icon=texture; }
-        else report("tab icon did not load: "+path_utf8(t.icon));
-        for(auto fn:{L"UpdateImage",L"CommitSize",L"CommitScale"}) invoke(icon,fn);
-        add_horizontal(strip,icon);
-        if(auto* slot=object_of(icon,L"Slot")) if(auto* ref_slot=object_of(reference,L"Slot"))
-            invoke(slot,L"SetPadding",L"InPadding",read<std::array<float,4>>(ref_slot,L"Padding"));   // the game's own tab spacing
-        tab.tab=icon;
-        tabs_.push_back(std::move(tab));
-        rescan(strip);
-        attach_cost_.steps.push_back({"tab",clock_us()-started});
-        return false;
+    try {
+        if(icon) { add_tab_widget(tabs_[index],*binding.spec); ++icons_ready_; }
+        else { add_page_widget(tabs_[index]); ++pages_ready_; }
+        attach_cost_.steps.push_back({icon?"tab":"page",clock_us()-started});
+    } catch(const std::exception& e) {
+        if(binding.provider==declared.owner) throw;
+        deps_.runtime->disable_photo_contribution(*binding.provider,e.what());
     }
-    if(pages_ready_<tabs_.size()) {
-        auto& tab=tabs_[pages_ready_];
-        auto* page=create_widget(pc_.Get(),widget_class(page_class));
-        auto* box=object_of(page,L"BP_VBC_PhotomodeGeneral");
-        if(!box) throw std::runtime_error("the Photo Mode page layout changed; tabs not added");
-        if(pages_ready_==0) learn_row_looks(box);
-        invoke(box,L"ClearChildren");
-        add_child(switcher,page);
-        // The player's text size setting, which the game applies to its own pages when they open.
-        apply_visual_bool(page,L"RefreshUIScale",false);
-        tab.page=page; tab.box=box;
-        ++pages_ready_;
-        attach_cost_.steps.push_back({"page",clock_us()-started});
-        return false;
-    }
-    return true;
+}
+
+void PhotoMode::add_tab_widget(Tab& tab,const Manifest::PhotoTab& spec) {
+    auto* strip=strip_.Get();
+    const auto existing=children(strip);
+    if(existing.empty()) throw std::runtime_error("the Photo Mode tab strip has no reference icon");
+    auto* reference=existing.front();
+    auto* icon=create_widget(pc_.Get(),widget_class(tab_class));
+    tab.tab=icon;
+    for(auto name:{L"ImageStretchMode",L"SelectedColor",L"DefaultColor",L"RootSize",L"RootScale",L"HighlightY",L"bUseHighlight",L"IconSizeX",L"IconSizeY",L"HighlightColor"})
+        copy_property(icon,reference,name);
+    if(auto* texture=icon_texture(spec.icon)) { object_property(icon,L"IconTexture",texture); tab.icon=texture; }
+    else report("tab icon did not load: "+path_utf8(spec.icon));
+    for(auto fn:{L"UpdateImage",L"CommitSize",L"CommitScale"}) invoke(icon,fn);
+    add_horizontal(strip,icon);
+    if(auto* slot=object_of(icon,L"Slot")) if(auto* ref_slot=object_of(reference,L"Slot"))
+        invoke(slot,L"SetPadding",L"InPadding",read<std::array<float,4>>(ref_slot,L"Padding"));
+    rescan(strip);
+}
+
+void PhotoMode::add_page_widget(Tab& tab) {
+    auto* page=create_widget(pc_.Get(),widget_class(page_class));
+    tab.page=page;
+    auto* box=object_of(page,L"BP_VBC_PhotomodeGeneral");
+    if(!box) throw std::runtime_error("the Photo Mode page layout changed; tabs not added");
+    if(pages_ready_==0) learn_row_looks(box);
+    invoke(box,L"ClearChildren");
+    add_child(switcher_.Get(),page);
+    apply_visual_bool(page,L"RefreshUIScale",false);
+    tab.box=box;
 }
 
 // The game's own rows on the page CSSX clones carry per-row settings that differ from the row
@@ -545,27 +562,41 @@ void PhotoMode::detach_panel() noexcept {
     unwrap_strip();
     try { if(auto* strip=strip_.Get()) rescan(strip); } catch(...) {}
     panel_.Reset(); strip_.Reset(); switcher_.Reset(); game_tabs_=0; active_tab_=-1;
-    strip_width_=0; tab_pitch_=0; first_tab_=0; pages_ready_=0;
+    strip_width_=0; tab_pitch_=0; first_tab_=0; icons_ready_=pages_ready_=0;
 }
 
 void PhotoMode::detach() noexcept {
-    end_session();
+    end_session("detached");
     detach_player();
 }
 
 void PhotoMode::detach_player() noexcept {
     watch_confirms(nullptr,false);
-    if(activation_.live) end_session();
+    end_session("detached");
     for(auto& p:pause_rows_) remove(p.row.Get());
     try { if(auto* page=system_page_.Get()) if(auto* box=object_of(page,L"BP_VBC_System")) rescan(box); } catch(...) {}
     pause_rows_.clear(); system_page_.Reset();
     pc_.Reset(); handler_.Reset(); component_.Reset();
 }
 
-void PhotoMode::forget() noexcept {
-    pause_rows_.clear(); system_page_.Reset(); tabs_.clear(); strip_siblings_.clear();
-    panel_.Reset(); strip_.Reset(); switcher_.Reset(); strip_box_.Reset(); scroll_.Reset(); size_box_.Reset();
-    pc_.Reset(); handler_.Reset(); component_.Reset(); session_.clear(); keys_.clear(); icons_.clear(); announced_=false; pages_ready_=0;
+void PhotoMode::trim_tabs(size_t keep) {
+    auto* strip=strip_.Get();
+    const int ours=active_tab_-game_tabs_;
+    if(ours>=0 && size_t(ours)>=keep && size_t(ours)<tabs_.size() && strip) {
+        open_provider_=tabs_[size_t(ours)].provider->id;
+        open_section_=tabs_[size_t(ours)].section;
+        try { navigate(strip,keep?game_tabs_:0); } catch(const std::exception& e) { report(e.what()); }
+        active_tab_=-1;
+    }
+    for(size_t i=keep;i<tabs_.size();++i) {
+        remove(tabs_[i].tab.Get());
+        remove(tabs_[i].page.Get());
+    }
+    tabs_.resize(keep);
+    icons_ready_=std::min(icons_ready_,keep);
+    pages_ready_=std::min(pages_ready_,keep);
+    pending_confirm_.clear(); rows_dirty_=true;
+    if(strip) try { rescan(strip); } catch(const std::exception& e) { report(e.what()); }
 }
 
 // ---------------------------------------------------------------- rows
@@ -695,7 +726,7 @@ void PhotoMode::poll_keys(Tab& tab) {
 }
 
 void PhotoMode::press(Tab& tab,const std::string& key) {
-    if(tab.selected<0 || tab.selected>=int(tab.rows.size())) return;
+    if(model_provider_!=tab.provider || tab.selected<0 || tab.selected>=int(tab.rows.size())) return;
     const auto& row=tab.rows[size_t(tab.selected)];
     const auto* control=photo_control(model_,tab.section,row.id);
     if(!control) return;
@@ -709,7 +740,7 @@ void PhotoMode::press(Tab& tab,const std::string& key) {
     }
     const auto event=photo_event(*control,key,confirmed);
     if(event.is_null()) return;
-    try { deps_.runtime->event(session_,event); last_error_.clear(); }
+    try { deps_.runtime->photo_action(*tab.provider,event); last_error_.clear(); }
     catch(const std::exception& e) { report(e.what()); }
     rows_dirty_=true;   // show the result on the next tick, even if the extension did not invalidate
 }
@@ -722,9 +753,9 @@ Json PhotoMode::attach_steps() const {
 
 Json PhotoMode::diagnostics() const {
     Json tabs=Json::array();
-    for(const auto& t:tabs_) tabs.push_back({{"section",t.section},{"rows",t.rows.size()},{"selected",t.selected},{"widgets",t.option_rows.size()+t.slider_rows.size()}});
+    for(const auto& t:tabs_) tabs.push_back({{"extension",t.provider->id},{"section",t.section},{"rows",t.rows.size()},{"selected",t.selected},{"widgets",t.option_rows.size()+t.slider_rows.size()}});
     Json declared=Json::array();
-    for(const auto& d:declared_) declared.push_back({{"id",d.id},{"entry",d.entry},{"tabs",d.tabs.size()}});
+    for(const auto& d:declared_) declared.push_back({{"id",d.owner->id},{"entry",d.owner->photo_entry},{"tabs",d.tabs.size()}});
     return {{"declared",declared},{"pause_rows",pause_rows_.size()},{"session",session_},{"live",activation_.live},
             {"attached",panel_.Get()!=nullptr},{"game_tabs",game_tabs_},{"active_tab",active_tab_},{"tabs",tabs},{"attach_us",attach_steps()},{"error",last_error_}};
 }

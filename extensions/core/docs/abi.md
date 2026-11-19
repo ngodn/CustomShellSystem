@@ -52,8 +52,7 @@ Photo Mode (CSSX 1.3.2). An extension whose manifest has `"photo_mode": {"entry"
 The row opens the game's Photo Mode with the extension's menu sections added as tabs, built from the
 game's own tab, page and row widgets. Only the extension's rows that read like the game's are shown:
 no text inputs, and no label whose text is too long for the value column. The extension hears
-`{"id":"cssx.photo_mode","value":"open"|"parked"|"closed"}`. Host ops for the extension that owns the
-session, both run on the next tick:
+`{"id":"cssx.photo_mode","value":"open"|"parked"|"closed"}`. The owner can request two operations that run on the next tick.
 `photo.step_out` closes Photo Mode the way the game's own exit does and parks the session (the
 extension hears `parked`, not `closed`), so the player can move or the extension can use its own
 camera; `photo.step_in {section?}` reopens Photo Mode into the parked session, on that section's tab.
@@ -97,6 +96,54 @@ Refused: `hud.minimap.*` (CSS-specific), unknown ops, default-object writes.
 `id` is a lowercase storage namespace (letters, digits, `.`, `_`, `-`, no
 Windows reserved stems). Schema 1 manifests (`api` 1 or 2, `layout` field) are
 accepted. Paths are relative, forward slashes, inside the folder.
+
+### Adding tabs to another extension's Photo Mode (CSSX 1.3.3)
+
+In a schema 2, API 3 manifest, name the extension that owns the mode and list one to eight
+sections from your own `menu`. Bundle each PNG with your extension. Choose one target per
+extension. A manifest can declare its own mode or contribute to another.
+
+```json
+{
+  "photo_mode_contribution": {
+    "target": "example.director",
+    "min_version": "2.0.0",
+    "tabs": [{"section": "poses", "icon": "tabs/poses.png"}]
+  }
+}
+```
+
+The owner supplies the pause entry. Its tabs follow the game's tabs. Contributors follow the
+owner in extension-id order and keep their own manifest order. CSSX binds each tab to its
+provider's model and sends row events to that provider. Section and control ids may therefore
+match ones used by the owner. CSSX preserves the session when the game rebuilds its panel or
+when your menu definition reloads.
+
+Listen for `{"id":"cssx.photo_mode","value":"open"}` in your regular event callback.
+The values below apply to contributors.
+
+| Transition | Event values in delivery order |
+| --- | --- |
+| Join the owner's mode | `open` |
+| Step out to gameplay | `step_out`, `parked` |
+| Return to the parked session | `step_in`, `open` |
+| Player closes the mode | `closed` |
+| Runtime reload, player loss, parked session replaced, or contribution withdrawn | `detached` if the callback is still callable |
+
+The owner and its attached contributors can request `photo.step_out` while open and
+`photo.step_in` while parked. CSSX runs each request on the next tick. Pass `section` on
+step-in to focus one of the caller's tabs. An omitted or unknown section opens the owner's
+first tab. Restore session resources on `closed` and `detached`. Keep them across `parked`.
+
+The optional `min_version` compares the target's three unsigned decimal components numerically.
+A missing target, an unavailable mode or a version that fails the floor leaves the contribution
+idle. CSSX writes one reason to its discovery log. An older CSSX ignores this optional manifest
+field. Require CSSX 1.3.3 in your package if it depends on these tabs. The native ABI remains 3.
+
+CSSX removes a contribution for the rest of the runtime after a Photo Mode callback fails or
+takes more than 50 ms to return. A reload retries it. The owner keeps its tabs. ABI 3 calls
+native code on the game thread, so time spent in a late call affects that frame. A native
+DLL that crashes the process or never returns can still stop the game.
 
 ## Menu schema 2 (`menu.json` or the `model()` result)
 

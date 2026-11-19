@@ -1,6 +1,10 @@
 #include "manifest.hpp"
 #include <algorithm>
 #include <cmath>
+#include <array>
+#include <charconv>
+#include <optional>
+#include <string_view>
 namespace cssx {
 bool valid_namespace(const std::string& id) {
     if(id.empty() || id.size()>96 || id.front()<'a' || id.front()>'z' || id.back()=='.') return false;
@@ -29,6 +33,24 @@ fs::path contained_file(const fs::path& root,const std::string& relative) {
     if(b==target.end() || !fs::is_regular_file(target)) throw std::runtime_error("Extension file is not a regular file");
     return target;
 }
+static std::optional<std::array<unsigned,3>> photo_version(std::string_view text) {
+    std::array<unsigned,3> parts{};
+    for(size_t i=0;i<parts.size();++i) {
+        const auto dot=text.find('.');
+        if((dot==text.npos)!=(i==parts.size()-1)) return {};
+        const auto part=text.substr(0,dot);
+        const auto end=part.data()+part.size();
+        const auto parsed=std::from_chars(part.data(),end,parts[i]);
+        if(parsed.ec!=std::errc{} || parsed.ptr!=end) return {};
+        if(dot!=text.npos) text.remove_prefix(dot+1);
+    }
+    return parts;
+}
+bool photo_version_matches(const std::string& version,const std::string& minimum) {
+    if(minimum.empty()) return true;
+    const auto actual=photo_version(version), floor=photo_version(minimum);
+    return actual && floor && *actual>=*floor;
+}
 Manifest Manifest::parse(const Json& j,const fs::path& dir) {
     if(!j.is_object()) throw std::runtime_error("Extension manifest must be a JSON object");
     Manifest m;
@@ -53,10 +75,21 @@ Manifest Manifest::parse(const Json& j,const fs::path& dir) {
     if((m.kind=="native" && !native_ok) || (m.kind=="lua" && suffix!=".lua")) throw std::runtime_error("Extension entry does not match its kind");
     if(j.contains("banner")) m.banner=contained_file(dir,text(j,"banner",2048));
     if(j.contains("menu")) m.menu=contained_file(dir,text(j,"menu",2048));
-    if(j.contains("photo_mode")) {
-        const auto& photo=j.at("photo_mode");
+    const bool contribution=j.contains("photo_mode_contribution");
+    if(contribution && (!current || j.contains("photo_mode")))
+        throw std::runtime_error("A photo_mode_contribution needs schema 2/api 3 and cannot also declare photo_mode");
+    if(contribution || j.contains("photo_mode")) {
+        const auto& photo=j.at(contribution?"photo_mode_contribution":"photo_mode");
         if(!photo.is_object()) throw std::runtime_error("photo_mode must be an object");
-        m.photo_entry=text(photo,"entry",48);
+        if(contribution) {
+            m.photo_target=text(photo,"target",96);
+            if(!valid_namespace(m.photo_target) || m.photo_target=="cssx" || m.photo_target==m.id)
+                throw std::runtime_error("Invalid Photo Mode target extension id");
+            if(photo.contains("min_version")) {
+                m.photo_min_version=text(photo,"min_version",32);
+                if(!photo_version(m.photo_min_version)) throw std::runtime_error("min_version needs three decimal components");
+            }
+        } else m.photo_entry=text(photo,"entry",48);
         if(!photo.contains("tabs") || !photo["tabs"].is_array() || photo["tabs"].empty() || photo["tabs"].size()>8)
             throw std::runtime_error("photo_mode needs 1 to 8 tabs");
         if(m.menu.empty()) throw std::runtime_error("photo_mode needs the extension's menu file");
@@ -72,10 +105,15 @@ Manifest Manifest::parse(const Json& j,const fs::path& dir) {
 }
 Json Manifest::json() const {
     Json result={{"id",id},{"schema",schema},{"api",api},{"title",title},{"version",version},{"author",author},{"description",description},{"kind",kind},{"layout",layout},{"banner",path_utf8(banner)}};
-    if(!photo_entry.empty()) {
+    if(!photo_tabs.empty()) {
         Json tabs=Json::array();
         for(const auto& t:photo_tabs) tabs.push_back({{"section",t.section},{"icon",path_utf8(t.icon)}});
-        result["photo_mode"]={{"entry",photo_entry},{"tabs",std::move(tabs)}};
+        if(photo_target.empty()) result["photo_mode"]={{"entry",photo_entry},{"tabs",std::move(tabs)}};
+        else {
+            auto& contribution=result["photo_mode_contribution"];
+            contribution={{"target",photo_target},{"tabs",std::move(tabs)}};
+            if(!photo_min_version.empty()) contribution["min_version"]=photo_min_version;
+        }
     }
     return result;
 }
