@@ -65,6 +65,7 @@ public:
     Call(const Call&)=delete;
     Call& operator=(const Call&)=delete;
     FProperty* param(const wchar_t* name);
+    void set_single_bool_input(bool value);
     void* data(FProperty* p) { return bytes_.data()+p->GetOffset_Internal(); }
     template<typename T> void set(const wchar_t* name,const T& value) {
         auto* p=param(name);

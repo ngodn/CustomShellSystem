@@ -166,6 +166,13 @@ FProperty* Call::param(const wchar_t* name) {
     for(auto* p:*params_) if(p->GetName()==name) return p;
     throw std::runtime_error("Missing parameter: "+narrow(name));
 }
+void Call::set_single_bool_input(bool value) {
+    if(params_->size()!=1 || !params_->front()->IsA<FBoolProperty>() ||
+       params_->front()->HasAnyPropertyFlags(CPF_OutParm|CPF_ReturnParm|CPF_ReferenceParm))
+        throw std::runtime_error("Expected one bool input for "+narrow(function_->GetName()));
+    auto* input=static_cast<FBoolProperty*>(params_->front());
+    input->SetPropertyValue(data(input),value);
+}
 void Call::copy(const wchar_t* name,Call& other,const wchar_t* other_name) {
     auto* p=param(name); auto* q=other.param(other_name);
     if(p->GetElementSize()!=q->GetElementSize() || !p->SameType(q)) throw std::runtime_error("Parameter type mismatch: "+narrow(name));

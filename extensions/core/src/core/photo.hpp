@@ -106,6 +106,7 @@ private:
     void refresh_declared();
     void forget() noexcept;
     void report(const std::string& message);
+    void apply_visual_bool(UObject* widget,const wchar_t* function,bool value);
     // pause menu
     void pause_tick(UObject* handler);
     UObject* ensure_pause_row(PauseRow& p,UObject* box,UObject* reference,UObject* after);

@@ -63,6 +63,14 @@ void PhotoMode::report(const std::string& message) {
     if(deps_.log) deps_.log("Photo Mode: "+message);
 }
 
+void PhotoMode::apply_visual_bool(UObject* widget,const wchar_t* function,bool value) {
+    try {
+        Call call(widget,function,1);
+        call.set_single_bool_input(value);
+        call.run();
+    } catch(const std::exception& e) { report(e.what()); }
+}
+
 void PhotoMode::set_runtime(Runtime* runtime) {
     if(runtime==deps_.runtime) return;
     detach();
@@ -154,7 +162,10 @@ void PhotoMode::pause_tick(UObject* handler) {
         after=row;
         watch_confirms(row,true);
         // Available exactly when the game's own Photo Mode row is (IsPlayerInterfaceEnabled).
-        if(bool_of(row,L"bEnabled",true)!=enabled) { set_bool(row,L"bEnabled",enabled); try { invoke(row,L"UpdateEnabledState",L"bEnabled",enabled); } catch(const std::exception& e) { report(e.what()); } }
+        if(bool_of(row,L"bEnabled",true)!=enabled) {
+            set_bool(row,L"bEnabled",enabled);
+            apply_visual_bool(row,L"UpdateEnabledState",enabled);
+        }
         const auto state=read<uint8_t>(row,L"NavigableState");
         // The game's navigation confirms a row by state (keys and clicks); the accept key on the
         // selected row is read too, in case a state change is undone within the same frame.
@@ -445,7 +456,7 @@ bool PhotoMode::grow(const Declared& declared) {
         invoke(box,L"ClearChildren");
         add_child(switcher,page);
         // The player's text size setting, which the game applies to its own pages when they open.
-        try { Call scale(page,L"RefreshUIScale",1); scale.set(L"bPreview",false); scale.run(); } catch(const std::exception& e) { report(e.what()); }
+        apply_visual_bool(page,L"RefreshUIScale",false);
         tab.page=page; tab.box=box;
         ++pages_ready_;
         attach_cost_.steps.push_back({"page",clock_us()-started});
@@ -649,7 +660,8 @@ void PhotoMode::fill(Row& row,const PhotoRow& value) {
     if(row.slider && (row.fresh || row.shown.fill!=value.fill)) if(auto* bar=object_of(w,L"WBP_GenericBar")) {
         invoke(bar,L"UpdateProgressBar",L"InPercent",float(value.fill));   // WBP_Player_Bar_Generic
     }
-    if(row.fresh || row.shown.enabled!=value.enabled) invoke(w,L"ToggleButtonGrayout",L"bShouldGrayout",!value.enabled);
+    // The option and slider Blueprints spell the input differently.
+    if(row.fresh || row.shown.enabled!=value.enabled) apply_visual_bool(w,L"ToggleButtonGrayout",!value.enabled);
     row.shown=value; row.fresh=false;
 }
 
