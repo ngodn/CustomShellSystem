@@ -28,6 +28,8 @@ struct AnimationOption {
     std::vector<std::string> saved_aliases;
 };
 bool animation_choice_matches(const AnimationOption&,const std::string&);
+std::string selected_idle_choice(const std::vector<AnimationOption>& options,const std::string* saved,
+                                 const std::string& override_choice,bool legacy_feminine);
 struct AnimationSet {
     // A present empty slot explicitly disables inherited outfit options.
     std::map<AnimationSlot,std::vector<AnimationOption>> slots;

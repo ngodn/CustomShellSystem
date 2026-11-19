@@ -34,6 +34,7 @@ void Appearance::write_facial_binding(FacialBinding& binding,UObject* component,
         [&](const auto& name,float weight){facial_weight(component,name,weight);});
 }
 void Appearance::restore_expression() {
+    stop_menu_idle();
     restore_facial_performance();
     restore_facial_binding(facial_preview_);
     restore_facial_binding(facial_world_);
@@ -42,10 +43,12 @@ void Appearance::restore_expression() {
 void Appearance::push_facial_morphs(UObject* component) {
     if(facial_weights_.empty() || !component) return;
     if(facial_motion_ && component==component_.Get()) return;
+    if(menu_idle_face_ && component==menu_component_.Get()) return;
     if(component==component_.Get()) write_facial_binding(facial_world_,component,facial_weights_);
     else if(component==menu_component_.Get()) write_facial_binding(facial_preview_,component,facial_weights_);
 }
 void Appearance::set_expression(const FacialPlan& plan) {
+    if(menu_idle_face_ && facial_weights_!=plan.weights) stop_menu_idle();
     restore_facial_performance();
     facial_requested_=plan.expression;
     facial_reason_=plan.reason;

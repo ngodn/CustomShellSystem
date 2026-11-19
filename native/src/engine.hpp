@@ -18,6 +18,10 @@
 #include "replacements.hpp"
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
+#include "inventory_idle.hpp"
+#include "idle_output.hpp"
+#include "arm_stretch.hpp"
+#include "inventory_effects.hpp"
 #include "inventory_backdrop.hpp"
 #include "inventory_light.hpp"
 #include "inventory_keys.hpp"
@@ -50,6 +54,19 @@ public:
     WeakObject() = default;
     WeakObject(RC::Unreal::UObject* object);
     WeakObject& operator=(RC::Unreal::UObject* object);
+};
+class PlayerArmStretch {
+    WeakObject instance_;
+    std::array<int32_t,2> offsets_{};
+    RC::Unreal::FProperty *allow_=nullptr,*maximum_=nullptr;
+    ArmStretchLease lease_;
+    void resolve(RC::Unreal::UObject* instance);
+    ArmStretchPair read_values(RC::Unreal::UObject* instance) const;
+    void write_values(RC::Unreal::UObject* instance,const ArmStretchPair& values) const;
+public:
+    void sync(RC::Unreal::UObject* instance);
+    void release();
+    Json inspect(RC::Unreal::UObject* current) const;
 };
 class GenessaRevival {
     const CssHookHost* host_=nullptr;
@@ -706,7 +723,20 @@ public:
 };
 // Shared owner for the built-in feminine idle/walk and mod movement options.
 // The game's animation instance evaluates the selected locomotion BlendSpace.
+class PlayerIdleOutput {
+    WeakObject owner_;
+    IdleOutput output_=IdleOutput::game;
+    IdleDirectFallback fallback_;
+    int32_t source_id_=0;
+    std::byte *address_=nullptr,*original_=nullptr,*selected_=nullptr;
+public:
+    bool linked() const;
+    void report_fallback(const char* route,void (*log)(const char*)) { fallback_.report(route,log); }
+    void bind(RC::Unreal::UObject* animation,IdleOutput output);
+    void release();
+};
 class WalkOverride {
+    PlayerIdleOutput idle_output_;
     struct SameWeakObject {
         bool operator()(const WeakObject& a,const WeakObject& b) const {
             return a.ObjectIndex==b.ObjectIndex && a.ObjectSerialNumber==b.ObjectSerialNumber;
@@ -774,6 +804,8 @@ public:
     bool genessa_walk_active() const { return genessa_active_; }
     bool proxima_walk_active() const { return proxima_active_; }
     bool engaged() const { return engaged_ || custom_idle_engaged_; }
+    void report_idle_fallback(void (*log)(const char*)) { idle_output_.report_fallback("player BlendSpace",log); }
+    bool direct_idle_linked() const { return idle_output_.linked(); }
     bool custom_idle_engaged() const { return custom_idle_engaged_; }
     const std::string& reason() const { return reason_; }
     void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,
@@ -890,6 +922,14 @@ class Appearance {
         OwnedMorphs weights;
     };
     FacialBinding facial_world_, facial_preview_;
+    InventoryIdlePlayback menu_idle_;
+    PlayerIdleOutput menu_idle_output_;
+    WeakObject menu_idle_component_, menu_idle_mesh_, menu_idle_anim_, menu_idle_post_, menu_idle_clip_, menu_idle_montage_;
+    AssetLoadRoots menu_idle_roots_;
+    std::optional<FacialPerformancePose> menu_idle_face_;
+    FacialBinding menu_idle_face_binding_;
+    void release_menu_idle();
+    double start_menu_idle(const Catalog&,const InventoryIdleChoice&);
     FacialBinding facial_motion_binding_;
     std::optional<FacialPerformancePose> facial_motion_;
     uint32_t facial_motion_samples_=0;   // read-back every 60th performance sample, see OwnedMorphs::apply
@@ -937,6 +977,20 @@ class Appearance {
     ControlValue color_check_value_{};
     std::vector<WeakObject> expected_materials_;
     WeakObject menu_component_, menu_applied_;
+    struct MenuFlowSlot {
+        WeakObject source, copy, original_override;
+        inventory_effects::Driver driver=inventory_effects::Driver::none;
+        uint64_t revision=0;
+        float base=0, rate=0;
+    };
+    std::map<int,MenuFlowSlot> menu_flow_;
+    std::optional<inventory_effects::PausedClock> menu_clock_;
+    inventory_effects::PreviewFlag menu_cloth_, menu_cloth_tick_;
+    inventory_effects::ClothBlend menu_cloth_blend_;
+    void restore_menu_flow();
+    void restore_menu_effects();
+    void sync_menu_cloth(RC::Unreal::UObject* source, RC::Unreal::UObject* target,bool paused);
+    RC::Unreal::UObject* menu_flow_material(int slot, RC::Unreal::UObject* source, RC::Unreal::UObject* original_override);
     std::string menu_original_;
     std::vector<std::string> menu_original_materials_;
     std::vector<WeakObject> menu_original_live_materials_;
@@ -966,6 +1020,8 @@ class Appearance {
     bool fit_defaults_=true, fit_stale_=false;
     HandSupport hand_support_;
     NativeFootIk native_foot_ik_;
+    PlayerArmStretch arm_stretch_;
+    RC::Unreal::UObject* arm_animation() const;
     std::string fit_shell_, fit_error_;
     std::map<std::string,std::string> shell_data_;   // CharacterId -> its character data asset
     WeakObject fit_worn_data_;
@@ -1017,7 +1073,14 @@ public:
     bool repair_mesh_needed() const;
     bool ready_to_apply() const;
     std::string ready_to_apply_reason() const;
-    void sync_menu();
+    void sync_menu(bool effects_page);
+    void tick_menu_effects(bool effects_page);
+    void sync_menu_idle(const Catalog&,const InventoryIdleChoice&);
+    void report_menu_idle_fallback(void (*log)(const char*)) { menu_idle_output_.report_fallback("Inventory montage",log); }
+    Json inspect_menu_idle() const;
+    Json inspect_menu_effects() const;
+    void tick_menu_idle(uint64_t now);
+    void stop_menu_idle();
     void sync_overlay_effects();
     void sync_attachments();
     void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz
@@ -1032,6 +1095,8 @@ public:
     std::vector<std::string> take_shader_fallback_log();
     Json shader_fallback_status() const;
     void sync_hand_support();
+    void sync_arm_stretch(bool locked);
+    Json inspect_arm_stretch() const { return arm_stretch_.inspect(arm_animation()); }
     void sync_anim_switches();
     Json hand_support_status() const { return hand_support_.status(); }
     void sync_native_foot_ik(bool eligible);

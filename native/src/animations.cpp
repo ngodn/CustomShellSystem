@@ -87,6 +87,14 @@ AnimationSet AnimationSet::parse(const Json& value) {
 bool animation_choice_matches(const AnimationOption& option,const std::string& choice) {
     return option.id==choice || std::find(option.saved_aliases.begin(),option.saved_aliases.end(),choice)!=option.saved_aliases.end();
 }
+std::string selected_idle_choice(const std::vector<AnimationOption>& options,const std::string* saved,
+                                 const std::string& override_choice,bool legacy_feminine) {
+    if(!override_choice.empty() && std::any_of(options.begin(),options.end(),[&](const auto& option) {
+        return animation_choice_matches(option,override_choice);
+    })) return override_choice;
+    if(saved) return *saved;
+    return legacy_feminine?feminine_animation_id:"original";
+}
 ResolvedAnimation resolve_animation(const std::vector<AnimationOption>& options,AnimationSlot slot,
     const std::string& choice,const std::string& weapon) {
     slot=animation_source_slot(slot);

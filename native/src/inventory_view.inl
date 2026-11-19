@@ -1308,11 +1308,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const bool has_doubles=astral_shell(appearance.shell);
         const int sunlight_row=position_row+(has_doubles?4:1);
         const int material_row=sunlight_row+1;
+        const int stretch_row=material_row+1;
         const Json confirm_revival{{"action","ui_confirm"},
             {"title","Override Genessa revival?"},
             {"message","Switch to Faithful once, even when Alteration blocks revival? Purchased upgrades and progression are kept. Native revival can restore health, and the game can save the resulting form and health normally. Later transitions follow the game. Cancel changes nothing."},
             {"target",{{"action","genessa_form"},{"mode","faithful"},{"override",true}}}};
-        row_=std::clamp(row_,0,material_row);
+        row_=std::clamp(row_,0,stretch_row);
         auto mode_word=[&](const MiscRule& rule) {
             if(rule.mode=="hidden") row_look.value="Hidden";
             else if(rule.mode=="in_use") row_look.value="When in use";
@@ -1366,6 +1367,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const Json material_previous=material_action(material_mode=="auto"?"off":material_mode=="always"?"auto":"always");
         row_look.value=material_label(material_mode);
         row(material_row,"Outfit materials",material_next,material_previous,material_next);
+        const bool locked=state.arm_stretch=="locked";
+        const Json lock_arms{{"action","arm_stretch"},{"mode","locked"}};
+        const Json game_arms{{"action","arm_stretch"},{"mode","game"}};
+        const auto& stretch_toggle=locked ? game_arms : lock_arms;
+        row_look.value=locked?"Locked (default)":"Game";
+        row(stretch_row,"Arm stretch",stretch_toggle,stretch_toggle,stretch_toggle);
         if(row_<position_row) {
             const bool category_row=row_<4;
             const std::string key=category_row?defs[row_].key:"item:"+shell_items[size_t(row_-4)].key;
@@ -1401,6 +1408,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 {"reduced","Reduced noise",{{"action","sunlight_shadows"},{"mode","reduced"}}},
             },state.sunlight_shadows);
             direction_hint(true,"Choose sunlight shadows");
+        } else if(row_==stretch_row) {
+            detail("Arm stretch",locked?"Locked (default)":"Game",
+                "Locked keeps each arm at its normal length when reaching for a weapon. Game restores the player graph's stretch settings.");
+            choice_rows({{"locked","Locked (default)",lock_arms},{"game","Game",game_arms}},state.arm_stretch);
+            direction_hint(true,"Choose arm stretch");
         } else if(row_==material_row) {
             const auto status=appearance.shader_fallback_status();
             const auto verified=status.at("verified_build").get<std::string>();

@@ -55,6 +55,7 @@ struct AnimationAssetCandidate {
     bool bundled = false;
     std::string idle_blend_space{};
 };
+std::string idle_carrier_path(const LibraryAnimation& entry,const AnimationAssetCandidate& selected);
 struct AnimationLibraryMatch {
     const LibraryAnimation* entry = nullptr;
     std::vector<AnimationAssetCandidate> candidates;

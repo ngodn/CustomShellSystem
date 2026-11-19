@@ -305,14 +305,16 @@ struct Core {
                         if(shared.matched) movement[i]=shared.asset;
                     }
                     const auto& idles=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
-                    // The override only where this look has that idle; otherwise its own choice stands.
-                    const bool overridden=!vista_rest && !idle_override.empty() &&
-                        std::any_of(idles.begin(),idles.end(),[&](const auto& option){return animation_choice_matches(option,idle_override);});
-                    const auto choice=overridden?idle_override:state.animation_choices.get(selection.outfit,selection.variant,idle_slot);
+                    const auto choice=vista_rest?state.animation_choices.get(selection.outfit,selection.variant,idle_slot):
+                                                selected_idle_choice(selection);
                     custom_idle=resolve_animation(idles,AnimationSlot::Idle,choice);
                     const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
                         selection.outfit,selection.variant,AnimationSlot::Idle,choice,&animation_trace);
-                    if(shared.matched) { custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space; }
+                    if(shared.matched) {
+                        custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;
+                        if(shared.asset.empty() && appearance.shared_animation_available(AnimationSlot::Idle,choice)==false)
+                            idle_unavailable(choice,shared.reason);
+                    }
                 }
             }
             if(!selected_animations && state.enabled && !apply_pending && !restore_pending &&
@@ -326,7 +328,12 @@ struct Core {
                 }
                 const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
                     "","",AnimationSlot::Idle,state.animation_choices.get("","",idle_slot),&animation_trace);
-                if(shared.matched) {custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;}
+                if(shared.matched) {
+                    custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;
+                    const auto choice=state.animation_choices.get("","",idle_slot);
+                    if(shared.asset.empty() && appearance.shared_animation_available(AnimationSlot::Idle,choice)==false)
+                        idle_unavailable(choice,shared.reason);
+                }
             }
             if(!selected_animations) appearance.clear_shared_animations();
             bool vista_feminine=false;
@@ -345,9 +352,14 @@ struct Core {
                 shared_animation_revision=appearance.shared_animation_revision();
                 ui_refresh=true;status_dirty=true;
             }
-            appearance.sync_walk(vista_feminine || (!vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Idle)),
+            bool feminine= !vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Idle);
+            if(feminine && !inventory_idle_skeleton(true,native_human_idle_skeleton,appearance.animation_skeleton())) {
+                idle_unavailable(feminine_animation_id,"Incompatible idle skeleton");feminine=false;
+            }
+            appearance.sync_walk(vista_feminine || feminine,
                                  !vista_rest && use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
                                  custom_idle.asset,custom_idle.hide_weapons,idle_carrier,vista_rest);
+            appearance.walk.report_idle_fallback(host.log);
             if(animation_trace && traced_idle_engaged!=appearance.walk.custom_idle_engaged()) {
                 traced_idle_engaged=appearance.walk.custom_idle_engaged();
                 animation_trace.write(std::string("body idle ")+(traced_idle_engaged?"active: ":"released: ")+custom_idle.asset);
@@ -364,12 +376,57 @@ struct Core {
         walk_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
         ++walk_updates;walk_total_ms+=walk_ms;walk_max_ms=std::max(walk_max_ms,walk_ms);
     }
+    bool menu_effects_active() const {
+        return inventory.active() && !inventory_failed && state.enabled && !restore_pending && !(apply_pending && !custom_only);
+    }
+    uint64_t arm_stretch_retry_=0;
+    std::string arm_stretch_error_;
+    std::string idle_warning_;
+    void idle_unavailable(const std::string& choice,const std::string& reason) {
+        const auto message="Idle "+choice+" unavailable for "+appearance.performance_mesh()+": "+reason;
+        if(idle_warning_!=message) { host.log(message.c_str());idle_warning_=message; }
+    }
     void sync_menu_safely() {
         if(GetTickCount64()<maintenance_after) return;
-        try { appearance.sync_menu(); maintenance_error.clear(); }
+        try { appearance.sync_menu(menu_effects_active()); maintenance_error.clear(); }
         catch(const std::exception& error) {
             if(maintenance_error!=error.what()) { maintenance_error=error.what(); host.log(("Menu preview deferred: "+maintenance_error).c_str()); }
             maintenance_after=GetTickCount64()+1000;
+        }
+    }
+
+    uint64_t menu_idle_after=0;
+    void update_menu_idle(uint64_t now) {
+        try { appearance.tick_menu_effects(menu_effects_active()); }
+        catch(const std::exception& error) {
+            if(maintenance_error!=error.what()) { maintenance_error=error.what();host.log(error.what()); }
+        }
+        if(!inventory.active() || inventory_failed || !state.enabled || restore_pending || (apply_pending && !custom_only)) {
+            appearance.stop_menu_idle();menu_idle_after=0;return;
+        }
+        if(now>=menu_idle_after) {
+            menu_idle_after=now+150;
+            const auto it=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
+            const bool worn=it!=state.selections.end() && applied_id==it->second.outfit+"/"+it->second.variant;
+            const bool bare=it==state.selections.end() || !catalog.find(it->second.outfit,it->second.variant);
+            if(!worn && !bare) { appearance.stop_menu_idle();return; }
+            const Selection native{};
+            const auto& selection=worn ? it->second : native;
+            const auto choice=selected_idle_choice(selection);
+            try {
+                appearance.sync_menu_idle(catalog,{selection.outfit,selection.variant,choice,selection.custom.expression,
+                                                  animation_catalog_generation});
+                appearance.report_menu_idle_fallback(host.log);
+            } catch(const std::exception& error) {
+                host.log(("Inventory idle "+choice+" unavailable for "+applied_id+": "+error.what()).c_str());
+                return;
+            }
+        }
+        try { appearance.tick_menu_idle(now); }
+        catch(const std::exception& error) {
+            appearance.stop_menu_idle();
+            menu_idle_after=now+1000;
+            host.log(("Inventory idle stopped: "+std::string(error.what())).c_str());
         }
     }
 
@@ -462,12 +519,14 @@ struct Core {
         return {appearance.player_revision,appearance.appearance_revision,animation_catalog_generation,
             worn?selected->second.outfit:"",worn?selected->second.variant:"",appearance.performance_mesh()};
     }
+    std::string selected_idle_choice(const Selection& selection) const {
+        const auto& options=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
+        return css::selected_idle_choice(options,state.animation_choices.find(selection.outfit,selection.variant,AnimationSlot::Idle),
+                                         idle_override,state.walk_animation=="feminine");
+    }
     std::string idle_identity(const Selection& selection) const {
         const auto& options=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
-        auto choice=state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle);
-        if(!idle_override.empty() && std::any_of(options.begin(),options.end(),[&](const auto& option) {
-            return animation_choice_matches(option,idle_override);
-        })) choice=idle_override;
+        const auto choice=selected_idle_choice(selection);
         const auto resolved=resolve_animation(options,AnimationSlot::Idle,choice);
         return resolved.option ? (resolved.option->library_identity.empty()?resolved.option->id:
                                   resolved.option->library_identity) : std::string{};
@@ -932,6 +991,12 @@ struct Core {
             if(choice!=(mode=="css")) { choice=mode=="css";dirty=true; }
             ui_refresh=true;
         }
+        else if(action=="arm_stretch") {
+            const auto mode=command.at("mode").get<std::string>();
+            if(mode!="locked" && mode!="game") throw std::runtime_error("Unknown arm stretch mode");
+            if(state.arm_stretch!=mode) { state.arm_stretch=mode; arm_stretch_retry_=0; dirty=true; }
+            ui_refresh=true;
+        }
         else if(action=="shader_fallback") {
             const auto mode=command.at("mode").get<std::string>();
             if(!shader_fallback::parse_mode(mode)) throw std::runtime_error("Unknown outfit material mode");
@@ -1179,7 +1244,7 @@ struct Core {
 #ifdef CSS_INVENTORY_DEV
         sample_motion(now);
 #endif
-        measured(FrameProfile::maintenance,[&] { sync_overlays_safely(now); maintain(now); sync_genessa_form(now); });
+        measured(FrameProfile::maintenance,[&] { sync_overlays_safely(now); maintain(now); update_menu_idle(now); sync_genessa_form(now); });
         measured(FrameProfile::attachments,[&] { sync_attachments_safely(now); });
         measured(FrameProfile::seals,[&] { sync_seals_safely(now); });
         measured(FrameProfile::walk,[&] {
@@ -1199,6 +1264,16 @@ struct Core {
         measured(FrameProfile::attachments,[&] { sync_hand_support_safely(now); sync_native_foot_ik_safely(now); sync_anim_switches_safely(now); });
         if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
         measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
+        if(now>=arm_stretch_retry_) {
+            try {
+                appearance.sync_arm_stretch(state.arm_stretch=="locked");
+                arm_stretch_error_.clear();
+            } catch(const std::exception& error) {
+                if(arm_stretch_error_!=error.what()) host.log((std::string("Arm stretch: ")+error.what()).c_str());
+                arm_stretch_error_=error.what();
+                arm_stretch_retry_=now+1000;
+            }
+        }
         if(!restore_performance_face && !apply_pending && !restore_pending && !appearance.performance.active())
             performance_face_mesh_roots.release();
         measured(FrameProfile::astral,[&] {
@@ -1395,8 +1470,10 @@ struct Core {
             forget_current = false;
             dirty = true; ui_refresh = true; report("Original appearance restored.");
         }
-        if (state.enabled || apply_pending) {
+        // Arm length is a player setting even on a fresh install with no wardrobe selection.
+        if(state.enabled || apply_pending || state.arm_stretch=="locked" || inspect_pending)
             appearance.player(engine);
+        if (state.enabled || apply_pending) {
             // Player tags come in two families, each per body: a worn shell
             // (CharacterId.Player.Shell.<Name>) and the bare Harbinger it severs into
             // on death (CharacterId.Player.Darkform.<Name>). Remember the living shell
@@ -1597,6 +1674,12 @@ struct Core {
         }
         if(inspect_pending) {
             auto result=appearance.transition_state(engine); result["id"]=last_request; result["inventory"]=inventory.diagnostics();
+            result["arm_stretch"]=appearance.inspect_arm_stretch();
+            result["arm_stretch"]["mode"]=state.arm_stretch;
+            result["arm_stretch"]["error"]=arm_stretch_error_;
+            result["world_idle_direct"]=appearance.walk.direct_idle_linked();
+            result["inventory_idle"]=appearance.inspect_menu_idle();
+            result["inventory_effects"]=appearance.inspect_menu_effects();
             // The per-item MISC report walks every attached mesh; it is on demand, never on a timer.
             try { result["misc_items"]=appearance.misc_report(); } catch(const std::exception& error) { result["misc_items"]=error.what(); }
             write_runtime_json(root / "runtime/inspection.json",result); inspect_pending=false;
@@ -1753,6 +1836,7 @@ bool stop(void* ptr) noexcept {
         if(!core.astral.clear()) throw std::runtime_error("Genessa double visuals could not be released");
         core.inventory.detach();
         core.appearance.performance.interrupt("CSS stopped");
+        core.appearance.sync_arm_stretch(false);
         core.appearance.walk.release();
         core.appearance.clear_shared_animations();
         core.appearance.restore_misc();

@@ -1992,3 +1992,11 @@ The game is closed. Compatibility and cloth updates are ready within the
 documented live scope. FPS is not claimed fully fixed. The already-published
 Cheat Menu 1.1.2 is installed and needs no new version from the tested results.
 No public upload was performed. `dist/DELIVERY.md` is the current release list.
+
+## CSS 1.0.12 release gate, third-party and native-shell idles
+
+Verify the direct idle output on Long Hair Proxima and other native-human looks before release. Compare the eight arm bones with Vanilla 0.2.0 on the same source clip. Cover all Shared poses and dances, Feminine, the original shell, NPC and non-CSS replacement rows, Inventory, and the transition back to walk, jog and sprint. The per-idle measurements and live acceptance matrix are in the preview-idle lane report.
+
+## CSS 1.0.12 release gate, weapon arm stretch
+
+Misc > Compatibility > Arm stretch defaults to Locked for both arms on the player graph. Compare Locked and Game on stock Genessa, stock Proxima and a CSS outfit during ranged aim and melee. Record both segment lengths and repeat after a shell swap. The preview-idle lane report contains the cooked node values, solver measurements and live checklist.

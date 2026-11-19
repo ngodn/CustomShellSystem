@@ -611,6 +611,7 @@ static bool gameplay_input_blocked(UObject* pawn) {
     return values.Num()!=0;
 }
 #include "walk_override.inl"
+#include "arm_stretch.inl"
 #include "misc_visibility.inl"
 UObject* Appearance::player(void* engine) {
     shell.clear(); pawn_name.clear(); current_mesh.clear();
@@ -651,7 +652,10 @@ UObject* Appearance::player(void* engine) {
     }
     return pawn;
 }
+#include "inventory_effects.inl"
 void Appearance::restore_menu() {
+    restore_menu_effects();
+    if(menu_component_.Get() && menu_component_.Get()==menu_idle_component_.Get()) stop_menu_idle();
     restore_visual_scale(true);
     menu_morph_deformer_.release();
     restore_facial_binding(facial_preview_);
@@ -687,7 +691,7 @@ void Appearance::restore_menu() {
 void Appearance::sync_overlay_effects() {
     if(component_.Get()==observed_component_.Get()) overlay_controls_.sync();
 }
-void Appearance::sync_menu() {
+void Appearance::sync_menu(bool effects_page) {
     auto* source=component_.Get();
     if(!source || source!=observed_component_.Get() || mesh_asset(source)!=applied_.Get()) { restore_menu(); return; }
     world_morph_deformer_.sync(source,driven_morphs_);
@@ -699,7 +703,7 @@ void Appearance::sync_menu() {
     // Other shell-selection previews belong to the game until that shell is worn.
     if(!display || display==player || read<FName>(display,L"CharacterId")!=read<FName>(player,L"CharacterId")) { restore_menu(); return; }
     auto* target=read<UObject*>(display,L"Mesh");
-    if(!target) { restore_menu(); return; }
+    if(!target || target==source) { restore_menu(); return; }
     auto* before=mesh_asset(target); auto* desired=applied_.Get();
     if(!before || !desired || !is_compatible_skeleton(before, desired)) { restore_menu(); return; }
     if(menu_component_.Get()!=target || before!=menu_applied_.Get()) {
@@ -712,14 +716,38 @@ void Appearance::sync_menu() {
         menu_component_=target;
     }
     menu_applied_=desired;
-    if(before!=desired) set_mesh(target,desired);
+    if(before!=desired) { restore_menu_effects();set_mesh(target,desired); }
     apply_visual_scale(target,visual_scale_,true);
     sync_weapon_scales(true);
-    auto values=overrides(source), previous=overrides(target);
-    for(int i=0;i<std::max(values.Num(),previous.Num());++i) {
+    bool paused=false;
+    if(effects_page) {
+        Call pause(find(L"/Script/Engine.Default__GameplayStatics"),L"IsGamePaused",2);
+        pause.set(L"WorldContextObject",target);pause.run();paused=pause.get<bool>();
+    }
+    if(paused) {
+        if(!menu_clock_) {
+            menu_clock_=inventory_effects::PausedClock{menu_seconds(target,L"GetUnpausedTimeSeconds"),
+                                                       menu_seconds(target,L"GetTimeSeconds")};
+        }
+    } else restore_menu_flow();
+    if(effects_page) sync_menu_cloth(source,target,paused);
+    else restore_menu_effects();
+    // Snapshot before SetMaterial can grow the preview's override array.
+    auto values=material_objects(source), previous=material_objects(target);
+    int count=static_cast<int>(std::max(values.size(),previous.size()));
+    if(paused) {
+        Call slots(source,L"GetNumMaterials",1);slots.run();
+        count=std::max(count,slots.get<int32_t>());
+    }
+    if(count>512) throw std::runtime_error("Invalid menu material count");
+    for(int i=0;i<count;++i) {
         UObject* value{}; UObject* current{};
-        if(i<values.Num()) std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
-        if(i<previous.Num()) std::memcpy(&current,previous.GetRawPtr(i),sizeof(current));
+        if(size_t(i)<values.size()) value=values[i].Get();
+        if(size_t(i)<previous.size()) current=previous[i].Get();
+        if(paused) {
+            auto* effective=value ? value : menu_material_at(source,i);
+            value=menu_flow_material(i,effective,value);
+        }
         if(current!=value) material(target,i,value);
     }
     menu_overlay_controls_.share(target,desired,overlay_controls_);
@@ -1443,6 +1471,7 @@ void Appearance::set_ground_offset(double offset) {
         throw std::runtime_error("World mesh height read-back failed");
 }
 bool Appearance::restore() {
+    stop_menu_idle();
     ++appearance_revision;
     hand_support_.release();
     try {native_foot_ik_.release();} catch(const std::exception&) {}   // never blocks the outfit restore; status says "restore failed"
@@ -3036,6 +3065,7 @@ bool Appearance::transition_active() const {
 
 #include "genessa_revival.inl"
 #include "performance_player.inl"
+#include "inventory_idle.inl"
 
 }
 

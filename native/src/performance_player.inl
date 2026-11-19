@@ -141,7 +141,7 @@ void performance_override(UObject* component,UObject* type,bool reinitialize=tru
     if(read<UObject*>(component,L"OverridePostProcessAnimBP")!=type)
         throw std::runtime_error("Performance override did not restore its owner");
 }
-void performance_montage_blend(Call& call,const wchar_t* parameter) {
+void performance_montage_blend(Call& call,const wchar_t* parameter,float duration) {
     auto* outer=call.param(parameter);
     if(!outer->IsA<FStructProperty>()) throw std::runtime_error("Montage blend settings are not a struct");
     auto member=[](FProperty* parent,const wchar_t* name) {
@@ -158,7 +158,6 @@ void performance_montage_blend(Call& call,const wchar_t* parameter) {
     auto* time=member(blend,L"BlendTime");
     if(!time->IsA<FFloatProperty>() || time->GetElementSize()!=sizeof(float))
         throw std::runtime_error("Montage blend time is unsupported");
-    const float duration=static_cast<float>(PerformanceClock::blend_seconds);
     time->CopyCompleteValue(data+time->GetOffset_Internal(),&duration);
     auto* option=member(blend,L"BlendOption");
     auto* enumeration=option->IsA<FEnumProperty>()?static_cast<FEnumProperty*>(option)->GetEnum().Get():
@@ -327,10 +326,7 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
         release();throw;
     }
 }
-void PerformancePlayer::bind_native_montage() {
-    auto* animation=animation_.Get();auto* sequence=sequence_.Get();
-    if(!animation || !sequence || !native_montage_)
-        throw std::runtime_error("Native performance has no owner");
+static UObject* create_positioned_montage(UObject* sequence,float blend_seconds) {
     auto* notifies=sequence->GetPropertyByNameInChain(L"Notifies");
     if(!notifies || !notifies->IsA<FArrayProperty>() || notifies->GetArrayDim()!=1 ||
        notifies->GetOffset_Internal()<0 || notifies->GetElementSize()<=0 ||
@@ -343,27 +339,36 @@ void PerformancePlayer::bind_native_montage() {
         L"CreateSlotAnimationAsDynamicMontage_WithBlendSettings",8);
     create.set(L"Asset",sequence);
     create.set(L"SlotNodeName",FName(L"DefaultSlot"));
-    performance_montage_blend(create,L"BlendInSettings");
-    performance_montage_blend(create,L"BlendOutSettings");
+    performance_montage_blend(create,L"BlendInSettings",blend_seconds);
+    performance_montage_blend(create,L"BlendOutSettings",blend_seconds);
     create.set(L"InPlayRate",1.f);create.set(L"LoopCount",int32_t{1});
     create.set(L"InBlendOutTriggerTime",-1.f);create.run();
     auto* montage=create.get<UObject*>();
     if(!montage || !montage->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimMontage"))) ||
        read<UObject*>(montage,L"Skeleton")!=read<UObject*>(sequence,L"Skeleton"))
         throw std::runtime_error("Could not create the native performance montage");
-    montage_=montage;retained_.keep(montage);
     auto* auto_out=field(montage,L"bEnableAutoBlendOut",sizeof(bool));
     if(!auto_out->IsA<FBoolProperty>()) throw std::runtime_error("Montage automatic blend property changed");
     static_cast<FBoolProperty*>(auto_out)->SetPropertyValueInContainer(montage,false);
+    return montage;
+}
+static void play_positioned_montage(UObject* animation,UObject* montage,float position) {
     // The shared clock supplies position. This transient montage owns only its
     // blend and slot; it neither advances twice nor stops gameplay montages.
     Call play(animation,L"Montage_Play",6);
     play.set(L"MontageToPlay",montage);play.set(L"InPlayRate",0.f);
     play.set(L"ReturnValueType",uint8_t{0});
-    play.set(L"InTimeToStartMontageAt",static_cast<float>(session_.clock().position()));
+    play.set(L"InTimeToStartMontageAt",position);
     play.set(L"bStopAllMontages",false);play.run();
     if(!std::isfinite(play.get<float>()) || play.get<float>()<=0.f)
         throw std::runtime_error("Native performance montage did not start");
+}
+void PerformancePlayer::bind_native_montage() {
+    auto* animation=animation_.Get();auto* sequence=sequence_.Get();
+    if(!animation || !sequence || !native_montage_) throw std::runtime_error("Native performance has no owner");
+    auto* montage=create_positioned_montage(sequence,static_cast<float>(PerformanceClock::blend_seconds));
+    montage_=montage;retained_.keep(montage);
+    play_positioned_montage(animation,montage,static_cast<float>(session_.clock().position()));
 }
 bool PerformancePlayer::intact() const {
     auto* pawn=pawn_.Get();auto* component=component_.Get();auto* post=post_.Get();
