@@ -11,7 +11,10 @@ namespace {
 enum class Type { object, byte, margin };
 enum class Direction { input, result, output, reference };
 struct Field { std::wstring name; Type type; Direction direction; };
+struct Size { double x,y; };
 struct Widget {
+    std::string text;
+    double cached_width=-1;
     std::map<std::wstring,std::vector<Field>> functions;
     Widget* child=nullptr;
     Widget* slot=nullptr;
@@ -59,13 +62,26 @@ struct Frame {
         if(f.type!=Type::margin || f.direction!=Direction::input) throw std::runtime_error("wrong margin input");
         padding=value;
     }
+    void set_single_bool_input(bool value) {
+        if(fields.size()!=1 || fields.front().direction!=Direction::input) throw std::runtime_error("wrong wrap input");
+        setting=value;
+    }
     template<class T> T get(const wchar_t* name=L"ReturnValue") const {
-        const auto& f=named(name);
-        if(!ran || f.type!=Type::object || f.direction!=Direction::result) throw std::runtime_error("wrong slot result");
-        return target->slot;
+        if constexpr(std::is_same_v<T,Size>) {
+            if(!ran || fn!=L"GetDesiredSize" || target->cached_width<0) throw std::runtime_error("width read before prepass");
+            return {target->cached_width,35};
+        } else {
+            const auto& f=named(name);
+            if(!ran || f.type!=Type::object || f.direction!=Direction::result) throw std::runtime_error("wrong slot result");
+            return target->slot;
+        }
     }
     void run() {
         if(fn==L"SetContent" || fn==L"AddChild" || fn==L"AddChildToHorizontalBox") target->child=child;
+        else if(fn==L"ForceLayoutPrepass") {
+            target->cached_width=0;
+            for(unsigned char c:target->text) if((c&0xc0)!=0x80) target->cached_width+=c=='.'?2:c=='i'?1:6;
+        }
         else if(fn==L"SetPadding") target->padding=padding;
         else target->settings[fn]=setting;
         ran=true;
@@ -77,11 +93,40 @@ void check_layout(std::wstring child_name,std::wstring result_name,std::wstring 
     column.slot=&slot;
     column.functions[L"SetContent"]={{result_name,Type::object,Direction::result},{child_name,Type::object,Direction::input}};
     for(auto fn:{L"SetHorizontalAlignment",L"SetVerticalAlignment"}) slot.functions[fn]={{option_name,Type::byte,Direction::input}};
-    for(auto fn:{L"SetTextOverflowPolicy",L"SetClipping"}) value.functions[fn]={{option_name,Type::byte,Direction::input}};
+    for(auto fn:{L"SetTextOverflowPolicy",L"SetClipping",L"SetAutoWrapText"}) value.functions[fn]={{option_name,Type::byte,Direction::input}};
     cssx::engine::fit_information_value<Frame>(&column,&value);
+    check(value.settings.at(L"SetAutoWrapText")==0,"word wrapping must be disabled");
+    value.functions[L"ForceLayoutPrepass"]={};
+    value.functions[L"GetDesiredSize"]={{L"ReturnValue",Type::object,Direction::result}};
+    auto write=[](Widget* block,const std::string& text){ block->text=text; block->cached_width=-1; };
+    auto label=cssx::engine::display_information<Frame,Size>(column.child,"My five-second camera arc.",70,write);
+    check(label.first==value.text && value.text.ends_with("...") && label.second==value.cached_width && label.second<70,
+          "the attached native text block must keep the final fitted run after every width probe");
     check(column.child==&value,"SetContent did not receive the value widget");
     check(slot.settings.at(L"SetHorizontalAlignment")==2 && slot.settings.at(L"SetVerticalAlignment")==2,"wrong slot alignment");
     check(value.settings.at(L"SetTextOverflowPolicy")==1 && value.settings.at(L"SetClipping")==1,"wrong overflow or clipping");
+}
+void check_measured_information() {
+    // Proportional mock font. The measure callback receives the combined run including all dots.
+    auto measure=[](const std::string& text) {
+        double width=0;
+        for(unsigned char c:text) if((c&0xc0)!=0x80) width+=c=='.'?2:c=='i'?1:6;
+        return width;
+    };
+    using cssx::engine::fit_information_text;
+    check(fit_information_text("iiiiiiii",12,measure)=="iiiiiiii","narrow glyphs fit");
+    check(fit_information_text("MMMMMMMM",20,measure)=="MM...","dots must fit inside the column");
+    check(fit_information_text("界界界界",14,measure)=="界...","UTF-8 prefix must end on a character boundary");
+    check(fit_information_text("ii\nMMMM",20,measure)=="ii...","second line needs a visible marker");
+    size_t largest=0;
+    auto bounded=[&](const std::string& text){ largest=std::max(largest,text.size()); return measure(text); };
+    check(fit_information_text(std::string(100000,'M'),20,bounded)=="MM..." && largest<=131,
+          "long labels should only shape the beginning of the line");
+    for(auto text:{"My five-second camera arc.","Cycles every palette, then your own look"}) {
+        auto displayed=fit_information_text(text,70,measure);
+        check(displayed.ends_with("...") && measure(displayed)<70,"live regression must display all three dots");
+        check(fit_information_text(text,500,measure)==text,"restore complete label when the column grows");
+    }
 }
 void check_invalid_child(std::vector<Field> fields) {
     Widget parent{},child{};
@@ -116,5 +161,6 @@ int main() {
         check_invalid_child({child,{L"ReturnValue",Type::object,Direction::output}});
         check_invalid_child({child,{L"other",Type::object,Direction::input}});
         check_tab_calls();
+        check_measured_information();
     } catch(const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }

@@ -142,6 +142,30 @@ UObject* Bridge::resolve(const Json& value) {
     if(!result) throw std::runtime_error("Object handle expired");
     return result;
 }
+std::optional<bool> Bridge::component_pause_tick(uint64_t id,std::optional<bool> value) {
+    auto it=objects_.find(id);
+    auto* component=it==objects_.end()?nullptr:it->second.weak.Get();
+    if(!component) return std::nullopt;
+    auto* component_class=static_cast<UClass*>(find_cached(L"/Script/Engine.ActorComponent"));
+    if(!component->IsA(component_class) || component->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject)))
+        throw std::runtime_error("Expected a live actor component instance");
+    auto* tick=property_in(component_class,L"PrimaryComponentTick");
+    auto* base=static_cast<UStruct*>(find_cached(L"/Script/Engine.TickFunction"));
+    auto* structure=tick && tick->IsA<FStructProperty>()?static_cast<FStructProperty*>(tick)->GetStruct().Get():nullptr;
+    if(!structure || structure!=find_cached(L"/Script/Engine.ActorComponentTickFunction") || structure->GetSuperStruct()!=base ||
+       tick->GetArrayDim()!=1 || tick->GetOffset_Internal()<0 || tick->GetElementSize()<=0 ||
+       tick->GetOffset_Internal()>component->GetClassPrivate()->GetPropertiesSize()-tick->GetElementSize())
+        throw std::runtime_error("Unexpected primary component tick layout");
+    auto* field=property_in(base,L"bTickEvenWhenPaused");
+    if(!field || !field->IsA<FBoolProperty>() || field->GetArrayDim()!=1 ||
+       field->GetElementSize()!=1 || field->GetOffset_Internal()<0 || field->GetOffset_Internal()>=tick->GetElementSize())
+        throw std::runtime_error("Missing reflected pause tick bit");
+    auto* flag=static_cast<FBoolProperty*>(field);
+    auto* data=reinterpret_cast<std::byte*>(component)+tick->GetOffset_Internal();
+    bool previous=flag->GetPropertyValueInContainer(data);
+    if(value && previous!=*value) flag->SetPropertyValueInContainer(data,*value);
+    return previous;
+}
 Json Bridge::decode(FProperty* p,void* data,unsigned depth) {
     if(depth>12 || p->GetArrayDim()!=1 || p->GetElementSize()<0) throw std::runtime_error("Unsupported property shape");
     if(p->IsA<FEnumProperty>()) {

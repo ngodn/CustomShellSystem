@@ -10,6 +10,7 @@
 #include "cssx/hud.h"
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace cssx {
@@ -19,6 +20,8 @@ struct HostServices {
     const CssxHudApi* hud=nullptr;
     // Optional: sink for framework log lines (defaults to the storage log).
     std::function<void(const std::string& level,const std::string& message,const Json& fields)> log;
+    // Returns the previous bit, or nullopt if the weak component expired.
+    std::function<std::optional<bool>(uint64_t,std::optional<bool>)> component_pause_tick;
 };
 struct ExtensionCost {
     uint64_t tick_calls=0, tick_us=0, render_calls=0, render_us=0, model_calls=0, model_us=0, event_calls=0, event_us=0, requests=0;
@@ -46,6 +49,7 @@ public:
     // CSSX's own notice to one extension, outside its menu controls: {"id":"cssx.<name>","value":...}.
     // Since 1.3.2: "cssx.photo_mode" with "open" / "closed" for extensions that declare photo_mode.
     void host_event(const std::string& id,const std::string& name,const Json& value);
+    void world_changed();
     void tick(double seconds);
     void render(const CssxFrame& frame);
     bool needs_frame() const;

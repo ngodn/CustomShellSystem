@@ -1,4 +1,5 @@
 #include "extensions.hpp"
+#include <exception>
 #include "controls.hpp"
 #include <algorithm>
 #include <chrono>
@@ -123,6 +124,10 @@ struct Runtime::Entry {
     double status_age=1e9;
     bool suspended=false, stopped=false, dirty=true;
     bool used_hooks=false;
+    bool photo_open=false;
+    std::map<uint64_t,bool> original_pause_ticks;
+    Json pause_tick(const std::string& op,uint64_t target);
+    void leave_pause_scope();
     bool photo_disabled=false;
     template<class Callback> void photo_call(Callback&& callback);
     unsigned requests=0;
@@ -194,10 +199,55 @@ int lua_invoke(lua_State* l) {
     to_lua(l,*call->argument);lua_call(l,1,1);return 1;
 }
 }
+Json Runtime::Entry::pause_tick(const std::string& op,uint64_t target) {
+    auto& exchange=runtime->services_.component_pause_tick;
+    if(!exchange) throw std::runtime_error("Component tick access unavailable");
+    auto held=original_pause_ticks.find(target);
+    if(op=="component.pause_tick.release") {
+        if(held==original_pause_ticks.end()) return false;
+        exchange(target,held->second);
+        original_pause_ticks.erase(held);
+        return true;
+    }
+    if(op=="component.pause_tick.read") {
+        if(auto current=exchange(target,std::nullopt)) return *current;
+        throw std::runtime_error("Component handle expired");
+    }
+    if(op!="component.pause_tick.acquire") throw std::runtime_error("Unknown component pause tick operation");
+    if(!photo_open || suspended || stopped) throw std::runtime_error("Component override requires an open Photo Mode session");
+    if(held!=original_pause_ticks.end()) {
+        if(exchange(target,std::nullopt)) return held->second;
+        original_pause_ticks.erase(held);
+        throw std::runtime_error("Component handle expired");
+    }
+    for(const auto& other:runtime->entries_) if(other->original_pause_ticks.contains(target))
+        throw std::runtime_error("Component tick override belongs to another extension");
+    auto entry=original_pause_ticks.emplace(target,false).first;
+    try {
+        auto previous=exchange(target,true);
+        if(!previous) throw std::runtime_error("Component handle expired");
+        entry->second=*previous;
+    } catch(...) { original_pause_ticks.erase(entry); throw; }
+    return entry->second;
+}
+
+void Runtime::Entry::leave_pause_scope() {
+    photo_open=false;
+    std::exception_ptr failure;
+    for(auto it=original_pause_ticks.begin();it!=original_pause_ticks.end();) {
+        try {
+            runtime->services_.component_pause_tick(it->first,it->second);
+            it=original_pause_ticks.erase(it);
+        } catch(...) { failure=std::current_exception(); ++it; }
+    }
+    if(failure) std::rethrow_exception(failure);
+}
+
 Json Runtime::Entry::service(const Json& j) {
     if(++requests>4096) throw std::runtime_error("Extension host request budget exceeded");
     ++cost.requests;
     const auto op=j.at("op").get<std::string>();
+    if(op.starts_with("component.pause_tick.")) return pause_tick(op,j.at("target").at("$object").get<uint64_t>());
     const auto state=runtime->root()/"state"/utf8_path(manifest.id+".json");
     if(op=="state.load") {
         if(!fs::exists(state)) { atomic_json(state,Json::object());return Json::object(); }
@@ -345,6 +395,7 @@ void Runtime::Entry::render(const CssxFrame* frame) {
 bool Runtime::Entry::stop() {
     if(stopped) return true;requests=0;
     try {
+        leave_pause_scope();
         if(used_hooks && runtime->services_.request) {runtime->services_.request({{"op","hooks.clear"},{"extension",manifest.id}});used_hooks=false;}
         if(lua && table!=LUA_NOREF) { auto result=invoke_lua("stop",nullptr,true);if(result.is_boolean() && !result.get<bool>()) return false; }
         if(api && instance && !api->stop(instance)) return false;
@@ -439,6 +490,7 @@ void Runtime::disable_photo_contribution(const Manifest& provider,const std::str
     if(provider.photo_target.empty() || entry.photo_disabled) return;
     entry.photo_disabled=true;
     ++photo_revision_;
+    entry.leave_pause_scope();
     log("cssx","warning","Photo Mode contribution disabled",{{"extension",provider.id},{"reason",reason}});
 }
 Json Runtime::photo_model(const Manifest& provider) {
@@ -456,8 +508,12 @@ void Runtime::photo_action(const Manifest& provider,const Json& action) {
 }
 void Runtime::photo_notice(const Manifest& provider,const char* value) {
     try {
-        if(provider.photo_target.empty()) return host_event(provider.id,"photo_mode",value);
         auto& e=find(provider.id);
+        const std::string_view notice_value=value;
+        if(notice_value=="open") e.photo_open=!e.photo_disabled && !e.suspended && !e.stopped;
+        else if(notice_value=="parked" || notice_value=="step_out" || notice_value=="detached" || notice_value=="closed")
+            e.leave_pause_scope();
+        if(provider.photo_target.empty()) return host_event(provider.id,"photo_mode",value);
         if(e.suspended || e.stopped) return;
         const Json notice={{"id","cssx.photo_mode"},{"value",value}};
         if(e.photo_disabled) {
@@ -485,7 +541,18 @@ Json Runtime::request(const Json& j) {
     if(op=="event") { event(id,j.at("event"));return {{"revision",revision_}}; }
     throw std::runtime_error("Unknown CSSX runtime request");
 }
-void Runtime::tick(double seconds) { for(auto& e:entries_) if(!e->suspended) try { e->tick(seconds); } catch(const std::exception& error) { e->fail(error.what()); } }
+void Runtime::world_changed() {
+    for(auto& e:entries_) try { e->leave_pause_scope(); }
+    catch(const std::exception& error) { log(e->manifest.id,"warning",error.what()); }
+}
+void Runtime::tick(double seconds) {
+    for(auto& e:entries_) {
+        if(!e->photo_open && !e->original_pause_ticks.empty()) {
+            try { e->leave_pause_scope(); } catch(const std::exception&) { continue; }
+        }
+        if(!e->suspended) try { e->tick(seconds); } catch(const std::exception& error) { e->fail(error.what()); }
+    }
+}
 void Runtime::render(const CssxFrame& frame) { for(auto& e:entries_) if(!e->suspended) try { e->render(&frame); } catch(const std::exception& error) { e->fail(error.what()); } }
 bool Runtime::needs_frame() const { return !stopped_ && std::any_of(entries_.begin(),entries_.end(),[](const auto& e){return e->needs_frame();}); }
 bool Runtime::stop() { bool ok=true;for(auto& e:entries_) if(!e->stop()) ok=false;stopped_=ok;return ok; }

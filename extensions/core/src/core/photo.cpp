@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/FString.hpp>
@@ -661,8 +662,7 @@ PhotoMode::Row PhotoMode::make_row(PhotoRow::Kind kind) {
         auto* value=object_of(w,L"Text_Option_Value");
         auto* column=object_of(w,L"SizeBox_OptionValue");
         if(column && value) {
-            // Bypass the value's shrink-to-fit box. The centered size-box slot clamps the
-            // text block to the available width, where Slate can paint the overflow marker.
+            // Keep the game's font at its native size. fit_info measures it after the column is laid out.
             try { fit_information_value<Call>(column,value); }
             catch(const std::exception& e) { report(std::string("information row layout: ")+e.what()); }
         }
@@ -680,6 +680,13 @@ void PhotoMode::recheck(Tab& tab) {
     const auto now=now_ms();
     bool settling=false;
     for(size_t i=0;i<tab.order.size();++i) { auto& row=row_at(tab,i); if(now<row.settle_until) { settling=true; recheck_row(row); } }
+    for(size_t i=0;i<tab.order.size();++i) {
+        auto& row=row_at(tab,i);
+        if(row.shown.kind==PhotoRow::information && !row.fresh) {
+            recheck_row(row);
+            if(!row.fresh) fit_info(row,row.shown,false);
+        }
+    }
     if(!settling) {
         // The game resets option rows and slider rows separately, so one of each stands for the page.
         bool changed=false; bool seen_option=false, seen_slider=false;
@@ -693,11 +700,31 @@ void PhotoMode::recheck(Tab& tab) {
     for(size_t i=0;i<tab.order.size() && i<tab.rows.size();++i) if(auto& row=row_at(tab,i); row.fresh) fill(row,tab.rows[i]);
 }
 
+void PhotoMode::fit_info(Row& row,const PhotoRow& value,bool force) {
+    auto* w=row.widget.Get();
+    auto* column=object_of(w,L"SizeBox_OptionValue");
+    auto* block=object_of(w,L"Text_Option_Value");
+    if(!block) return;
+    if(column) try {
+        Call geometry(column,L"GetCachedGeometry",1); geometry.run();
+        Call size(find_cached(L"/Script/UMG.Default__SlateBlueprintLibrary"),L"GetLocalSize",2);
+        size.copy(L"Geometry",geometry,L"ReturnValue"); size.run();
+        const double width=size.get<Vec2>().x;
+        if(!force && width==row.column_width && std::abs(desired_text_width<Call,Vec2>(block)-row.text_width)<0.01) return;
+        std::tie(row.displayed_info,row.text_width)=display_information<Call,Vec2>(block,value.value,width,text_value);
+        row.column_width=width;
+        return;
+    } catch(const std::exception& e) { report(std::string("information row measurement: ")+e.what()); }
+    row.displayed_info=value.value;
+    row.column_width=row.text_width=-1;
+    text_value(block,row.displayed_info);
+}
+
 void PhotoMode::recheck_row(Row& row) {
     auto* w=row.widget.Get(); if(!w || row.fresh) return;
     const auto& shown=row.shown;
-    // A label can occupy most of the 1 MiB menu. GetText returns the full value plus a terminator.
-    if(text_of(object_of(w,L"Text_Option_Value"),1024*1024+1)!=shown.value) { row.fresh=true; return; }
+    // GetText returns the displayed text plus a terminator. The model retains the full label.
+    if(text_of(object_of(w,L"Text_Option_Value"),1024*1024+1)!=(shown.kind==PhotoRow::information?row.displayed_info:shown.value)) { row.fresh=true; return; }
     if(text_of(object_of(w,L"Text_Option"),4096)!=shown.name) { row.fresh=true; return; }
     if(auto* arrow=object_of(w,L"WBP_ArrowButton_L"))
         if(read<uint8_t>(arrow,L"Visibility")!=(shown.arrows?vis_self_passive:vis_hidden)) { row.fresh=true; return; }
@@ -711,7 +738,10 @@ void PhotoMode::fill(Row& row,const PhotoRow& value) {
         text_property(w,L"Text_OptionName",value.name);
         invoke(w,L"InitText");
     }
-    if(row.fresh || row.shown.value!=value.value) if(auto* block=object_of(w,L"Text_Option_Value")) text_value(block,value.value);
+    if(row.fresh || row.shown.value!=value.value) {
+        if(value.kind==PhotoRow::information) fit_info(row,value,true);
+        else if(auto* block=object_of(w,L"Text_Option_Value")) text_value(block,value.value);
+    }
     if(row.fresh || row.shown.arrows!=value.arrows) {
         // Hidden, not collapsed: the value keeps its place in the row.
         visible(object_of(w,L"WBP_ArrowButton_L"),value.arrows?vis_self_passive:vis_hidden);
@@ -773,7 +803,12 @@ Json PhotoMode::diagnostics() const {
     for(const auto& t:tabs_) {
         size_t widgets=0;
         for(const auto& pool:t.pools) widgets+=pool.size();
-        tabs.push_back({{"extension",t.provider->id},{"section",t.section},{"rows",t.rows.size()},{"selected",t.selected},{"widgets",widgets}});
+        Json info=Json::array();
+        for(const auto& [kind,index]:t.order) if(kind==PhotoRow::information) {
+            const auto& row=t.pools[kind][index];
+            info.push_back({{"id",row.shown.id},{"displayed",row.displayed_info},{"column_width",row.column_width},{"text_width",row.text_width}});
+        }
+        tabs.push_back({{"information",std::move(info)},{"extension",t.provider->id},{"section",t.section},{"rows",t.rows.size()},{"selected",t.selected},{"widgets",widgets}});
     }
     Json declared=Json::array();
     for(const auto& d:declared_) declared.push_back({{"id",d.owner->id},{"entry",d.owner->photo_entry},{"tabs",d.tabs.size()}});

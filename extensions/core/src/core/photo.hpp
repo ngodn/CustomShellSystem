@@ -57,7 +57,7 @@ private:
     using WeakObject=engine::WeakObject;
     using Declared=PhotoModeDefinition;
     struct PauseRow { std::string id; WeakObject row; bool down=false, confirmed=false; };
-    struct Row { WeakObject widget; bool slider=false; PhotoRow shown; bool fresh=true; uint64_t settle_until=0; };
+    struct Row { WeakObject widget; bool slider=false; PhotoRow shown; std::string displayed_info; double column_width=-1, text_width=-1; bool fresh=true; uint64_t settle_until=0; };
     struct Tab {
         const Manifest* provider=nullptr;
         std::string section; WeakObject tab, page, box; WeakObject icon;
@@ -141,6 +141,7 @@ private:
     Row make_row(PhotoRow::Kind kind);
     void recheck(Tab& tab);
     void recheck_row(Row& row);
+    void fit_info(Row&,const PhotoRow&,bool force);
     void fill(Row& row,const PhotoRow& value);
     void poll_keys(Tab& tab);
     void press(Tab& tab,const std::string& key);

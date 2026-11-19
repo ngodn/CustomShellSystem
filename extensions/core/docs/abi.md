@@ -51,8 +51,9 @@ Photo Mode (CSSX 1.3.2). An extension whose manifest has `"photo_mode": {"entry"
 [{"section", "icon"}]}` gets a row under the game's Activate Photo Mode on the pause menu's System page.
 The row opens the game's Photo Mode with the extension's menu sections added as tabs, built from the
 game's own tab, page and row widgets. Text input is available in the Player Menu. Since 1.3.3,
-Photo Mode also shows long read-only labels. The value column displays an ellipsis when the text
-exceeds its available width. The extension hears
+Photo Mode also shows long read-only labels. CSSX measures the value with the original text block's font
+and fits three periods into its laid-out column when the full text overflows. The model retains
+the complete value, including after resizing or switching tabs. The extension hears
 `{"id":"cssx.photo_mode","value":"open"|"parked"|"closed"}`. The owner can request two operations that run on the next tick.
 `photo.step_out` closes Photo Mode the way the game's own exit does and parks the session (the
 extension hears `parked`, not `closed`), so the player can move or the extension can use its own
@@ -179,3 +180,15 @@ dropped from an older file on save: the L3+R3 chord collided with the game's
 own stick presses),
 `ui_scale` (0.75–1.5), `pause_while_open`, `hide_hud_while_open`,
 `show_extension_status`. Unknown keys round-trip.
+
+### Ticking one component while Photo Mode is paused
+
+CSSX 1.3.3 provides three JSON requests through the ABI 3 client. Pass the object handle of a live actor component such as a skeletal mesh. The scope covers that component's primary tick. Its ordinary tick registration, interval and other tick flags keep their existing values.
+
+| Operation | Result |
+| --- | --- |
+| `component.pause_tick.read` | Current boolean value of `PrimaryComponentTick.bTickEvenWhenPaused`. Available outside Photo Mode too. |
+| `component.pause_tick.acquire` | Enables paused ticking and returns the original boolean. An open owner or contributor can acquire during its `open` callback. Repeating the request returns the same original value. A component held by another extension yields an error. |
+| `component.pause_tick.release` | Restores the saved bit and returns true if the caller held the component. Repeated release returns false. An expired component is forgotten by its weak handle. |
+
+For example, send `{"op":"component.pause_tick.acquire","target":{"$object":42}}` with the handle obtained for your component. A successful result of `false` means paused ticking was off before acquisition. Release the handle when playback ends. CSSX also restores it on park, close, detach, world change, extension failure and unload. After stepping back in, acquire again from the next `open` callback if playback continues. A stale handle or incompatible component yields an error on read or acquire.

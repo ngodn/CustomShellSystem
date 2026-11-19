@@ -52,9 +52,80 @@ void install(const fs::path& root,std::string id,std::string title,std::string t
         }
     )";
 }
+
+void check_pause_tick_scopes() {
+    Directory dir;
+    const std::string owner="test.owner",guest="test.guest";
+    for(const auto& id:{owner,guest}) {
+        install(dir.path,id,id,id==owner?"":owner);
+        std::ofstream(dir.path/"extensions"/id/"main.lua")<<R"(
+            return { model=function() return {} end, event=function(e)
+                if e.id~="cssx.probe" then return end
+                local result,err=cssx.request{op="component.pause_tick."..e.value.op,target={["$object"]=e.value.id}}
+                cssx.request{op="test.reply",result=result,err=err}
+            end }
+        )";
+    }
+    std::map<uint64_t,bool> components{{11,false},{12,true},{14,false}};
+    bool fail_restore=false;
+    HostServices host;
+    host.component_pause_tick=[&](uint64_t id,std::optional<bool> write)->std::optional<bool> {
+        auto it=components.find(id);
+        if(it==components.end()) return {};
+        if(id==11 && write==false && fail_restore) throw std::runtime_error("transient restore failure");
+        const bool original=it->second;
+        if(write) it->second=*write;
+        return original;
+    };
+    Json reply;
+    host.request=[&](const Json& request)->Json { reply=request; return nullptr; };
+    Runtime runtime(dir.path,host);
+    PhotoSession session;
+    auto mode=runtime.photo_modes().front();
+    auto ask=[&](const std::string& caller,const char* op,int id=11) {
+        reply=nullptr;
+        runtime.host_event(caller,"probe",{{"op",op},{"id",id}});
+        return reply;
+    };
+    auto acquire=[&] {
+        check(ask(guest,"acquire").at("result")==false && components.at(11),"acquire records and enables a false bit");
+        check(ask(guest,"acquire").at("result")==false,"repeat acquire preserves first baseline");
+        check(ask(guest,"acquire",12).at("result")==true,"already-enabled bit preserved");
+    };
+    auto restored=[&] { check(!components.at(11) && components.at(12),"restore original false and true bits"); };
+    check(ask(guest,"read").at("result")==false && ask(guest,"acquire").contains("err"),"read outside session, acquire restricted");
+    session.open(runtime,mode);
+    acquire();
+    check(ask(guest,"read").at("result")==true,"read returns current held value");
+    check(ask(owner,"acquire").contains("err") && ask(owner,"release").at("result")==false && components.at(11),"other provider cannot steal or release");
+    check(ask(guest,"release").at("result")==true && ask(guest,"release").at("result")==false,"release is idempotent");
+    restored();
+    acquire(); session.park(runtime); restored();
+    check(ask(guest,"acquire").contains("err"),"parked session cannot reacquire");
+    session.open(runtime,mode); acquire(); session.end(runtime,false); restored();
+    session.open(runtime,mode); acquire(); session.end(runtime,true); restored();
+    session.open(runtime,mode); acquire();
+    check(ask(owner,"acquire",14).at("result")==false,"second owner has an independent component");
+    fail_restore=true;
+    runtime.world_changed();
+    check(components.at(11) && !components.at(14),"one failed restore cannot block another owner");
+    fail_restore=false;
+    runtime.tick(0.01); restored();
+    check(ask(guest,"acquire").contains("err"),"world transition closes scope before callbacks");
+    session.end(runtime,true); session.open(runtime,mode); acquire();
+    components.erase(11);
+    components[13]=false;
+    check(ask(guest,"release").at("result")==true && !components.at(13),"expired handle cannot write its replacement");
+    components[11]=false;
+    acquire(); runtime.disable_photo_contribution(*mode.contributors.front(),"fixture failure"); restored();
+    check(ask(owner,"acquire").at("result")==false,"owner can acquire after guest retires");
+    check(runtime.stop(),"unload releases the outstanding owner override"); restored();
+}
+
 }
 
 int main() try {
+    check_pause_tick_scopes();
     Directory dir;
     const std::string owner="test.host", guest="test.b", other="test.a";
     install(dir.path,owner,"Owner");

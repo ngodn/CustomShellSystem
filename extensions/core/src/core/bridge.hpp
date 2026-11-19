@@ -8,6 +8,7 @@
 #include "core_abi.h"
 #include <map>
 #include <set>
+#include <optional>
 #include <unordered_map>
 
 namespace cssx {
@@ -23,6 +24,7 @@ public:
     Json handle(engine::UObject* object);          // {$object,name,class} or null
     uint64_t track(engine::UObject* object);       // id only, 0 for null
     engine::UObject* resolve(const Json& value);   // throws when expired
+    std::optional<bool> component_pause_tick(uint64_t handle,std::optional<bool> value);
     bool stop_hooks();                             // remove every rule; false while one is busy
     Json hook_stats() const;
     const CssxHookHost* hook_host() const { return hooks_; }   // null when the loader has none

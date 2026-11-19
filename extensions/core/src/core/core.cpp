@@ -64,6 +64,7 @@ void Core::start_runtime() {
     if(runtime_) return;
     HostServices services;
     services.hud=hud_.api();
+    services.component_pause_tick=[this](uint64_t id,std::optional<bool> value){ return bridge_->component_pause_tick(id,value); };
     services.request=[this](const Json& r){ return service(r); };
     services.log=[this](const std::string& level,const std::string& message,const Json& fields){ log(level,message,fields); };
     runtime_=std::make_unique<Runtime>(root_,std::move(services));
@@ -202,7 +203,12 @@ void Core::tick(void* engine,float delta) {
         else log("warning","Legacy CSSX activation or runtime detected in CustomShellSystem; extensions are not loaded",{{"activation",legacy_.activation_present},{"mapped",legacy_.mapped}});
         legacy_check_after_=now+30000;
     }
+    const auto* previous_world=player_.world;
     try { player_=player_context(engine); } catch(...) { player_={}; }
+    if(previous_world && player_.world!=previous_world && runtime_) {
+        runtime_->world_changed();
+        if(photo_) photo_->detach();
+    }
     if(dev_) dev_->poll();
     // Second legacy check after CSS has had time to start its host lazily.
     if(legacy_check_after_ && now>=legacy_check_after_) {
