@@ -362,9 +362,12 @@ struct Core {
         walk_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
         ++walk_updates;walk_total_ms+=walk_ms;walk_max_ms=std::max(walk_max_ms,walk_ms);
     }
+    bool menu_effects_active() const {
+        return inventory.active() && !inventory_failed && state.enabled && !restore_pending && !(apply_pending && !custom_only);
+    }
     void sync_menu_safely() {
         if(GetTickCount64()<maintenance_after) return;
-        try { appearance.sync_menu(); maintenance_error.clear(); }
+        try { appearance.sync_menu(menu_effects_active()); maintenance_error.clear(); }
         catch(const std::exception& error) {
             if(maintenance_error!=error.what()) { maintenance_error=error.what(); host.log(("Menu preview deferred: "+maintenance_error).c_str()); }
             maintenance_after=GetTickCount64()+1000;
@@ -373,6 +376,10 @@ struct Core {
 
     uint64_t menu_idle_after=0;
     void update_menu_idle(uint64_t now) {
+        try { appearance.tick_menu_effects(menu_effects_active()); }
+        catch(const std::exception& error) {
+            if(maintenance_error!=error.what()) { maintenance_error=error.what();host.log(error.what()); }
+        }
         if(!inventory.active() || inventory_failed || !state.enabled || restore_pending || (apply_pending && !custom_only)) {
             appearance.stop_menu_idle();menu_idle_after=0;return;
         }
@@ -1627,6 +1634,7 @@ struct Core {
         if(inspect_pending) {
             auto result=appearance.transition_state(engine); result["id"]=last_request; result["inventory"]=inventory.diagnostics();
             result["inventory_idle"]=appearance.inspect_menu_idle();
+            result["inventory_effects"]=appearance.inspect_menu_effects();
             // The per-item MISC report walks every attached mesh; it is on demand, never on a timer.
             try { result["misc_items"]=appearance.misc_report(); } catch(const std::exception& error) { result["misc_items"]=error.what(); }
             write_runtime_json(root / "runtime/inspection.json",result); inspect_pending=false;

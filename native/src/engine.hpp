@@ -19,6 +19,7 @@
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
 #include "inventory_idle.hpp"
+#include "inventory_effects.hpp"
 #include "inventory_backdrop.hpp"
 #include "inventory_light.hpp"
 #include "inventory_keys.hpp"
@@ -945,6 +946,20 @@ class Appearance {
     ControlValue color_check_value_{};
     std::vector<WeakObject> expected_materials_;
     WeakObject menu_component_, menu_applied_;
+    struct MenuFlowSlot {
+        WeakObject source, copy, original_override;
+        inventory_effects::Driver driver=inventory_effects::Driver::none;
+        uint64_t revision=0;
+        float base=0, rate=0;
+    };
+    std::map<int,MenuFlowSlot> menu_flow_;
+    std::optional<inventory_effects::PausedClock> menu_clock_;
+    inventory_effects::PreviewFlag menu_cloth_, menu_cloth_tick_;
+    inventory_effects::ClothBlend menu_cloth_blend_;
+    void restore_menu_flow();
+    void restore_menu_effects();
+    void sync_menu_cloth(RC::Unreal::UObject* source, RC::Unreal::UObject* target,bool paused);
+    RC::Unreal::UObject* menu_flow_material(int slot, RC::Unreal::UObject* source, RC::Unreal::UObject* original_override);
     std::string menu_original_;
     std::vector<std::string> menu_original_materials_;
     std::vector<WeakObject> menu_original_live_materials_;
@@ -1025,9 +1040,11 @@ public:
     bool repair_mesh_needed() const;
     bool ready_to_apply() const;
     std::string ready_to_apply_reason() const;
-    void sync_menu();
+    void sync_menu(bool effects_page);
+    void tick_menu_effects(bool effects_page);
     void sync_menu_idle(const Catalog&,const InventoryIdleChoice&);
     Json inspect_menu_idle() const;
+    Json inspect_menu_effects() const;
     void tick_menu_idle(uint64_t now);
     void stop_menu_idle();
     void sync_overlay_effects();
