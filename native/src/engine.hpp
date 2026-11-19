@@ -18,6 +18,7 @@
 #include "replacements.hpp"
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
+#include "inventory_idle.hpp"
 #include "inventory_backdrop.hpp"
 #include "inventory_light.hpp"
 #include "inventory_keys.hpp"
@@ -890,6 +891,13 @@ class Appearance {
         OwnedMorphs weights;
     };
     FacialBinding facial_world_, facial_preview_;
+    InventoryIdlePlayback menu_idle_;
+    WeakObject menu_idle_component_, menu_idle_mesh_, menu_idle_anim_, menu_idle_post_, menu_idle_clip_, menu_idle_montage_;
+    AssetLoadRoots menu_idle_roots_;
+    std::optional<FacialPerformancePose> menu_idle_face_;
+    FacialBinding menu_idle_face_binding_;
+    void release_menu_idle();
+    double start_menu_idle(const Catalog&,const InventoryIdleChoice&);
     FacialBinding facial_motion_binding_;
     std::optional<FacialPerformancePose> facial_motion_;
     uint32_t facial_motion_samples_=0;   // read-back every 60th performance sample, see OwnedMorphs::apply
@@ -1018,6 +1026,10 @@ public:
     bool ready_to_apply() const;
     std::string ready_to_apply_reason() const;
     void sync_menu();
+    void sync_menu_idle(const Catalog&,const InventoryIdleChoice&);
+    Json inspect_menu_idle() const;
+    void tick_menu_idle(uint64_t now);
+    void stop_menu_idle();
     void sync_overlay_effects();
     void sync_attachments();
     void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz

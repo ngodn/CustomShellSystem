@@ -305,10 +305,8 @@ struct Core {
                         if(shared.matched) movement[i]=shared.asset;
                     }
                     const auto& idles=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
-                    // The override only where this look has that idle; otherwise its own choice stands.
-                    const bool overridden=!vista_rest && !idle_override.empty() &&
-                        std::any_of(idles.begin(),idles.end(),[&](const auto& option){return animation_choice_matches(option,idle_override);});
-                    const auto choice=overridden?idle_override:state.animation_choices.get(selection.outfit,selection.variant,idle_slot);
+                    const auto choice=vista_rest?state.animation_choices.get(selection.outfit,selection.variant,idle_slot):
+                                                selected_idle_choice(selection);
                     custom_idle=resolve_animation(idles,AnimationSlot::Idle,choice);
                     const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
                         selection.outfit,selection.variant,AnimationSlot::Idle,choice,&animation_trace);
@@ -370,6 +368,35 @@ struct Core {
         catch(const std::exception& error) {
             if(maintenance_error!=error.what()) { maintenance_error=error.what(); host.log(("Menu preview deferred: "+maintenance_error).c_str()); }
             maintenance_after=GetTickCount64()+1000;
+        }
+    }
+
+    uint64_t menu_idle_after=0;
+    void update_menu_idle(uint64_t now) {
+        if(!inventory.active() || inventory_failed || !state.enabled || restore_pending || (apply_pending && !custom_only)) {
+            appearance.stop_menu_idle();menu_idle_after=0;return;
+        }
+        if(now>=menu_idle_after) {
+            menu_idle_after=now+150;
+            const auto it=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
+            if(it==state.selections.end() || applied_id!=it->second.outfit+"/"+it->second.variant) {
+                appearance.stop_menu_idle();return;
+            }
+            const auto& selection=it->second;
+            const auto choice=selected_idle_choice(selection);
+            try {
+                appearance.sync_menu_idle(catalog,{selection.outfit,selection.variant,choice,selection.custom.expression,
+                                                  animation_catalog_generation});
+            } catch(const std::exception& error) {
+                host.log(("Inventory idle "+choice+" unavailable for "+applied_id+": "+error.what()).c_str());
+                return;
+            }
+        }
+        try { appearance.tick_menu_idle(now); }
+        catch(const std::exception& error) {
+            appearance.stop_menu_idle();
+            menu_idle_after=now+1000;
+            host.log(("Inventory idle stopped: "+std::string(error.what())).c_str());
         }
     }
 
@@ -462,12 +489,14 @@ struct Core {
         return {appearance.player_revision,appearance.appearance_revision,animation_catalog_generation,
             worn?selected->second.outfit:"",worn?selected->second.variant:"",appearance.performance_mesh()};
     }
+    std::string selected_idle_choice(const Selection& selection) const {
+        const auto& options=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
+        return css::selected_idle_choice(options,state.animation_choices.find(selection.outfit,selection.variant,AnimationSlot::Idle),
+                                         idle_override,state.walk_animation=="feminine");
+    }
     std::string idle_identity(const Selection& selection) const {
         const auto& options=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
-        auto choice=state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle);
-        if(!idle_override.empty() && std::any_of(options.begin(),options.end(),[&](const auto& option) {
-            return animation_choice_matches(option,idle_override);
-        })) choice=idle_override;
+        const auto choice=selected_idle_choice(selection);
         const auto resolved=resolve_animation(options,AnimationSlot::Idle,choice);
         return resolved.option ? (resolved.option->library_identity.empty()?resolved.option->id:
                                   resolved.option->library_identity) : std::string{};
@@ -1179,7 +1208,7 @@ struct Core {
 #ifdef CSS_INVENTORY_DEV
         sample_motion(now);
 #endif
-        measured(FrameProfile::maintenance,[&] { sync_overlays_safely(now); maintain(now); sync_genessa_form(now); });
+        measured(FrameProfile::maintenance,[&] { sync_overlays_safely(now); maintain(now); update_menu_idle(now); sync_genessa_form(now); });
         measured(FrameProfile::attachments,[&] { sync_attachments_safely(now); });
         measured(FrameProfile::seals,[&] { sync_seals_safely(now); });
         measured(FrameProfile::walk,[&] {
@@ -1597,6 +1626,7 @@ struct Core {
         }
         if(inspect_pending) {
             auto result=appearance.transition_state(engine); result["id"]=last_request; result["inventory"]=inventory.diagnostics();
+            result["inventory_idle"]=appearance.inspect_menu_idle();
             // The per-item MISC report walks every attached mesh; it is on demand, never on a timer.
             try { result["misc_items"]=appearance.misc_report(); } catch(const std::exception& error) { result["misc_items"]=error.what(); }
             write_runtime_json(root / "runtime/inspection.json",result); inspect_pending=false;

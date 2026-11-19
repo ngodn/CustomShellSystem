@@ -652,6 +652,7 @@ UObject* Appearance::player(void* engine) {
     return pawn;
 }
 void Appearance::restore_menu() {
+    stop_menu_idle();
     restore_visual_scale(true);
     menu_morph_deformer_.release();
     restore_facial_binding(facial_preview_);
@@ -3036,6 +3037,7 @@ bool Appearance::transition_active() const {
 
 #include "genessa_revival.inl"
 #include "performance_player.inl"
+#include "inventory_idle.inl"
 
 }
 
