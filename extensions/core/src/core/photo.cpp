@@ -74,6 +74,8 @@ void PhotoMode::apply_visual_bool(UObject* widget,const wchar_t* function,bool v
 void PhotoMode::set_runtime(Runtime* runtime) {
     if(runtime==deps_.runtime) return;
     detach();
+    // A reloaded extension can replace a PNG at the same path while the old texture is alive.
+    icons_.clear();
     deps_.runtime=runtime; photo_revision_=0; declared_.clear();
 }
 
