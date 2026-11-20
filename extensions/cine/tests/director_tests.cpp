@@ -21,6 +21,7 @@ Json object(uint64_t id) { return {{"$object", id}}; }
 uint64_t id_of(const Json& j) { return j.is_object() && j.contains("$object") ? j["$object"].get<uint64_t>() : 0; }
 
 struct Host {
+    int park_requests = 0;
     fs::path dir;
     Json pack_rows;
     unsigned invalidations = 0;
@@ -317,7 +318,8 @@ struct Host {
         if (op == "state.save") { state = j.at("value"); return true; }
         if (op == "log") { logs.push_back(j.value("message", std::string())); return nullptr; }
         if (op == "invalidate") { ++invalidations; return nullptr; }
-        if (op == "menu.close") return nullptr;
+        if (op == "menu.close" || op == "photo.step_in") return nullptr;
+        if (op == "photo.step_out") { ++park_requests; return nullptr; }
         if (op == "table.rows") {
             Json names = Json::array();
             for (const auto& [name, value] : pack_rows.items()) names.push_back(name);
@@ -588,6 +590,12 @@ int main(int argc, char** argv) {
             expect(r.ext->model()["values"]["guide"] == initial_guide, "the console key leaves the frame guide alone");
             r.press("F5");
             expect(r.ext->model()["values"]["guide"] != initial_guide, "F5 cycles the frame guide in CINE Mode");
+            r.press("F8");
+            expect(r.host.park_requests == 1 && !r.ext->model()["enabled"]["render_take"].get<bool>(),
+                   "an accepted F8 requests one park and disables Render Take");
+            bool refused = false;
+            try { r.ext->event({{"id", "render_take"}}); } catch (const std::runtime_error&) { refused = true; }
+            expect(refused && r.host.park_requests == 1, "a stale render button cannot convert the pending take");
             r.ext->event({{"id", "cssx.photo_mode"}, {"value", "closed"}});
             r.ext->event({{"id", "enter"}});
             const auto original = cine::content().callouts.label_font;
@@ -596,6 +604,25 @@ int main(int argc, char** argv) {
             expect(cine::content().callouts.label_font == 31 && original != 31, "selected pack applies its callout size");
             r.steps(120);
             expect(cine::content().callouts.label_font == original, "finishing the pack take restores the core callout size");
+        }
+        {
+            Rig r(dir / "empty");
+            r.step();
+            r.ext->event({{"id", "cssx.photo_mode"}, {"value", "open"}});
+            r.press("F8");
+            expect(r.host.park_requests == 0 && r.error() == r.ext->model()["disabled"]["take"].get<std::string>(),
+                   "F8 on an unavailable take leaves the panel open with its displayed reason");
+            r.press("F9");
+            expect(r.ext->status()["active"] == true, "F9 in framing leaves native Photo Mode open");
+            r.ext->event({{"id", "record"}});
+            r.steps(8);
+            expect(r.host.park_requests == 1 && has(r.status(), "Leaving Photo Mode"),
+                   "route instructions wait for Photo Mode to give back the character");
+            r.ext->event({{"id", "cssx.photo_mode"}, {"value", "parked"}});
+            r.steps(3);
+            expect(has(r.status(), "Walk at least 3 m"), "route instructions appear after the native park notice");
+            r.press("F9");
+            expect(has(r.status(), "cancelled"), "F9 discards the recording");
         }
         {   // Enter, glide take, everything restored, still in Cine World; then leave.
             Rig r(dir);

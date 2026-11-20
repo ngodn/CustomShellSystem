@@ -4,7 +4,7 @@
     {
       "id": "take",
       "title": "Take",
-      "description": "F5 cycles the frame guide, F7 saves the final shot, F8 rolls a take and F9 cancels a take or route recording.",
+      "description": "While framing in CINE Mode, F5 changes the frame guide and F7 saves the final shot. F8 starts an available take. During a take or route recording, F9 cancels.",
       "controls": [
         {
           "id": "status",
@@ -35,7 +35,7 @@
           "id": "take",
           "type": "button",
           "label": "Roll Take",
-          "description": "Starts the scene after the countdown. You can also press F8 from the panel or the camera.",
+          "description": "Starts the scene after the countdown. When Roll Take is available in CINE Mode, F8 also starts it.",
           "disabled_label": "Not ready"
         },
         {
@@ -153,7 +153,7 @@
           "id": "record",
           "type": "button",
           "label": "Record Route",
-          "description": "Closes the menu. Walk the route, then stand still for 3 seconds. F9 cancels.",
+          "description": "Returns control to your character. Walk at least 3 m, then stand still for 3 seconds to save the route. F9 discards the recording.",
           "disabled_label": "Recording now"
         },
         {

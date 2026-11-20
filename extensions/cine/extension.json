@@ -4,7 +4,7 @@
   "id": "eins0fx.cine",
   "title": "CINE",
   "author": "_eins0fx",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Cinematic camera for showcases: walk, pose and orbit takes, a clean scene without enemies or NPCs, and a VFX-style breakdown of the picture in layers. Scene packs add music scenes that change your CSS outfits, skins and palettes on the beat. You record with your own recorder.",
   "kind": "native",
   "entry": "cine.dll",

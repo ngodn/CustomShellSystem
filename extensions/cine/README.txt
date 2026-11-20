@@ -1,10 +1,10 @@
-CINE 2.0.1 for CSSX
+CINE 2.0.2 for CSSX
 ===================
 
 Cinematic camera for showcases, inside the game's own Photo Mode. CINE moves the camera and
 the character, and can render a take straight to a video file.
 
-Requirements: CSSX 1.3.2 or newer. The look track and the music scenes also need Custom
+Requirements: CSSX 1.3.4 or newer. The look track and the music scenes also need Custom
 Shell System 1.0.5 or newer; without CSS the camera works and the look track is off.
 
 Install
@@ -26,13 +26,14 @@ Quick start
 2. Take: pick a scene, frame her with the Photo Mode camera, then Roll Take (or F8).
    Photo Mode steps aside while the take runs and comes back when it ends.
 3. Walk scenes (Fashion Walk and the like) need a route and a final shot first:
-   Route > Record Route closes Photo Mode; walk the path, then stand still for 3 seconds.
+   Choose Route > Record Route. When the walking hint appears, walk at least 3 m,
+   then stand still for 3 seconds.
    CINE Mode comes back on the Route tab. Frame the end of the walk with the Photo Mode
    camera and choose Use Current View as Final Shot.
 4. Close Photo Mode the usual way to leave CINE Mode.
 
 In CINE Mode, F5 cycles the frame guide, F7 saves the final shot, F8 rolls a take and
-F9 cancels a take or route recording. Escape closes Photo Mode.
+F9 cancels a take or discards the route you are recording. Escape closes Photo Mode.
 
 Render to video
 Render > Render Take to Video rolls the chosen scene and saves it as video.mp4 in

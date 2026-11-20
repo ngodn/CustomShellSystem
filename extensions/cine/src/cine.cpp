@@ -273,11 +273,12 @@ int Extension::render(const CssxFrame* f) {
     if (mode_ == Mode::Idle || mode_ == Mode::RecordWait) { guides_.hide(); callouts_.hide(); return 1; }
     Overlay o;
     o.visible = true;
+    const bool native_panel = photo_ && !photo_parked_;
     const bool framing = mode_ == Mode::Armed || mode_ == Mode::Recording;
     o.guide = framing ? guide_from(settings_.guide) : Guide::Off;
     if (mode_ == Mode::Armed && !photo_) o.help = help_line;   // Photo Mode has its own prompt bar and the Roll Take row
-    else if (mode_ == Mode::Recording) o.help = "CINE   recording your route: walk it, then stand still for 3 s (F9 stops)";
-    if (mode_ == Mode::Countdown && take_) o.countdown = "CINE  " + std::to_string(int(std::ceil(std::max(0.0, take_->countdown))));
+    else if (mode_ == Mode::Recording && !native_panel) o.help = "CINE   walk at least 3 m, then stand still for 3 s to save. F9 cancels.";
+    if (mode_ == Mode::Countdown && take_ && !native_panel) o.countdown = "CINE  " + std::to_string(int(std::ceil(std::max(0.0, take_->countdown))));
     if (mode_ == Mode::Running || mode_ == Mode::Preparing) o.visible = false;   // nothing of CINE in the recording
     if (frame_.in_menu) o.visible = false;                                       // nor over a menu
     guides_.update(*f, o);
@@ -325,6 +326,7 @@ int Extension::render(const CssxFrame* f) {
     }
     // An outfit change has the picture: its cover is a transition, not a breakdown step, and
     // the labels go the frame it starts (the tick that samples them is up to 100 ms behind).
+    if (native_panel) { callouts_.hide(); return 1; }
     const bool covering = take_ && (take_->wearing != Take::Wear::Idle || take_->seq_clock < take_->transition_until);
     const bool titled = mode_ == Mode::Running && take_ && settings_.labels && !take_->title.empty() && !frame_.in_menu;
     if (mode_ == Mode::Running && labels_live_ && lens_.ok && !frame_.in_menu && !covering) {
@@ -432,7 +434,12 @@ void Extension::tick(double seconds) {
         poll_keys();
         switch (mode_) {
             case Mode::RecordWait:
-                if (frame_.valid && frame_.ready && !frame_.in_menu) { if (!rig_.resolved()) rig_.resolve(); world_ = frame_.world; keys_previous_.clear(); samples_.clear(); record_clock_ = 0; still_since_ = -1; mode_ = Mode::Recording; report("Recording your route: walk it, then stand still for 3 seconds."); }
+                if (frame_.valid && frame_.ready && !frame_.in_menu && (!photo_ || photo_parked_)) {
+                    if (!rig_.resolved()) rig_.resolve();
+                    world_ = frame_.world; keys_previous_.clear(); samples_.clear();
+                    record_clock_ = 0; still_since_ = -1; mode_ = Mode::Recording;
+                    report("Recording your route. Walk at least 3 m, then stand still for 3 seconds to save. F9 cancels.");
+                }
                 break;
             case Mode::Recording: record_clock_ += dt; record_tick(); break;
             case Mode::Preparing: prepare(); break;
@@ -476,7 +483,11 @@ void Extension::poll_keys() {
     }
     if (mode_ != Mode::Armed) return;
     if (capture) capture_final_now();
-    if (take) start_take();
+    if (take) {
+        const auto reason = photo_ && !photo_parked_ ? model()["disabled"].value("take", std::string{}) : std::string{};
+        if (reason.empty()) start_take();
+        else report(reason, true);
+    }
     if (guide) {
         const auto guide_ids = cine::guide_ids();
         auto it = std::find(guide_ids.begin(), guide_ids.end(), settings_.guide);
@@ -525,8 +536,9 @@ void Extension::start_take() {
     if (photo_ && !photo_parked_) {
         // Photo Mode's camera owns the view while it is open: the take runs outside it, on
         // CINE's own camera, and CINE Mode comes back on the Take tab when it ends.
-        start_pending_ = true;
+        if (start_pending_) return;
         host_.request({{"op", "photo.step_out"}});
+        start_pending_ = true;
         report("Rolling in a moment.");
         return;
     }
@@ -2004,7 +2016,7 @@ Json Extension::model() const {
     const bool busy = mode_ == Mode::Preparing || mode_ == Mode::Countdown || mode_ == Mode::Running;
     Json disabled = Json::object();
     if (in_world) disabled["enter"] = "Already in Cine World";
-    if (!in_world) { disabled["exit"] = "Not in Cine World"; disabled["take"] = "Enter Cine World first"; }
+    if (!in_world) { disabled["exit"] = "Not in Cine World"; disabled["take"] = "Activate CINE Mode first"; }
     if (p && p->kind == ShotKind::Walk && !route_) disabled["take"] = "Record a route first";
     // A walk take starts on the saved route: one recorded somewhere else, or a final shot she
     // cannot curve into from it, would only stop the take, so say so before it rolls. Short
@@ -2027,6 +2039,9 @@ Json Extension::model() const {
     if (!busy && !expression_catalog_.unavailable(settings_.expression).empty()) disabled["take"] = expression_catalog_.unavailable(settings_.expression);
     if (!busy && settings_.expression != "unchanged" && (settings_.look != "off" || (p && p->kind == ShotKind::Sequence && !p->sequence.looks.empty())))
         disabled["take"] = "Use As set in CSS for takes that change looks, or turn the look track off.";
+    if (start_pending_) {
+        for (const auto* id : {"take", "capture", "record"}) disabled[id] = "Starting the take";
+    }
     if (!core_loader_.done()) disabled["take"] = "Reading CINE core data";
     if (!p) {
         if (packs_loading_) disabled["take"] = "Reading scene packs";
@@ -2078,6 +2093,8 @@ void Extension::event(const Json& e) {
     }
     try {
         error_.clear();
+        if (start_pending_ && (id == "take" || id == "render_take" || id == "record" || id == "capture"))
+            throw std::runtime_error("Starting the take");
         if (id == "expression" || id == "expression_refresh") {
             if (mode_ != Mode::Idle && mode_ != Mode::Armed) throw std::runtime_error("Wait for the take or route recording to finish");
             if (id == "expression_refresh") expression_catalog_.refresh([&](const Json& r) { return rig_.css(r); });
@@ -2112,19 +2129,21 @@ void Extension::event(const Json& e) {
         else if (id == "enter") enter();
         else if (id == "exit") exit_world("Left Cine World.");
         else if (id == "render_take") {
-            if (mode_ != Mode::Armed) throw std::runtime_error("Enter Cine World first");
+            if (mode_ != Mode::Armed) throw std::runtime_error("Activate CINE Mode first");
             if (render_watch_) throw std::runtime_error("Wait for the previous render to finish");
             render_pending_ = true;
-            if (photo_) start_take();   // steps out of Photo Mode first
-            else { start_pending_ = true; host_.request({{"op", "menu.close"}}); report("Closing the menu; the render starts in a moment."); }
+            try {
+                if (photo_) start_take();
+                else { host_.request({{"op", "menu.close"}}); start_pending_ = true; report("Closing the menu; the render starts in a moment."); }
+            } catch (...) { render_pending_ = false; throw; }
         }
         else if (id == "render_cancel") { if (renderer_) renderer_->cancel(); }
         else if (id == "render_fps") { const unsigned f = std::stoul(e.at("value").get<std::string>()); if (f == 24 || f == 30 || f == 60) { settings_.render_fps = f; save_state(); } }
         else if (id == "render_quality") { const auto q = e.at("value").get<std::string>(); if (q == "high" || q == "medium" || q == "small") { settings_.render_quality = q; save_state(); } }
         else if (id == "take") {
-            if (mode_ != Mode::Armed) throw std::runtime_error("Enter Cine World first");
+            if (mode_ != Mode::Armed) throw std::runtime_error("Activate CINE Mode first");
             if (photo_) start_take();   // steps out of Photo Mode first
-            else { start_pending_ = true; host_.request({{"op", "menu.close"}}); report("Closing the menu; the take starts in a moment."); }
+            else { host_.request({{"op", "menu.close"}}); start_pending_ = true; report("Closing the menu; the take starts in a moment."); }
         }
         else if (id == "record") {
             if (mode_ == Mode::Recording || mode_ == Mode::RecordWait) return;
@@ -2132,9 +2151,10 @@ void Extension::event(const Json& e) {
             record_return_ = mode_; mode_ = Mode::RecordWait;
             if (photo_) {
                 // She cannot walk in Photo Mode: step out of it, record, and come back on the Route tab.
-                host_.request({{"op", "photo.step_out"}});
-                report("Walk your route, then stand still for 3 seconds. F9 cancels.");
-            } else { host_.request({{"op", "menu.close"}}); report("Close the menu, walk your route, then stand still for 3 seconds."); }
+                try { host_.request({{"op", "photo.step_out"}}); }
+                catch (...) { mode_ = record_return_; throw; }
+                report("Leaving Photo Mode to record your route.");
+            } else { host_.request({{"op", "menu.close"}}); report("Leaving the menu to record your route."); }
         }
         else if (id == "capture") {
             if (mode_ != Mode::Idle && mode_ != Mode::Armed) throw std::runtime_error("Wait for the take to finish");
