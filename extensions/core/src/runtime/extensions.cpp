@@ -129,8 +129,9 @@ struct Runtime::Entry {
     std::map<uint64_t,bool> original_pause_ticks;
     Json pause_tick(const std::string& op,uint64_t target);
     void leave_pause_scope();
-    bool photo_disabled=false;
+    bool photo_disabled=false, photo_failed=false;
     template<class Callback> void photo_call(Callback&& callback);
+    template<class Callback> void frame_call(Callback&& callback);
     unsigned requests=0;
     double elapsed=0, menu_check=0;
     fs::file_time_type menu_time{};
@@ -149,7 +150,7 @@ struct Runtime::Entry {
     void tick(double);
     void render(const CssxFrame*);
     bool needs_frame() const {
-        return !suspended && !stopped && api && instance && api->abi>=2 && has_member(CSSX_ABI2_EXTENSION_SIZE) && api->render;
+        return !suspended && !stopped && !photo_failed && api && instance && api->abi>=2 && has_member(CSSX_ABI2_EXTENSION_SIZE) && api->render;
     }
     void fail(const std::string& text);
 };
@@ -371,7 +372,9 @@ void Runtime::Entry::deliver(const Json& e) {
     else {
         auto data=e.dump();
         if(!api->event(instance,data.c_str())) {
-            dirty=true;++runtime->revision_;refresh();
+            dirty=true;++runtime->revision_;
+            if((photo_open || photo_failed) && !manifest.photo_target.empty()) throw std::runtime_error("Extension event callback failed");
+            refresh();
             throw std::runtime_error(model.value("error",std::string{}).empty()?"Extension event callback failed":model["error"].get<std::string>());
         }
     }
@@ -465,7 +468,7 @@ std::vector<PhotoModeDefinition> Runtime::photo_modes() const {
         if(!m.photo_entry.empty()) {
             auto& mode=modes.emplace_back(PhotoModeDefinition{&m,{},{}});
             for(const auto& tab:m.photo_tabs) mode.tabs.push_back({&m,&tab});
-        } else if(!m.photo_target.empty() && !entry->photo_disabled) guests.push_back(&m);
+        } else if(!m.photo_target.empty() && !entry->photo_disabled && !entry->photo_failed) guests.push_back(&m);
     }
     std::ranges::sort(guests,{},&Manifest::id);
     for(const auto* guest:guests) {
@@ -480,7 +483,7 @@ std::vector<PhotoModeDefinition> Runtime::photo_modes() const {
 // Calls that use the engine must stay on its thread. Retire only the contribution after a
 // callback fails or returns late. The ordinary menu and the owner's callbacks stay independent.
 template<class Callback> void Runtime::Entry::photo_call(Callback&& callback) {
-    if(photo_disabled || suspended || stopped) throw std::runtime_error("Photo Mode contribution unavailable: "+manifest.id);
+    if(photo_disabled || photo_failed || suspended || stopped) throw std::runtime_error("Photo Mode contribution unavailable: "+manifest.id);
     constexpr uint64_t limit_us=50000;
     const auto started=monotonic_us();
     std::string reason;
@@ -494,14 +497,30 @@ template<class Callback> void Runtime::Entry::photo_call(Callback&& callback) {
     runtime->disable_photo_contribution(manifest,reason);
     throw std::runtime_error(manifest.id+": "+reason);
 }
+template<class Callback> void Runtime::Entry::frame_call(Callback&& callback) {
+    if(suspended || photo_failed) return;
+    if(photo_open && !manifest.photo_target.empty()) {
+        try { photo_call(callback); } catch(const std::exception&) { /* photo_call recorded the failure */ }
+    } else {
+        try { callback(); } catch(const std::exception& error) { fail(error.what()); }
+    }
+}
 void Runtime::disable_photo_contribution(const Manifest& provider,const std::string& reason) {
     auto& entry=find(provider.id);
-    if(provider.photo_target.empty() || entry.photo_disabled) return;
-    entry.photo_disabled=true;
+    if(provider.photo_target.empty() || entry.photo_disabled || entry.photo_failed) return;
+    entry.photo_failed=true;
     assets_.clear(provider.id);
     ++photo_revision_;
-    entry.leave_pause_scope();
-    log("cssx","warning","Photo Mode contribution disabled",{{"extension",provider.id},{"reason",reason}});
+    std::string detail=reason;
+    try { entry.leave_pause_scope(); }
+    catch(const std::exception& error) { detail+=" (tick restore pending: "+std::string(error.what())+")"; }
+    log("cssx","warning","Photo Mode contribution disabled",{{"extension",provider.id},{"reason",detail}});
+}
+void Runtime::finish_photo_session(const Manifest& owner) {
+    for(auto& entry:entries_) if(entry->photo_failed && entry->manifest.photo_target==owner.id) {
+        entry->photo_failed=false;
+        ++photo_revision_;
+    }
 }
 Json Runtime::photo_model(const Manifest& provider) {
     if(provider.photo_target.empty()) return model(provider.id);
@@ -512,9 +531,11 @@ Json Runtime::photo_model(const Manifest& provider) {
 void Runtime::photo_action(const Manifest& provider,const Json& action) {
     if(provider.photo_target.empty()) return event(provider.id,action);
     auto& e=find(provider.id);
-    if(e.dirty) e.photo_call([&]{ e.refresh(); });
-    validate_event(e.model,action);
-    e.photo_call([&]{ e.deliver(action); });
+    e.photo_call([&]{
+        if(e.dirty) e.refresh();
+        validate_event(e.model,action);
+        e.deliver(action);
+    });
 }
 void Runtime::photo_notice(const Manifest& provider,const char* value) {
     try {
@@ -523,14 +544,19 @@ void Runtime::photo_notice(const Manifest& provider,const char* value) {
         const bool closing=notice_value=="parked" || notice_value=="step_out" || notice_value=="detached" || notice_value=="closed";
         struct Reset { bool& flag; bool original; ~Reset(){ flag=original; } } reset{e.closing_assets,e.closing_assets};
         if(notice_value=="closed" || notice_value=="detached") { e.closing_assets=true; assets_.clear(provider.id); }
-        if(notice_value=="open") e.photo_open=!e.photo_disabled && !e.suspended && !e.stopped;
-        else if(closing)
-            e.leave_pause_scope();
+        if(notice_value=="open") e.photo_open=!e.photo_disabled && !e.photo_failed && !e.suspended && !e.stopped;
+        else if(closing) {
+            try { e.leave_pause_scope(); }
+            catch(const std::exception& error) {
+                if(provider.photo_target.empty()) throw;
+                disable_photo_contribution(provider,error.what());
+            }
+        }
         if(provider.photo_target.empty()) return host_event(provider.id,"photo_mode",value);
         if(e.suspended || e.stopped) return;
         const Json notice={{"id","cssx.photo_mode"},{"value",value}};
-        if(e.photo_disabled) {
-            if(std::string_view(value)=="detached") e.deliver(notice);
+        if(e.photo_disabled || e.photo_failed) {
+            if(notice_value=="detached" || notice_value=="closed") e.deliver(notice);
             return;
         }
         e.photo_call([&]{ e.deliver(notice); });
@@ -564,15 +590,16 @@ void Runtime::tick(double seconds) {
         if(!e->photo_open && !e->original_pause_ticks.empty()) {
             try { e->leave_pause_scope(); } catch(const std::exception&) { continue; }
         }
-        if(!e->suspended) try { e->tick(seconds); } catch(const std::exception& error) { e->fail(error.what()); }
+        e->frame_call([&]{ e->tick(seconds); });
     }
     if(auto notice=assets_.tick(services_.asset_stream)) {
         auto& entry=find(notice->owner);
-        try { entry.deliver({{"id","cssx.asset_load"},{"value",std::move(notice->value)}}); }
-        catch(const std::exception& error) { entry.fail(error.what()); }
+        entry.frame_call([&]{ entry.deliver({{"id","cssx.asset_load"},{"value",std::move(notice->value)}}); });
     }
 }
-void Runtime::render(const CssxFrame& frame) { for(auto& e:entries_) if(!e->suspended) try { e->render(&frame); } catch(const std::exception& error) { e->fail(error.what()); } }
+void Runtime::render(const CssxFrame& frame) {
+    for(auto& e:entries_) if(e->needs_frame()) e->frame_call([&]{ e->render(&frame); });
+}
 bool Runtime::needs_frame() const { return !stopped_ && std::any_of(entries_.begin(),entries_.end(),[](const auto& e){return e->needs_frame();}); }
 bool Runtime::stop() { bool ok=true;for(auto& e:entries_) if(!e->stop()) ok=false;stopped_=ok;return ok; }
 }

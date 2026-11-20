@@ -176,6 +176,8 @@ WidgetParam Call::describe_widget_parameter(FProperty* field) {
     auto type=WidgetParamType::other;
     if(field->IsA<FObjectProperty>() && field->GetElementSize()==sizeof(UObject*))
         type=WidgetParamType::object;
+    else if(field->IsA<FIntProperty>() && field->GetElementSize()==sizeof(int32_t))
+        type=WidgetParamType::integer;
     else if((field->IsA<FByteProperty>() || field->IsA<FEnumProperty>()) && field->GetElementSize()==1)
         type=WidgetParamType::byte_enum;
     else if(field->IsA<FStructProperty>() && field->GetElementSize()==sizeof(Margin)) {

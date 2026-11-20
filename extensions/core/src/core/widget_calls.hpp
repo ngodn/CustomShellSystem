@@ -8,7 +8,7 @@
 #include <cmath>
 
 namespace cssx::engine {
-enum class WidgetParamType { object, byte_enum, margin, other };
+enum class WidgetParamType { object, byte_enum, integer, margin, other };
 enum class WidgetParamRole { input, result, other };
 struct WidgetParam {
     std::wstring name;
@@ -47,6 +47,36 @@ void set_widget_option(Widget* target,const wchar_t* function,WidgetParamType ty
     const auto input=widget_parameter(call,type,WidgetParamRole::input);
     call.set(input.c_str(),value);
     call.run();
+}
+
+template<class Frame,class Widget>
+void add_photo_row(Widget* box,Widget* row) {
+    if(!row || !set_widget_child<Frame>(box,L"AddChildToVerticalBox",row))
+        throw std::runtime_error("Photo Mode row could not be attached");
+}
+
+// Tab navigation normally switches the page by delegate. A removed guest can leave
+// the strip on the owner while the switcher still shows the old page.
+template<class Frame,class Widget>
+bool select_photo_page(Widget* panel,Widget* switcher,Widget* page,int32_t index) {
+    auto selected=[&] {
+        Frame current(switcher,L"GetActiveWidget",1);
+        current.run();
+        return current.template get<Widget*>()==page;
+    };
+    if(selected()) return true;
+    set_widget_option<Frame>(panel,L"HandleTabSwitch",WidgetParamType::integer,index);
+    return selected();
+}
+
+template<class Frame,class Widget,class SetFocusFlag>
+void restore_photo_focus(Widget* panel,Widget* viewport_library,SetFocusFlag set_flag) {
+    Frame focus(panel,L"TogglePhotomodeFocus",1);
+    focus.set_single_bool_input(true);
+    Frame viewport(viewport_library,L"SetFocusToGameViewport",0);
+    set_flag();
+    focus.run();
+    viewport.run();
 }
 
 template<class Frame,class Widget>

@@ -11,13 +11,13 @@
 // that Photo Mode session ends, so the game's Activate Photo Mode always opens the panel exactly
 // as shipped. Since 1.3.3, other extensions can contribute tabs to the owner's session.
 //
-// Cost: nothing unless an extension declares photo_mode. Then two cached flag reads a frame;
-// while an extension tab is showing, a key poll and a model refresh four times a second.
+// Row events are observed only while an extension page is active.
 #include "engine.hpp"
 #include "core_abi.h"
 #include "photo_session.hpp"
 #include "menu_input.hpp"
 #include "photo_rows.hpp"
+#include "photo_input.hpp"
 #include "photo_activation.hpp"
 #include <array>
 #include <functional>
@@ -57,7 +57,7 @@ private:
     using WeakObject=engine::WeakObject;
     using Declared=PhotoModeDefinition;
     struct PauseRow { std::string id; WeakObject row; bool down=false, confirmed=false; };
-    struct Row { WeakObject widget; bool slider=false; PhotoRow shown; std::string displayed_info; double column_width=-1, text_width=-1; bool fresh=true; uint64_t settle_until=0; };
+    struct Row { WeakObject widget,main_button; bool slider=false; PhotoRow shown; std::string displayed_info; double column_width=-1, text_width=-1; bool fresh=true; uint64_t settle_until=0; };
     struct Tab {
         const Manifest* provider=nullptr;
         std::string section; WeakObject tab, page, box; WeakObject icon;
@@ -97,16 +97,22 @@ private:
     bool rows_dirty_=true;
     struct { std::vector<std::pair<const char*,uint64_t>> steps; } attach_cost_;   // last attach, microseconds a step
     size_t icons_ready_=0, pages_ready_=0;
+    bool owner_page_ready_=false, recover_owner_input_=false;
     bool announced_=false;                  // the extension heard "open" this session
     std::map<std::wstring,WeakObject> icons_;   // imported tab icons
     std::string pending_confirm_; uint64_t confirm_until_=0;
     std::vector<MenuKeyBinding> keys_;
-    std::map<std::string,bool> key_down_;
-    uint64_t keys_retry_=0, repeat_at_=0;
+    uint64_t keys_retry_=0;
+    std::map<RC::Unreal::UFunction*,PhotoInputHook> row_hooks_;
+    std::set<RC::Unreal::UClass*> watched_classes_;
+    PhotoInputQueue gestures_;
+    uint64_t delivered_=0;
+    Json last_action_;
     std::string last_error_;
     struct RowLook { uint8_t type=0; bool hover=false; bool known=false; };
     RowLook option_look_, slider_look_;
 
+    Json input_layout() const;
     void refresh_declared();
     const Declared* declaration(const std::string&) const;
     void trim_tabs(size_t keep);
@@ -125,6 +131,7 @@ private:
     void run_step(UObject* component);
     // panel
     void panel_tick(UObject* component);
+    bool select_page(size_t index);
     enum class Attach { done, later, failed };
     Attach attach(UObject* panel);
     void detach_panel() noexcept;
@@ -136,14 +143,21 @@ private:
     void grow(const Declared& declared);
     void add_tab_widget(Tab&,const Manifest::PhotoTab&);
     void add_page_widget(Tab&);
-    void build_page(Tab& tab,bool slow);
+    void update_active_page(Tab&,UObject* component,bool slow,uint64_t now);
+    void build_page(Tab&,const Json& model,bool rebuild,bool active,bool slow);
     Row& row_at(Tab& tab,size_t i);
     Row make_row(PhotoRow::Kind kind);
     void recheck(Tab& tab);
     void recheck_row(Row& row);
     void fit_info(Row&,const PhotoRow&,bool force);
     void fill(Row& row,const PhotoRow& value);
-    void poll_keys(Tab& tab);
+    void watch_row_input(UObject* widget,bool button);
+    void unwatch_row_input() noexcept;
+    static void on_row_input(void*,void*,void*,void*) noexcept;
+    void remember_input(UObject*,PhotoInputSource,uint8_t);
+    bool body_click_allowed(UObject* button);
+    void dispatch_input(Tab&);
+    void press_row(Tab&,size_t,const std::string&);
     void press(Tab& tab,const std::string& key);
 };
 }

@@ -102,7 +102,7 @@ struct Bridge::HookGroup {
     uint64_t token=0;
     std::map<uint64_t,Rule> rules;
 };
-Bridge::Bridge(const CssxHookHost* hooks):hooks_(hooks && hooks->abi==1 && hooks->size>=sizeof(CssxHookHost) && hooks->add && hooks->remove?hooks:nullptr) {}
+Bridge::Bridge(const CssxHookHost* hooks):hooks_(hooks && hooks->abi==1 && hooks->size>=offsetof(CssxHookHost,add_script_pre) && hooks->add && hooks->remove?hooks:nullptr) {}
 Bridge::~Bridge()=default;
 Json Bridge::handle(UObject* object) {
     if(!object) return nullptr;

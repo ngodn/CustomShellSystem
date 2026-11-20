@@ -3,6 +3,7 @@
 // panel, and which event a menu key on that row sends. Portable, so the host tests cover it;
 // the widgets themselves are core/photo.cpp.
 #include "controls.hpp"
+#include "manifest.hpp"
 #include <string>
 #include <vector>
 
@@ -10,6 +11,7 @@ namespace cssx {
 struct PhotoRow {
     std::string id, name, value;
     enum Kind { option, slider, information, kind_count } kind=option;
+    bool button=false;
     bool arrows=false;     // left/right change it
     bool enabled=true;
     double fill=0;         // slider position 0..1
@@ -30,7 +32,8 @@ inline std::vector<PhotoRow> photo_rows(const Json& model,const std::string& sec
             row.enabled=interactive(c) || type=="label" || type=="progress" || type=="loading";
             if(type=="slider") row.kind=PhotoRow::slider;
             row.arrows=interactive(c) && (adjustable(c) || type=="toggle");
-            if(type=="button") {
+            row.button=type=="button";
+            if(row.button) {
                 row.value=c.value("enabled",true) ? std::string() : c.value("disabled_label",std::string());
             } else if(type=="label") {
                 row.kind=PhotoRow::information;
@@ -47,6 +50,13 @@ inline std::vector<PhotoRow> photo_rows(const Json& model,const std::string& sec
             rows.push_back(std::move(row));
         }
     }
+    return rows;
+}
+
+inline std::vector<PhotoRow> photo_tab_rows(const Json& model,const Manifest& provider,const std::string& section) {
+    auto rows=photo_rows(model,section);
+    if(rows.empty() && !provider.photo_target.empty())
+        throw std::runtime_error("Photo Mode tab '"+section+"' has no displayable rows");
     return rows;
 }
 

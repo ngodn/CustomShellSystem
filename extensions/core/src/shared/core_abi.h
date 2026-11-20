@@ -26,6 +26,8 @@ typedef struct CssxHookHost {
      * total time in them, in QPC ticks; and whether the global script-function
      * interception is currently installed. */
     void (*stats)(void* context, uint64_t* calls, uint64_t* ticks, int* script_hook_installed);
+    /* Observe Blueprint locals at entry, before nested events reuse the persistent frame. */
+    uint64_t (*add_script_pre)(void* context, void* function, CssxHookCallback callback, void* user);
 } CssxHookHost;
 
 /* Loader-owned ring of intervals between consecutive engine tick callbacks,

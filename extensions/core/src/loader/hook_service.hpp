@@ -11,6 +11,8 @@ class CssxHookService {
     std::shared_ptr<State> state_;
     CssxHookHost api_;
     static uint64_t add(void*,void* function,CssxHookCallback,void* user);
+    static uint64_t add_script_pre(void*,void*,CssxHookCallback,void*);
+    static uint64_t register_hook(void*,void*,CssxHookCallback,void*,bool pre);
     static int remove(void*,uint64_t);
     static void stats(void*,uint64_t*,uint64_t*,int*);
 public:

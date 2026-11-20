@@ -8,7 +8,7 @@
 #include "../src/core/widget_calls.hpp"
 
 namespace {
-enum class Type { object, byte, margin };
+enum class Type { object, byte, integer, margin };
 enum class Direction { input, result, output, reference };
 struct Field { std::wstring name; Type type; Direction direction; };
 struct Size { double x,y; };
@@ -18,6 +18,7 @@ struct Widget {
     std::map<std::wstring,std::vector<Field>> functions;
     Widget* child=nullptr;
     Widget* slot=nullptr;
+    std::vector<Widget*> pages;
     std::map<std::wstring,uint8_t> settings;
     std::array<float,4> padding{};
 };
@@ -27,6 +28,7 @@ struct Frame {
     const std::vector<Field>& fields;
     Widget* child=nullptr;
     uint8_t setting=0;
+    int32_t index=0;
     bool ran=false;
     std::array<float,4> padding{};
     Frame(Widget* target,const wchar_t* fn,size_t count)
@@ -39,7 +41,8 @@ struct Frame {
         const auto role=f.direction==Direction::result?WidgetParamRole::result:
                         f.direction==Direction::input?WidgetParamRole::input:WidgetParamRole::other;
         const auto type=f.type==Type::object?WidgetParamType::object:
-                        f.type==Type::byte?WidgetParamType::byte_enum:WidgetParamType::margin;
+                        f.type==Type::byte?WidgetParamType::byte_enum:
+                        f.type==Type::integer?WidgetParamType::integer:WidgetParamType::margin;
         return {f.name,type,role};
     }
     const Field& named(const wchar_t* name) const {
@@ -51,6 +54,11 @@ struct Frame {
         const auto& f=named(name);
         if(f.type!=Type::object || f.direction!=Direction::input) throw std::runtime_error("wrong child input");
         child=value;
+    }
+    void set(const wchar_t* name,int32_t value) {
+        const auto& f=named(name);
+        if(f.type!=Type::integer || f.direction!=Direction::input) throw std::runtime_error("wrong page index");
+        index=value;
     }
     void set(const wchar_t* name,uint8_t value) {
         const auto& f=named(name);
@@ -82,6 +90,7 @@ struct Frame {
             target->cached_width=0;
             for(unsigned char c:target->text) if((c&0xc0)!=0x80) target->cached_width+=c=='.'?2:c=='i'?1:6;
         }
+        else if(fn==L"HandleTabSwitch") target->child->slot=target->pages.at(index);
         else if(fn==L"SetPadding") target->padding=padding;
         else target->settings[fn]=setting;
         ran=true;
@@ -136,6 +145,30 @@ void check_invalid_child(std::vector<Field> fields) {
     catch(const std::runtime_error&) { rejected=true; }
     check(rejected && parent.child==nullptr,"invalid signature should fail before the widget changes");
 }
+void check_owner_selection() {
+    Widget panel{}, switcher{}, owner{}, guest{};
+    panel.child=&switcher;
+    panel.pages={&guest,&owner};
+    panel.functions[L"HandleTabSwitch"]={{L"ChosenIndex",Type::integer,Direction::input}};
+    switcher.functions[L"GetActiveWidget"]={{L"ReturnValue",Type::object,Direction::result}};
+    switcher.slot=&guest;
+    check(cssx::engine::select_photo_page<Frame>(&panel,&switcher,&owner,1) && switcher.slot==&owner,
+          "removed guest page still active in the switcher");
+    switcher.slot=&guest;
+    check(!cssx::engine::select_photo_page<Frame>(&panel,&switcher,&owner,0),
+          "focus granted before the owner page became active");
+    switcher.slot=&owner;
+    panel.functions.erase(L"HandleTabSwitch");
+    check(cssx::engine::select_photo_page<Frame>(&panel,&switcher,&owner,1),
+          "already selected page was reopened");
+    Widget viewport{};
+    bool ui_focus=false;
+    panel.functions[L"TogglePhotomodeFocus"]={{L"bIsInFocus",Type::byte,Direction::input}};
+    viewport.functions[L"SetFocusToGameViewport"]={};
+    cssx::engine::restore_photo_focus<Frame>(&panel,&viewport,[&]{ ui_focus=true; });
+    check(ui_focus && panel.settings.at(L"TogglePhotomodeFocus")==1 && viewport.settings.contains(L"SetFocusToGameViewport"),
+          "owner recovery must restore the input gate, menu bindings and viewport focus");
+}
 void check_tab_calls() {
     using namespace cssx::engine;
     Widget parent{},child{},slot{};
@@ -160,6 +193,7 @@ int main() {
         check_invalid_child({{L"content",Type::object,Direction::reference},slot});
         check_invalid_child({child,{L"ReturnValue",Type::object,Direction::output}});
         check_invalid_child({child,{L"other",Type::object,Direction::input}});
+        check_owner_selection();
         check_tab_calls();
         check_measured_information();
     } catch(const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }

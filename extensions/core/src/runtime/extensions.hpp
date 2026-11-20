@@ -44,6 +44,14 @@ public:
     std::vector<PhotoModeDefinition> photo_modes() const;
     uint64_t photo_revision() const { return photo_revision_; }
     void disable_photo_contribution(const Manifest&,const std::string& reason);
+    void finish_photo_session(const Manifest& owner);
+    template<class Work> bool photo_tab(const Manifest& provider,Work&& work) {
+        if(provider.photo_target.empty()) { work(); return true; }
+        try { work(); return true; }
+        catch(const std::exception& error) { disable_photo_contribution(provider,error.what()); }
+        catch(...) { disable_photo_contribution(provider,"unknown tab failure"); }
+        return false;
+    }
     Json photo_model(const Manifest&);
     void photo_action(const Manifest&,const Json&);
     void photo_notice(const Manifest&,const char* value);

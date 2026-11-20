@@ -132,6 +132,12 @@ The values below apply to contributors.
 | Player closes the mode | `closed` |
 | Runtime reload, player loss, parked session replaced, or contribution withdrawn | `detached` if the callback is still callable |
 
+In CSSX 1.3.4 the game's page listener supplies left, right and confirm on extension rows.
+Declare an action as `button` to receive its completed body click. Adjustable controls use the
+native row arrows and repeat rate. The slider bar displays its current value. Scrolling and
+selection belong to the native page. Providers receive the existing control events in either
+focus state when the game delivers the input. [Photo Mode input](PHOTO-MODE-INPUT.md)
+
 The owner and its attached contributors can request `photo.step_out` while open and
 `photo.step_in` while parked. CSSX runs each request on the next tick. Pass `section` on
 step-in to focus one of the caller's tabs. An omitted or unknown section opens the owner's
@@ -142,10 +148,15 @@ A missing target, an unavailable mode or a version that fails the floor leaves t
 idle. CSSX writes one reason to its discovery log. An older CSSX ignores this optional manifest
 field. Require CSSX 1.3.3 in your package if it depends on these tabs. The native ABI remains 3.
 
-CSSX removes a contribution for the rest of the runtime after a Photo Mode callback fails or
-takes more than 50 ms to return. A reload retries it. The owner keeps its tabs. ABI 3 calls
-native code on the game thread, so time spent in a late call affects that frame. A native
-DLL that crashes the process or never returns can still stop the game.
+CSSX selects the owner's page and processes its rows before sending guest open notices, one
+guest per frame. Each guest tab needs at least one displayable row. A text-entry-only section
+needs a displayable control alongside its text input to be usable as a Photo Mode tab.
+
+If a guest callback fails, exceeds the existing 50 ms budget, or its tab cannot be built,
+CSSX logs the reason once, removes that guest for the session and returns input to the owner.
+A fresh session retries the guest. Returning from a step out keeps the same session.
+The budget covers callbacks that return. Native ABI 3 callbacks run on the game thread.
+A DLL that never returns can stop the game indefinitely.
 
 ## Menu schema 2 (`menu.json` or the `model()` result)
 

@@ -1,5 +1,7 @@
 #include "photo_rows.hpp"
+#include "photo_input.hpp"
 #include "photo_session.hpp"
+#include "../src/core/widget_calls.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -53,6 +55,201 @@ void install(const fs::path& root,std::string id,std::string title,std::string t
     )";
 }
 
+void open_all(PhotoSession& session,Runtime& runtime,const PhotoModeDefinition& mode) {
+    session.open(runtime,mode);
+    while(session.open_next(runtime)) {}
+}
+
+// The game can accept the reflected AddChild call but return no panel slot.
+struct RejectRow {
+    RejectRow(int*,const wchar_t* function,int count) {
+        check(std::wstring_view(function)==L"AddChildToVerticalBox" && count==2,"wrong row function");
+    }
+    std::array<int,2> parameters() const { return {0,1}; }
+    engine::WidgetParam describe_widget_parameter(int field) const {
+        using namespace engine;
+        return {field?L"ReturnValue":L"content",WidgetParamType::object,field?WidgetParamRole::result:WidgetParamRole::input};
+    }
+    void set(const wchar_t* name,int*) { check(std::wstring_view(name)==L"content","wrong row parameter"); }
+    void run() {}
+    template<class T> T get(const wchar_t*) const { return nullptr; }
+};
+
+void check_guest_failure_isolation() {
+    Directory dir;
+    const std::string owner="test.owner", guest="test.guest";
+    install(dir.path,owner,owner);
+    install(dir.path,guest,guest,owner);
+    int warnings=0, owner_actions=0, owner_closes=0, guest_opens=0;
+    bool throw_on_open=true;
+    HostServices host;
+    host.log=[&](const std::string&,const std::string& msg,const Json& fields) {
+        if(msg=="Photo Mode contribution disabled") {
+            ++warnings;
+            check(fields.at("extension")==guest,"wrong failure attribution");
+        }
+    };
+    host.request=[&](const Json& r)->Json {
+        if(r.at("op")=="probe.event") {
+            if(r.at("extension")==owner && r.at("value")=="go") ++owner_actions;
+            if(r.at("extension")==owner && r.at("value")=="closed") ++owner_closes;
+            if(r.at("extension")==guest && r.at("value")=="open") {
+                ++guest_opens;
+                if(throw_on_open) return "fail"; // fixture raises a Lua error
+            }
+        }
+        return "ok";
+    };
+    Runtime runtime(dir.path,host);
+    PhotoSession session;
+    auto mode=runtime.photo_modes().at(0);
+    auto& provider=*mode.contributors.at(0);
+    auto owner_button=[&] {
+        auto model=runtime.photo_model(*mode.owner);
+        const auto* control=photo_control(model,"shared","go");
+        check(control!=nullptr,"owner button lost");
+        runtime.photo_action(*mode.owner,photo_event(*control,"accept",false));
+    };
+    for(int attempt=0;attempt<4;++attempt) {
+        session.open(runtime,mode);
+        owner_button();
+        check(guest_opens==attempt && !session.includes(guest),"owner handles input before guest open");
+        check(session.open_next(runtime) && !session.open_next(runtime),"guest opens once");
+        if(attempt==1 || attempt==2) {
+            session.request({{"op","photo.step_out"},{"extension",guest}});
+            check(!runtime.photo_tab(provider,[&]{
+                const auto model=runtime.photo_model(provider);
+                const auto rows=photo_tab_rows(model,provider,attempt==1?"shared":"unknown");
+                check(rows.size()==1,"fixture needs a row");
+                int box=0,row=0;
+                engine::add_photo_row<RejectRow>(&box,&row);
+            }),"row failure must stay within the tab");
+        }
+        if(attempt<3) {
+            auto remaining=runtime.photo_modes().at(0);
+            check(session.prune(runtime,remaining) && !session.prune(runtime,remaining),"single owner focus recovery");
+            check(!session.includes(guest) && remaining.tabs.size()==1 && session.includes(owner),"only the failed guest leaves");
+            check(session.take_step().kind==PhotoSession::Step::none,"failed guest cannot park the owner");
+            runtime.disable_photo_contribution(provider,"duplicate");
+            check(warnings==attempt+1,"one reason per failed guest");
+        } else check(session.includes(guest),"guest can join a fresh session");
+        owner_button();
+        check(owner_actions==2*(attempt+1) && owner_closes==attempt,"owner action still delivered without reopening");
+        session.end(runtime,false);
+        throw_on_open=false;
+        mode=runtime.photo_modes().at(0);
+        check(mode.contributors.size()==1,"next genuine open retries the guest");
+    }
+    check(runtime.stop(),"fixture unloaded");
+}
+
+void check_stalled_guest_tick() {
+    Directory dir;
+    const std::string owner="test.owner",guest="test.guest";
+    install(dir.path,owner,owner);
+    install(dir.path,guest,guest,owner);
+    std::ofstream(dir.path/"extensions"/guest/"main.lua")<<R"(
+        local active=false
+        return { model=function() return {} end,
+            event=function(e) active=e.value=="open" end,
+            tick=function() if active then while true do end end end }
+    )";
+    int warnings=0,owner_actions=0;
+    HostServices host;
+    host.log=[&](const std::string&,const std::string& message,const Json&) {
+        if(message=="Photo Mode contribution disabled") ++warnings;
+    };
+    host.request=[&](const Json& r)->Json {
+        if(r.at("extension")==owner && r.value("value","")=="go") ++owner_actions;
+        return "ok";
+    };
+    Runtime runtime(dir.path,host);
+    auto mode=runtime.photo_modes().at(0);
+    PhotoSession session;
+    open_all(session,runtime,mode);
+    runtime.tick(.2);
+    check(session.prune(runtime,runtime.photo_modes().at(0)) && !session.includes(guest),"stalled Lua guest pruned after instruction limit");
+    runtime.tick(.2);
+    runtime.photo_action(*mode.owner,{{"id","go"}});
+    check(warnings==1 && owner_actions==1 && session.includes(owner),"owner handles input after stalled guest tick");
+    session.end(runtime,false);
+    check(runtime.stop(),"stalled guest fixture unloaded");
+}
+
+void check_native_row_input() {
+    using S=PhotoInputSource;
+    struct Binding { const wchar_t* name; S source; };
+    const Binding functions[]={
+        {L"HandleNavigableInput",S::navigation},
+        {L"BndEvt__WBP_NB_Photomode_WBP_ArrowButton_L_K2Node_ComponentBoundEvent_8_OnClicked__DelegateSignature",S::arrow_left},
+        {L"BndEvt__WBP_NB_Photomode_WBP_ArrowButton_R_K2Node_ComponentBoundEvent_10_OnContinuousTrigger__DelegateSignature",S::arrow_right},
+        {L"BndEvt__WBP_NB_Option_Slider_WBP_ArrowButton_R_K2Node_ComponentBoundEvent_7_OnClicked__DelegateSignature",S::arrow_right},
+        {L"BndEvt__WBP_NB_Option_Slider_WBP_ArrowButton_L_K2Node_ComponentBoundEvent_10_OnContinuousTrigger__DelegateSignature",S::arrow_left},
+        {L"BndEvt__WBP_NavigationButton_ButtonWidget_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature",S::button},
+        {L"BndEvt__WBP_NavigationButton_ButtonWidget_K2Node_ComponentBoundEvent_4_OnButtonReleasedEvent__DelegateSignature",S::button_up},
+        {L"BndEvt__WBP_NB_Photomode_WBP_ArrowButton_L_K2Node_ComponentBoundEvent_3_OnHovered__DelegateSignature",S::unrelated},
+        {L"OnMouseWheel",S::unrelated},{L"OnMouseMove",S::unrelated}
+    };
+    for(auto binding:functions) check(photo_input_source(binding.name)==binding.source,"wrong native widget binding");
+    struct Function {
+        int bytes=0,params=0,entry=0;
+        Function* graph=nullptr;
+        int GetNumParms() const { return params; }
+        int GetParmsSize() const { return bytes; }
+        int GetEventGraphCallOffset() const { return entry; }
+        Function* GetEventGraphFunction() const { return graph; }
+    };
+    Function graph{4,1},left{0,0,1466,&graph},right{0,0,1456,&graph},body,nav{2,2};
+    std::map<Function*,PhotoInputHook> registered;
+    unsigned subscriptions=0;
+    auto subscribe=[&](Function*) { return ++subscriptions; };
+    bind_photo_script(registered,&left,S::arrow_left,-1,subscribe);
+    bind_photo_script(registered,&right,S::arrow_right,-1,subscribe);
+    bind_photo_script(registered,&body,S::button,-1,subscribe);
+    bind_photo_script(registered,&nav,S::navigation,0,subscribe);
+    const auto& shared=registered.at(&graph);
+    check(subscriptions==3 && !registered.contains(&left) && !registered.contains(&right),
+          "optimized stubs share one real graph subscription");
+    check(shared.offset==0 && shared.route.source(1466)==S::arrow_left && shared.route.source(1456)==S::arrow_right &&
+          shared.route.source(200)==S::unrelated,"only the selected bound delegate reaches the row");
+    check(registered.at(&body).route.source(0)==S::button && registered.at(&nav).offset==0,
+          "ordinary button and parameterized navigation functions remain direct subscriptions");
+    for(int i=0;i<256;++i) {
+        std::string_view expected=i==5 || i==6?"left":i==7 || i==8?"right":i==13?"accept":"";
+        check(photo_command(S::navigation,uint8_t(i),false,true)==expected,"stock input enum routed to wrong action");
+    }
+    check(photo_command(S::button,0,true,false)=="accept" && photo_command(S::button,0,false,true).empty(),
+          "only an action button accepts a main-body click");
+    check(photo_command(S::arrow_left,0,true,false).empty() && photo_command(S::arrow_right,0,false,true)=="right",
+          "arrow clicks require an adjustable row");
+    PhotoInputQueue queue;
+    for(int i=0;i<3;++i) queue.push({11,"speed","right",S::navigation});
+    check(queue.take().size()==3,"the native listener owns repeat cadence");
+    PhotoGesture click{11,"play","accept",S::button},confirm{11,"play","accept",S::navigation};
+    queue.down(11,"play",true);
+    queue.push(confirm);
+    check(queue.take().size()==1,"pad press delivers once");
+    queue.up(11,"play");
+    queue.push(click);
+    check(queue.take().empty(),"the later simulated release cannot deliver a second press");
+    queue.down(11,"play",true);
+    queue.up(11,"play");
+    queue.push(click);
+    queue.push(confirm);
+    check(queue.take().size()==1,"a synthetic click alone works, paired navigation does not duplicate it");
+    queue.down(11,"play",false);
+    queue.push(confirm);
+    queue.push(click);
+    check(queue.take().size()==2,"independent mouse and keyboard actions each deliver");
+    queue.push(click);
+    queue.clear();
+    check(queue.take().empty(),"tab change discards stale gestures");
+    check(!click.matches(12,"play") && !click.matches(11,"exit"),"pooled row or replaced widget took stale input");
+    PhotoBounds icon{90,10,130,35},strip{0,0,100,40};
+    auto clipped=icon.clipped(strip);
+    check(clipped && clipped->left==90 && clipped->right==100 && !icon.clipped({0,0,40,40}),
+          "diagnostic rectangle must exclude the scrolled-off portion");
+}
 struct StreamProbe {
     int starts=0,polls=0,resident=0,pending=0,late=0;
     bool finish=false,throw_start=false;
@@ -152,7 +349,7 @@ void check_async_assets() {
     release(owner,id); probe.throw_start=false; empty();
     id=start(owner); check(release(owner,id),"cancel queued request"); empty();
     for(int exit=0;exit<5;++exit) {
-        session.open(runtime,mode); id=start(guest);
+        open_all(session,runtime,mode); id=start(guest);
         tick(); tick(); tick();
         check(probe.resident==1 && probe.pending==1,"exit fixture holds a resident and a pending path");
         auto seen=events.size();
@@ -160,7 +357,7 @@ void check_async_assets() {
         if(exit==1) {
             session.park(runtime);
             check(probe.resident==1 && probe.pending==1,"park preserves the held batch");
-            session.open(runtime,mode);
+            open_all(session,runtime,mode);
             check(probe.resident==1 && probe.pending==1,"resume preserves the same handle");
             session.end(runtime,false);
         }
@@ -179,7 +376,7 @@ void check_async_assets() {
     for(int i=0;i<12;++i) tick();
     check(probe.pending==2,"global in-flight limit");
     release(owner,id); release(owner,second); release(guest,third); empty();
-    probe.finish=true; session.open(runtime,mode); start(guest); tick(); tick(); tick();
+    probe.finish=true; open_all(session,runtime,mode); start(guest); tick(); tick(); tick();
     runtime.disable_photo_contribution(*mode.contributors.front(),"fixture failure"); empty();
     start(owner); tick(); tick(); tick(); check(runtime.stop(),"unload releases pending and resident assets"); empty();
 }
@@ -225,7 +422,7 @@ void check_pause_tick_scopes() {
     };
     auto restored=[&] { check(!components.at(11) && components.at(12),"restore original false and true bits"); };
     check(ask(guest,"read").at("result")==false && ask(guest,"acquire").contains("err"),"read outside session, acquire restricted");
-    session.open(runtime,mode);
+    open_all(session,runtime,mode);
     acquire();
     check(ask(guest,"read").at("result")==true,"read returns current held value");
     check(ask(owner,"acquire").contains("err") && ask(owner,"release").at("result")==false && components.at(11),"other provider cannot steal or release");
@@ -233,9 +430,9 @@ void check_pause_tick_scopes() {
     restored();
     acquire(); session.park(runtime); restored();
     check(ask(guest,"acquire").contains("err"),"parked session cannot reacquire");
-    session.open(runtime,mode); acquire(); session.end(runtime,false); restored();
-    session.open(runtime,mode); acquire(); session.end(runtime,true); restored();
-    session.open(runtime,mode); acquire();
+    open_all(session,runtime,mode); acquire(); session.end(runtime,false); restored();
+    open_all(session,runtime,mode); acquire(); session.end(runtime,true); restored();
+    open_all(session,runtime,mode); acquire();
     check(ask(owner,"acquire",14).at("result")==false,"second owner has an independent component");
     fail_restore=true;
     runtime.world_changed();
@@ -243,7 +440,7 @@ void check_pause_tick_scopes() {
     fail_restore=false;
     runtime.tick(0.01); restored();
     check(ask(guest,"acquire").contains("err"),"world transition closes scope before callbacks");
-    session.end(runtime,true); session.open(runtime,mode); acquire();
+    session.end(runtime,true); open_all(session,runtime,mode); acquire();
     components.erase(11);
     components[13]=false;
     check(ask(guest,"release").at("result")==true && !components.at(13),"expired handle cannot write its replacement");
@@ -256,6 +453,9 @@ void check_pause_tick_scopes() {
 }
 
 int main() try {
+    check_native_row_input();
+    check_guest_failure_isolation();
+    check_stalled_guest_tick();
     check_async_assets();
     check_pause_tick_scopes();
     Directory dir;
@@ -311,7 +511,7 @@ int main() try {
         check(mode.tabs.size()==3 && mode.tabs[0].provider->id==owner &&
               mode.tabs[1].provider->id==other && mode.tabs[2].provider->id==guest,"tabs ordered by owner, then id, independent of title");
         PhotoSession session;
-        session.open(runtime,mode);
+        open_all(session,runtime,mode);
         check(session.includes(owner) && session.includes(guest) && !session.includes("test.old"),"only attached participants can step");
         const auto before=models;
         for(const auto& tab:mode.tabs) {
@@ -333,13 +533,13 @@ int main() try {
         const auto step=session.take_step();
         check(step.kind==PhotoSession::Step::in && mode.focus_tab(step.provider,step.section)==2 &&
               mode.focus_tab(owner,step.section)==0 && mode.focus_tab(guest,"unknown")==0,"return focuses the caller's tab with fallback to owner");
-        session.open(runtime,mode);
+        open_all(session,runtime,mode);
         session.end(runtime,false);
         check(events[owner]==std::vector<std::string>{"open","parked","open","closed"},"owner's original event sequence");
         check(events[guest]==std::vector<std::string>{"open","go","step_out","parked","step_in","open","closed"},"guest actions and full lifecycle");
         check(events[other]==std::vector<std::string>{"open","step_out","parked","step_in","open","closed"},"second guest receives no sibling action");
 
-        session.open(runtime,mode);
+        open_all(session,runtime,mode);
         const auto topology=runtime.photo_revision();
         auto menu_path=dir.path/"extensions"/guest/"menu.json";
         const auto previous=fs::last_write_time(menu_path);
@@ -378,7 +578,7 @@ int main() try {
         auto mode=runtime.photo_modes().front();
         check(mode.tabs.size()==3,"reloading either manifest reattaches contributors");
         PhotoSession session;
-        session.open(runtime,mode);
+        open_all(session,runtime,mode);
         session.park(runtime);
         session.end(runtime,true);
         check(!session.includes(owner) && events[guest].back()=="detached","reloading a parked session releases the guest");

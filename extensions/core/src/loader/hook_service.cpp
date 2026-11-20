@@ -16,31 +16,34 @@ struct CssxHookService::State {
         UFunction* function=nullptr;
         CssxHookCallback callback=nullptr; void* user=nullptr;
         CallbackId native_id=0;
-        bool rooted=false; unsigned running=0;
+        bool rooted=false, pre=false; unsigned running=0;
     };
     std::shared_ptr<std::recursive_mutex> gate;
     std::atomic<DWORD> thread{0};
     std::atomic<bool> enabled{false};
-    Hook::GlobalCallbackId script_id=0;
     std::map<uint64_t,std::shared_ptr<Slot>> slots;
-    std::map<UFunction*,std::vector<std::shared_ptr<Slot>>> scripts;
-    // Lock-free pre-filter for the global script callback: the hooked
-    // Blueprint functions, published under the gate, read without it. Every
-    // Blueprint call in the game passes through that callback while a
-    // Blueprint rule exists, so the common case (not ours) must cost a few
-    // loads and no mutex.
-    std::array<std::atomic<UFunction*>,128> fast{};
-    std::atomic<uint32_t> fast_count{0};
-    void publish_fast() {
-        uint32_t n=0;
-        for(const auto& [function,slots]:scripts) { if(n>=fast.size()) break; fast[n++].store(function,std::memory_order_relaxed); }
-        fast_count.store(n,std::memory_order_release);
-    }
-    bool maybe_hooked(UFunction* node) const noexcept {
-        const auto n=fast_count.load(std::memory_order_acquire);
-        for(uint32_t i=0;i<n;++i) if(fast[i].load(std::memory_order_relaxed)==node) return true;
-        return false;
-    }
+    struct ScriptRegistry {
+        Hook::GlobalCallbackId id=0;
+        std::map<UFunction*,std::vector<std::shared_ptr<Slot>>> scripts;
+        // Lock-free pre-filter for the global script callback: the hooked
+        // Blueprint functions, published under the gate, read without it. Every
+        // Blueprint call in the game passes through that callback while a
+        // Blueprint rule exists, so the common case (not ours) must cost a few
+        // loads and no mutex.
+        std::array<std::atomic<UFunction*>,128> fast{};
+        std::atomic<uint32_t> fast_count{0};
+        void publish_fast() {
+            uint32_t n=0;
+            for(const auto& [function,slots]:scripts) { if(n>=fast.size()) break; fast[n++].store(function,std::memory_order_relaxed); }
+            fast_count.store(n,std::memory_order_release);
+        }
+        bool maybe_hooked(UFunction* node) const noexcept {
+            const auto n=fast_count.load(std::memory_order_acquire);
+            for(uint32_t i=0;i<n;++i) if(fast[i].load(std::memory_order_relaxed)==node) return true;
+            return false;
+        }
+    };
+    ScriptRegistry before,after;
     struct Root { unsigned users=0; bool owned=false; };
     std::map<UFunction*,Root> roots;
     uint64_t next=1;
@@ -58,16 +61,22 @@ struct CssxHookService::State {
     }
 };
 CssxHookService::CssxHookService(std::shared_ptr<std::recursive_mutex> gate)
-    :state_(std::make_shared<State>(std::move(gate))),api_{1,sizeof(CssxHookHost),this,add,remove,stats} {}
+    :state_(std::make_shared<State>(std::move(gate))),api_{1,sizeof(CssxHookHost),this,add,remove,stats,add_script_pre} {}
 void CssxHookService::game_thread() { state_->thread=GetCurrentThreadId(); }
 uint64_t CssxHookService::add(void* context,void* target,CssxHookCallback callback,void* user) {
+    return register_hook(context,target,callback,user,false);
+}
+uint64_t CssxHookService::add_script_pre(void* context,void* target,CssxHookCallback callback,void* user) {
+    return register_hook(context,target,callback,user,true);
+}
+uint64_t CssxHookService::register_hook(void* context,void* target,CssxHookCallback callback,void* user,bool pre) {
     auto state=static_cast<CssxHookService*>(context)->state_;
     try {
         std::lock_guard lock(*state->gate);
         if(state->stopped || state->thread!=GetCurrentThreadId() || !target || !callback || state->slots.size()>=128) return 0;
         auto* function=static_cast<UFunction*>(target);
-        if(function->HasAnyFunctionFlags(FUNC_Delegate|FUNC_MulticastDelegate)) return 0;
-        auto slot=std::make_shared<State::Slot>(); slot->function=function; slot->callback=callback; slot->user=user;
+        if(function->HasAnyFunctionFlags(FUNC_Delegate|FUNC_MulticastDelegate) || (pre && function->HasAnyFunctionFlags(FUNC_Native))) return 0;
+        auto slot=std::make_shared<State::Slot>(); slot->pre=pre; slot->function=function; slot->callback=callback; slot->user=user;
         const auto id=state->next++;
         state->slots.emplace(id,slot);
         try {
@@ -82,21 +91,24 @@ uint64_t CssxHookService::add(void* context,void* target,CssxHookCallback callba
                 });
             } else {
                 if(!UObject::ProcessLocalScriptFunctionInternal.is_ready()) throw std::runtime_error("Script dispatcher is unavailable");
-                state->scripts[function].push_back(slot); state->publish_fast();
-                if(!state->script_id) {
-                    // One global script-function interception for every Blueprint rule.
-                    // Installed on the first Blueprint rule and removed with the last,
-                    // so it costs nothing while no such rule exists.
-                    state->script_id=Hook::RegisterProcessLocalScriptFunctionPostCallback([state](auto&,UObject* object,FFrame& frame,void* result) {
+                auto& registry=pre?state->before:state->after;
+                registry.scripts[function].push_back(slot);
+                registry.publish_fast();
+                if(!registry.id) {
+                    auto dispatch=[state,pre](auto&,UObject* object,FFrame& frame,void* result) {
                         if(!state->enabled || state->thread!=GetCurrentThreadId()) return;
-                        if(!state->maybe_hooked(frame.Node())) return;   // no lock on the common path
+                        auto& registry=pre?state->before:state->after;
+                        if(!registry.maybe_hooked(frame.Node())) return;
                         std::lock_guard lock(*state->gate);
                         if(state->stopped) return;
-                        const auto found=state->scripts.find(frame.Node());
-                        if(found==state->scripts.end()) return;
+                        const auto found=registry.scripts.find(frame.Node());
+                        if(found==registry.scripts.end()) return;
                         for(const auto& slot:found->second) State::invoke(*state,slot,object,frame,result);
-                    },{false,false,STR("CSSX"),STR("ScriptDispatch")});
-                    if(!state->script_id) throw std::runtime_error("Script callback registration failed");
+                    };
+                    Hook::FCallbackOptions options{false,false,STR("CSSX"),pre?STR("ScriptEntry"):STR("ScriptDispatch")};
+                    registry.id=pre?Hook::RegisterProcessLocalScriptFunctionPreCallback(dispatch,options):
+                                    Hook::RegisterProcessLocalScriptFunctionPostCallback(dispatch,options);
+                    if(!registry.id) throw std::runtime_error("Script callback registration failed");
                 }
             }
             state->enabled=true; return id;
@@ -111,6 +123,7 @@ int CssxHookService::remove(void* context,uint64_t id) {
         auto slot=found->second;
         if(slot->running) return 0;
         slot->callback=nullptr; slot->user=nullptr;
+        auto& registry=slot->pre?state->before:state->after;
         if(slot->native_id) {
             auto& hooks=Internal::GetHookedFunctionsMap(); auto registered=hooks.find(slot->function);
             if(registered!=hooks.end() && registered->second.GetCallbackData(slot->native_id)) {
@@ -118,11 +131,11 @@ int CssxHookService::remove(void* context,uint64_t id) {
                 if(registered->second.GetCallbackData(slot->native_id)) return 0;
             }
             slot->native_id=0;
-        } else if(auto scripts=state->scripts.find(slot->function); scripts!=state->scripts.end()) {
+        } else if(auto scripts=registry.scripts.find(slot->function); scripts!=registry.scripts.end()) {
             auto& values=scripts->second;
             values.erase(std::remove(values.begin(),values.end(),slot),values.end());
-            if(values.empty()) state->scripts.erase(scripts);
-            state->publish_fast();
+            if(values.empty()) registry.scripts.erase(scripts);
+            registry.publish_fast();
         }
         if(slot->rooted) {
             auto root=state->roots.find(slot->function);
@@ -133,7 +146,7 @@ int CssxHookService::remove(void* context,uint64_t id) {
             slot->rooted=false;
         }
         state->slots.erase(found); state->enabled=!state->slots.empty();
-        if(state->scripts.empty() && state->script_id) { Hook::UnregisterCallback(state->script_id); state->script_id=0; }
+        if(registry.scripts.empty() && registry.id) { Hook::UnregisterCallback(registry.id); registry.id=0; }
         return 1;
     } catch(...) { return 0; }
 }
@@ -141,11 +154,11 @@ void CssxHookService::stats(void* context,uint64_t* calls,uint64_t* ticks,int* s
     auto state=static_cast<CssxHookService*>(context)->state_;
     if(calls) *calls=state->calls.load(std::memory_order_relaxed);
     if(ticks) *ticks=state->ticks.load(std::memory_order_relaxed);
-    if(script_hook_installed) *script_hook_installed=state->script_id?1:0;
+    if(script_hook_installed) *script_hook_installed=(state->before.id || state->after.id)?1:0;
 }
 void CssxHookService::quiesce() {
     std::lock_guard lock(*state_->gate); state_->stopped=true; state_->enabled=false;
     for(auto& [id,slot]:state_->slots) { slot->callback=nullptr; slot->user=nullptr; }
-    state_->scripts.clear(); state_->publish_fast();
+    for(auto* registry:{&state_->before,&state_->after}) { registry->scripts.clear(); registry->publish_fast(); }
 }
 CssxHookService::~CssxHookService() { quiesce(); }
