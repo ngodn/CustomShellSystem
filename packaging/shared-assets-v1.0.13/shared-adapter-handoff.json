@@ -1,0 +1,23 @@
+{
+  "source_manifest_sha256": "56aae3a76b0b53eb47c0a9c9559dc09147fd4e5544b1cf4ca7f0f9840f71e306",
+  "expected_adapters": [
+    {
+      "pointer": "/catalog/animation_library/adapters/41",
+      "adapter": {
+        "source_outfit": "eins0fx.gta6lucia",
+        "skeleton": "/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.SKEL_Base",
+        "source_toc_sha256": "79f3c149bb65651f4543995d17a7a675e27d8b8a615041fa3597a486625f9b86",
+        "source_bulk_bytes": 331100970,
+        "source_class": "/Game/CSS/CSS_GTA6Lucia_eins0fx_P/ABP_LuciaIdle.ABP_LuciaIdle_C",
+        "target_class": "/Game/CSS/CSS_GTA6Lucia_eins0fx_P/Animations/Adapters/ABP_Lucia.ABP_Lucia_C"
+      }
+    }
+  ],
+  "outfit_trio": "CSS_GTA6Lucia_eins0fx_P",
+  "scope": "Both variants share the same playback class. Append using --allow-new. Add the new Lucia face rig from facial-handoff.json in the same release.",
+  "applied": true,
+  "applied_shared_version": "1.0.13",
+  "base_release_version": "1.0.12",
+  "base_release_manifest_sha256": "36d0afcea29458cb258673599362069bfbff949df4f825e77fbc0140f7371393",
+  "outfit_archive": "gta6-lucia-v0.1.0.zip"
+}

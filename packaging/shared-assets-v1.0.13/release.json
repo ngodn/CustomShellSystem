@@ -1,0 +1,14 @@
+{
+  "name": "CSS Shared Assets",
+  "version": "1.0.13",
+  "container": "CSS_SharedAssets_P",
+  "requires_css": "1.0.12",
+  "files": {
+    "CSS_SharedAssets_P/CSS_SharedAssets_P.pak": "e517b4d097976f5741c83141486b20551955d2655b3ef9daf8d072c5843cff08",
+    "CSS_SharedAssets_P/CSS_SharedAssets_P.utoc": "6866994dfc5a91fad3dea70ebf7f0ff04af2fb144d2ed96066d51b12eb785e0b",
+    "CSS_SharedAssets_P/CSS_SharedAssets_P.ucas": "87ad051bfc0513aca908703e8ae7125f25ee3040e2d60fa0a674ac77b25757c9",
+    "README.txt": "6675066d13faba9deb2fa1e8d3f45d12af93a2b600c04c7e76ed58775a81e117",
+    "changelog.bbcode": "bb49e741d7ec017047e95c79208be2414d72206df700caa4f471830aa4c70408"
+  },
+  "outfit_revision": "79f3c149bb65651f4543995d17a7a675e27d8b8a615041fa3597a486625f9b86"
+}
